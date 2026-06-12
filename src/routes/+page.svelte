@@ -5,6 +5,8 @@
   import Matching from "$lib/komponenten/Matching.svelte";
   import Merkliste from "$lib/komponenten/Merkliste.svelte";
   import Stammdaten from "$lib/komponenten/Stammdaten.svelte";
+  import SammelFormular from "$lib/komponenten/SammelFormular.svelte";
+  import { leeresFormular, antragBauen } from "$lib/antrag";
 
   // Die App kennt fünf Ansichten:
   // laden -> einrichten (kein Tresor) ODER entsperren (Tresor da)
@@ -47,6 +49,7 @@
       erstellt: new Date().toISOString().slice(0, 10),
       fragebogen: null,
       merkliste: [],
+      formular: leeresFormular(),
     };
   }
 
@@ -108,11 +111,24 @@
       }
     }
 
-    // Projekte aus aelteren Staenden bekommen eine leere Merkliste.
+    // Projekte aus aelteren Staenden bekommen eine leere Merkliste
+    // und ein leeres Sammel-Formular.
     for (const p of d.projekte) {
       if (!Array.isArray(p.merkliste)) {
         p.merkliste = [];
         veraendert = true;
+      }
+      const formularVorlage = leeresFormular();
+      if (!p.formular || typeof p.formular !== "object") {
+        p.formular = formularVorlage;
+        veraendert = true;
+      } else {
+        for (const feld of Object.keys(formularVorlage)) {
+          if (typeof p.formular[feld] !== "string") {
+            p.formular[feld] = "";
+            veraendert = true;
+          }
+        }
       }
     }
     if (d.aktivesProjektId && !d.projekte.some((p) => p.id === d.aktivesProjektId)) {
@@ -218,6 +234,33 @@
   async function stammdatenSpeichern(neu) {
     daten.stammdaten = neu;
     await tresorSpeichern();
+  }
+
+  // Sammel-Formular des aktiven Projekts ersetzen und sichern.
+  async function formularSpeichern(neu) {
+    aktivesProjekt.formular = neu;
+    await tresorSpeichern();
+  }
+
+  // antworten.json + Word-Datei im Foerderungs-Ordner erzeugen.
+  async function antragErzeugen(foerderung) {
+    const { titel, warnhinweis, abschnitte, antwortenJson } = antragBauen(
+      $state.snapshot(daten.stammdaten),
+      $state.snapshot(aktivesProjekt.formular),
+      foerderung
+    );
+    try {
+      await invoke("antrag_erzeugen", {
+        projekt: aktivesProjekt.name,
+        foerderung: foerderung.name,
+        titel,
+        warnhinweis,
+        abschnitte,
+        antwortenJson,
+      });
+    } catch (e) {
+      alert("Der Antrag konnte nicht erzeugt werden.\n" + e);
+    }
   }
 
   // Förderung auf die Merkliste des aktiven Projekts setzen bzw.
@@ -422,6 +465,9 @@
         <button class:aktiv={bereich === "merkliste"} onclick={() => (bereich = "merkliste")}>
           Merkliste{#if aktivesProjekt?.merkliste.length}&nbsp;({aktivesProjekt.merkliste.length}){/if}
         </button>
+        <button class:aktiv={bereich === "formular"} onclick={() => (bereich = "formular")}>
+          Formular
+        </button>
         <button class:aktiv={bereich === "stammdaten"} onclick={() => (bereich = "stammdaten")}>
           Stammdaten
         </button>
@@ -459,11 +505,19 @@
             umschalten={merklisteUmschalten}
           />
         {/key}
+      {:else if bereich === "formular"}
+        {#key daten.aktivesProjektId}
+          <SammelFormular
+            formular={aktivesProjekt.formular}
+            speichern={formularSpeichern}
+          />
+        {/key}
       {:else}
         <Merkliste
           merkliste={aktivesProjekt.merkliste}
           umschalten={merklisteUmschalten}
           {ordnerOeffnen}
+          {antragErzeugen}
         />
       {/if}
     </main>

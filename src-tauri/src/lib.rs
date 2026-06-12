@@ -2,6 +2,7 @@
 // welche Befehle das JS-Frontend aufrufen darf (invoke_handler) und
 // welcher Zustand im Speicher verwaltet wird (manage).
 
+mod dokument;
 mod ordner;
 mod tresor;
 
@@ -18,7 +19,8 @@ pub fn run() {
             tresor::tresor_sperren,
             tresor::tresor_neu_aufsetzen,
             ordner::ordner_oeffnen,
-            ordner::ordner_umbenennen
+            ordner::ordner_umbenennen,
+            dokument::antrag_erzeugen
         ])
         .run(tauri::generate_context!())
         .expect("Fehler beim Starten der Anwendung");

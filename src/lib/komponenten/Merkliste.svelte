@@ -6,7 +6,7 @@
   import FoerderKarte from "./FoerderKarte.svelte";
   import FoerderDetail from "./FoerderDetail.svelte";
 
-  let { merkliste, umschalten, ordnerOeffnen = null } = $props();
+  let { merkliste, umschalten, ordnerOeffnen = null, antragErzeugen = null } = $props();
 
   let ausgewaehlt = $state(null);
 
@@ -78,6 +78,7 @@
     gemerkt={merkliste.includes(ausgewaehlt.id)}
     umschalten={umschalten}
     ordnerOeffnen={ordnerOeffnen ? () => ordnerOeffnen(ausgewaehlt.name) : null}
+    antragErzeugen={antragErzeugen ? () => antragErzeugen(ausgewaehlt) : null}
     schliessen={() => (ausgewaehlt = null)}
   />
 {/if}

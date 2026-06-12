@@ -29,4 +29,7 @@ serde_json = "1"
 #          (falsches Passwort/Manipulation wird sicher erkannt)
 argon2 = "0.5"
 aes-gcm = "0.10"
+# docx-rs: erzeugt Word-Dateien (.docx). In CLAUDE.md als Loesung
+# fuer die Word-Ausgabe vorgesehen.
+docx-rs = "0.4"
 

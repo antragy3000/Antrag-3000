@@ -13,7 +13,7 @@ use std::path::PathBuf;
 use tauri::Manager;
 
 /// Wurzelordner aller Nutzdaten: Dokumente\Antrag 3000
-fn wurzel(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+pub(crate) fn wurzel(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     let dokumente = app
         .path()
         .document_dir()
@@ -24,7 +24,7 @@ fn wurzel(app: &tauri::AppHandle) -> Result<PathBuf, String> {
 /// Macht aus einem freien Namen einen gueltigen Windows-Ordnernamen:
 /// verbotene Zeichen werden durch _ ersetzt, Leerraum und Punkte am
 /// Rand entfernt (Windows erlaubt sie dort nicht).
-fn bereinigen(name: &str) -> Result<String, String> {
+pub(crate) fn bereinigen(name: &str) -> Result<String, String> {
     const VERBOTEN: [char; 9] = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
     let ersetzt: String = name
         .chars()
