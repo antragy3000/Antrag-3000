@@ -4,6 +4,7 @@
   import Foerderungen from "$lib/komponenten/Foerderungen.svelte";
   import Matching from "$lib/komponenten/Matching.svelte";
   import Merkliste from "$lib/komponenten/Merkliste.svelte";
+  import Stammdaten from "$lib/komponenten/Stammdaten.svelte";
 
   // Die App kennt fünf Ansichten:
   // laden -> einrichten (kein Tresor) ODER entsperren (Tresor da)
@@ -49,12 +50,22 @@
     };
   }
 
+  // Leere Stammdaten-Struktur (alles Tresor-Inhalt, hochsensibel).
+  function leereStammdaten() {
+    return {
+      person: { vorname: "", nachname: "", kuenstlername: "", organisation: "" },
+      kontakt: { strasse: "", plz: "", ort: "", land: "", email: "", telefon: "", webseite: "" },
+      bank: { kontoinhaber: "", iban: "", bic: "", bank: "" },
+      steuer: { steuernummer: "", ustid: "", finanzamt: "" },
+    };
+  }
+
   // Struktur eines frischen Tresors (wächst in späteren Schritten).
   // Bewusst ohne Projekt: Die App fordert zum Erstellen auf.
   function frischerTresor() {
     return {
       version: 2,
-      stammdaten: {},
+      stammdaten: leereStammdaten(),
       projekte: [],
       aktivesProjektId: null,
     };
@@ -76,6 +87,27 @@
       delete d.fragebogen;
       veraendert = true;
     }
+    // Stammdaten aus aelteren Staenden um fehlende Felder ergaenzen.
+    const vorlage = leereStammdaten();
+    if (!d.stammdaten || typeof d.stammdaten !== "object") {
+      d.stammdaten = vorlage;
+      veraendert = true;
+    } else {
+      for (const [gruppe, felder] of Object.entries(vorlage)) {
+        if (!d.stammdaten[gruppe] || typeof d.stammdaten[gruppe] !== "object") {
+          d.stammdaten[gruppe] = felder;
+          veraendert = true;
+        } else {
+          for (const feld of Object.keys(felder)) {
+            if (typeof d.stammdaten[gruppe][feld] !== "string") {
+              d.stammdaten[gruppe][feld] = "";
+              veraendert = true;
+            }
+          }
+        }
+      }
+    }
+
     // Projekte aus aelteren Staenden bekommen eine leere Merkliste.
     for (const p of d.projekte) {
       if (!Array.isArray(p.merkliste)) {
@@ -179,6 +211,12 @@
     daten.projekte = daten.projekte.filter((p) => p.id !== daten.aktivesProjektId);
     daten.aktivesProjektId = daten.projekte[0]?.id ?? null;
     loeschDialogOffen = false;
+    await tresorSpeichern();
+  }
+
+  // Stammdaten ersetzen und verschlüsselt sichern.
+  async function stammdatenSpeichern(neu) {
+    daten.stammdaten = neu;
     await tresorSpeichern();
   }
 
@@ -364,6 +402,9 @@
         <button class:aktiv={bereich === "merkliste"} onclick={() => (bereich = "merkliste")}>
           Merkliste{#if aktivesProjekt?.merkliste.length}&nbsp;({aktivesProjekt.merkliste.length}){/if}
         </button>
+        <button class:aktiv={bereich === "stammdaten"} onclick={() => (bereich = "stammdaten")}>
+          Stammdaten
+        </button>
       </nav>
       <button class="leise" onclick={sperren}>Sperren</button>
     </header>
@@ -373,6 +414,8 @@
           merkliste={aktivesProjekt?.merkliste ?? null}
           umschalten={merklisteUmschalten}
         />
+      {:else if bereich === "stammdaten"}
+        <Stammdaten stammdaten={daten.stammdaten} speichern={stammdatenSpeichern} />
       {:else if !aktivesProjekt}
         <div class="leer-projekt">
           <div class="karte">
