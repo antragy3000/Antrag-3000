@@ -27,6 +27,7 @@
   );
   let neuesProjektOffen = $state(false);
   let neuerProjektName = $state("");
+  let loeschDialogOffen = $state(false);
 
   // Eindeutige Kennung für neue Projekte.
   function neueId() {
@@ -161,6 +162,19 @@
     await tresorSpeichern();
   }
 
+  // Entfernt das aktive Projekt endgültig. Bleibt kein Projekt übrig,
+  // wird automatisch ein frisches "Mein Projekt" angelegt, damit die
+  // App nie ohne Projekt dasteht.
+  async function projektLoeschen() {
+    daten.projekte = daten.projekte.filter((p) => p.id !== daten.aktivesProjektId);
+    if (daten.projekte.length === 0) {
+      daten.projekte.push(neuesProjekt("Mein Projekt"));
+    }
+    daten.aktivesProjektId = daten.projekte[0].id;
+    loeschDialogOffen = false;
+    await tresorSpeichern();
+  }
+
   async function projektAnlegen(event) {
     event.preventDefault();
     const name = neuerProjektName.trim();
@@ -281,6 +295,14 @@
           <button class="leise" onclick={() => (neuesProjektOffen = true)}>
             + Projekt
           </button>
+          <button
+            class="leise"
+            title="Aktives Projekt löschen"
+            aria-label="Aktives Projekt löschen"
+            onclick={() => (loeschDialogOffen = true)}
+          >
+            🗑
+          </button>
         </div>
       </div>
       <nav>
@@ -317,6 +339,23 @@
             Abbrechen
           </button>
         </form>
+      </div>
+    {/if}
+
+    {#if loeschDialogOffen}
+      <div class="schleier" onclick={() => (loeschDialogOffen = false)} role="presentation">
+        <div class="karte" onclick={(e) => e.stopPropagation()} role="presentation">
+          <h1>Projekt löschen?</h1>
+          <p class="untertitel">
+            Das Projekt <strong>„{aktivesProjekt?.name}"</strong> wird endgültig
+            entfernt – samt seinem Fragebogen und Matching-Ergebnis.
+            Das lässt sich nicht rückgängig machen.
+          </p>
+          <button class="gefahr" onclick={projektLoeschen}>Ja, löschen</button>
+          <button class="leise" onclick={() => (loeschDialogOffen = false)}>
+            Abbrechen
+          </button>
+        </div>
       </div>
     {/if}
   </div>
