@@ -3,7 +3,15 @@
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { LAENDER, SPARTEN, PROJEKTARTEN, TRAEGERSCHAFT, fristText } from "$lib/begriffe";
 
-  let { foerderung: f, alle, hinweis, schliessen, gemerkt = null, umschalten = null } = $props();
+  let {
+    foerderung: f,
+    alle,
+    hinweis,
+    schliessen,
+    gemerkt = null,
+    umschalten = null,
+    ordnerOeffnen = null,
+  } = $props();
 
   function nameVon(id) {
     const x = alle.find((e) => e.id === id);
@@ -74,6 +82,11 @@
 
     <p class="datenstand">{hinweis}</p>
 
+    {#if ordnerOeffnen}
+      <button class="zweit" onclick={ordnerOeffnen}>
+        📁 Ordner zu dieser Förderung öffnen
+      </button>
+    {/if}
     {#if umschalten}
       <button class="zweit" onclick={() => umschalten(f.id)}>
         {gemerkt ? "★ Von der Merkliste entfernen" : "☆ Auf die Merkliste setzen"}

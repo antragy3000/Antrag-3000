@@ -243,9 +243,29 @@
     event.preventDefault();
     const name = umbenennenName.trim();
     if (!name) return;
+    const alterName = aktivesProjekt.name;
     aktivesProjekt.name = name;
     umbenennenOffen = false;
     await tresorSpeichern();
+    // Falls es schon einen Projektordner gibt, zieht er mit um.
+    try {
+      await invoke("ordner_umbenennen", { alt: alterName, neu: name });
+    } catch (e) {
+      alert("Hinweis: Der Projektordner konnte nicht umbenannt werden.\n" + e);
+    }
+  }
+
+  // Legt den Ordner des aktiven Projekts (optional mit Foerderungs-
+  // Unterordner) bei Bedarf an und oeffnet ihn im Explorer.
+  async function ordnerOeffnen(foerderungsName = null) {
+    try {
+      await invoke("ordner_oeffnen", {
+        projekt: aktivesProjekt.name,
+        foerderung: foerderungsName,
+      });
+    } catch (e) {
+      alert("Der Ordner konnte nicht geöffnet werden.\n" + e);
+    }
   }
 
   async function projektAnlegen(event) {
@@ -443,6 +463,7 @@
         <Merkliste
           merkliste={aktivesProjekt.merkliste}
           umschalten={merklisteUmschalten}
+          {ordnerOeffnen}
         />
       {/if}
     </main>

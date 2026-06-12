@@ -6,7 +6,7 @@
   import FoerderKarte from "./FoerderKarte.svelte";
   import FoerderDetail from "./FoerderDetail.svelte";
 
-  let { merkliste, umschalten } = $props();
+  let { merkliste, umschalten, ordnerOeffnen = null } = $props();
 
   let ausgewaehlt = $state(null);
 
@@ -33,7 +33,14 @@
 </script>
 
 <div class="bereich">
-  <h2>Merkliste <span class="anzahl">{gemerkte.length}</span></h2>
+  <div class="kopfzeile">
+    <h2>Merkliste <span class="anzahl">{gemerkte.length}</span></h2>
+    {#if ordnerOeffnen}
+      <button class="ordner" onclick={() => ordnerOeffnen(null)}>
+        📁 Projektordner öffnen
+      </button>
+    {/if}
+  </div>
 
   {#each konflikte as [a, b]}
     <div class="konflikt">
@@ -70,6 +77,7 @@
     hinweis={datenbank.hinweis}
     gemerkt={merkliste.includes(ausgewaehlt.id)}
     umschalten={umschalten}
+    ordnerOeffnen={ordnerOeffnen ? () => ordnerOeffnen(ausgewaehlt.name) : null}
     schliessen={() => (ausgewaehlt = null)}
   />
 {/if}
@@ -80,10 +88,32 @@
     margin: 0 auto;
     padding: 32px 24px 64px;
   }
+  .kopfzeile {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
   h2 {
-    margin: 0 0 20px;
+    margin: 0;
     font-size: 1.35rem;
     font-weight: 600;
+  }
+  .ordner {
+    padding: 9px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #172b4d;
+    background: #fff;
+    border: 2px solid #dfe1e6;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .ordner:hover {
+    border-color: #4f6df5;
   }
   .anzahl {
     color: #5e6c84;
