@@ -4,8 +4,9 @@ node_modules
 # LibreOffice-Sperrdateien (temporär, entstehen beim Öffnen von Dokumenten)
 .~lock.*#
 
-# Interne Claude-Code-Arbeitsdateien
+# Interne Claude-Code-Arbeitsdateien (maschinenspezifisch)
 .claude/scheduled_tasks.lock
+.claude/settings.local.json
 /build
 /.svelte-kit
 /package
