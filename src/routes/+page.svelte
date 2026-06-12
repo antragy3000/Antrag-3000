@@ -1,6 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
+  import Foerderungen from "$lib/komponenten/Foerderungen.svelte";
 
   // Die App kennt fünf Ansichten:
   // laden -> einrichten (kein Tresor) ODER entsperren (Tresor da)
@@ -181,13 +182,7 @@
       <button class="leise" onclick={sperren}>Sperren</button>
     </header>
     <main>
-      <div class="karte schmal">
-        <h2>Tresor entsperrt ✓</h2>
-        <p class="untertitel">
-          Dein verschlüsselter Datentresor ist einsatzbereit.
-          Als Nächstes bauen wir hier die Förder-Datenbank ein (Schritt 2).
-        </p>
-      </div>
+      <Foerderungen />
     </main>
   </div>
 {/if}
@@ -221,11 +216,6 @@
     max-width: 380px;
     box-sizing: border-box;
   }
-  .karte.schmal {
-    max-width: 480px;
-    margin: 48px auto;
-  }
-
   h1 {
     margin: 0 0 4px;
     font-size: 1.5rem;

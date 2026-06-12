@@ -1,0 +1,255 @@
+{
+  "schema_version": 1,
+  "stand": "2026-06-12",
+  "hinweis": "Beispieldaten zur Entwicklung. Konditionen, Fristen und Voraussetzungen vor jeder Antragstellung auf der Webseite des Foerdergebers pruefen.",
+  "foerderungen": [
+    {
+      "id": "de-fonds-darstellende-kuenste",
+      "name": "Projektförderung Darstellende Künste",
+      "foerdergeber": "Fonds Darstellende Künste e. V.",
+      "land": "DE",
+      "beschreibung": "Bundesweite Projektförderung für professionelle Künstler:innen und Gruppen der freien darstellenden Künste. Gefördert werden u. a. Produktionen und künstlerische Entwicklungsvorhaben.",
+      "webseite": "https://www.fonds-daku.de",
+      "harte_kriterien": {
+        "wohnsitz": ["DE"],
+        "durchfuehrungsort": ["DE"],
+        "traegerschaft": ["einzelperson", "gruppe", "organisation"],
+        "studentisch_erlaubt": false
+      },
+      "weiche_kriterien": {
+        "sparten": ["theater", "tanz", "performance"],
+        "projektarten": ["produktion", "recherche_entwicklung"],
+        "budget_min": 5000,
+        "budget_max": 50000,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": ["2026-09-15"],
+      "foerderhoehe_text": "je nach Programm ca. 5.000–50.000 €",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Projektbeschreibung",
+        "Kosten- und Finanzierungsplan",
+        "Künstlerischer Lebenslauf / Portfolio",
+        "Nachweis Professionalität (z. B. bisherige Produktionen)"
+      ]
+    },
+    {
+      "id": "de-musikfonds",
+      "name": "Projektförderung Musikfonds",
+      "foerdergeber": "Musikfonds e. V.",
+      "land": "DE",
+      "beschreibung": "Förderung von Projekten der zeitgenössischen Musik aller Genres: Konzerte, Produktionen, experimentelle Vorhaben. Bundesmittel – Doppelförderung desselben Projekts durch andere Bundesfonds ist ausgeschlossen.",
+      "webseite": "https://www.musikfonds.de",
+      "harte_kriterien": {
+        "wohnsitz": ["DE"],
+        "durchfuehrungsort": ["DE"],
+        "traegerschaft": ["einzelperson", "gruppe", "organisation"],
+        "studentisch_erlaubt": false
+      },
+      "weiche_kriterien": {
+        "sparten": ["musik"],
+        "projektarten": ["produktion", "veroeffentlichung"],
+        "budget_min": 2000,
+        "budget_max": 30000,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": ["2026-09-30"],
+      "foerderhoehe_text": "ca. 2.000–30.000 €",
+      "unvertraeglich_mit": ["de-initiative-musik"],
+      "checkliste_vorschlag": [
+        "Projektbeschreibung",
+        "Kosten- und Finanzierungsplan",
+        "Künstlerischer Lebenslauf",
+        "Hörbeispiele / Arbeitsproben"
+      ]
+    },
+    {
+      "id": "de-initiative-musik",
+      "name": "Künstler:innenförderung Initiative Musik",
+      "foerdergeber": "Initiative Musik gGmbH",
+      "land": "DE",
+      "beschreibung": "Förderung von Musiker:innen aus Pop, Rock, Jazz und verwandten Genres: Tonträgerproduktionen, Marketing, Touren. Anteilsfinanzierung (Eigen-/Drittmittel erforderlich). Bundesmittel – Doppelförderung desselben Projekts durch andere Bundesfonds ist ausgeschlossen.",
+      "webseite": "https://www.initiative-musik.de",
+      "harte_kriterien": {
+        "wohnsitz": ["DE"],
+        "durchfuehrungsort": [],
+        "traegerschaft": ["einzelperson", "gruppe", "organisation"],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": ["musik"],
+        "projektarten": ["produktion", "veroeffentlichung", "gastspiel_tournee"],
+        "budget_min": 5000,
+        "budget_max": 60000,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": ["2026-08-20"],
+      "foerderhoehe_text": "bis ca. 30.000 € (max. 50 % der Kosten)",
+      "unvertraeglich_mit": ["de-musikfonds"],
+      "checkliste_vorschlag": [
+        "Projektbeschreibung",
+        "Kosten- und Finanzierungsplan mit Eigenanteil",
+        "Bandbiografie / Diskografie",
+        "Vermarktungskonzept"
+      ]
+    },
+    {
+      "id": "de-stiftung-kunstfonds",
+      "name": "Projektförderung Bildende Kunst",
+      "foerdergeber": "Stiftung Kunstfonds",
+      "land": "DE",
+      "beschreibung": "Förderung professioneller bildender Künstler:innen: Arbeitsvorhaben, Ausstellungen, Publikationen. Auch Förderung kunstvermittelnder Projekte.",
+      "webseite": "https://www.kunstfonds.de",
+      "harte_kriterien": {
+        "wohnsitz": ["DE"],
+        "durchfuehrungsort": [],
+        "traegerschaft": ["einzelperson", "organisation"],
+        "studentisch_erlaubt": false
+      },
+      "weiche_kriterien": {
+        "sparten": ["bildende_kunst", "medienkunst"],
+        "projektarten": ["produktion", "veroeffentlichung"],
+        "budget_min": 3000,
+        "budget_max": 25000,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": ["2026-11-30"],
+      "foerderhoehe_text": "bis ca. 25.000 €",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Projektbeschreibung",
+        "Kostenplan",
+        "Portfolio / Bildmaterial",
+        "Künstlerischer Lebenslauf"
+      ]
+    },
+    {
+      "id": "at-bmkoes-startstipendien",
+      "name": "Startstipendien für Künstler:innen",
+      "foerdergeber": "BMKÖS (Bundesministerium Kunst, Kultur, öff. Dienst und Sport)",
+      "land": "AT",
+      "beschreibung": "Stipendien für junge Künstler:innen am Beginn der Laufbahn, in mehreren Sparten ausgeschrieben. Dient der Konzentration auf die künstlerische Arbeit, kein Projektkostenzuschuss.",
+      "webseite": "https://www.bmkoes.gv.at",
+      "harte_kriterien": {
+        "wohnsitz": ["AT"],
+        "durchfuehrungsort": [],
+        "traegerschaft": ["einzelperson"],
+        "studentisch_erlaubt": false
+      },
+      "weiche_kriterien": {
+        "sparten": ["musik", "literatur", "bildende_kunst", "film", "theater", "tanz"],
+        "projektarten": ["recherche_entwicklung"],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": ["2026-09-01"],
+      "foerderhoehe_text": "Stipendium, ca. 9.600 € (6 Monate)",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Motivationsschreiben",
+        "Arbeitsvorhaben",
+        "Lebenslauf",
+        "Arbeitsproben",
+        "Ausbildungsnachweis"
+      ]
+    },
+    {
+      "id": "at-ske-fonds",
+      "name": "Projektkostenzuschuss Musik",
+      "foerdergeber": "SKE Fonds (Austro Mechana)",
+      "land": "AT",
+      "beschreibung": "Zuschüsse für Projekte zeitgenössischer Musikschaffender in Österreich: Produktionen, Veröffentlichungen, Aufführungen. Mehrere Vergabetermine pro Jahr.",
+      "webseite": "https://www.ske-fonds.at",
+      "harte_kriterien": {
+        "wohnsitz": ["AT"],
+        "durchfuehrungsort": [],
+        "traegerschaft": ["einzelperson", "gruppe"],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": ["musik"],
+        "projektarten": ["produktion", "veroeffentlichung"],
+        "budget_min": 1000,
+        "budget_max": 10000,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "bis ca. 10.000 €",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Projektbeschreibung",
+        "Kostenplan",
+        "Werkliste / Diskografie"
+      ]
+    },
+    {
+      "id": "ch-pro-helvetia",
+      "name": "Projektbeiträge",
+      "foerdergeber": "Pro Helvetia (Schweizer Kulturstiftung)",
+      "land": "CH",
+      "beschreibung": "Beiträge an professionelle Kunstschaffende für Projekte mit überregionaler oder internationaler Ausstrahlung: Produktion, Verbreitung, Austausch. Laufende Eingabe über das Antragsportal.",
+      "webseite": "https://www.prohelvetia.ch",
+      "harte_kriterien": {
+        "wohnsitz": ["CH"],
+        "durchfuehrungsort": [],
+        "traegerschaft": ["einzelperson", "gruppe", "organisation"],
+        "studentisch_erlaubt": false
+      },
+      "weiche_kriterien": {
+        "sparten": ["musik", "theater", "tanz", "literatur", "bildende_kunst", "interdisziplinaer"],
+        "projektarten": ["produktion", "gastspiel_tournee", "veroeffentlichung"],
+        "budget_min": 5000,
+        "budget_max": 100000,
+        "waehrung": "CHF",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "je nach Vorhaben, ca. 5.000–50.000 CHF",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Projektdossier",
+        "Budget mit Finanzierungsplan",
+        "Portfolio / Arbeitsproben",
+        "Tourneeplan (falls zutreffend)"
+      ]
+    },
+    {
+      "id": "int-goethe-koproduktionsfonds",
+      "name": "Internationaler Koproduktionsfonds",
+      "foerdergeber": "Goethe-Institut",
+      "land": "INT",
+      "beschreibung": "Förderung internationaler Koproduktionen in Theater, Tanz, Musik und Performance. Erforderlich ist eine Partnerschaft zwischen Kunstschaffenden in Deutschland und im Ausland.",
+      "webseite": "https://www.goethe.de",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": ["INT"],
+        "traegerschaft": ["gruppe", "organisation"],
+        "studentisch_erlaubt": false
+      },
+      "weiche_kriterien": {
+        "sparten": ["theater", "tanz", "musik", "performance"],
+        "projektarten": ["produktion"],
+        "budget_min": 10000,
+        "budget_max": 80000,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": ["2026-07-15"],
+      "foerderhoehe_text": "bis ca. 25.000 €",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Gemeinsame Projektbeschreibung beider Partner",
+        "Kosten- und Finanzierungsplan",
+        "Nachweis der Partnerschaft (Letter of Intent)",
+        "Portfolios beider Partner"
+      ]
+    }
+  ]
+}
