@@ -27,6 +27,7 @@ export const PROJEKTARTEN = {
   recherche_entwicklung: "Recherche & Entwicklung",
   residenz: "Residenz",
   gastspiel_tournee: "Gastspiel / Tournee",
+  festival: "Festival",
   veroeffentlichung: "Veröffentlichung",
   vermittlung: "Vermittlung",
 };

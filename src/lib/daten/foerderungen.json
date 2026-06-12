@@ -18,7 +18,7 @@
       },
       "weiche_kriterien": {
         "sparten": ["theater", "tanz", "performance"],
-        "projektarten": ["produktion", "recherche_entwicklung"],
+        "projektarten": ["produktion", "recherche_entwicklung", "festival"],
         "budget_min": 5000,
         "budget_max": 50000,
         "waehrung": "EUR",
@@ -49,7 +49,7 @@
       },
       "weiche_kriterien": {
         "sparten": ["musik"],
-        "projektarten": ["produktion", "veroeffentlichung"],
+        "projektarten": ["produktion", "veroeffentlichung", "festival"],
         "budget_min": 2000,
         "budget_max": 30000,
         "waehrung": "EUR",

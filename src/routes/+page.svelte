@@ -21,12 +21,70 @@
   // Welcher Bereich ist nach dem Entsperren aktiv?
   let bereich = $state("alle"); // alle | passend
 
+  // Projekt-Verwaltung
+  let aktivesProjekt = $derived(
+    daten ? daten.projekte.find((p) => p.id === daten.aktivesProjektId) : null
+  );
+  let neuesProjektOffen = $state(false);
+  let neuerProjektName = $state("");
+
+  // Eindeutige Kennung für neue Projekte.
+  function neueId() {
+    return crypto.randomUUID
+      ? crypto.randomUUID()
+      : "p-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+  }
+
+  function neuesProjekt(name) {
+    return {
+      id: neueId(),
+      name,
+      erstellt: new Date().toISOString().slice(0, 10),
+      fragebogen: null,
+    };
+  }
+
   // Struktur eines frischen Tresors (wächst in späteren Schritten).
-  const LEERER_TRESOR = {
-    version: 1,
-    stammdaten: {},
-    projekte: [],
-  };
+  function frischerTresor() {
+    const projekt = neuesProjekt("Mein Projekt");
+    return {
+      version: 2,
+      stammdaten: {},
+      projekte: [projekt],
+      aktivesProjektId: projekt.id,
+    };
+  }
+
+  // Bringt ältere Tresor-Stände auf die aktuelle Struktur.
+  // Liefert true, wenn etwas geändert wurde (dann neu speichern).
+  function normalisieren(d) {
+    let veraendert = false;
+    if (!Array.isArray(d.projekte)) {
+      d.projekte = [];
+      veraendert = true;
+    }
+    // Schritt-3-Stand: ein einzelner Fragebogen ohne Projekt.
+    if (d.fragebogen) {
+      const p = neuesProjekt("Mein Projekt");
+      p.fragebogen = d.fragebogen;
+      d.projekte.push(p);
+      delete d.fragebogen;
+      veraendert = true;
+    }
+    if (d.projekte.length === 0) {
+      d.projekte.push(neuesProjekt("Mein Projekt"));
+      veraendert = true;
+    }
+    if (!d.aktivesProjektId || !d.projekte.some((p) => p.id === d.aktivesProjektId)) {
+      d.aktivesProjektId = d.projekte[0].id;
+      veraendert = true;
+    }
+    if (d.version !== 2) {
+      d.version = 2;
+      veraendert = true;
+    }
+    return veraendert;
+  }
 
   onMount(async () => {
     const status = await invoke("tresor_status");
@@ -46,11 +104,12 @@
     }
     beschaeftigt = true;
     try {
+      const frisch = frischerTresor();
       await invoke("tresor_erstellen", {
         passwort,
-        daten: JSON.stringify(LEERER_TRESOR),
+        daten: JSON.stringify(frisch),
       });
-      daten = structuredClone(LEERER_TRESOR);
+      daten = frisch;
       passwort = passwortWdh = "";
       ansicht = "offen";
     } catch (e) {
@@ -67,6 +126,8 @@
     try {
       const json = await invoke("tresor_entsperren", { passwort });
       daten = JSON.parse(json);
+      // Ältere Datenstände (z. B. aus Schritt 3) sanft überführen.
+      if (normalisieren(daten)) await tresorSpeichern();
       passwort = "";
       ansicht = "offen";
     } catch (e) {
@@ -86,13 +147,30 @@
     ansicht = "entsperren";
   }
 
-  // Fragebogen-Antworten gehören in den Tresor (Budget ist sensibel).
-  // Hier passiert das verschlüsselte Speichern des gesamten Datenstands.
-  async function fragebogenSpeichern(antworten) {
-    daten.fragebogen = antworten;
+  // Speichert den gesamten Datenstand verschlüsselt in den Tresor.
+  async function tresorSpeichern() {
     await invoke("tresor_speichern", {
       daten: JSON.stringify($state.snapshot(daten)),
     });
+  }
+
+  // Fragebogen-Antworten gehören zum aktiven Projekt und damit in
+  // den Tresor (Budget ist sensibel).
+  async function fragebogenSpeichern(antworten) {
+    aktivesProjekt.fragebogen = antworten;
+    await tresorSpeichern();
+  }
+
+  async function projektAnlegen(event) {
+    event.preventDefault();
+    const name = neuerProjektName.trim();
+    if (!name) return;
+    const p = neuesProjekt(name);
+    daten.projekte.push(p);
+    daten.aktivesProjektId = p.id;
+    neuerProjektName = "";
+    neuesProjektOffen = false;
+    await tresorSpeichern();
   }
 
   async function neuAufsetzen() {
@@ -192,7 +270,19 @@
 {:else if ansicht === "offen"}
   <div class="app">
     <header>
-      <span class="logo">Antrag 3000</span>
+      <div class="links">
+        <span class="logo">Antrag 3000</span>
+        <div class="projektwahl">
+          <select bind:value={daten.aktivesProjektId} onchange={tresorSpeichern}>
+            {#each daten.projekte as p (p.id)}
+              <option value={p.id}>{p.name}</option>
+            {/each}
+          </select>
+          <button class="leise" onclick={() => (neuesProjektOffen = true)}>
+            + Projekt
+          </button>
+        </div>
+      </div>
       <nav>
         <button class:aktiv={bereich === "alle"} onclick={() => (bereich = "alle")}>
           Alle Förderungen
@@ -207,9 +297,28 @@
       {#if bereich === "alle"}
         <Foerderungen />
       {:else}
-        <Matching antworten={daten.fragebogen ?? null} speichern={fragebogenSpeichern} />
+        {#key daten.aktivesProjektId}
+          <Matching
+            antworten={aktivesProjekt?.fragebogen ?? null}
+            speichern={fragebogenSpeichern}
+          />
+        {/key}
       {/if}
     </main>
+
+    {#if neuesProjektOffen}
+      <div class="schleier" onclick={() => (neuesProjektOffen = false)} role="presentation">
+        <form class="karte" onsubmit={projektAnlegen} onclick={(e) => e.stopPropagation()}>
+          <h1>Neues Projekt</h1>
+          <label for="projektname">Name des Projekts</label>
+          <input id="projektname" type="text" bind:value={neuerProjektName} />
+          <button type="submit" disabled={!neuerProjektName.trim()}>Anlegen</button>
+          <button type="button" class="leise" onclick={() => (neuesProjektOffen = false)}>
+            Abbrechen
+          </button>
+        </form>
+      </div>
+    {/if}
   </div>
 {/if}
 
@@ -385,5 +494,44 @@
     background: #eef1ff;
     color: #3d5bf0;
     font-weight: 600;
+  }
+
+  .links {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .projektwahl {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .projektwahl select {
+    padding: 7px 10px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    color: #172b4d;
+    background: #f7f8f9;
+    border: 2px solid #dfe1e6;
+    border-radius: 8px;
+    max-width: 220px;
+  }
+  .projektwahl select:focus {
+    outline: none;
+    border-color: #4f6df5;
+  }
+  .projektwahl button.leise {
+    width: auto;
+    margin: 0;
+  }
+
+  .schleier {
+    position: fixed;
+    inset: 0;
+    background: rgba(9, 30, 66, 0.45);
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    z-index: 20;
   }
 </style>
