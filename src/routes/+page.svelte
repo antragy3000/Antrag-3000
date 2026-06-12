@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import Foerderungen from "$lib/komponenten/Foerderungen.svelte";
+  import Matching from "$lib/komponenten/Matching.svelte";
 
   // Die App kennt fünf Ansichten:
   // laden -> einrichten (kein Tresor) ODER entsperren (Tresor da)
@@ -16,6 +17,9 @@
 
   // Die entschlüsselten Daten – leben nur im Arbeitsspeicher.
   let daten = $state(null);
+
+  // Welcher Bereich ist nach dem Entsperren aktiv?
+  let bereich = $state("alle"); // alle | passend
 
   // Struktur eines frischen Tresors (wächst in späteren Schritten).
   const LEERER_TRESOR = {
@@ -78,7 +82,17 @@
     await invoke("tresor_sperren");
     daten = null;
     fehler = "";
+    bereich = "alle";
     ansicht = "entsperren";
+  }
+
+  // Fragebogen-Antworten gehören in den Tresor (Budget ist sensibel).
+  // Hier passiert das verschlüsselte Speichern des gesamten Datenstands.
+  async function fragebogenSpeichern(antworten) {
+    daten.fragebogen = antworten;
+    await invoke("tresor_speichern", {
+      daten: JSON.stringify($state.snapshot(daten)),
+    });
   }
 
   async function neuAufsetzen() {
@@ -179,10 +193,22 @@
   <div class="app">
     <header>
       <span class="logo">Antrag 3000</span>
+      <nav>
+        <button class:aktiv={bereich === "alle"} onclick={() => (bereich = "alle")}>
+          Alle Förderungen
+        </button>
+        <button class:aktiv={bereich === "passend"} onclick={() => (bereich = "passend")}>
+          Passende für mich
+        </button>
+      </nav>
       <button class="leise" onclick={sperren}>Sperren</button>
     </header>
     <main>
-      <Foerderungen />
+      {#if bereich === "alle"}
+        <Foerderungen />
+      {:else}
+        <Matching antworten={daten.fragebogen ?? null} speichern={fragebogenSpeichern} />
+      {/if}
     </main>
   </div>
 {/if}
@@ -335,5 +361,29 @@
   .app header button.leise {
     width: auto;
     margin: 0;
+  }
+
+  nav {
+    display: flex;
+    gap: 4px;
+  }
+  nav button {
+    width: auto;
+    margin: 0;
+    padding: 7px 14px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #44546f;
+    background: none;
+    border-radius: 8px;
+  }
+  nav button:hover:not(.aktiv) {
+    background: #f1f2f4;
+    color: #172b4d;
+  }
+  nav button.aktiv {
+    background: #eef1ff;
+    color: #3d5bf0;
+    font-weight: 600;
   }
 </style>
