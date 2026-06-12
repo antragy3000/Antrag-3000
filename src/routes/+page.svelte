@@ -28,6 +28,8 @@
   let neuesProjektOffen = $state(false);
   let neuerProjektName = $state("");
   let loeschDialogOffen = $state(false);
+  let umbenennenOffen = $state(false);
+  let umbenennenName = $state("");
 
   // Eindeutige Kennung für neue Projekte.
   function neueId() {
@@ -46,13 +48,13 @@
   }
 
   // Struktur eines frischen Tresors (wächst in späteren Schritten).
+  // Bewusst ohne Projekt: Die App fordert zum Erstellen auf.
   function frischerTresor() {
-    const projekt = neuesProjekt("Mein Projekt");
     return {
       version: 2,
       stammdaten: {},
-      projekte: [projekt],
-      aktivesProjektId: projekt.id,
+      projekte: [],
+      aktivesProjektId: null,
     };
   }
 
@@ -72,11 +74,11 @@
       delete d.fragebogen;
       veraendert = true;
     }
-    if (d.projekte.length === 0) {
-      d.projekte.push(neuesProjekt("Mein Projekt"));
+    if (d.aktivesProjektId && !d.projekte.some((p) => p.id === d.aktivesProjektId)) {
+      d.aktivesProjektId = d.projekte[0]?.id ?? null;
       veraendert = true;
     }
-    if (!d.aktivesProjektId || !d.projekte.some((p) => p.id === d.aktivesProjektId)) {
+    if (!d.aktivesProjektId && d.projekte.length > 0) {
       d.aktivesProjektId = d.projekte[0].id;
       veraendert = true;
     }
@@ -162,16 +164,26 @@
     await tresorSpeichern();
   }
 
-  // Entfernt das aktive Projekt endgültig. Bleibt kein Projekt übrig,
-  // wird automatisch ein frisches "Mein Projekt" angelegt, damit die
-  // App nie ohne Projekt dasteht.
+  // Entfernt das aktive Projekt endgültig. Ohne verbleibende Projekte
+  // zeigt die App die Aufforderung, ein neues zu erstellen.
   async function projektLoeschen() {
     daten.projekte = daten.projekte.filter((p) => p.id !== daten.aktivesProjektId);
-    if (daten.projekte.length === 0) {
-      daten.projekte.push(neuesProjekt("Mein Projekt"));
-    }
-    daten.aktivesProjektId = daten.projekte[0].id;
+    daten.aktivesProjektId = daten.projekte[0]?.id ?? null;
     loeschDialogOffen = false;
+    await tresorSpeichern();
+  }
+
+  function umbenennenOeffnen() {
+    umbenennenName = aktivesProjekt.name;
+    umbenennenOffen = true;
+  }
+
+  async function projektUmbenennen(event) {
+    event.preventDefault();
+    const name = umbenennenName.trim();
+    if (!name) return;
+    aktivesProjekt.name = name;
+    umbenennenOffen = false;
     await tresorSpeichern();
   }
 
@@ -287,22 +299,36 @@
       <div class="links">
         <span class="logo">Antrag 3000</span>
         <div class="projektwahl">
-          <select bind:value={daten.aktivesProjektId} onchange={tresorSpeichern}>
-            {#each daten.projekte as p (p.id)}
-              <option value={p.id}>{p.name}</option>
-            {/each}
-          </select>
-          <button class="leise" onclick={() => (neuesProjektOffen = true)}>
-            + Projekt
-          </button>
-          <button
-            class="leise"
-            title="Aktives Projekt löschen"
-            aria-label="Aktives Projekt löschen"
-            onclick={() => (loeschDialogOffen = true)}
-          >
-            🗑
-          </button>
+          {#if daten.projekte.length === 0}
+            <button class="leise" onclick={() => (neuesProjektOffen = true)}>
+              + Erstes Projekt erstellen
+            </button>
+          {:else}
+            <select bind:value={daten.aktivesProjektId} onchange={tresorSpeichern}>
+              {#each daten.projekte as p (p.id)}
+                <option value={p.id}>{p.name}</option>
+              {/each}
+            </select>
+            <button class="leise" onclick={() => (neuesProjektOffen = true)}>
+              + Projekt
+            </button>
+            <button
+              class="leise"
+              title="Aktives Projekt umbenennen"
+              aria-label="Aktives Projekt umbenennen"
+              onclick={umbenennenOeffnen}
+            >
+              ✏️
+            </button>
+            <button
+              class="leise"
+              title="Aktives Projekt löschen"
+              aria-label="Aktives Projekt löschen"
+              onclick={() => (loeschDialogOffen = true)}
+            >
+              🗑
+            </button>
+          {/if}
         </div>
       </div>
       <nav>
@@ -318,6 +344,20 @@
     <main>
       {#if bereich === "alle"}
         <Foerderungen />
+      {:else if !aktivesProjekt}
+        <div class="leer-projekt">
+          <div class="karte">
+            <h1>Noch kein Projekt erstellt</h1>
+            <p class="untertitel">
+              Das Matching gehört immer zu einem Projekt – mit eigenem
+              Fragebogen und eigener Rangliste. Erstelle dein erstes
+              Projekt, um loszulegen.
+            </p>
+            <button onclick={() => (neuesProjektOffen = true)}>
+              Projekt erstellen
+            </button>
+          </div>
+        </div>
       {:else}
         {#key daten.aktivesProjektId}
           <Matching
@@ -336,6 +376,20 @@
           <input id="projektname" type="text" bind:value={neuerProjektName} />
           <button type="submit" disabled={!neuerProjektName.trim()}>Anlegen</button>
           <button type="button" class="leise" onclick={() => (neuesProjektOffen = false)}>
+            Abbrechen
+          </button>
+        </form>
+      </div>
+    {/if}
+
+    {#if umbenennenOffen}
+      <div class="schleier" onclick={() => (umbenennenOffen = false)} role="presentation">
+        <form class="karte" onsubmit={projektUmbenennen} onclick={(e) => e.stopPropagation()}>
+          <h1>Projekt umbenennen</h1>
+          <label for="umbenennen">Neuer Name</label>
+          <input id="umbenennen" type="text" bind:value={umbenennenName} />
+          <button type="submit" disabled={!umbenennenName.trim()}>Umbenennen</button>
+          <button type="button" class="leise" onclick={() => (umbenennenOffen = false)}>
             Abbrechen
           </button>
         </form>
@@ -572,5 +626,11 @@
     place-items: center;
     padding: 24px;
     z-index: 20;
+  }
+
+  .leer-projekt {
+    display: grid;
+    place-items: center;
+    padding: 64px 24px;
   }
 </style>
