@@ -26,7 +26,15 @@ export default defineConfig(async () => ({
       : undefined,
     watch: {
       // 3. tell Vite to ignore watching `src-tauri`
-      ignored: ["**/src-tauri/**"],
+      // plus persoenliche Arbeitsunterlagen im Projektordner
+      // (kein Programmcode; offene Office-Dateien liessen den
+      // Datei-Beobachter sonst mit EBUSY abstuerzen)
+      ignored: [
+        "**/src-tauri/**",
+        "**/Beispiele*/**",
+        "**/Unterlagen/**",
+        "**/Fragebogen zum Starten des Coding prozesses/**",
+      ],
     },
   },
 }));

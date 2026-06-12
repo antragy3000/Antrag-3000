@@ -7,6 +7,10 @@ node_modules
 # Interne Claude-Code-Arbeitsdateien (maschinenspezifisch)
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
+
+# Persoenliche Arbeitsunterlagen (gehoeren nicht in den Programmcode)
+/Beispiele*/
+/Unterlagen/
 /build
 /.svelte-kit
 /package
