@@ -9,6 +9,9 @@
 
   const foerderungen = datenbank.foerderungen;
 
+  // merkliste = null bedeutet: kein aktives Projekt, Sterne ausblenden.
+  let { merkliste = null, umschalten = null } = $props();
+
   let suche = $state("");
   let ausgewaehlt = $state(null);
 
@@ -46,7 +49,12 @@
 
   <div class="raster">
     {#each gefiltert as f (f.id)}
-      <FoerderKarte foerderung={f} auswaehlen={(x) => (ausgewaehlt = x)} />
+      <FoerderKarte
+        foerderung={f}
+        gemerkt={merkliste?.includes(f.id) ?? null}
+        merken={merkliste ? umschalten : null}
+        auswaehlen={(x) => (ausgewaehlt = x)}
+      />
     {:else}
       <p class="leer">Keine Förderung passt zu deiner Suche.</p>
     {/each}
@@ -58,6 +66,8 @@
     foerderung={ausgewaehlt}
     alle={foerderungen}
     hinweis={datenbank.hinweis}
+    gemerkt={merkliste?.includes(ausgewaehlt.id) ?? null}
+    umschalten={merkliste ? umschalten : null}
     schliessen={() => (ausgewaehlt = null)}
   />
 {/if}

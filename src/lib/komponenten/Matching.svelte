@@ -9,7 +9,7 @@
   import FoerderKarte from "./FoerderKarte.svelte";
   import FoerderDetail from "./FoerderDetail.svelte";
 
-  let { antworten = null, speichern } = $props();
+  let { antworten = null, speichern, merkliste = [], umschalten = null } = $props();
 
   let bearbeiten = $state(false);
   let ausgewaehlt = $state(null);
@@ -48,6 +48,8 @@
           foerderung={e.foerderung}
           punkte={e.punkte}
           treffer={e.treffer}
+          gemerkt={merkliste.includes(e.foerderung.id)}
+          merken={umschalten}
           auswaehlen={(f) => (ausgewaehlt = f)}
         />
       {:else}
@@ -72,6 +74,8 @@
           <FoerderKarte
             foerderung={e.foerderung}
             gruende={e.gruende}
+            gemerkt={merkliste.includes(e.foerderung.id)}
+            merken={umschalten}
             auswaehlen={(f) => (ausgewaehlt = f)}
           />
         {/each}
@@ -85,6 +89,8 @@
     foerderung={ausgewaehlt}
     alle={datenbank.foerderungen}
     hinweis={datenbank.hinweis}
+    gemerkt={merkliste.includes(ausgewaehlt.id)}
+    umschalten={umschalten}
     schliessen={() => (ausgewaehlt = null)}
   />
 {/if}

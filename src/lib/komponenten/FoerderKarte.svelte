@@ -1,6 +1,6 @@
 <script>
-  // Eine einzelne Förderkarte. Optional mit Matching-Zusatz:
-  // punkte/treffer (Rangliste) oder gruende (weitere Vorschläge).
+  // Eine einzelne Förderkarte. Optional mit Matching-Zusatz
+  // (punkte/treffer bzw. gruende) und Merklisten-Stern.
   import { LAENDER, SPARTEN, fristText } from "$lib/begriffe";
 
   let {
@@ -9,15 +9,45 @@
     punkte = null,
     treffer = [],
     gruende = [],
+    gemerkt = null,
+    merken = null,
   } = $props();
 </script>
 
-<button class="foerderkarte" class:gedimmt={gruende.length > 0} onclick={() => auswaehlen(f)}>
+<div
+  class="foerderkarte"
+  class:gedimmt={gruende.length > 0}
+  role="button"
+  tabindex="0"
+  onclick={() => auswaehlen(f)}
+  onkeydown={(e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      auswaehlen(f);
+    }
+  }}
+>
   <div class="oben">
     <span class="land land-{f.land}">{LAENDER[f.land] ?? f.land}</span>
-    {#if punkte !== null}
-      <span class="punkte">Passung {punkte} %</span>
-    {/if}
+    <span class="rechts">
+      {#if punkte !== null}
+        <span class="punkte">Passung {punkte} %</span>
+      {/if}
+      {#if merken}
+        <button
+          class="stern"
+          class:aktiv={gemerkt}
+          title={gemerkt ? "Von der Merkliste entfernen" : "Auf die Merkliste"}
+          aria-label={gemerkt ? "Von der Merkliste entfernen" : "Auf die Merkliste"}
+          onclick={(e) => {
+            e.stopPropagation();
+            merken(f.id);
+          }}
+        >
+          {gemerkt ? "★" : "☆"}
+        </button>
+      {/if}
+    </span>
   </div>
   <h3>{f.name}</h3>
   <p class="geber">{f.foerdergeber}</p>
@@ -37,20 +67,17 @@
     <p class="gruende">{gruende.join(" · ")}</p>
   {/if}
   <p class="frist">{fristText(f)}</p>
-</button>
+</div>
 
 <style>
   .foerderkarte {
     text-align: left;
     background: #fff;
-    border: none;
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 1px 3px rgba(9, 30, 66, 0.12);
     cursor: pointer;
     transition: box-shadow 0.15s, transform 0.15s;
-    font: inherit;
-    color: inherit;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -58,6 +85,10 @@
   .foerderkarte:hover {
     box-shadow: 0 4px 14px rgba(9, 30, 66, 0.18);
     transform: translateY(-1px);
+  }
+  .foerderkarte:focus-visible {
+    outline: 2px solid #4f6df5;
+    outline-offset: 2px;
   }
   .foerderkarte.gedimmt {
     opacity: 0.75;
@@ -74,6 +105,11 @@
     justify-content: space-between;
     align-items: center;
   }
+  .rechts {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
   .punkte {
     font-size: 0.78rem;
     font-weight: 700;
@@ -81,6 +117,23 @@
     background: #dcfff1;
     padding: 3px 9px;
     border-radius: 99px;
+  }
+
+  .stern {
+    background: none;
+    border: none;
+    font-size: 1.15rem;
+    line-height: 1;
+    color: #b3bac5;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 6px;
+  }
+  .stern:hover {
+    color: #e2a400;
+  }
+  .stern.aktiv {
+    color: #e2a400;
   }
 
   .geber {

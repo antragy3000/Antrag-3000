@@ -3,7 +3,7 @@
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { LAENDER, SPARTEN, PROJEKTARTEN, TRAEGERSCHAFT, fristText } from "$lib/begriffe";
 
-  let { foerderung: f, alle, hinweis, schliessen } = $props();
+  let { foerderung: f, alle, hinweis, schliessen, gemerkt = null, umschalten = null } = $props();
 
   function nameVon(id) {
     const x = alle.find((e) => e.id === id);
@@ -74,6 +74,11 @@
 
     <p class="datenstand">{hinweis}</p>
 
+    {#if umschalten}
+      <button class="zweit" onclick={() => umschalten(f.id)}>
+        {gemerkt ? "★ Von der Merkliste entfernen" : "☆ Auf die Merkliste setzen"}
+      </button>
+    {/if}
     <button class="primaer" onclick={() => openUrl(f.webseite)}>
       Webseite des Fördergebers öffnen
     </button>
@@ -174,6 +179,23 @@
   .datenstand {
     color: #8590a2;
     font-size: 0.8rem;
+  }
+
+  .zweit {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 11px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #172b4d;
+    background: #fff;
+    border: 2px solid #dfe1e6;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .zweit:hover {
+    border-color: #e2a400;
+    background: #fffaf0;
   }
 
   .primaer {

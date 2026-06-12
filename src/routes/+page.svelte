@@ -3,6 +3,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import Foerderungen from "$lib/komponenten/Foerderungen.svelte";
   import Matching from "$lib/komponenten/Matching.svelte";
+  import Merkliste from "$lib/komponenten/Merkliste.svelte";
 
   // Die App kennt fünf Ansichten:
   // laden -> einrichten (kein Tresor) ODER entsperren (Tresor da)
@@ -44,6 +45,7 @@
       name,
       erstellt: new Date().toISOString().slice(0, 10),
       fragebogen: null,
+      merkliste: [],
     };
   }
 
@@ -73,6 +75,13 @@
       d.projekte.push(p);
       delete d.fragebogen;
       veraendert = true;
+    }
+    // Projekte aus aelteren Staenden bekommen eine leere Merkliste.
+    for (const p of d.projekte) {
+      if (!Array.isArray(p.merkliste)) {
+        p.merkliste = [];
+        veraendert = true;
+      }
     }
     if (d.aktivesProjektId && !d.projekte.some((p) => p.id === d.aktivesProjektId)) {
       d.aktivesProjektId = d.projekte[0]?.id ?? null;
@@ -170,6 +179,20 @@
     daten.projekte = daten.projekte.filter((p) => p.id !== daten.aktivesProjektId);
     daten.aktivesProjektId = daten.projekte[0]?.id ?? null;
     loeschDialogOffen = false;
+    await tresorSpeichern();
+  }
+
+  // Förderung auf die Merkliste des aktiven Projekts setzen bzw.
+  // wieder entfernen (Stern-Knopf).
+  async function merklisteUmschalten(id) {
+    if (!aktivesProjekt) {
+      neuesProjektOffen = true;
+      return;
+    }
+    const liste = aktivesProjekt.merkliste;
+    aktivesProjekt.merkliste = liste.includes(id)
+      ? liste.filter((x) => x !== id)
+      : [...liste, id];
     await tresorSpeichern();
   }
 
@@ -338,33 +361,46 @@
         <button class:aktiv={bereich === "passend"} onclick={() => (bereich = "passend")}>
           Passende für mich
         </button>
+        <button class:aktiv={bereich === "merkliste"} onclick={() => (bereich = "merkliste")}>
+          Merkliste{#if aktivesProjekt?.merkliste.length}&nbsp;({aktivesProjekt.merkliste.length}){/if}
+        </button>
       </nav>
       <button class="leise" onclick={sperren}>Sperren</button>
     </header>
     <main>
       {#if bereich === "alle"}
-        <Foerderungen />
+        <Foerderungen
+          merkliste={aktivesProjekt?.merkliste ?? null}
+          umschalten={merklisteUmschalten}
+        />
       {:else if !aktivesProjekt}
         <div class="leer-projekt">
           <div class="karte">
             <h1>Noch kein Projekt erstellt</h1>
             <p class="untertitel">
-              Das Matching gehört immer zu einem Projekt – mit eigenem
-              Fragebogen und eigener Rangliste. Erstelle dein erstes
-              Projekt, um loszulegen.
+              Matching und Merkliste gehören immer zu einem Projekt –
+              mit eigenem Fragebogen und eigener Auswahl. Erstelle dein
+              erstes Projekt, um loszulegen.
             </p>
             <button onclick={() => (neuesProjektOffen = true)}>
               Projekt erstellen
             </button>
           </div>
         </div>
-      {:else}
+      {:else if bereich === "passend"}
         {#key daten.aktivesProjektId}
           <Matching
             antworten={aktivesProjekt?.fragebogen ?? null}
             speichern={fragebogenSpeichern}
+            merkliste={aktivesProjekt.merkliste}
+            umschalten={merklisteUmschalten}
           />
         {/key}
+      {:else}
+        <Merkliste
+          merkliste={aktivesProjekt.merkliste}
+          umschalten={merklisteUmschalten}
+        />
       {/if}
     </main>
 
