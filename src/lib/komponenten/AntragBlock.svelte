@@ -8,6 +8,7 @@
   let { antrag, aendern } = $props();
 
   let neuerPunkt = $state("");
+  let neueFrist = $state("");
 
   function punktHinzufuegen(event) {
     event.preventDefault();
@@ -20,6 +21,29 @@
   function punktEntfernen(i) {
     antrag.checkliste.splice(i, 1);
     aendern();
+  }
+
+  function fristHinzufuegen(event) {
+    event.preventDefault();
+    if (!neueFrist) return;
+    if (!Array.isArray(antrag.eigeneFristen)) antrag.eigeneFristen = [];
+    if (!antrag.eigeneFristen.includes(neueFrist)) {
+      antrag.eigeneFristen.push(neueFrist);
+      antrag.eigeneFristen.sort();
+    }
+    neueFrist = "";
+    aendern();
+  }
+  function fristEntfernen(i) {
+    antrag.eigeneFristen.splice(i, 1);
+    aendern();
+  }
+  function fristAnzeige(d) {
+    return new Date(d).toLocaleDateString("de-DE", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
   }
 </script>
 
@@ -42,6 +66,23 @@
       onchange={aendern}
     />
   {/if}
+
+  <h4 class="check-titel">Eigene Fristen</h4>
+  {#if (antrag.eigeneFristen ?? []).length === 0}
+    <p class="leer">Keine eigenen Fristen. Trage unten z. B. interne Abgabetermine ein.</p>
+  {/if}
+  <ul class="fristen">
+    {#each antrag.eigeneFristen ?? [] as d, i (d)}
+      <li>
+        <span class="frist-datum">📅 {fristAnzeige(d)}</span>
+        <button class="entfernen" title="Frist entfernen" onclick={() => fristEntfernen(i)}>✕</button>
+      </li>
+    {/each}
+  </ul>
+  <form class="hinzufuegen" onsubmit={fristHinzufuegen}>
+    <input type="date" bind:value={neueFrist} />
+    <button type="submit" disabled={!neueFrist}>+ Frist</button>
+  </form>
 
   <h4 class="check-titel">Benötigte Dokumente</h4>
   {#if antrag.checkliste.length === 0}
@@ -141,6 +182,26 @@
     color: #5e6c84;
     font-size: 0.9rem;
     margin: 0 0 10px;
+  }
+
+  .fristen {
+    list-style: none;
+    margin: 0 0 4px;
+    padding: 0;
+  }
+  .fristen li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid #f1f2f4;
+  }
+  .frist-datum {
+    font-size: 0.9rem;
+  }
+  .hinzufuegen input[type="date"] {
+    flex: 1;
   }
   .checkliste {
     list-style: none;

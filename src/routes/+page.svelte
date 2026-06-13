@@ -8,6 +8,7 @@
   import Stammdaten from "$lib/komponenten/Stammdaten.svelte";
   import SammelFormular from "$lib/komponenten/SammelFormular.svelte";
   import KostenPlan from "$lib/komponenten/KostenPlan.svelte";
+  import datenbank from "$lib/daten/foerderungen.json";
   import { leeresFormular, antragBauen } from "$lib/antrag";
   import { leererKfp, kfpExport } from "$lib/kfp";
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
@@ -39,6 +40,13 @@
   let umbenennenOffen = $state(false);
   let umbenennenName = $state("");
 
+  // Datenbank-Förderungen plus die eigenen Förderungen des aktiven
+  // Projekts – diese Liste löst überall die IDs auf.
+  let alleFoerderungen = $derived([
+    ...datenbank.foerderungen,
+    ...(aktivesProjekt?.eigeneFoerderungen ?? []),
+  ]);
+
   // Eindeutige Kennung für neue Projekte.
   function neueId() {
     return crypto.randomUUID
@@ -57,6 +65,7 @@
       kfp: leererKfp(),
       kfpHinweisAusblenden: false,
       antraege: {},
+      eigeneFoerderungen: [],
     };
   }
 
@@ -192,6 +201,17 @@
       if (!p.antraege || typeof p.antraege !== "object" || Array.isArray(p.antraege)) {
         p.antraege = {};
         veraendert = true;
+      }
+      if (!Array.isArray(p.eigeneFoerderungen)) {
+        p.eigeneFoerderungen = [];
+        veraendert = true;
+      }
+      // Antrag-Einträge älterer Stände um eigene Fristen ergänzen.
+      for (const a of Object.values(p.antraege)) {
+        if (a && !Array.isArray(a.eigeneFristen)) {
+          a.eigeneFristen = [];
+          veraendert = true;
+        }
       }
     }
     if (d.aktivesProjektId && !d.projekte.some((p) => p.id === d.aktivesProjektId)) {
@@ -359,6 +379,7 @@
       a = {
         status: ANTRAG_STANDARD,
         statusFrei: "",
+        eigeneFristen: [],
         checkliste: (foerderung.checkliste_vorschlag ?? []).map((t) => ({
           text: t,
           status: CHECK_STANDARD,
@@ -367,7 +388,45 @@
       };
       aktivesProjekt.antraege[foerderung.id] = a;
     }
+    if (!Array.isArray(a.eigeneFristen)) a.eigeneFristen = [];
     return a;
+  }
+
+  // Eigene (selbst recherchierte) Förderung anlegen und direkt auf die
+  // Merkliste setzen. Liegt verschlüsselt im Projekt (Tresor).
+  async function eigeneFoerderungAnlegen(eingabe) {
+    const f = {
+      id: "eigen-" + neueId(),
+      eigen: true,
+      name: eingabe.name.trim(),
+      foerdergeber: eingabe.foerdergeber.trim(),
+      land: eingabe.land || "ANDERES",
+      beschreibung: eingabe.beschreibung.trim(),
+      webseite: eingabe.webseite.trim(),
+      foerderhoehe_text: eingabe.foerderhoehe.trim() || "—",
+      fristen: eingabe.frist ? [eingabe.frist] : [],
+      unvertraeglich_mit: [],
+      checkliste_vorschlag: [],
+      harte_kriterien: {
+        wohnsitz: [],
+        durchfuehrungsort: [],
+        traegerschaft: ["einzelperson", "gruppe", "organisation"],
+        studentisch_erlaubt: true,
+      },
+      weiche_kriterien: {
+        sparten: [],
+        projektarten: [],
+        budget_min: null,
+        budget_max: null,
+        waehrung: "EUR",
+        zeitpunkt: eingabe.laufend ? "laufend" : "fristen",
+      },
+    };
+    aktivesProjekt.eigeneFoerderungen.push(f);
+    if (!aktivesProjekt.merkliste.includes(f.id)) {
+      aktivesProjekt.merkliste.push(f.id);
+    }
+    await tresorSpeichern();
   }
 
   // Förderung auf die Merkliste des aktiven Projekts setzen bzw.
@@ -378,9 +437,18 @@
       return;
     }
     const liste = aktivesProjekt.merkliste;
-    aktivesProjekt.merkliste = liste.includes(id)
+    const entfernen = liste.includes(id);
+    aktivesProjekt.merkliste = entfernen
       ? liste.filter((x) => x !== id)
       : [...liste, id];
+    // Eigene Förderungen existieren nur über die Merkliste: beim
+    // Entfernen werden sie ganz gelöscht (sie stehen nicht in der DB).
+    if (entfernen && id.startsWith("eigen-")) {
+      aktivesProjekt.eigeneFoerderungen = aktivesProjekt.eigeneFoerderungen.filter(
+        (f) => f.id !== id
+      );
+      delete aktivesProjekt.antraege[id];
+    }
     await tresorSpeichern();
   }
 
@@ -630,6 +698,7 @@
           <KostenPlan
             kfp={aktivesProjekt.kfp}
             merkliste={aktivesProjekt.merkliste}
+            foerderungen={alleFoerderungen}
             projektName={aktivesProjekt.name}
             speichern={kfpSpeichern}
             excelErzeugen={kfpExcelErzeugen}
@@ -639,6 +708,8 @@
         {/key}
       {:else if bereich === "fristen"}
         <Kalender
+          foerderungen={alleFoerderungen}
+          hinweis={datenbank.hinweis}
           merkliste={aktivesProjekt.merkliste}
           umschalten={merklisteUmschalten}
           {ordnerOeffnen}
@@ -649,6 +720,8 @@
         />
       {:else}
         <Merkliste
+          foerderungen={alleFoerderungen}
+          hinweis={datenbank.hinweis}
           merkliste={aktivesProjekt.merkliste}
           umschalten={merklisteUmschalten}
           {ordnerOeffnen}
@@ -656,6 +729,7 @@
           antraege={aktivesProjekt.antraege}
           {antragHolen}
           antragSpeichern={tresorSpeichern}
+          eigeneAnlegen={eigeneFoerderungAnlegen}
         />
       {/if}
     </main>

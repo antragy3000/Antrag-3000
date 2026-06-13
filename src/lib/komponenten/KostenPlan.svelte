@@ -1,14 +1,12 @@
 <script>
   // Kostenfinanzplan-Editor: Kategorien mit Positionen, automatische
   // Summen, Fehlbedarfs-Anzeige. Tresor-Inhalt (Budget ist sensibel).
-  import datenbank from "$lib/daten/foerderungen.json";
   import { fade } from "svelte/transition";
   import {
     vorlageKfp,
     betragFormat,
     istFormel,
     formelAuswerten,
-    foerderLabel,
     kategorieSumme,
     seitenSumme,
     differenz,
@@ -18,18 +16,29 @@
     kfp,
     speichern,
     merkliste = [],
+    foerderungen = [],
     projektName = "",
     excelErzeugen,
     hinweisAusblenden = false,
     hinweisMerken,
   } = $props();
 
-  // Gemerkte Förderungen dieses Projekts (als Quellen wählbar).
+  // Gemerkte Förderungen dieses Projekts (als Quellen wählbar) –
+  // inkl. eigener Förderungen aus der kombinierten Liste.
   let merklisteFoerderungen = $derived(
-    merkliste
-      .map((id) => datenbank.foerderungen.find((f) => f.id === id))
-      .filter(Boolean)
+    merkliste.map((id) => foerderungen.find((f) => f.id === id)).filter(Boolean)
   );
+
+  function foerderName(id) {
+    const f = foerderungen.find((x) => x.id === id);
+    return f ? `${f.name} (${f.foerdergeber})` : null;
+  }
+
+  // Beim Wechsel der Quelle den Namen als Rückfall mitspeichern, damit
+  // auch eigene Förderungen in Word/Excel/JSON aufgelöst werden.
+  function quelleGewechselt(posten) {
+    posten.bezeichnung = posten.foerderId ? foerderName(posten.foerderId) ?? "" : "";
+  }
 
   let kopie = $state(structuredClone($state.snapshot(kfp)));
   let einmalGespeichert = $state(false);
@@ -242,11 +251,15 @@
               <div class="posten">
                 <span class="nummer klein">{ki + 1}.{pi + 1}</span>
                 {#if seite === "finanzierung"}
-                  <select class="quelle" bind:value={posten.foerderId}>
+                  <select
+                    class="quelle"
+                    bind:value={posten.foerderId}
+                    onchange={() => quelleGewechselt(posten)}
+                  >
                     <option value="">Eigene Drittmittel / Einnahmen …</option>
                     {#if posten.foerderId && !merkliste.includes(posten.foerderId)}
                       <option value={posten.foerderId}>
-                        {foerderLabel(posten.foerderId) ?? "(nicht mehr gemerkt)"}
+                        {foerderName(posten.foerderId) ?? "(nicht mehr gemerkt)"}
                       </option>
                     {/if}
                     {#each merklisteFoerderungen as f (f.id)}

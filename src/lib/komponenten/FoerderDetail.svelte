@@ -184,6 +184,7 @@
   .land-AT { background: #ffeceb; color: #ae2e24; }
   .land-CH { background: #fff7d6; color: #7f5f01; }
   .land-INT { background: #f3f0ff; color: #5e4db2; }
+  .land-ANDERES { background: #f1f2f4; color: #44546f; }
 
   .schliessen {
     background: none;

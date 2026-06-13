@@ -2,7 +2,6 @@
   // Fristen / Kalender: die Einreichfristen der gemerkten Förderungen,
   // nach Datum sortiert, mit Countdown ("noch X Tage") und Antrag-
   // Status. Klick auf eine Zeile öffnet die Detailansicht.
-  import datenbank from "$lib/daten/foerderungen.json";
   import FoerderDetail from "./FoerderDetail.svelte";
   import { LAENDER } from "$lib/begriffe";
   import {
@@ -13,6 +12,8 @@
   } from "$lib/status";
 
   let {
+    foerderungen = [],
+    hinweis = "",
     merkliste,
     umschalten,
     ordnerOeffnen = null,
@@ -43,14 +44,21 @@
 
   let gemerkte = $derived(
     merkliste
-      .map((id) => datenbank.foerderungen.find((f) => f.id === id))
+      .map((id) => foerderungen.find((f) => f.id === id))
       .filter(Boolean)
   );
+
+  // Alle Fristen einer Förderung: aus der Datenbank plus eigene, die
+  // im Antrag-Eintrag dieses Projekts hinterlegt sind.
+  function fristenVon(f) {
+    const eigene = antraege[f.id]?.eigeneFristen ?? [];
+    return [...(f.fristen ?? []), ...eigene];
+  }
 
   // Pro Förderung: nächste zukünftige bzw. letzte vergangene Frist.
   function fristInfo(f) {
     const laufend = f.weiche_kriterien.zeitpunkt === "laufend";
-    const mitTagen = (f.fristen ?? []).map((d) => ({ d, t: tageBis(d) }));
+    const mitTagen = fristenVon(f).map((d) => ({ d, t: tageBis(d) }));
     const zukunft = mitTagen.filter((x) => x.t >= 0).sort((a, b) => a.t - b.t);
     const verg = mitTagen.filter((x) => x.t < 0).sort((a, b) => b.t - a.t);
     if (zukunft.length) return { typ: "anstehend", frist: zukunft[0].d, tage: zukunft[0].t };
@@ -205,8 +213,8 @@
 {#if ausgewaehlt}
   <FoerderDetail
     foerderung={ausgewaehlt}
-    alle={datenbank.foerderungen}
-    hinweis={datenbank.hinweis}
+    alle={foerderungen}
+    hinweis={hinweis}
     gemerkt={merkliste.includes(ausgewaehlt.id)}
     umschalten={umschalten}
     ordnerOeffnen={ordnerOeffnen ? () => ordnerOeffnen(ausgewaehlt.name) : null}
@@ -353,6 +361,7 @@
   .land-AT { background: #ffeceb; color: #ae2e24; }
   .land-CH { background: #fff7d6; color: #7f5f01; }
   .land-INT { background: #f3f0ff; color: #5e4db2; }
+  .land-ANDERES { background: #f1f2f4; color: #44546f; }
 
   .status-badge {
     display: inline-flex;

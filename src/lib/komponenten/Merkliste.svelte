@@ -3,8 +3,8 @@
   // die Förderung samt Antrag-Status UND der benötigten Dokumente mit
   // ihrem Status. Klick auf eine Zeile öffnet die Detailansicht mit dem
   // Status-/Checklisten-Block. Warnung bei unverträglichen Förderungen.
-  import datenbank from "$lib/daten/foerderungen.json";
   import FoerderDetail from "./FoerderDetail.svelte";
+  import EigeneFoerderung from "./EigeneFoerderung.svelte";
   import { LAENDER, SPARTEN, fristText } from "$lib/begriffe";
   import {
     ANTRAG_STATUS,
@@ -16,6 +16,8 @@
   } from "$lib/status";
 
   let {
+    foerderungen = [],
+    hinweis = "",
     merkliste,
     umschalten,
     ordnerOeffnen = null,
@@ -23,14 +25,16 @@
     antraege = {},
     antragHolen = null,
     antragSpeichern = null,
+    eigeneAnlegen = null,
   } = $props();
 
   let ausgewaehlt = $state(null);
   let aktuellerAntrag = $state(null);
+  let eigeneOffen = $state(false);
 
   let gemerkte = $derived(
     merkliste
-      .map((id) => datenbank.foerderungen.find((f) => f.id === id))
+      .map((id) => foerderungen.find((f) => f.id === id))
       .filter(Boolean)
   );
 
@@ -79,11 +83,18 @@
 <div class="bereich">
   <div class="kopfzeile">
     <h2>Merkliste <span class="anzahl">{gemerkte.length}</span></h2>
-    {#if ordnerOeffnen}
-      <button class="ordner" onclick={() => ordnerOeffnen(null)}>
-        📁 Projektordner öffnen
-      </button>
-    {/if}
+    <div class="kopf-knoepfe">
+      {#if eigeneAnlegen}
+        <button class="ordner" onclick={() => (eigeneOffen = true)}>
+          + Eigene Förderung
+        </button>
+      {/if}
+      {#if ordnerOeffnen}
+        <button class="ordner" onclick={() => ordnerOeffnen(null)}>
+          📁 Projektordner öffnen
+        </button>
+      {/if}
+    </div>
   </div>
 
   {#each konflikte as [a, b]}
@@ -98,7 +109,8 @@
   {#if gemerkte.length === 0}
     <p class="leer">
       Noch nichts gemerkt. Markiere Förderungen mit dem ☆-Stern –
-      in der Übersicht oder im Matching-Ergebnis.
+      in der Übersicht oder im Matching-Ergebnis – oder lege oben eine
+      <strong>eigene Förderung</strong> an.
     </p>
   {:else}
     <div class="liste">
@@ -170,11 +182,18 @@
   {/if}
 </div>
 
+{#if eigeneOffen}
+  <EigeneFoerderung
+    anlegen={eigeneAnlegen}
+    schliessen={() => (eigeneOffen = false)}
+  />
+{/if}
+
 {#if ausgewaehlt}
   <FoerderDetail
     foerderung={ausgewaehlt}
-    alle={datenbank.foerderungen}
-    hinweis={datenbank.hinweis}
+    alle={foerderungen}
+    hinweis={hinweis}
     gemerkt={merkliste.includes(ausgewaehlt.id)}
     umschalten={umschalten}
     ordnerOeffnen={ordnerOeffnen ? () => ordnerOeffnen(ausgewaehlt.name) : null}
@@ -213,6 +232,11 @@
     font-size: 0.9rem;
     font-weight: 400;
     margin-left: 8px;
+  }
+  .kopf-knoepfe {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
   }
   .ordner {
     padding: 9px 16px;
@@ -338,6 +362,7 @@
   .land-AT { background: #ffeceb; color: #ae2e24; }
   .land-CH { background: #fff7d6; color: #7f5f01; }
   .land-INT { background: #f3f0ff; color: #5e4db2; }
+  .land-ANDERES { background: #f1f2f4; color: #44546f; }
 
   /* Dokumente mit Status */
   .dokumente {
