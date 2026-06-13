@@ -4,8 +4,11 @@
 // logik - Rust setzt es nur noch in eine .docx-Datei um.
 
 import { fristText } from "./begriffe";
+import { kfpAbschnitte } from "./kfp";
 
 // Felder des Sammel-Formulars: [Schlüssel, Beschriftung, Eingabetyp]
+// Kosten und Finanzierung haben eine eigene Funktion: den
+// Kostenfinanzplan (Bereich "Kostenplan", kfp.js).
 export const FORMULAR_FELDER = [
   ["projekttitel", "Projekttitel", "input"],
   ["kurzbeschreibung", "Kurzbeschreibung (2–3 Sätze)", "textarea"],
@@ -13,9 +16,7 @@ export const FORMULAR_FELDER = [
   ["ziele", "Ziele und Zielgruppe", "textarea"],
   ["zeitraum", "Zeitraum (von – bis)", "input"],
   ["ort", "Durchführungsort(e)", "input"],
-  ["beteiligte", "Beteiligte / Mitwirkende", "textarea"],
-  ["kosten", "Kostenüberblick", "textarea"],
-  ["finanzierung", "Finanzierungsüberblick (inkl. Eigenmittel, weitere Förderungen)", "textarea"],
+  ["beteiligte", "Beteiligte / Mitwirkende / Partner*innen", "textarea"],
 ];
 
 export function leeresFormular() {
@@ -28,7 +29,7 @@ function zeilen(...teile) {
   return teile.filter((t) => t && t.trim() !== "");
 }
 
-export function antragBauen(stammdaten, formular, foerderung) {
+export function antragBauen(stammdaten, formular, foerderung, kfp) {
   const heute = new Date().toLocaleDateString("de-DE");
   const s = stammdaten;
 
@@ -91,6 +92,9 @@ export function antragBauen(stammdaten, formular, foerderung) {
     if (wert) abschnitte.push({ ueberschrift: beschriftung, absaetze: [wert] });
   }
 
+  // Kostenfinanzplan als Tabellen (Kosten, Finanzierung, Bilanz).
+  for (const a of kfpAbschnitte(kfp)) abschnitte.push(a);
+
   abschnitte.push({
     ueberschrift: "Übliche Unterlagen (Checkliste des Fördergebers)",
     absaetze: foerderung.checkliste_vorschlag.map((p) => `☐  ${p}`),
@@ -108,6 +112,7 @@ export function antragBauen(stammdaten, formular, foerderung) {
         foerdergeber: foerderung.foerdergeber,
       },
       formular,
+      kfp,
       stammdaten: s,
     },
     null,

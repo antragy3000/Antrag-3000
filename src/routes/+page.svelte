@@ -6,7 +6,9 @@
   import Merkliste from "$lib/komponenten/Merkliste.svelte";
   import Stammdaten from "$lib/komponenten/Stammdaten.svelte";
   import SammelFormular from "$lib/komponenten/SammelFormular.svelte";
+  import KostenPlan from "$lib/komponenten/KostenPlan.svelte";
   import { leeresFormular, antragBauen } from "$lib/antrag";
+  import { leererKfp } from "$lib/kfp";
 
   // Die App kennt fünf Ansichten:
   // laden -> einrichten (kein Tresor) ODER entsperren (Tresor da)
@@ -50,6 +52,7 @@
       fragebogen: null,
       merkliste: [],
       formular: leeresFormular(),
+      kfp: leererKfp(),
     };
   }
 
@@ -129,6 +132,37 @@
             veraendert = true;
           }
         }
+      }
+      // Kostenfinanzplan ergaenzen; Texte aus den frueheren Feldern
+      // "Kostenueberblick"/"Finanzierungsueberblick" hinueberretten.
+      if (
+        !p.kfp ||
+        typeof p.kfp !== "object" ||
+        !Array.isArray(p.kfp.kosten) ||
+        !Array.isArray(p.kfp.finanzierung)
+      ) {
+        p.kfp = leererKfp();
+        veraendert = true;
+      }
+      if (typeof p.formular.kosten === "string") {
+        if (p.formular.kosten.trim()) {
+          p.kfp.kosten.push({
+            name: "Aus dem Formular übernommen",
+            posten: [{ bezeichnung: p.formular.kosten.trim(), erlaeuterung: "", betrag: 0 }],
+          });
+        }
+        delete p.formular.kosten;
+        veraendert = true;
+      }
+      if (typeof p.formular.finanzierung === "string") {
+        if (p.formular.finanzierung.trim()) {
+          p.kfp.finanzierung.push({
+            name: "Aus dem Formular übernommen",
+            posten: [{ bezeichnung: p.formular.finanzierung.trim(), status: "geplant", betrag: 0 }],
+          });
+        }
+        delete p.formular.finanzierung;
+        veraendert = true;
       }
     }
     if (d.aktivesProjektId && !d.projekte.some((p) => p.id === d.aktivesProjektId)) {
@@ -242,12 +276,19 @@
     await tresorSpeichern();
   }
 
+  // Kostenfinanzplan des aktiven Projekts ersetzen und sichern.
+  async function kfpSpeichern(neu) {
+    aktivesProjekt.kfp = neu;
+    await tresorSpeichern();
+  }
+
   // antworten.json + Word-Datei im Foerderungs-Ordner erzeugen.
   async function antragErzeugen(foerderung) {
     const { titel, warnhinweis, abschnitte, antwortenJson } = antragBauen(
       $state.snapshot(daten.stammdaten),
       $state.snapshot(aktivesProjekt.formular),
-      foerderung
+      foerderung,
+      $state.snapshot(aktivesProjekt.kfp)
     );
     try {
       await invoke("antrag_erzeugen", {
@@ -468,6 +509,9 @@
         <button class:aktiv={bereich === "formular"} onclick={() => (bereich = "formular")}>
           Formular
         </button>
+        <button class:aktiv={bereich === "kostenplan"} onclick={() => (bereich = "kostenplan")}>
+          Kostenplan
+        </button>
         <button class:aktiv={bereich === "stammdaten"} onclick={() => (bereich = "stammdaten")}>
           Stammdaten
         </button>
@@ -511,6 +555,10 @@
             formular={aktivesProjekt.formular}
             speichern={formularSpeichern}
           />
+        {/key}
+      {:else if bereich === "kostenplan"}
+        {#key daten.aktivesProjektId}
+          <KostenPlan kfp={aktivesProjekt.kfp} speichern={kfpSpeichern} />
         {/key}
       {:else}
         <Merkliste
