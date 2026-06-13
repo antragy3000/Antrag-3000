@@ -11,7 +11,19 @@
   let beschreibung = $state("");
   let laufend = $state(false);
   let frist = $state("");
+  let dokumente = $state([]);
+  let neuesDok = $state("");
   let beschaeftigt = $state(false);
+
+  function dokHinzufuegen() {
+    const t = neuesDok.trim();
+    if (!t) return;
+    dokumente.push(t);
+    neuesDok = "";
+  }
+  function dokEntfernen(i) {
+    dokumente.splice(i, 1);
+  }
 
   async function speichern(event) {
     event.preventDefault();
@@ -27,6 +39,7 @@
         beschreibung,
         laufend,
         frist: laufend ? "" : frist,
+        dokumente: [...dokumente],
       });
       schliessen();
     } finally {
@@ -80,6 +93,34 @@
 
     <label for="ef-besch">Kurzbeschreibung</label>
     <textarea id="ef-besch" rows="3" bind:value={beschreibung}></textarea>
+
+    <span class="feldtitel">Benötigte Dokumente</span>
+    {#if dokumente.length}
+      <ul class="dok-liste">
+        {#each dokumente as d, i (d + i)}
+          <li>
+            <span>{d}</span>
+            <button type="button" class="entfernen" title="Entfernen" onclick={() => dokEntfernen(i)}>✕</button>
+          </li>
+        {/each}
+      </ul>
+    {/if}
+    <div class="dok-add">
+      <input
+        type="text"
+        placeholder="z. B. Projektbeschreibung"
+        bind:value={neuesDok}
+        onkeydown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            dokHinzufuegen();
+          }
+        }}
+      />
+      <button type="button" class="dok-knopf" disabled={!neuesDok.trim()} onclick={dokHinzufuegen}>
+        + Dokument
+      </button>
+    </div>
 
     <div class="knoepfe">
       <button type="button" class="leise" onclick={schliessen}>Abbrechen</button>
@@ -164,6 +205,67 @@
   textarea {
     resize: vertical;
     line-height: 1.5;
+  }
+
+  .feldtitel {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #5e6c84;
+    margin: 14px 0 6px;
+  }
+  .dok-liste {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+  }
+  .dok-liste li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid #f1f2f4;
+    font-size: 0.9rem;
+  }
+  .dok-add {
+    display: flex;
+    gap: 8px;
+  }
+  .dok-add input {
+    flex: 1;
+  }
+  .dok-knopf {
+    padding: 9px 14px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #172b4d;
+    background: #fff;
+    border: 2px solid #dfe1e6;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .dok-knopf:hover:not(:disabled) {
+    border-color: #4f6df5;
+  }
+  .dok-knopf:disabled {
+    color: #b3bac5;
+    cursor: default;
+  }
+  .entfernen {
+    background: none;
+    border: none;
+    color: #8590a2;
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 6px;
+  }
+  .entfernen:hover {
+    background: #ffeceb;
+    color: #ae2e24;
   }
 
   .zwei {

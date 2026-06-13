@@ -66,6 +66,7 @@
       kfpHinweisAusblenden: false,
       antraege: {},
       eigeneFoerderungen: [],
+      interneFristen: [],
     };
   }
 
@@ -204,6 +205,10 @@
       }
       if (!Array.isArray(p.eigeneFoerderungen)) {
         p.eigeneFoerderungen = [];
+        veraendert = true;
+      }
+      if (!Array.isArray(p.interneFristen)) {
+        p.interneFristen = [];
         veraendert = true;
       }
       // Antrag-Einträge älterer Stände um eigene Fristen ergänzen.
@@ -406,7 +411,9 @@
       foerderhoehe_text: eingabe.foerderhoehe.trim() || "—",
       fristen: eingabe.frist ? [eingabe.frist] : [],
       unvertraeglich_mit: [],
-      checkliste_vorschlag: [],
+      checkliste_vorschlag: (eingabe.dokumente ?? [])
+        .map((s) => s.trim())
+        .filter(Boolean),
       harte_kriterien: {
         wohnsitz: [],
         durchfuehrungsort: [],
@@ -426,6 +433,20 @@
     if (!aktivesProjekt.merkliste.includes(f.id)) {
       aktivesProjekt.merkliste.push(f.id);
     }
+    await tresorSpeichern();
+  }
+
+  // Interne Frist (unabhängig von Förderungen) anlegen / entfernen.
+  async function interneFristAnlegen(eingabe) {
+    aktivesProjekt.interneFristen.push({
+      id: neueId(),
+      datum: eingabe.datum,
+      titel: eingabe.titel.trim() || "Interner Termin",
+    });
+    await tresorSpeichern();
+  }
+  async function interneFristEntfernen(id) {
+    aktivesProjekt.interneFristen = aktivesProjekt.interneFristen.filter((t) => t.id !== id);
     await tresorSpeichern();
   }
 
@@ -717,6 +738,9 @@
           antraege={aktivesProjekt.antraege}
           {antragHolen}
           antragSpeichern={tresorSpeichern}
+          interneFristen={aktivesProjekt.interneFristen}
+          interneAnlegen={interneFristAnlegen}
+          interneEntfernen={interneFristEntfernen}
         />
       {:else}
         <Merkliste

@@ -21,10 +21,27 @@
     antraege = {},
     antragHolen = null,
     antragSpeichern = null,
+    interneFristen = [],
+    interneAnlegen = null,
+    interneEntfernen = null,
   } = $props();
 
   let ausgewaehlt = $state(null);
   let aktuellerAntrag = $state(null);
+
+  // Eingabe für interne Fristen (ohne Förderung)
+  let interneOffen = $state(false);
+  let neuDatum = $state("");
+  let neuTitel = $state("");
+
+  async function interneSpeichern(event) {
+    event.preventDefault();
+    if (!neuDatum) return;
+    await interneAnlegen({ datum: neuDatum, titel: neuTitel });
+    neuDatum = "";
+    neuTitel = "";
+    interneOffen = false;
+  }
 
   const HEUTE = new Date();
   HEUTE.setHours(0, 0, 0, 0);
@@ -67,18 +84,23 @@
     return { typ: "offen" }; // keine feste Frist hinterlegt
   }
 
-  let anstehend = $derived(
-    gemerkte
-      .map((f) => ({ f, info: fristInfo(f) }))
-      .filter((x) => x.info.typ === "anstehend")
-      .sort((a, b) => a.info.tage - b.info.tage)
-  );
-  let vergangen = $derived(
-    gemerkte
-      .map((f) => ({ f, info: fristInfo(f) }))
-      .filter((x) => x.info.typ === "vergangen")
-      .sort((a, b) => b.info.tage - a.info.tage)
-  );
+  // Alle Termine: Förderungs-Fristen plus interne Fristen.
+  let termine = $derived.by(() => {
+    const liste = [];
+    for (const f of gemerkte) {
+      const info = fristInfo(f);
+      if (info.typ === "anstehend" || info.typ === "vergangen") {
+        liste.push({ kind: "foerderung", id: f.id, f, frist: info.frist, tage: info.tage });
+      }
+    }
+    for (const t of interneFristen) {
+      liste.push({ kind: "intern", id: t.id, titel: t.titel, frist: t.datum, tage: tageBis(t.datum) });
+    }
+    return liste;
+  });
+
+  let anstehend = $derived(termine.filter((t) => t.tage >= 0).sort((a, b) => a.tage - b.tage));
+  let vergangen = $derived(termine.filter((t) => t.tage < 0).sort((a, b) => b.tage - a.tage));
   let ohneFrist = $derived(
     gemerkte
       .map((f) => ({ f, info: fristInfo(f) }))
@@ -89,6 +111,11 @@
     if (tage <= 14) return "rot";
     if (tage <= 30) return "gelb";
     return "gruen";
+  }
+  function countdownText(tage) {
+    if (tage === 0) return "heute!";
+    if (tage === 1) return "morgen";
+    return `noch ${tage} Tage`;
   }
 
   function badgeFuer(id) {
@@ -107,106 +134,152 @@
 </script>
 
 <div class="bereich">
-  <h2>Fristen <span class="anzahl">{anstehend.length} anstehend</span></h2>
+  <div class="kopfzeile">
+    <h2>Fristen <span class="anzahl">{anstehend.length} anstehend</span></h2>
+    {#if interneAnlegen}
+      <button class="ordner" onclick={() => (interneOffen = !interneOffen)}>
+        + Interne Frist
+      </button>
+    {/if}
+  </div>
 
-  {#if gemerkte.length === 0}
+  {#if interneOffen}
+    <form class="interne-form" onsubmit={interneSpeichern}>
+      <input type="date" bind:value={neuDatum} />
+      <input type="text" placeholder="Titel (z. B. Teamabgabe Entwurf)" bind:value={neuTitel} />
+      <button type="submit" class="primaer" disabled={!neuDatum}>Hinzufügen</button>
+      <button type="button" class="leise" onclick={() => (interneOffen = false)}>Abbrechen</button>
+    </form>
+  {/if}
+
+  {#if anstehend.length === 0 && ohneFrist.length === 0 && vergangen.length === 0}
     <p class="leer">
-      Noch nichts gemerkt. Sobald du Förderungen merkst, erscheinen ihre
-      Einreichfristen hier – nach Datum sortiert.
+      Noch keine Fristen. Merke Förderungen mit Einreichfrist oder lege oben
+      eine interne Frist an.
     </p>
-  {:else}
-    {#if anstehend.length}
-      <div class="liste">
-        {#each anstehend as { f, info } (f.id)}
-          {@const badge = badgeFuer(f.id)}
+  {/if}
+
+  {#if anstehend.length}
+    <div class="liste">
+      {#each anstehend as t (t.kind + t.id)}
+        {#if t.kind === "foerderung"}
+          {@const badge = badgeFuer(t.f.id)}
           <div
             class="zeile"
             role="button"
             tabindex="0"
-            onclick={() => oeffnen(f)}
+            onclick={() => oeffnen(t.f)}
             onkeydown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                oeffnen(f);
+                oeffnen(t.f);
               }
             }}
           >
-            <div class="datum farbe-{dringlichkeit(info.tage)}">
-              <span class="tag">{tag(info.frist)}</span>
-              <span class="monat">{monat(info.frist)}</span>
-              <span class="jahr">{jahr(info.frist)}</span>
+            <div class="datum farbe-{dringlichkeit(t.tage)}">
+              <span class="tag">{tag(t.frist)}</span>
+              <span class="monat">{monat(t.frist)}</span>
+              <span class="jahr">{jahr(t.frist)}</span>
             </div>
             <div class="haupt">
               <div class="kopf">
-                <span class="land land-{f.land}">{LAENDER[f.land] ?? f.land}</span>
-                <h3>{f.name}</h3>
+                <span class="land land-{t.f.land}">{LAENDER[t.f.land] ?? t.f.land}</span>
+                <h3>{t.f.name}</h3>
                 <span class="status-badge farbe-{badge.farbe}">
                   <span class="punkt"></span>{badge.label}
                 </span>
               </div>
-              <p class="meta">{f.foerdergeber}</p>
+              <p class="meta">{t.f.foerdergeber}</p>
             </div>
-            <div class="countdown farbe-{dringlichkeit(info.tage)}">
-              {#if info.tage === 0}
-                heute!
-              {:else if info.tage === 1}
-                morgen
-              {:else}
-                noch {info.tage} Tage
-              {/if}
-            </div>
+            <div class="countdown farbe-{dringlichkeit(t.tage)}">{countdownText(t.tage)}</div>
           </div>
-        {/each}
-      </div>
-    {:else}
-      <p class="leer">Keine anstehenden Fristen bei deinen gemerkten Förderungen.</p>
-    {/if}
-
-    {#if ohneFrist.length}
-      <h3 class="gruppe">Laufend / ohne feste Frist</h3>
-      <div class="liste">
-        {#each ohneFrist as { f } (f.id)}
-          <div class="zeile schlicht" role="button" tabindex="0"
-            onclick={() => oeffnen(f)}
-            onkeydown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); oeffnen(f); } }}
-          >
-            <div class="datum farbe-grau"><span class="infinity">∞</span></div>
+        {:else}
+          <div class="zeile intern">
+            <div class="datum farbe-{dringlichkeit(t.tage)}">
+              <span class="tag">{tag(t.frist)}</span>
+              <span class="monat">{monat(t.frist)}</span>
+              <span class="jahr">{jahr(t.frist)}</span>
+            </div>
             <div class="haupt">
               <div class="kopf">
-                <span class="land land-{f.land}">{LAENDER[f.land] ?? f.land}</span>
-                <h3>{f.name}</h3>
+                <span class="intern-tag">📌 Intern</span>
+                <h3>{t.titel}</h3>
               </div>
-              <p class="meta">{f.foerdergeber} · laufend einreichbar</p>
             </div>
+            <div class="countdown farbe-{dringlichkeit(t.tage)}">{countdownText(t.tage)}</div>
+            {#if interneEntfernen}
+              <button class="entfernen" title="Interne Frist entfernen" onclick={() => interneEntfernen(t.id)}>✕</button>
+            {/if}
           </div>
-        {/each}
-      </div>
-    {/if}
+        {/if}
+      {/each}
+    </div>
+  {/if}
 
-    {#if vergangen.length}
-      <h3 class="gruppe">Bereits vergangen</h3>
-      <div class="liste">
-        {#each vergangen as { f, info } (f.id)}
+  {#if ohneFrist.length}
+    <h3 class="gruppe">Laufend / ohne feste Frist</h3>
+    <div class="liste">
+      {#each ohneFrist as { f } (f.id)}
+        <div class="zeile schlicht" role="button" tabindex="0"
+          onclick={() => oeffnen(f)}
+          onkeydown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); oeffnen(f); } }}
+        >
+          <div class="datum farbe-grau"><span class="infinity">∞</span></div>
+          <div class="haupt">
+            <div class="kopf">
+              <span class="land land-{f.land}">{LAENDER[f.land] ?? f.land}</span>
+              <h3>{f.name}</h3>
+            </div>
+            <p class="meta">{f.foerdergeber} · laufend einreichbar</p>
+          </div>
+        </div>
+      {/each}
+    </div>
+  {/if}
+
+  {#if vergangen.length}
+    <h3 class="gruppe">Bereits vergangen</h3>
+    <div class="liste">
+      {#each vergangen as t (t.kind + t.id)}
+        {#if t.kind === "foerderung"}
           <div class="zeile schlicht verg" role="button" tabindex="0"
-            onclick={() => oeffnen(f)}
-            onkeydown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); oeffnen(f); } }}
+            onclick={() => oeffnen(t.f)}
+            onkeydown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); oeffnen(t.f); } }}
           >
             <div class="datum farbe-grau">
-              <span class="tag">{tag(info.frist)}</span>
-              <span class="monat">{monat(info.frist)}</span>
-              <span class="jahr">{jahr(info.frist)}</span>
+              <span class="tag">{tag(t.frist)}</span>
+              <span class="monat">{monat(t.frist)}</span>
+              <span class="jahr">{jahr(t.frist)}</span>
             </div>
             <div class="haupt">
               <div class="kopf">
-                <span class="land land-{f.land}">{LAENDER[f.land] ?? f.land}</span>
-                <h3>{f.name}</h3>
+                <span class="land land-{t.f.land}">{LAENDER[t.f.land] ?? t.f.land}</span>
+                <h3>{t.f.name}</h3>
               </div>
-              <p class="meta">{f.foerdergeber} · vor {Math.abs(info.tage)} Tagen</p>
+              <p class="meta">{t.f.foerdergeber} · vor {Math.abs(t.tage)} Tagen</p>
             </div>
           </div>
-        {/each}
-      </div>
-    {/if}
+        {:else}
+          <div class="zeile schlicht verg intern">
+            <div class="datum farbe-grau">
+              <span class="tag">{tag(t.frist)}</span>
+              <span class="monat">{monat(t.frist)}</span>
+              <span class="jahr">{jahr(t.frist)}</span>
+            </div>
+            <div class="haupt">
+              <div class="kopf">
+                <span class="intern-tag">📌 Intern</span>
+                <h3>{t.titel}</h3>
+              </div>
+              <p class="meta">vor {Math.abs(t.tage)} Tagen</p>
+            </div>
+            {#if interneEntfernen}
+              <button class="entfernen" title="Interne Frist entfernen" onclick={() => interneEntfernen(t.id)}>✕</button>
+            {/if}
+          </div>
+        {/if}
+      {/each}
+    </div>
   {/if}
 </div>
 
@@ -253,6 +326,109 @@
   }
   .leer {
     color: #5e6c84;
+  }
+
+  .kopfzeile {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .kopfzeile h2 {
+    margin: 0;
+  }
+  .ordner {
+    padding: 9px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #172b4d;
+    background: #fff;
+    border: 2px solid #dfe1e6;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .ordner:hover {
+    border-color: #4f6df5;
+  }
+
+  .interne-form {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.12);
+    padding: 14px 18px;
+    margin-bottom: 20px;
+  }
+  .interne-form input {
+    padding: 9px 12px;
+    font-size: 0.92rem;
+    font-family: inherit;
+    border: 2px solid #dfe1e6;
+    border-radius: 8px;
+    background: #fafbfc;
+  }
+  .interne-form input[type="text"] {
+    flex: 1;
+    min-width: 180px;
+  }
+  .interne-form input:focus {
+    outline: none;
+    border-color: #4f6df5;
+    background: #fff;
+  }
+  .interne-form .primaer {
+    padding: 9px 18px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #fff;
+    background: #4f6df5;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .interne-form .primaer:disabled {
+    background: #c1c7d0;
+    cursor: default;
+  }
+  .interne-form .leise {
+    background: none;
+    border: none;
+    color: #5e6c84;
+    font-size: 0.9rem;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .intern-tag {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 3px 9px;
+    border-radius: 99px;
+    background: #eae6ff;
+    color: #5e44b0;
+  }
+  .zeile.intern .entfernen {
+    background: none;
+    border: none;
+    color: #8590a2;
+    font-size: 0.95rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    align-self: center;
+  }
+  .zeile.intern .entfernen:hover {
+    background: #ffeceb;
+    color: #ae2e24;
   }
 
   .liste {
