@@ -3,6 +3,7 @@
   // die Förderung samt Antrag-Status UND der benötigten Dokumente mit
   // ihrem Status. Klick auf eine Zeile öffnet die Detailansicht mit dem
   // Status-/Checklisten-Block. Warnung bei unverträglichen Förderungen.
+  import { openUrl } from "@tauri-apps/plugin-opener";
   import FoerderDetail from "./FoerderDetail.svelte";
   import EigeneFoerderung from "./EigeneFoerderung.svelte";
   import { LAENDER, SPARTEN, fristText } from "$lib/begriffe";
@@ -78,6 +79,34 @@
     aktuellerAntrag = antragHolen ? antragHolen(f) : null;
     ausgewaehlt = f;
   }
+
+  // Kontaktperson / E-Mail einer Förderung (aus dem Antrag-Eintrag).
+  function kontaktName(id) {
+    return (antraege[id]?.kontakt?.ansprechpartner ?? "").trim();
+  }
+  function kontaktEmail(id) {
+    return (antraege[id]?.kontakt?.email ?? "").trim();
+  }
+  function mailSchreiben(id) {
+    const adr = kontaktEmail(id);
+    if (adr) openUrl("mailto:" + adr);
+  }
+
+  // Tage bis zur nächsten Frist (Datenbank + eigene); null = keine.
+  const HEUTE = new Date();
+  HEUTE.setHours(0, 0, 0, 0);
+  function naechsteFristTage(f) {
+    const eigene = antraege[f.id]?.eigeneFristen ?? [];
+    const tage = [...(f.fristen ?? []), ...eigene]
+      .map((d) => Math.round((new Date(d) - HEUTE) / 86400000))
+      .filter((t) => t >= 0)
+      .sort((a, b) => a - b);
+    return tage.length ? tage[0] : null;
+  }
+  function fristDringend(f) {
+    const t = naechsteFristTage(f);
+    return t !== null && t <= 14;
+  }
 </script>
 
 <div class="bereich">
@@ -128,17 +157,33 @@
             }
           }}
         >
-          <button
-            class="stern"
-            title="Von der Merkliste entfernen"
-            aria-label="Von der Merkliste entfernen"
-            onclick={(e) => {
-              e.stopPropagation();
-              umschalten(f.id);
-            }}
-          >
-            ★
-          </button>
+          <div class="aktionen">
+            <button
+              class="stern"
+              title="Von der Merkliste entfernen"
+              aria-label="Von der Merkliste entfernen"
+              onclick={(e) => {
+                e.stopPropagation();
+                umschalten(f.id);
+              }}
+            >
+              ★
+            </button>
+            <button
+              class="mail"
+              class:aus={!kontaktEmail(f.id)}
+              title={kontaktEmail(f.id)
+                ? "E-Mail an " + (kontaktName(f.id) || "Kontaktperson") + " schreiben"
+                : "noch keine Emailadresse eingetragen"}
+              aria-label="E-Mail an Kontaktperson"
+              onclick={(e) => {
+                e.stopPropagation();
+                mailSchreiben(f.id);
+              }}
+            >
+              ✉
+            </button>
+          </div>
 
           <div class="haupt">
             <div class="kopf">
@@ -150,14 +195,21 @@
             </div>
 
             <p class="meta">
-              {f.foerdergeber} · <span class="hoehe">{f.foerderhoehe_text}</span> · {fristText(f)}
+              {f.foerdergeber} · <span class="hoehe">{f.foerderhoehe_text}</span>
             </p>
 
-            <div class="chips">
-              {#each f.weiche_kriterien.sparten as sp}
-                <span class="chip">{SPARTEN[sp] ?? sp}</span>
-              {/each}
+            <div class="tag-zeile">
+              <div class="chips">
+                {#each f.weiche_kriterien.sparten as sp}
+                  <span class="chip">{SPARTEN[sp] ?? sp}</span>
+                {/each}
+              </div>
+              <span class="frist" class:dringend={fristDringend(f)}>{fristText(f)}</span>
             </div>
+
+            <p class="kontaktperson" class:leer-kontakt={!kontaktName(f.id)}>
+              👤 {kontaktName(f.id) || "keine Kontaktperson"}
+            </p>
 
             <div class="dokumente">
               <span class="dok-titel">Benötigte Dokumente:</span>
@@ -292,6 +344,13 @@
     outline-offset: 2px;
   }
 
+  .aktionen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
   .stern {
     background: none;
     border: none;
@@ -302,10 +361,30 @@
     padding: 2px 4px;
     border-radius: 6px;
     height: fit-content;
-    flex-shrink: 0;
   }
   .stern:hover {
     background: #fffaf0;
+  }
+  .mail {
+    background: none;
+    border: none;
+    font-size: 1.05rem;
+    line-height: 1;
+    color: #4f6df5;
+    cursor: pointer;
+    padding: 3px 4px;
+    border-radius: 6px;
+    height: fit-content;
+  }
+  .mail:hover {
+    background: #eef1ff;
+  }
+  .mail.aus {
+    color: #c1c7d0;
+    cursor: not-allowed;
+  }
+  .mail.aus:hover {
+    background: none;
   }
 
   .haupt {
@@ -336,11 +415,18 @@
     font-weight: 600;
   }
 
+  .tag-zeile {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-top: 8px;
+  }
   .chips {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    margin-top: 8px;
+    flex: 1;
+    min-width: 0;
   }
   .chip {
     font-size: 0.75rem;
@@ -348,6 +434,25 @@
     color: #44546f;
     padding: 3px 9px;
     border-radius: 99px;
+  }
+  .frist {
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    color: #8590a2;
+    white-space: nowrap;
+    padding-top: 2px;
+  }
+  .frist.dringend {
+    color: #ae2e24;
+    font-weight: 700;
+  }
+  .kontaktperson {
+    margin: 8px 0 0;
+    font-size: 0.82rem;
+    color: #44546f;
+  }
+  .kontaktperson.leer-kontakt {
+    color: #b3bac5;
   }
 
   .land {

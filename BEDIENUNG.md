@@ -78,7 +78,11 @@ Listenansicht der Förderungen, die du verfolgst – pro Projekt. Jede Zeile
 zeigt Land, Name, Geber, Förderhöhe, Sparten, Frist, den **Antrag-Status**
 (farbiges Etikett) und die **benötigten Dokumente mit Status**.
 
-- **☆/★-Stern**: von der Merkliste entfernen.
+- **★-Stern**: von der Merkliste entfernen.
+- **✉-Knopf** (unter dem Stern): E-Mail an die hinterlegte Kontaktperson.
+  Ausgegraut, solange keine E-Mail-Adresse erfasst ist.
+- Die **Frist** steht rechts auf Höhe der Sparten-Tags; ab zwei Wochen vor
+  Ablauf wird sie **rot**. Darunter die **Kontaktperson**.
 - **Klick auf eine Zeile**: Detailansicht mit Status und Checkliste (siehe
   „Status" unten).
 - **📁 Projektordner öffnen**: legt den Projektordner an und öffnet ihn.
