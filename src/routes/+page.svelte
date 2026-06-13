@@ -53,6 +53,7 @@
       merkliste: [],
       formular: leeresFormular(),
       kfp: leererKfp(),
+      kfpHinweisAusblenden: false,
     };
   }
 
@@ -181,6 +182,10 @@
           }
         }
       }
+      if (typeof p.kfpHinweisAusblenden !== "boolean") {
+        p.kfpHinweisAusblenden = false;
+        veraendert = true;
+      }
     }
     if (d.aktivesProjektId && !d.projekte.some((p) => p.id === d.aktivesProjektId)) {
       d.aktivesProjektId = d.projekte[0]?.id ?? null;
@@ -293,26 +298,27 @@
     await tresorSpeichern();
   }
 
-  // Kostenfinanzplan des aktiven Projekts ersetzen und sichern.
-  // Zusaetzlich wird im allgemeinen Projektordner immer eine aktuelle
-  // Excel-Datei geschrieben (unabhaengig von der Word-Erzeugung).
-  // Gibt "" bei Erfolg zurueck, sonst einen Warnhinweis (Excel-Kopie).
+  // Kostenfinanzplan des aktiven Projekts ersetzen und verschlüsselt
+  // sichern. Die Excel wird hier bewusst NICHT geschrieben.
   async function kfpSpeichern(neu) {
     aktivesProjekt.kfp = neu;
     await tresorSpeichern();
-    try {
-      await invoke("kfp_excel_schreiben", {
-        projekt: aktivesProjekt.name,
-        kfp: kfpExport($state.snapshot(neu)),
-      });
-      return "";
-    } catch (e) {
-      // Die verschluesselte Speicherung ist schon erfolgt; die Excel
-      // ist nur eine Kopie. Haeufigster Grund fuers Scheitern: die
-      // Datei ist gerade in Excel geoeffnet (Windows sperrt sie dann).
-      console.error("Excel-Export fehlgeschlagen:", e);
-      return "Gespeichert – aber die Excel-Datei konnte nicht aktualisiert werden (ist sie gerade in Excel geöffnet?).";
-    }
+  }
+
+  // Excel des Kostenfinanzplans NUR auf ausdrücklichen Wunsch erzeugen.
+  // Sie liegt danach unverschlüsselt im Projektordner. Gibt den Pfad
+  // zurück. (Datensouveränität: bewusste, informierte Entscheidung.)
+  async function kfpExcelErzeugen(kfpDaten) {
+    return await invoke("kfp_excel_schreiben", {
+      projekt: aktivesProjekt.name,
+      kfp: kfpExport(kfpDaten),
+    });
+  }
+
+  // Merkt pro Projekt, dass der Sensibel-Hinweis nicht mehr nötig ist.
+  async function kfpHinweisMerken() {
+    aktivesProjekt.kfpHinweisAusblenden = true;
+    await tresorSpeichern();
   }
 
   // antworten.json + Word-Datei im Foerderungs-Ordner erzeugen.
@@ -594,7 +600,11 @@
           <KostenPlan
             kfp={aktivesProjekt.kfp}
             merkliste={aktivesProjekt.merkliste}
+            projektName={aktivesProjekt.name}
             speichern={kfpSpeichern}
+            excelErzeugen={kfpExcelErzeugen}
+            hinweisAusblenden={aktivesProjekt.kfpHinweisAusblenden}
+            hinweisMerken={kfpHinweisMerken}
           />
         {/key}
       {:else}

@@ -13,7 +13,15 @@
     differenz,
   } from "$lib/kfp";
 
-  let { kfp, speichern, merkliste = [] } = $props();
+  let {
+    kfp,
+    speichern,
+    merkliste = [],
+    projektName = "",
+    excelErzeugen,
+    hinweisAusblenden = false,
+    hinweisMerken,
+  } = $props();
 
   // Gemerkte Förderungen dieses Projekts (als Quellen wählbar).
   let merklisteFoerderungen = $derived(
@@ -25,7 +33,12 @@
   let kopie = $state(structuredClone($state.snapshot(kfp)));
   let einmalGespeichert = $state(false);
   let beschaeftigt = $state(false);
-  let excelWarnung = $state("");
+
+  // Excel-Erzeugung (bewusst, mit Sensibel-Hinweis)
+  let hinweisOffen = $state(false);
+  let nichtMehrZeigen = $state(false);
+  let erzeugtPfad = $state("");
+  let erzeugFehler = $state("");
 
   let veraendert = $derived(
     JSON.stringify($state.snapshot(kopie)) !== JSON.stringify($state.snapshot(kfp))
@@ -59,19 +72,56 @@
     kategorie.posten.splice(index, 1);
   }
 
+  // Betraege bleiben als Text erhalten (damit Rechnungen wie
+  // "50 × 4 × 5 × 3" bearbeitbar bleiben); ausgerechnet wird live.
+  function saubereKopie() {
+    const sauber = structuredClone($state.snapshot(kopie));
+    for (const seite of ["kosten", "finanzierung"]) {
+      for (const k of sauber[seite]) {
+        for (const p of k.posten) p.betrag = String(p.betrag ?? "").trim();
+      }
+    }
+    return sauber;
+  }
+
   async function speichernKlick() {
     beschaeftigt = true;
     try {
-      // Betraege bleiben als Text erhalten (damit Rechnungen wie
-      // "50 × 4 × 5 × 3" bearbeitbar bleiben); ausgerechnet wird live.
-      const sauber = structuredClone($state.snapshot(kopie));
-      for (const seite of ["kosten", "finanzierung"]) {
-        for (const k of sauber[seite]) {
-          for (const p of k.posten) p.betrag = String(p.betrag ?? "").trim();
-        }
-      }
-      excelWarnung = (await speichern(sauber)) || "";
+      await speichern(saubereKopie());
       einmalGespeichert = true;
+    } finally {
+      beschaeftigt = false;
+    }
+  }
+
+  // "KFP generieren": zeigt erst den Sensibel-Hinweis (sofern für
+  // dieses Projekt nicht ausgeblendet), erzeugt danach die Excel.
+  function generierenKlick() {
+    erzeugtPfad = "";
+    erzeugFehler = "";
+    if (hinweisAusblenden) {
+      generieren();
+    } else {
+      nichtMehrZeigen = false;
+      hinweisOffen = true;
+    }
+  }
+
+  async function verstandenKlick() {
+    hinweisOffen = false;
+    if (nichtMehrZeigen) await hinweisMerken();
+    await generieren();
+  }
+
+  async function generieren() {
+    beschaeftigt = true;
+    try {
+      const sauber = saubereKopie();
+      await speichern(sauber); // Tresor mit dem erzeugten Stand gleichziehen
+      einmalGespeichert = true;
+      erzeugtPfad = await excelErzeugen(sauber);
+    } catch (e) {
+      erzeugFehler = String(e);
     } finally {
       beschaeftigt = false;
     }
@@ -84,22 +134,33 @@
       <h2>Kostenfinanzplan</h2>
       <p class="untertitel">
         Ausgaben und Finanzierung in Kategorien, mit automatischen Summen.
-        Bleibt verschlüsselt im Tresor; beim Speichern wird zusätzlich
-        eine aktuelle <strong>Excel-Datei</strong> im Projektordner abgelegt.
+        Bleibt <strong>verschlüsselt im Tresor</strong>. Eine Excel-Datei
+        entsteht nur, wenn du sie ausdrücklich erzeugst.
       </p>
     </div>
     <div class="speichern-bereich">
-      {#if !veraendert && einmalGespeichert && !excelWarnung}
-        <span class="ok">✓ gespeichert (Tresor + Excel)</span>
+      {#if !veraendert && einmalGespeichert}
+        <span class="ok">✓ verschlüsselt gespeichert</span>
       {/if}
+      <button class="zweit" disabled={beschaeftigt} onclick={generierenKlick}>
+        KFP generieren (Excel)
+      </button>
       <button class="primaer" disabled={!veraendert || beschaeftigt} onclick={speichernKlick}>
         {beschaeftigt ? "Speichert …" : "Speichern"}
       </button>
     </div>
   </div>
 
-  {#if excelWarnung}
-    <div class="excel-warnung">⚠ {excelWarnung}</div>
+  {#if erzeugtPfad}
+    <div class="erzeugt-ok">
+      ✓ Excel erstellt: <code>{erzeugtPfad}</code>
+    </div>
+  {/if}
+  {#if erzeugFehler}
+    <div class="erzeugt-fehler">
+      ⚠ Die Excel konnte nicht erstellt werden (ist sie gerade in Excel geöffnet?).<br />
+      {erzeugFehler}
+    </div>
   {/if}
 
   {#if leer}
@@ -233,6 +294,40 @@
   {/if}
 </div>
 
+{#if hinweisOffen}
+  <div class="schleier" onclick={() => (hinweisOffen = false)} role="presentation">
+    <div class="dialog" onclick={(e) => e.stopPropagation()} role="presentation">
+      <h2>Kostenfinanzplan als Excel erstellen</h2>
+      <p>
+        Antrag 3000 behandelt deinen Kostenfinanzplan als <strong>sensible
+        Daten</strong> und speichert ihn deshalb verschlüsselt im Tresor.
+      </p>
+      <p class="warn">
+        Wenn du jetzt eine Excel-Datei erzeugst, liegen diese Finanzdaten
+        <strong>unverschlüsselt und offen lesbar</strong> auf deinem Computer.
+      </p>
+      <p class="pfad">
+        Ablageort:<br />
+        <code>Dokumente\Antrag 3000\{projektName}\Kostenfinanzplan.xlsx</code>
+      </p>
+      <p class="klein">
+        Liegt dein Dokumente-Ordner in einer Cloud (z. B. OneDrive), wird die
+        Datei mit synchronisiert.
+      </p>
+
+      <label class="nichtmehr">
+        <input type="checkbox" bind:checked={nichtMehrZeigen} />
+        Hinweis bei diesem Projekt nicht mehr anzeigen
+      </label>
+
+      <div class="dialog-knoepfe">
+        <button class="leise" onclick={() => (hinweisOffen = false)}>Abbrechen</button>
+        <button class="primaer" onclick={verstandenKlick}>Verstanden, Excel erstellen</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
 <style>
   .bereich {
     max-width: 920px;
@@ -271,13 +366,88 @@
     font-weight: 600;
   }
 
-  .excel-warnung {
-    background: #fff7d6;
-    color: #533f04;
+  .erzeugt-ok {
+    background: #dcfff1;
+    color: #216e4e;
     border-radius: 10px;
     padding: 12px 16px;
     margin-bottom: 20px;
     font-size: 0.9rem;
+    word-break: break-all;
+  }
+  .erzeugt-ok code {
+    font-size: 0.85rem;
+  }
+  .erzeugt-fehler {
+    background: #ffeceb;
+    color: #ae2e24;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+  }
+
+  /* Sensibel-Hinweis vor der Excel-Erzeugung */
+  .schleier {
+    position: fixed;
+    inset: 0;
+    background: rgba(9, 30, 66, 0.45);
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    z-index: 30;
+  }
+  .dialog {
+    background: #fff;
+    border-radius: 12px;
+    padding: 32px;
+    max-width: 480px;
+    width: 100%;
+    box-shadow: 0 12px 40px rgba(9, 30, 66, 0.3);
+  }
+  .dialog h2 {
+    margin: 0 0 14px;
+    font-size: 1.2rem;
+  }
+  .dialog p {
+    margin: 0 0 12px;
+    font-size: 0.92rem;
+    line-height: 1.55;
+  }
+  .dialog .warn {
+    background: #fff7d6;
+    color: #533f04;
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+  .dialog .pfad code {
+    font-size: 0.85rem;
+    word-break: break-all;
+  }
+  .dialog .klein {
+    color: #5e6c84;
+    font-size: 0.84rem;
+  }
+  .nichtmehr {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 18px 0 8px;
+    font-size: 0.9rem;
+    color: #44546f;
+    cursor: pointer;
+  }
+  .nichtmehr input {
+    width: auto;
+  }
+  .dialog-knoepfe {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .dialog-knoepfe button {
+    width: auto;
   }
 
   .bilanz {
