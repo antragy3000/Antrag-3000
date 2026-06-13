@@ -2,6 +2,7 @@
   // Kostenfinanzplan-Editor: Kategorien mit Positionen, automatische
   // Summen, Fehlbedarfs-Anzeige. Tresor-Inhalt (Budget ist sensibel).
   import datenbank from "$lib/daten/foerderungen.json";
+  import { fade } from "svelte/transition";
   import {
     vorlageKfp,
     betragFormat,
@@ -39,6 +40,7 @@
   let nichtMehrZeigen = $state(false);
   let erzeugtPfad = $state("");
   let erzeugFehler = $state("");
+  let erzeugtTimer = null; // blendet die Erfolgsmeldung nach 3 s aus
 
   let veraendert = $derived(
     JSON.stringify($state.snapshot(kopie)) !== JSON.stringify($state.snapshot(kfp))
@@ -115,11 +117,21 @@
 
   async function generieren() {
     beschaeftigt = true;
+    if (erzeugtTimer) {
+      clearTimeout(erzeugtTimer);
+      erzeugtTimer = null;
+    }
     try {
       const sauber = saubereKopie();
       await speichern(sauber); // Tresor mit dem erzeugten Stand gleichziehen
       einmalGespeichert = true;
+      erzeugFehler = "";
       erzeugtPfad = await excelErzeugen(sauber);
+      // Nach 3 s ausblenden, damit eine erneute Erzeugung sichtbar wird.
+      erzeugtTimer = setTimeout(() => {
+        erzeugtPfad = "";
+        erzeugtTimer = null;
+      }, 3000);
     } catch (e) {
       erzeugFehler = String(e);
     } finally {
@@ -130,7 +142,7 @@
 
 <div class="bereich">
   <div class="kopfzeile">
-    <div>
+    <div class="titel-block">
       <h2>Kostenfinanzplan</h2>
       <p class="untertitel">
         Ausgaben und Finanzierung in Kategorien, mit automatischen Summen.
@@ -152,7 +164,7 @@
   </div>
 
   {#if erzeugtPfad}
-    <div class="erzeugt-ok">
+    <div class="erzeugt-ok" transition:fade={{ duration: 250 }}>
       ✓ Excel erstellt: <code>{erzeugtPfad}</code>
     </div>
   {/if}
@@ -355,9 +367,18 @@
     max-width: 480px;
     line-height: 1.5;
   }
+  /* Textblock darf wachsen/schrumpfen; faellt erst unter ~260px Breite
+     auf eine eigene Zeile, dann landen die Knoepfe darunter. */
+  .titel-block {
+    flex: 1 1 300px;
+    min-width: 260px;
+  }
   .speichern-bereich {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    flex-shrink: 0;
     gap: 14px;
   }
   .ok {
