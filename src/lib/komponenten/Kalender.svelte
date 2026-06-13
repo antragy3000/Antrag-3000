@@ -17,7 +17,6 @@
     merkliste,
     umschalten,
     ordnerOeffnen = null,
-    antragErzeugen = null,
     antraege = {},
     antragHolen = null,
     antragSpeichern = null,
@@ -295,7 +294,6 @@
     gemerkt={merkliste.includes(ausgewaehlt.id)}
     umschalten={umschalten}
     ordnerOeffnen={ordnerOeffnen ? () => ordnerOeffnen(ausgewaehlt.name) : null}
-    antragErzeugen={antragErzeugen ? () => antragErzeugen(ausgewaehlt) : null}
     antrag={aktuellerAntrag}
     antragAendern={antragSpeichern}
     schliessen={() => {

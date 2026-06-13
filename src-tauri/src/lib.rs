@@ -23,7 +23,7 @@ pub fn run() {
             tresor::tresor_neu_aufsetzen,
             ordner::ordner_oeffnen,
             ordner::ordner_umbenennen,
-            dokument::antrag_erzeugen,
+            dokument::formular_word_erzeugen,
             excel::kfp_excel_schreiben,
             backup::tresor_backup_erstellen,
             backup::tresor_backup_einspielen

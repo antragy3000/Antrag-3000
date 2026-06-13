@@ -12,23 +12,9 @@
     gemerkt = null,
     umschalten = null,
     ordnerOeffnen = null,
-    antragErzeugen = null,
     antrag = null,
     antragAendern = null,
   } = $props();
-
-  let erzeugt = $state(false);
-  let erzeugend = $state(false);
-
-  async function erzeugenKlick() {
-    erzeugend = true;
-    try {
-      await antragErzeugen();
-      erzeugt = true;
-    } finally {
-      erzeugend = false;
-    }
-  }
 
   function nameVon(id) {
     const x = alle.find((e) => e.id === id);
@@ -105,15 +91,6 @@
 
     <p class="datenstand">{hinweis}</p>
 
-    {#if antragErzeugen}
-      <button class="erzeugen" disabled={erzeugend} onclick={erzeugenKlick}>
-        {erzeugend
-          ? "Erzeugt …"
-          : erzeugt
-            ? "✓ Erzeugt – nochmal erzeugen"
-            : "📄 Word-Antrag erzeugen (antworten.json + .docx)"}
-      </button>
-    {/if}
     {#if ordnerOeffnen}
       <button class="zweit" onclick={ordnerOeffnen}>
         📁 Ordner zu dieser Förderung öffnen
@@ -225,27 +202,6 @@
   .datenstand {
     color: #8590a2;
     font-size: 0.8rem;
-  }
-
-  .erzeugen {
-    width: 100%;
-    margin-bottom: 10px;
-    padding: 11px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    font-family: inherit;
-    color: #fff;
-    background: #216e4e;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-  .erzeugen:hover:not(:disabled) {
-    background: #1a5a40;
-  }
-  .erzeugen:disabled {
-    background: #c1c7d0;
-    cursor: default;
   }
 
   .zweit {

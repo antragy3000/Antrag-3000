@@ -10,7 +10,7 @@
   import KostenPlan from "$lib/komponenten/KostenPlan.svelte";
   import Sicherung from "$lib/komponenten/Sicherung.svelte";
   import datenbank from "$lib/daten/foerderungen.json";
-  import { leeresFormular, antragBauen } from "$lib/antrag";
+  import { leeresFormular, formularWordBauen } from "$lib/antrag";
   import { leererKfp, kfpExport } from "$lib/kfp";
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
 
@@ -387,32 +387,20 @@
     await tresorSpeichern();
   }
 
-  // antworten.json + Word-Datei im Foerderungs-Ordner erzeugen.
-  async function antragErzeugen(foerderung) {
-    // Falls die offizielle Frist im Antrag korrigiert wurde, diese
-    // (statt der Datenbank-Frist) für den Word-Antrag verwenden.
-    const override = aktivesProjekt.antraege[foerderung.id]?.offizielleFristen;
-    const effektiv = Array.isArray(override)
-      ? { ...foerderung, fristen: $state.snapshot(override).filter(Boolean) }
-      : foerderung;
-    const { titel, warnhinweis, abschnitte, antwortenJson } = antragBauen(
-      $state.snapshot(daten.stammdaten),
-      $state.snapshot(aktivesProjekt.formular),
-      effektiv,
-      $state.snapshot(aktivesProjekt.kfp)
+  // Word aus dem Sammel-Formular im PROJEKT-Ordner erzeugen – ohne
+  // Stammdaten, ohne KFP. Bekommt die aktuell im Formular angezeigten
+  // Daten übergeben (auch ungespeicherte Änderungen auf dem Bildschirm).
+  async function formularWordErzeugen(formularDaten) {
+    const { titel, warnhinweis, abschnitte } = formularWordBauen(
+      formularDaten,
+      aktivesProjekt.name
     );
-    try {
-      await invoke("antrag_erzeugen", {
-        projekt: aktivesProjekt.name,
-        foerderung: foerderung.name,
-        titel,
-        warnhinweis,
-        abschnitte,
-        antwortenJson,
-      });
-    } catch (e) {
-      alert("Der Antrag konnte nicht erzeugt werden.\n" + e);
-    }
+    await invoke("formular_word_erzeugen", {
+      projekt: aktivesProjekt.name,
+      titel,
+      warnhinweis,
+      abschnitte,
+    });
   }
 
   // Liefert (und erstellt bei Bedarf) den Antrag-Status-Eintrag einer
@@ -770,6 +758,7 @@
           <SammelFormular
             formular={aktivesProjekt.formular}
             speichern={formularSpeichern}
+            wordErzeugen={formularWordErzeugen}
           />
         {/key}
       {:else if bereich === "kostenplan"}
@@ -792,7 +781,6 @@
           merkliste={aktivesProjekt.merkliste}
           umschalten={merklisteUmschalten}
           {ordnerOeffnen}
-          {antragErzeugen}
           antraege={aktivesProjekt.antraege}
           {antragHolen}
           antragSpeichern={tresorSpeichern}
@@ -807,7 +795,6 @@
           merkliste={aktivesProjekt.merkliste}
           umschalten={merklisteUmschalten}
           {ordnerOeffnen}
-          {antragErzeugen}
           antraege={aktivesProjekt.antraege}
           {antragHolen}
           antragSpeichern={tresorSpeichern}

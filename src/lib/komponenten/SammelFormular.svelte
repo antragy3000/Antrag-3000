@@ -5,11 +5,13 @@
   // und die Word-Datei.
   import { FORMULAR_FELDER } from "$lib/antrag";
 
-  let { formular, speichern } = $props();
+  let { formular, speichern, wordErzeugen = null } = $props();
 
   let kopie = $state(structuredClone($state.snapshot(formular)));
   let einmalGespeichert = $state(false);
   let beschaeftigt = $state(false);
+  let wordBeschaeftigt = $state(false);
+  let wordErstellt = $state(false);
 
   let veraendert = $derived(
     JSON.stringify($state.snapshot(kopie)) !==
@@ -25,6 +27,21 @@
       beschaeftigt = false;
     }
   }
+
+  // Erzeugt das Word im Projektordner aus dem, was gerade auf dem
+  // Bildschirm steht (auch ungespeicherte Änderungen).
+  async function wordKlick() {
+    if (!wordErzeugen) return;
+    wordBeschaeftigt = true;
+    try {
+      await wordErzeugen(structuredClone($state.snapshot(kopie)));
+      wordErstellt = true;
+    } catch (e) {
+      alert("Das Word konnte nicht erstellt werden.\n" + e);
+    } finally {
+      wordBeschaeftigt = false;
+    }
+  }
 </script>
 
 <div class="bereich">
@@ -33,8 +50,10 @@
       <h2>Sammel-Formular</h2>
       <p class="untertitel">
         Beantworte die typischen Antragsfragen einmal für dieses Projekt.
-        Daraus erzeugst du dann in der Merkliste für jede gemerkte
-        Förderung den Word-Antrag. Alles bleibt verschlüsselt im Tresor.
+        Mit <strong>Speichern</strong> bleibt alles verschlüsselt im Tresor.
+        Mit <strong>Word erstellen</strong> legst du diese Projektangaben
+        als Word-Datei in den Projektordner – ohne Stammdaten und ohne
+        Kostenfinanzplan.
       </p>
     </div>
     <div class="speichern-bereich">
@@ -44,6 +63,15 @@
       <button disabled={!veraendert || beschaeftigt} onclick={speichernKlick}>
         {beschaeftigt ? "Speichert …" : "Speichern"}
       </button>
+      {#if wordErzeugen}
+        <button class="word" disabled={wordBeschaeftigt} onclick={wordKlick}>
+          {wordBeschaeftigt
+            ? "Erstellt …"
+            : wordErstellt
+              ? "✓ Word erstellt – neu erstellen"
+              : "📄 Word erstellen"}
+        </button>
+      {/if}
     </div>
   </div>
 
@@ -119,6 +147,23 @@
   button:disabled {
     background: #c1c7d0;
     cursor: default;
+  }
+
+  /* Word-Knopf: zweitrangig (weiß), gleiche Höhe wie Speichern */
+  button.word {
+    padding: 8px 20px;
+    color: #172b4d;
+    background: #fff;
+    border: 2px solid #dfe1e6;
+  }
+  button.word:hover:not(:disabled) {
+    background: #fffaf0;
+    border-color: #e2a400;
+  }
+  button.word:disabled {
+    color: #8590a2;
+    background: #f4f5f7;
+    border-color: #dfe1e6;
   }
 
   .karte {

@@ -106,8 +106,13 @@ Detailansicht.
 ### Formular (Sammel-Formular)
 Die typischen Antragsfragen, **einmal pro Projekt** beantwortet
 (Projekttitel, Kurz-/Langbeschreibung, Ziele/Zielgruppe, Zeitraum, Ort,
-Beteiligte/Mitwirkende/Partner*innen). Daraus entsteht später der
-Word-Antrag. Mit **Speichern** verschlüsselt sichern.
+Beteiligte/Mitwirkende/Partner*innen).
+- **Speichern**: sichert die Angaben verschlüsselt im Tresor.
+- **📄 Word erstellen**: legt diese Projektangaben als Word-Datei in den
+  **Projektordner** – bewusst **ohne Stammdaten und ohne Kostenfinanzplan**,
+  damit diese sensiblen Daten nicht unverschlüsselt in der Datei stehen.
+  Die Word-Datei ist eine **Ausgabe**; Änderungen darin fließen nicht in
+  die App zurück.
 
 ### Kostenplan (Kostenfinanzplan)
 Ausgaben und Finanzierung in **Kategorien** (1, 2, 3 …) mit **Positionen**
@@ -154,20 +159,15 @@ wird rechnerisch geprüft (Tippfehler-Hinweis, blockiert aber nicht). Mit
   Förderung (z. B. interne Abgaben); erscheinen auch im Fristen-Bereich.
 Es wird immer nur der aktuelle Stand gezeigt (keine Verlaufshistorie).
 
-## Ordner und Word-Antrag
+## Ordner und Dateien
 Pro Projekt verwaltet die App Ordner unter
 `Dokumente\Antrag 3000\[Projektname]\[Förderungsname]\`.
 - **📁-Knöpfe** legen den jeweiligen Ordner an und öffnen ihn.
-- In der Detailansicht einer gemerkten Förderung erstellt **„Word-Antrag
-  erzeugen"** zwei Dateien im Förderungs-Ordner:
-  - `antworten.json` – die maschinenlesbare Quelle der Wahrheit.
-  - `Antrag - ….docx` – die lesbare Kopie mit rotem Warnhinweis. Diese
-    Word-Datei ist eine **Ausgabe** – Änderungen darin fließen nicht in die
-    App zurück. PDF erzeugst du selbst (Word → Speichern unter → PDF).
-  Der Kostenfinanzplan im Word ist auf **diese** Förderung zugeschnitten: Er
-  listet die **anderen** Mittel (was du anderswo schon beantragt/sicher hast)
-  und weist die bei dieser Förderung zu beantragende Summe als **Fehlbetrag**
-  aus (Gesamtkosten − andere Mittel).
+- Das **Word aus dem Formular** (Knopf „📄 Word erstellen" im Bereich
+  *Formular*) liegt direkt im **Projektordner** und enthält nur die
+  Projektangaben – ohne Stammdaten, ohne Kostenfinanzplan. Es ist eine
+  **Ausgabe**: Änderungen darin fließen nicht in die App zurück. Eine PDF
+  erzeugst du daraus selbst (Word → Speichern unter → PDF).
 
 ## Sicherung (Backup)
 Oben rechts **🛡 Sicherung**:

@@ -1,16 +1,16 @@
 // ============================================================
-// Antrags-Dokumente erzeugen (CLAUDE.md):
+// Formular-Word erzeugen (CLAUDE.md):
 //
-// Pro Foerderung entstehen im Ordner
-//   Dokumente\Antrag 3000\[Projekt]\[Foerderung]\
-// zwei Dateien:
-//   1. antworten.json  - maschinenlesbar, Quelle der Wahrheit
-//   2. Antrag - ....docx - menschenlesbare Kopie mit Warnhinweis
-//      am Dateianfang (Aenderungen dort fliessen NICHT zurueck)
+// Aus dem Sammel-Formular entsteht im PROJEKT-Ordner
+//   Dokumente\Antrag 3000\[Projekt]\Projektbeschrieb - [Projekt].docx
+// eine menschenlesbare Kopie mit Warnhinweis am Dateianfang
+// (Aenderungen dort fliessen NICHT zurueck). Bewusst OHNE Stammdaten
+// und OHNE Kostenfinanzplan - diese sensiblen Daten sollen nicht
+// unverschluesselt in der Datei stehen.
 //
 // Der Rust-Kern bleibt dumm: Er bekommt fertige Abschnitte
 // (Ueberschrift + Absaetze) vom Frontend und setzt sie nur in eine
-// Word-Datei um. WAS im Antrag steht, entscheidet das Frontend.
+// Word-Datei um. WAS im Word steht, entscheidet das Frontend.
 // ============================================================
 
 use std::fs;
@@ -46,29 +46,20 @@ fn zelle(text: &str, fett: bool) -> TableCell {
     TableCell::new().add_paragraph(Paragraph::new().add_run(run))
 }
 
-/// Schreibt antworten.json und die Word-Datei in den
-/// Foerderungs-Ordner und oeffnet diesen im Explorer.
+/// Schreibt die Word-Datei in den PROJEKT-Ordner und oeffnet diesen
+/// im Explorer. Ohne antworten.json, ohne Foerderungs-Unterordner.
 #[tauri::command]
-pub fn antrag_erzeugen(
+pub fn formular_word_erzeugen(
     app: tauri::AppHandle,
     projekt: String,
-    foerderung: String,
     titel: String,
     warnhinweis: String,
     abschnitte: Vec<DocAbschnitt>,
-    antworten_json: String,
 ) -> Result<String, String> {
-    let ordner_pfad = ordner::wurzel(&app)?
-        .join(ordner::bereinigen(&projekt)?)
-        .join(ordner::bereinigen(&foerderung)?);
+    let ordner_pfad = ordner::wurzel(&app)?.join(ordner::bereinigen(&projekt)?);
     fs::create_dir_all(&ordner_pfad).map_err(|e| format!("Ordner nicht anlegbar: {e}"))?;
 
-    // 1. Maschinenlesbare Quelle der Wahrheit.
-    let json_pfad = ordner_pfad.join("antworten.json");
-    fs::write(&json_pfad, antworten_json.as_bytes())
-        .map_err(|e| format!("antworten.json nicht schreibbar: {e}"))?;
-
-    // 2. Menschenlesbare Word-Datei.
+    // Menschenlesbare Word-Datei.
     let mut docx = Docx::new();
 
     // Warnhinweis ganz oben, deutlich abgesetzt (rot, fett).
@@ -131,7 +122,7 @@ pub fn antrag_erzeugen(
         docx = docx.add_paragraph(Paragraph::new());
     }
 
-    let docx_name = ordner::bereinigen(&format!("Antrag - {foerderung}"))? + ".docx";
+    let docx_name = ordner::bereinigen(&format!("Projektbeschrieb - {projekt}"))? + ".docx";
     let docx_pfad = ordner_pfad.join(&docx_name);
     let datei = fs::File::create(&docx_pfad)
         .map_err(|e| format!("Word-Datei nicht anlegbar: {e}"))?;
