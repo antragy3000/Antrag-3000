@@ -8,10 +8,31 @@
 //   }
 // Das Feld "betrag" ist ein Text und darf eine Rechnung enthalten
 // (z. B. "50 × 4 × 5 × 3"); der Wert wird live ausgerechnet.
+// Eine Finanzierungs-Position kann frei eingegeben sein
+// (bezeichnung) ODER per foerderId mit einer Foerderung aus der
+// Merkliste verknuepft sein - dann liefert die Foerder-Datenbank
+// den Namen.
 // Der Status einer Foerderung gehoert NICHT hierher, sondern zur
 // Foerderoption selbst (Antrag-Status, Schritt 8).
 // Tresor-Inhalt: Budget ist laut CLAUDE.md sensibel.
 // ============================================================
+
+import datenbank from "./daten/foerderungen.json";
+
+/// Anzeigename einer verknuepften Foerderung oder null.
+export function foerderLabel(id) {
+  const f = datenbank.foerderungen.find((x) => x.id === id);
+  return f ? `${f.name} (${f.foerdergeber})` : null;
+}
+
+/// Bezeichnung einer Finanzierungs-Position: bei Verknuepfung der
+/// Foerder-Name, sonst der frei eingegebene Text.
+export function finanzBezeichnung(p) {
+  if (p?.foerderId) {
+    return foerderLabel(p.foerderId) ?? p.bezeichnung ?? "(Förderung nicht mehr gemerkt)";
+  }
+  return p?.bezeichnung ?? "";
+}
 
 export function leererKfp() {
   return { kosten: [], finanzierung: [] };
@@ -194,22 +215,33 @@ export function differenz(kfp) {
 /// Maschinenlesbare Fassung fuer antworten.json: mit ausgerechneten
 /// Werten, Kategoriesummen und Gesamtsummen.
 export function kfpExport(kfp) {
-  const seite = (kategorien, mitErlaeuterung) =>
-    kategorien.map((k, i) => ({
-      nummer: String(i + 1),
-      name: k.name,
-      summe: kategorieSumme(k),
-      posten: k.posten.map((p, j) => ({
-        nummer: `${i + 1}.${j + 1}`,
-        bezeichnung: p.bezeichnung,
-        ...(mitErlaeuterung ? { erlaeuterung: p.erlaeuterung || "" } : {}),
-        betrag_formel: String(p.betrag ?? ""),
-        betrag: postenBetrag(p),
-      })),
-    }));
+  const kosten = kfp.kosten.map((k, i) => ({
+    nummer: String(i + 1),
+    name: k.name,
+    summe: kategorieSumme(k),
+    posten: k.posten.map((p, j) => ({
+      nummer: `${i + 1}.${j + 1}`,
+      bezeichnung: p.bezeichnung,
+      erlaeuterung: p.erlaeuterung || "",
+      betrag_formel: String(p.betrag ?? ""),
+      betrag: postenBetrag(p),
+    })),
+  }));
+  const finanzierung = kfp.finanzierung.map((k, i) => ({
+    nummer: String(i + 1),
+    name: k.name,
+    summe: kategorieSumme(k),
+    posten: k.posten.map((p, j) => ({
+      nummer: `${i + 1}.${j + 1}`,
+      bezeichnung: finanzBezeichnung(p),
+      foerder_id: p.foerderId || null,
+      betrag_formel: String(p.betrag ?? ""),
+      betrag: postenBetrag(p),
+    })),
+  }));
   return {
-    kosten: seite(kfp.kosten, true),
-    finanzierung: seite(kfp.finanzierung, false),
+    kosten,
+    finanzierung,
     summe_kosten: seitenSumme(kfp.kosten),
     summe_finanzierung: seitenSumme(kfp.finanzierung),
     differenz: differenz(kfp),
@@ -245,7 +277,7 @@ export function kfpAbschnitte(kfp) {
     kfp.finanzierung.forEach((k, i) => {
       zeilen.push([`**${i + 1} ${k.name}`, "**" + betragFormat(kategorieSumme(k))]);
       k.posten.forEach((p, j) => {
-        zeilen.push([`${i + 1}.${j + 1}  ${p.bezeichnung}`, betragFormat(postenBetrag(p))]);
+        zeilen.push([`${i + 1}.${j + 1}  ${finanzBezeichnung(p)}`, betragFormat(postenBetrag(p))]);
       });
     });
     zeilen.push(["**Gesamtfinanzierung", "**" + betragFormat(seitenSumme(kfp.finanzierung))]);

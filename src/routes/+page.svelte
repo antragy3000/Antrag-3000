@@ -166,11 +166,16 @@
       }
       // Frueher hatten Finanzierungs-Positionen ein Status-Feld; der
       // Status gehoert zur Foerderoption (Schritt 8), nicht in den KFP.
+      // Ausserdem: foerderId fuer die Verknuepfung mit der Merkliste.
       if (Array.isArray(p.kfp?.finanzierung)) {
         for (const k of p.kfp.finanzierung) {
           for (const po of k.posten ?? []) {
             if ("status" in po) {
               delete po.status;
+              veraendert = true;
+            }
+            if (typeof po.foerderId !== "string") {
+              po.foerderId = "";
               veraendert = true;
             }
           }
@@ -570,7 +575,11 @@
         {/key}
       {:else if bereich === "kostenplan"}
         {#key daten.aktivesProjektId}
-          <KostenPlan kfp={aktivesProjekt.kfp} speichern={kfpSpeichern} />
+          <KostenPlan
+            kfp={aktivesProjekt.kfp}
+            merkliste={aktivesProjekt.merkliste}
+            speichern={kfpSpeichern}
+          />
         {/key}
       {:else}
         <Merkliste

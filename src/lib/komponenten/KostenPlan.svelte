@@ -1,17 +1,26 @@
 <script>
   // Kostenfinanzplan-Editor: Kategorien mit Positionen, automatische
   // Summen, Fehlbedarfs-Anzeige. Tresor-Inhalt (Budget ist sensibel).
+  import datenbank from "$lib/daten/foerderungen.json";
   import {
     vorlageKfp,
     betragFormat,
     istFormel,
     formelAuswerten,
+    foerderLabel,
     kategorieSumme,
     seitenSumme,
     differenz,
   } from "$lib/kfp";
 
-  let { kfp, speichern } = $props();
+  let { kfp, speichern, merkliste = [] } = $props();
+
+  // Gemerkte Förderungen dieses Projekts (als Quellen wählbar).
+  let merklisteFoerderungen = $derived(
+    merkliste
+      .map((id) => datenbank.foerderungen.find((f) => f.id === id))
+      .filter(Boolean)
+  );
 
   let kopie = $state(structuredClone($state.snapshot(kfp)));
   let einmalGespeichert = $state(false);
@@ -34,7 +43,7 @@
     kategorie.posten.push(
       seite === "kosten"
         ? { bezeichnung: "", erlaeuterung: "", betrag: "" }
-        : { bezeichnung: "", betrag: "" }
+        : { bezeichnung: "", betrag: "", foerderId: "" }
     );
   }
 
@@ -153,13 +162,33 @@
             {#each kategorie.posten as posten, pi (posten)}
               <div class="posten">
                 <span class="nummer klein">{ki + 1}.{pi + 1}</span>
-                <input
-                  class="bezeichnung"
-                  type="text"
-                  placeholder="Bezeichnung"
-                  bind:value={posten.bezeichnung}
-                />
-                {#if seite === "kosten"}
+                {#if seite === "finanzierung"}
+                  <select class="quelle" bind:value={posten.foerderId}>
+                    <option value="">Eigene Drittmittel / Einnahmen …</option>
+                    {#if posten.foerderId && !merkliste.includes(posten.foerderId)}
+                      <option value={posten.foerderId}>
+                        {foerderLabel(posten.foerderId) ?? "(nicht mehr gemerkt)"}
+                      </option>
+                    {/if}
+                    {#each merklisteFoerderungen as f (f.id)}
+                      <option value={f.id}>{f.name} ({f.foerdergeber})</option>
+                    {/each}
+                  </select>
+                  {#if !posten.foerderId}
+                    <input
+                      class="bezeichnung"
+                      type="text"
+                      placeholder="z. B. Eigenmittel, Ticketeinnahmen"
+                      bind:value={posten.bezeichnung}
+                    />
+                  {/if}
+                {:else}
+                  <input
+                    class="bezeichnung"
+                    type="text"
+                    placeholder="Bezeichnung"
+                    bind:value={posten.bezeichnung}
+                  />
                   <input
                     class="erlaeuterung"
                     type="text"
@@ -336,6 +365,21 @@
   }
   .erlaeuterung {
     flex: 2;
+  }
+  .quelle {
+    flex: 2;
+    min-width: 0;
+    padding: 8px 10px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    border: 2px solid #dfe1e6;
+    border-radius: 8px;
+    background: #fafbfc;
+  }
+  .quelle:focus {
+    outline: none;
+    border-color: #4f6df5;
+    background: #fff;
   }
   .betrag-feld {
     display: flex;
