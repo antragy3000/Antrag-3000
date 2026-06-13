@@ -92,20 +92,29 @@
     if (adr) openUrl("mailto:" + adr);
   }
 
-  // Tage bis zur nächsten Frist (Datenbank + eigene); null = keine.
+  // Fristen zur Anzeige in der Zeile: offizielle (editierbare Übernahme
+  // aus der Datenbank) plus benannte eigene Fristen. Jede einzeln, mit
+  // Resttagen für die Rotfärbung.
   const HEUTE = new Date();
   HEUTE.setHours(0, 0, 0, 0);
-  function naechsteFristTage(f) {
-    const eigene = antraege[f.id]?.eigeneFristen ?? [];
-    const tage = [...(f.fristen ?? []), ...eigene]
-      .map((d) => Math.round((new Date(d) - HEUTE) / 86400000))
-      .filter((t) => t >= 0)
-      .sort((a, b) => a - b);
-    return tage.length ? tage[0] : null;
+  function tageBis(d) {
+    return Math.round((new Date(d) - HEUTE) / 86400000);
   }
-  function fristDringend(f) {
-    const t = naechsteFristTage(f);
-    return t !== null && t <= 14;
+  function fmtDatum(d) {
+    return new Date(d).toLocaleDateString("de-DE");
+  }
+  function fristenFuerListe(f) {
+    const a = antraege[f.id];
+    const offiziell = a?.offizielleFristen ?? f.fristen ?? [];
+    const eigene = a?.eigeneFristen ?? [];
+    const eintraege = [];
+    for (const d of offiziell) eintraege.push({ label: "Frist", datum: d, tage: tageBis(d) });
+    for (const e of eigene) {
+      const datum = typeof e === "string" ? e : e.datum;
+      const titel = typeof e === "string" ? "" : e.titel;
+      eintraege.push({ label: titel || "Eigene Frist", datum, tage: tageBis(datum) });
+    }
+    return eintraege;
   }
 </script>
 
@@ -204,7 +213,15 @@
                   <span class="chip">{SPARTEN[sp] ?? sp}</span>
                 {/each}
               </div>
-              <span class="frist" class:dringend={fristDringend(f)}>{fristText(f)}</span>
+              <div class="fristen-rechts">
+                {#each fristenFuerListe(f) as fr (fr.label + fr.datum)}
+                  <span class="frist" class:dringend={fr.tage <= 14}>
+                    {fr.label}: {fmtDatum(fr.datum)}
+                  </span>
+                {:else}
+                  <span class="frist">{fristText(f)}</span>
+                {/each}
+              </div>
             </div>
 
             <p class="kontaktperson" class:leer-kontakt={!kontaktName(f.id)}>
@@ -435,12 +452,18 @@
     padding: 3px 9px;
     border-radius: 99px;
   }
-  .frist {
+  .fristen-rechts {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
     flex-shrink: 0;
+    padding-top: 2px;
+  }
+  .frist {
     font-size: 0.8rem;
     color: #8590a2;
     white-space: nowrap;
-    padding-top: 2px;
   }
   .frist.dringend {
     color: #ae2e24;

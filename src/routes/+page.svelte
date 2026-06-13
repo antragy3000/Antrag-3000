@@ -214,12 +214,30 @@
         veraendert = true;
       }
       // Antrag-Einträge älterer Stände um eigene Fristen ergänzen.
-      for (const a of Object.values(p.antraege)) {
-        if (a && !Array.isArray(a.eigeneFristen)) {
+      const alleFoerd = [...datenbank.foerderungen, ...(p.eigeneFoerderungen ?? [])];
+      for (const [id, a] of Object.entries(p.antraege)) {
+        if (!a) continue;
+        if (!Array.isArray(a.eigeneFristen)) {
           a.eigeneFristen = [];
           veraendert = true;
         }
-        if (a && (!a.kontakt || typeof a.kontakt !== "object")) {
+        // Eigene Fristen: alte reine Datums-Strings -> {datum, titel}.
+        let umgewandelt = false;
+        a.eigeneFristen = a.eigeneFristen.map((x) => {
+          if (typeof x === "string") {
+            umgewandelt = true;
+            return { datum: x, titel: "" };
+          }
+          return x;
+        });
+        if (umgewandelt) veraendert = true;
+        // Offizielle Frist(en) aus der Förderung übernehmen, falls fehlend.
+        if (!Array.isArray(a.offizielleFristen)) {
+          const f = alleFoerd.find((x) => x.id === id);
+          a.offizielleFristen = [...(f?.fristen ?? [])];
+          veraendert = true;
+        }
+        if (!a.kontakt || typeof a.kontakt !== "object") {
           a.kontakt = { ansprechpartner: "", email: "", telefon: "", notiz: "" };
           veraendert = true;
         }
@@ -371,10 +389,16 @@
 
   // antworten.json + Word-Datei im Foerderungs-Ordner erzeugen.
   async function antragErzeugen(foerderung) {
+    // Falls die offizielle Frist im Antrag korrigiert wurde, diese
+    // (statt der Datenbank-Frist) für den Word-Antrag verwenden.
+    const override = aktivesProjekt.antraege[foerderung.id]?.offizielleFristen;
+    const effektiv = Array.isArray(override)
+      ? { ...foerderung, fristen: $state.snapshot(override) }
+      : foerderung;
     const { titel, warnhinweis, abschnitte, antwortenJson } = antragBauen(
       $state.snapshot(daten.stammdaten),
       $state.snapshot(aktivesProjekt.formular),
-      foerderung,
+      effektiv,
       $state.snapshot(aktivesProjekt.kfp)
     );
     try {
@@ -400,6 +424,7 @@
       a = {
         status: ANTRAG_STANDARD,
         statusFrei: "",
+        offizielleFristen: [...(foerderung.fristen ?? [])],
         eigeneFristen: [],
         kontakt: { ansprechpartner: "", email: "", telefon: "", notiz: "" },
         checkliste: (foerderung.checkliste_vorschlag ?? []).map((t) => ({
@@ -410,7 +435,15 @@
       };
       aktivesProjekt.antraege[foerderung.id] = a;
     }
+    // Offizielle Frist(en): aus der Datenbank vorbefüllt, aber editierbar.
+    if (!Array.isArray(a.offizielleFristen)) {
+      a.offizielleFristen = [...(foerderung.fristen ?? [])];
+    }
     if (!Array.isArray(a.eigeneFristen)) a.eigeneFristen = [];
+    // Eigene Fristen: alte reine Datums-Form -> {datum, titel}.
+    a.eigeneFristen = a.eigeneFristen.map((x) =>
+      typeof x === "string" ? { datum: x, titel: "" } : x
+    );
     if (!a.kontakt || typeof a.kontakt !== "object") {
       a.kontakt = { ansprechpartner: "", email: "", telefon: "", notiz: "" };
     }

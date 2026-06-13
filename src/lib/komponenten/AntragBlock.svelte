@@ -9,6 +9,8 @@
 
   let neuerPunkt = $state("");
   let neueFrist = $state("");
+  let neuerFristTitel = $state("");
+  let neueOffFrist = $state("");
 
   function punktHinzufuegen(event) {
     event.preventDefault();
@@ -23,15 +25,32 @@
     aendern();
   }
 
+  // Offizielle Einreichfrist(en) – editierbar
+  function offFristAendern(i, wert) {
+    antrag.offizielleFristen[i] = wert;
+    aendern();
+  }
+  function offFristEntfernen(i) {
+    antrag.offizielleFristen.splice(i, 1);
+    aendern();
+  }
+  function offFristHinzufuegen(event) {
+    event.preventDefault();
+    if (!neueOffFrist) return;
+    antrag.offizielleFristen.push(neueOffFrist);
+    antrag.offizielleFristen.sort();
+    neueOffFrist = "";
+    aendern();
+  }
+
+  // Eigene (benannte) Fristen
   function fristHinzufuegen(event) {
     event.preventDefault();
     if (!neueFrist) return;
-    if (!Array.isArray(antrag.eigeneFristen)) antrag.eigeneFristen = [];
-    if (!antrag.eigeneFristen.includes(neueFrist)) {
-      antrag.eigeneFristen.push(neueFrist);
-      antrag.eigeneFristen.sort();
-    }
+    antrag.eigeneFristen.push({ datum: neueFrist, titel: neuerFristTitel.trim() });
+    antrag.eigeneFristen.sort((a, b) => a.datum.localeCompare(b.datum));
     neueFrist = "";
+    neuerFristTitel = "";
     aendern();
   }
   function fristEntfernen(i) {
@@ -85,20 +104,47 @@
     <textarea id="kt-notiz" rows="2" bind:value={antrag.kontakt.notiz} onchange={aendern}></textarea>
   </div>
 
+  <h4 class="check-titel">Offizielle Einreichfrist</h4>
+  {#if (antrag.offizielleFristen ?? []).length === 0}
+    <p class="leer">Keine offizielle Frist hinterlegt (z. B. laufend einreichbar).</p>
+  {/if}
+  <ul class="fristen">
+    {#each antrag.offizielleFristen ?? [] as d, i (i)}
+      <li>
+        <input
+          type="date"
+          value={d}
+          onchange={(e) => offFristAendern(i, e.currentTarget.value)}
+        />
+        <button class="entfernen" title="Frist entfernen" onclick={() => offFristEntfernen(i)}>✕</button>
+      </li>
+    {/each}
+  </ul>
+  <form class="hinzufuegen" onsubmit={offFristHinzufuegen}>
+    <input type="date" bind:value={neueOffFrist} />
+    <button type="submit" disabled={!neueOffFrist}>+ Offizielle Frist</button>
+  </form>
+  <p class="hinweis-klein">
+    Vorbefüllt aus der Datenbank – falls etwas falsch übernommen wurde, hier korrigieren.
+  </p>
+
   <h4 class="check-titel">Eigene Fristen</h4>
   {#if (antrag.eigeneFristen ?? []).length === 0}
     <p class="leer">Keine eigenen Fristen. Trage unten z. B. interne Abgabetermine ein.</p>
   {/if}
   <ul class="fristen">
-    {#each antrag.eigeneFristen ?? [] as d, i (d)}
+    {#each antrag.eigeneFristen ?? [] as f, i (i)}
       <li>
-        <span class="frist-datum">📅 {fristAnzeige(d)}</span>
+        <span class="frist-datum">
+          📅 {fristAnzeige(f.datum)}{#if f.titel} – {f.titel}{/if}
+        </span>
         <button class="entfernen" title="Frist entfernen" onclick={() => fristEntfernen(i)}>✕</button>
       </li>
     {/each}
   </ul>
-  <form class="hinzufuegen" onsubmit={fristHinzufuegen}>
+  <form class="hinzufuegen eigene-frist" onsubmit={fristHinzufuegen}>
     <input type="date" bind:value={neueFrist} />
+    <input type="text" placeholder="Bezeichnung (z. B. Teamabgabe)" bind:value={neuerFristTitel} />
     <button type="submit" disabled={!neueFrist}>+ Frist</button>
   </form>
 
@@ -255,8 +301,31 @@
   .frist-datum {
     font-size: 0.9rem;
   }
+  /* editierbares Datumsfeld in der Liste der offiziellen Fristen */
+  .fristen li input[type="date"] {
+    flex: 1;
+    padding: 8px 10px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    border: 2px solid #dfe1e6;
+    border-radius: 8px;
+    background: #fafbfc;
+  }
+  .fristen li input[type="date"]:focus {
+    outline: none;
+    border-color: #4f6df5;
+    background: #fff;
+  }
   .hinzufuegen input[type="date"] {
     flex: 1;
+  }
+  .eigene-frist input[type="date"] {
+    flex: 0 0 auto;
+  }
+  .hinweis-klein {
+    font-size: 0.8rem;
+    color: #8590a2;
+    margin: 4px 0 0;
   }
   .checkliste {
     list-style: none;

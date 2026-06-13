@@ -65,11 +65,13 @@
       .filter(Boolean)
   );
 
-  // Alle Fristen einer Förderung: aus der Datenbank plus eigene, die
-  // im Antrag-Eintrag dieses Projekts hinterlegt sind.
+  // Alle Frist-Datumswerte einer Förderung: offizielle (editierbare
+  // Übernahme aus der Datenbank) plus eigene benannte Fristen.
   function fristenVon(f) {
-    const eigene = antraege[f.id]?.eigeneFristen ?? [];
-    return [...(f.fristen ?? []), ...eigene];
+    const a = antraege[f.id];
+    const offiziell = a?.offizielleFristen ?? f.fristen ?? [];
+    const eigene = (a?.eigeneFristen ?? []).map((e) => (typeof e === "string" ? e : e.datum));
+    return [...offiziell, ...eigene];
   }
 
   // Pro Förderung: nächste zukünftige bzw. letzte vergangene Frist.

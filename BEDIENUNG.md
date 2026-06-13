@@ -81,8 +81,9 @@ zeigt Land, Name, Geber, Förderhöhe, Sparten, Frist, den **Antrag-Status**
 - **★-Stern**: von der Merkliste entfernen.
 - **✉-Knopf** (unter dem Stern): E-Mail an die hinterlegte Kontaktperson.
   Ausgegraut, solange keine E-Mail-Adresse erfasst ist.
-- Die **Frist** steht rechts auf Höhe der Sparten-Tags; ab zwei Wochen vor
-  Ablauf wird sie **rot**. Darunter die **Kontaktperson**.
+- **Alle Fristen** (offizielle + eigene) stehen rechts auf Höhe der
+  Sparten-Tags; ab zwei Wochen vor Ablauf werden sie **rot**. Darunter die
+  **Kontaktperson**.
 - **Klick auf eine Zeile**: Detailansicht mit Status und Checkliste (siehe
   „Status" unten).
 - **📁 Projektordner öffnen**: legt den Projektordner an und öffnet ihn.
@@ -143,8 +144,10 @@ wird rechnerisch geprüft (Tippfehler-Hinweis, blockiert aber nicht). Mit
   Status). Punkte hinzufügen/entfernen. Erledigte sind durchgestrichen.
 - **Kontakt zum Förderer**: Ansprechpartner:in, E-Mail, Telefon und Notiz –
   direkt hier (aus der Merkliste) pflegbar.
-- **Eigene Fristen**: zusätzliche Termine zu dieser Förderung (erscheinen
-  auch im Fristen-Bereich).
+- **Offizielle Einreichfrist**: aus der Datenbank vorbefüllt, aber hier
+  korrigierbar (falls etwas falsch übernommen wurde).
+- **Eigene Fristen**: zusätzliche, frei **benannte** Termine zu dieser
+  Förderung (z. B. interne Abgaben); erscheinen auch im Fristen-Bereich.
 Es wird immer nur der aktuelle Stand gezeigt (keine Verlaufshistorie).
 
 ## Ordner und Word-Antrag
