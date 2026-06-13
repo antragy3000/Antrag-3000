@@ -69,8 +69,10 @@
   // Übernahme aus der Datenbank) plus eigene benannte Fristen.
   function fristenVon(f) {
     const a = antraege[f.id];
-    const offiziell = a?.offizielleFristen ?? f.fristen ?? [];
-    const eigene = (a?.eigeneFristen ?? []).map((e) => (typeof e === "string" ? e : e.datum));
+    const offiziell = (a?.offizielleFristen ?? f.fristen ?? []).filter(Boolean);
+    const eigene = (a?.eigeneFristen ?? [])
+      .map((e) => (typeof e === "string" ? e : e.datum))
+      .filter(Boolean);
     return [...offiziell, ...eigene];
   }
 

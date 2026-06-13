@@ -10,7 +10,6 @@
   let neuerPunkt = $state("");
   let neueFrist = $state("");
   let neuerFristTitel = $state("");
-  let neueOffFrist = $state("");
 
   function punktHinzufuegen(event) {
     event.preventDefault();
@@ -34,13 +33,8 @@
     antrag.offizielleFristen.splice(i, 1);
     aendern();
   }
-  function offFristHinzufuegen(event) {
-    event.preventDefault();
-    if (!neueOffFrist) return;
-    antrag.offizielleFristen.push(neueOffFrist);
-    antrag.offizielleFristen.sort();
-    neueOffFrist = "";
-    aendern();
+  function offFristNeuSlot() {
+    antrag.offizielleFristen.push("");
   }
 
   // Eigene (benannte) Fristen
@@ -105,27 +99,21 @@
   </div>
 
   <h4 class="check-titel">Offizielle Einreichfrist</h4>
-  {#if (antrag.offizielleFristen ?? []).length === 0}
-    <p class="leer">Keine offizielle Frist hinterlegt (z. B. laufend einreichbar).</p>
-  {/if}
-  <ul class="fristen">
+  <div class="off-fristen">
     {#each antrag.offizielleFristen ?? [] as d, i (i)}
-      <li>
+      <span class="off-frist">
         <input
           type="date"
           value={d}
           onchange={(e) => offFristAendern(i, e.currentTarget.value)}
         />
         <button class="entfernen" title="Frist entfernen" onclick={() => offFristEntfernen(i)}>✕</button>
-      </li>
+      </span>
     {/each}
-  </ul>
-  <form class="hinzufuegen" onsubmit={offFristHinzufuegen}>
-    <input type="date" bind:value={neueOffFrist} />
-    <button type="submit" disabled={!neueOffFrist}>+ Offizielle Frist</button>
-  </form>
+    <button type="button" class="off-add" onclick={offFristNeuSlot}>+ Frist</button>
+  </div>
   <p class="hinweis-klein">
-    Vorbefüllt aus der Datenbank – falls etwas falsch übernommen wurde, hier korrigieren.
+    Aus der Datenbank vorbefüllt – falls falsch übernommen, hier korrigieren.
   </p>
 
   <h4 class="check-titel">Eigene Fristen</h4>
@@ -301,20 +289,43 @@
   .frist-datum {
     font-size: 0.9rem;
   }
-  /* editierbares Datumsfeld in der Liste der offiziellen Fristen */
-  .fristen li input[type="date"] {
-    flex: 1;
-    padding: 8px 10px;
+  /* kompaktes, editierbares Datum der offiziellen Frist */
+  .off-fristen {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .off-frist {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .off-frist input[type="date"] {
+    padding: 7px 9px;
     font-size: 0.9rem;
     font-family: inherit;
     border: 2px solid #dfe1e6;
     border-radius: 8px;
     background: #fafbfc;
   }
-  .fristen li input[type="date"]:focus {
+  .off-frist input[type="date"]:focus {
     outline: none;
     border-color: #4f6df5;
     background: #fff;
+  }
+  .off-add {
+    background: none;
+    border: none;
+    color: #4f6df5;
+    font-size: 0.85rem;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 6px;
+  }
+  .off-add:hover {
+    background: #eef1ff;
   }
   .hinzufuegen input[type="date"] {
     flex: 1;

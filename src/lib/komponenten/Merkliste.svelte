@@ -105,7 +105,7 @@
   }
   function fristenFuerListe(f) {
     const a = antraege[f.id];
-    const offiziell = a?.offizielleFristen ?? f.fristen ?? [];
+    const offiziell = (a?.offizielleFristen ?? f.fristen ?? []).filter(Boolean);
     const eigene = a?.eigeneFristen ?? [];
     const eintraege = [];
     for (const d of offiziell) eintraege.push({ label: "Frist", datum: d, tage: tageBis(d) });

@@ -393,7 +393,7 @@
     // (statt der Datenbank-Frist) für den Word-Antrag verwenden.
     const override = aktivesProjekt.antraege[foerderung.id]?.offizielleFristen;
     const effektiv = Array.isArray(override)
-      ? { ...foerderung, fristen: $state.snapshot(override) }
+      ? { ...foerderung, fristen: $state.snapshot(override).filter(Boolean) }
       : foerderung;
     const { titel, warnhinweis, abschnitte, antwortenJson } = antragBauen(
       $state.snapshot(daten.stammdaten),
