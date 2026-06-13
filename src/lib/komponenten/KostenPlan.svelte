@@ -127,11 +127,11 @@
       einmalGespeichert = true;
       erzeugFehler = "";
       erzeugtPfad = await excelErzeugen(sauber);
-      // Nach 3 s ausblenden, damit eine erneute Erzeugung sichtbar wird.
+      // Nach 5 s ausblenden, damit eine erneute Erzeugung sichtbar wird.
       erzeugtTimer = setTimeout(() => {
         erzeugtPfad = "";
         erzeugtTimer = null;
-      }, 3000);
+      }, 5000);
     } catch (e) {
       erzeugFehler = String(e);
     } finally {
