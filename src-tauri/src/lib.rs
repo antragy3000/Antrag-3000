@@ -6,6 +6,7 @@ mod backup;
 mod dokument;
 mod excel;
 mod ordner;
+mod pdf;
 mod tresor;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -25,6 +26,8 @@ pub fn run() {
             ordner::ordner_umbenennen,
             dokument::formular_word_erzeugen,
             dokument::dokument_hochladen,
+            pdf::antrags_pdf_vorschau,
+            pdf::antrags_pdf_speichern,
             excel::kfp_excel_schreiben,
             backup::tresor_backup_erstellen,
             backup::tresor_backup_einspielen

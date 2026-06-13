@@ -5,13 +5,70 @@
   // und ruft danach aendern() zum verschlüsselten Speichern.
   import { ANTRAG_STATUS, CHECK_STATUS, statusFarbe } from "$lib/status";
 
-  let { antrag, aendern, hochladen = null } = $props();
+  let {
+    antrag,
+    aendern,
+    hochladen = null,
+    pdfVorschau = null,
+    pdfSpeichern = null,
+  } = $props();
 
   let neuerPunkt = $state("");
   let neueFrist = $state("");
   let neuerFristTitel = $state("");
   // Index des Punkts, dessen Datei gerade hochgeladen wird (-1 = keiner).
   let laedtIdx = $state(-1);
+
+  // --- Antrags-PDF: Bereitschaft, Hinweis, Vorschau/Speichern ----------
+  // Der Knopf ist nur aktiv, wenn ALLE benötigten Dokumente den Status
+  // "abgeschlossen" haben UND alle hochgeladen sind.
+  let alleAbgeschlossen = $derived(
+    antrag.checkliste.length > 0 &&
+      antrag.checkliste.every((p) => p.status === "abgeschlossen")
+  );
+  let alleHochgeladen = $derived(
+    antrag.checkliste.length > 0 &&
+      antrag.checkliste.every((p) => (p.datei || "").trim() !== "")
+  );
+  let pdfBereit = $derived(alleAbgeschlossen && alleHochgeladen);
+  let pdfHinweis = $derived(
+    antrag.checkliste.length === 0
+      ? "Füge zuerst die benötigten Dokumente hinzu."
+      : !alleAbgeschlossen
+        ? "nicht alle erforderlichen Dateien haben den Status abgeschlossen"
+        : !alleHochgeladen
+          ? "es wurden noch nicht alle Dateien hochgeladen"
+          : "Antrags-PDF aus Stammdaten, Formular, KFP und Anhängen erstellen"
+  );
+
+  let pdfModalOffen = $state(false);
+  let pdfBeschaeftigt = $state(false);
+  let pdfGespeichert = $state("");
+
+  async function pdfErstellenKlick() {
+    if (!pdfVorschau || !pdfBereit) return;
+    pdfBeschaeftigt = true;
+    pdfGespeichert = "";
+    try {
+      const ok = await pdfVorschau();
+      if (ok) pdfModalOffen = true;
+    } finally {
+      pdfBeschaeftigt = false;
+    }
+  }
+  async function pdfSpeichernKlick() {
+    if (!pdfSpeichern) return;
+    pdfBeschaeftigt = true;
+    try {
+      const pfad = await pdfSpeichern();
+      if (pfad) {
+        pdfGespeichert = pfad;
+        pdfModalOffen = false;
+      }
+    } finally {
+      pdfBeschaeftigt = false;
+    }
+  }
 
   function punktHinzufuegen(event) {
     event.preventDefault();
@@ -214,7 +271,43 @@
     <input type="text" placeholder="Weiteres Dokument …" bind:value={neuerPunkt} />
     <button type="submit" disabled={!neuerPunkt.trim()}>+ Hinzufügen</button>
   </form>
+
+  {#if pdfVorschau}
+    <div class="pdf-bereich">
+      <button
+        class="pdf-knopf"
+        disabled={!pdfBereit || pdfBeschaeftigt}
+        title={pdfHinweis}
+        onclick={pdfErstellenKlick}
+      >
+        {pdfBeschaeftigt && !pdfModalOffen ? "Erzeugt …" : "📄 Antrags-PDF erstellen"}
+      </button>
+      {#if pdfGespeichert}
+        <p class="pdf-ok">✓ Gespeichert: {pdfGespeichert}</p>
+      {/if}
+    </div>
+  {/if}
 </section>
+
+{#if pdfModalOffen}
+  <div class="pdf-schleier" onclick={() => (pdfModalOffen = false)} role="presentation">
+    <div class="pdf-dialog" onclick={(e) => e.stopPropagation()} role="presentation">
+      <h3>Antrags-PDF – Vorschau</h3>
+      <p>
+        Die Vorschau wurde in deinem PDF-Programm geöffnet – prüfe sie dort.
+        Passt alles, speichere das fertige PDF in den Förderer-Ordner.
+      </p>
+      <div class="pdf-aktionen">
+        <button class="primaer" disabled={pdfBeschaeftigt} onclick={pdfSpeichernKlick}>
+          {pdfBeschaeftigt ? "Speichert …" : "✓ Speichern"}
+        </button>
+        <button class="leise" disabled={pdfBeschaeftigt} onclick={() => (pdfModalOffen = false)}>
+          Abbrechen
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
   .antrag {
@@ -535,5 +628,102 @@
   .hinzufuegen button:disabled {
     background: #c1c7d0;
     cursor: default;
+  }
+
+  /* Antrags-PDF erstellen */
+  .pdf-bereich {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid #dfe1e6;
+  }
+  .pdf-knopf {
+    width: 100%;
+    padding: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #fff;
+    background: #216e4e;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .pdf-knopf:hover:not(:disabled) {
+    background: #1a5a40;
+  }
+  .pdf-knopf:disabled {
+    background: #c1c7d0;
+    cursor: not-allowed;
+  }
+  .pdf-ok {
+    margin: 10px 0 0;
+    font-size: 0.82rem;
+    color: #216e4e;
+    word-break: break-all;
+  }
+
+  .pdf-schleier {
+    position: fixed;
+    inset: 0;
+    background: rgba(9, 30, 66, 0.45);
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    z-index: 30;
+  }
+  .pdf-dialog {
+    background: #fff;
+    border-radius: 12px;
+    padding: 28px;
+    max-width: 440px;
+    width: 100%;
+    box-shadow: 0 12px 40px rgba(9, 30, 66, 0.3);
+  }
+  .pdf-dialog h3 {
+    margin: 0 0 10px;
+    font-size: 1.1rem;
+  }
+  .pdf-dialog p {
+    margin: 0 0 18px;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    color: #44546f;
+  }
+  .pdf-aktionen {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .pdf-aktionen .primaer {
+    padding: 10px 18px;
+    font-size: 0.93rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #fff;
+    background: #216e4e;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .pdf-aktionen .primaer:hover:not(:disabled) {
+    background: #1a5a40;
+  }
+  .pdf-aktionen .primaer:disabled {
+    background: #c1c7d0;
+    cursor: default;
+  }
+  .pdf-aktionen .leise {
+    background: none;
+    border: none;
+    color: #5e6c84;
+    font-size: 0.9rem;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 8px;
+  }
+  .pdf-aktionen .leise:hover:not(:disabled) {
+    color: #172b4d;
+    text-decoration: underline;
   }
 </style>

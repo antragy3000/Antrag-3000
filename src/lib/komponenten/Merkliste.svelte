@@ -23,6 +23,8 @@
     umschalten,
     ordnerOeffnen = null,
     dokumentHochladen = null,
+    antragsPdfVorschau = null,
+    antragsPdfSpeichern = null,
     antraege = {},
     antragHolen = null,
     antragSpeichern = null,
@@ -284,6 +286,8 @@
     umschalten={umschalten}
     ordnerOeffnen={ordnerOeffnen ? () => ordnerOeffnen(ausgewaehlt.name) : null}
     hochladen={dokumentHochladen ? (art) => dokumentHochladen(ausgewaehlt.name, art) : null}
+    pdfVorschau={antragsPdfVorschau ? () => antragsPdfVorschau(ausgewaehlt) : null}
+    pdfSpeichern={antragsPdfSpeichern ? () => antragsPdfSpeichern(ausgewaehlt) : null}
     antrag={aktuellerAntrag}
     antragAendern={antragSpeichern}
     schliessen={() => {

@@ -174,6 +174,30 @@ Pro Projekt verwaltet die App Ordner unter
   Projektangaben – ohne Stammdaten, ohne Kostenfinanzplan. Es ist eine
   **Ausgabe**: Änderungen darin fließen nicht in die App zurück. Eine PDF
   erzeugst du daraus selbst (Word → Speichern unter → PDF).
+- Hochgeladene Dokumente liegen im Unterordner `…/[Förderer]/Dateien/`.
+- Das fertige **Antrags-PDF** (siehe unten) liegt als
+  `Antrag_[Projekt]_[Förderer].pdf` im jeweiligen Förderer-Ordner.
+
+## Antrags-PDF (in der Detailansicht einer gemerkten Förderung)
+Ganz unten unter den benötigten Dokumenten erstellt **„📄 Antrags-PDF
+erstellen"** eine fertige PDF, die alles zusammenfügt:
+1. **Stammblatt** (deine Stammdaten),
+2. **Daten aus dem Formular**,
+3. **Kostenfinanzplan** (auf diese Förderung zugeschnitten: andere Mittel
+   und die zu beantragende Summe als Fehlbetrag),
+4. **Anhang** – eine Liste der benötigten Dokumente,
+5. die **hochgeladenen Dokumente** selbst, in der Reihenfolge der Liste.
+
+Der Knopf ist erst aktiv, wenn **alle** benötigten Dokumente den Status
+*abgeschlossen* haben **und** alle hochgeladen sind. Solange er ausgegraut
+ist, nennt der Hinweis beim Darüberfahren den Grund.
+
+Beim Klick öffnet sich zuerst eine **Vorschau** in deinem PDF-Programm.
+Passt alles, klickst du im Fenster auf **✓ Speichern** – dann wird die PDF
+als `Antrag_[Projekt]_[Förderer].pdf` im Förderer-Ordner abgelegt und der
+Ordner geöffnet. **Achtung:** Diese PDF enthält Stammdaten und
+Kostenfinanzplan und liegt **unverschlüsselt** im Ordner (sie ist die
+bewusste Ausgabe zum Einreichen).
 
 ## Sicherung (Backup)
 Oben rechts **🛡 Sicherung**:

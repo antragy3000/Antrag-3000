@@ -13,6 +13,8 @@
     umschalten = null,
     ordnerOeffnen = null,
     hochladen = null,
+    pdfVorschau = null,
+    pdfSpeichern = null,
     antrag = null,
     antragAendern = null,
   } = $props();
@@ -87,7 +89,7 @@
     </dl>
 
     {#if antrag}
-      <AntragBlock {antrag} aendern={antragAendern} {hochladen} />
+      <AntragBlock {antrag} aendern={antragAendern} {hochladen} {pdfVorschau} {pdfSpeichern} />
     {/if}
 
     <p class="datenstand">{hinweis}</p>

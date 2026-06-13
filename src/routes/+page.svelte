@@ -12,6 +12,7 @@
   import Sicherung from "$lib/komponenten/Sicherung.svelte";
   import datenbank from "$lib/daten/foerderungen.json";
   import { leeresFormular, formularWordBauen } from "$lib/antrag";
+  import { antragsPdfBauen } from "$lib/antragsPdf";
   import { leererKfp, kfpExport } from "$lib/kfp";
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
 
@@ -437,6 +438,41 @@
     }
   }
 
+  // Baut die Aufruf-Argumente fürs Antrags-PDF (Stammblatt, Formular,
+  // KFP, Anhang-Liste + hochgeladene Dateien dieser Förderung).
+  function pdfArgs(foerderung) {
+    const antrag = aktivesProjekt.antraege[foerderung.id];
+    const { titel, abschnitte, anhaenge } = antragsPdfBauen(
+      $state.snapshot(daten.stammdaten),
+      $state.snapshot(aktivesProjekt.formular),
+      $state.snapshot(aktivesProjekt.kfp),
+      $state.snapshot(foerderung),
+      $state.snapshot(antrag?.checkliste ?? [])
+    );
+    return { projekt: aktivesProjekt.name, foerderung: foerderung.name, titel, abschnitte, anhaenge };
+  }
+
+  // Vorschau erzeugen und im PDF-Programm öffnen.
+  async function antragsPdfVorschau(foerderung) {
+    try {
+      await invoke("antrags_pdf_vorschau", pdfArgs(foerderung));
+      return true;
+    } catch (e) {
+      alert("Die Vorschau konnte nicht erstellt werden.\n" + e);
+      return false;
+    }
+  }
+
+  // Endgültiges PDF in den Förderer-Ordner speichern. Gibt den Pfad zurück.
+  async function antragsPdfSpeichern(foerderung) {
+    try {
+      return await invoke("antrags_pdf_speichern", pdfArgs(foerderung));
+    } catch (e) {
+      alert("Das Antrags-PDF konnte nicht gespeichert werden.\n" + e);
+      return null;
+    }
+  }
+
   // Liefert (und erstellt bei Bedarf) den Antrag-Status-Eintrag einer
   // gemerkten Förderung. Die Checkliste startet mit den üblichen
   // Unterlagen der Förderung.
@@ -817,6 +853,8 @@
           umschalten={merklisteUmschalten}
           {ordnerOeffnen}
           {dokumentHochladen}
+          {antragsPdfVorschau}
+          {antragsPdfSpeichern}
           antraege={aktivesProjekt.antraege}
           {antragHolen}
           antragSpeichern={tresorSpeichern}
@@ -832,6 +870,8 @@
           umschalten={merklisteUmschalten}
           {ordnerOeffnen}
           {dokumentHochladen}
+          {antragsPdfVorschau}
+          {antragsPdfSpeichern}
           antraege={aktivesProjekt.antraege}
           {antragHolen}
           antragSpeichern={tresorSpeichern}

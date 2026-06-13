@@ -39,4 +39,17 @@ docx-rs = "0.4"
 # Bibliothek ohne fremde Programme. Fuer den stets aktuellen
 # Kostenfinanzplan im Projektordner.
 rust_xlsxwriter = "0.79"
+# genpdf: erzeugt das Antrags-PDF (Stammblatt, Formular, KFP, Anhang)
+# mit automatischem Zeilen- und Seitenumbruch sowie Tabellen. Diese
+# Layout-Logik selbst zu schreiben waere sehr umfangreich und
+# fehleranfaellig. Bindet eine eingebettete Schrift (Open Sans) ein, damit
+# Umlaute korrekt erscheinen. Feature "images" fuer Bild-Anhaenge.
+genpdf = { version = "0.2", features = ["images"] }
+# lopdf: haengt die hochgeladenen PDF-/Bild-Anhaenge an das Antrags-PDF
+# an (Seiten zu EINER Datei zusammenfuegen). Genau dafuer gedacht.
+lopdf = "0.32"
+# image: nur, um in der von genpdf genutzten image-0.23 die Decoder fuer
+# PNG und JPEG zu aktivieren (genpdf selbst schaltet sie nicht ein).
+# Cargo vereint die Features auf derselben Crate-Version.
+image = { version = "0.23", default-features = false, features = ["png", "jpeg"] }
 
