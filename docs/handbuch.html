@@ -1,0 +1,950 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Antrag 3000 – Benutzerhandbuch</title>
+<style>
+  @page { size: A4; margin: 17mm 15mm; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    color: #172b4d;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    background: #fff;
+  }
+  p { margin: 0 0 9px; }
+  ul, ol { margin: 4px 0 10px; padding-left: 20px; }
+  li { margin: 3px 0; }
+  strong { color: #172b4d; }
+  code { background: #f1f2f4; border-radius: 4px; padding: 1px 5px; font-size: 9.5pt; }
+  a { color: #3d5bf0; text-decoration: none; }
+
+  /* ---------- Deckblatt ---------- */
+  .cover {
+    height: 263mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    break-after: page;
+    padding: 0 6mm;
+  }
+  .cover .marke {
+    font-size: 13pt;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: #4f6df5;
+  }
+  .cover h1 {
+    font-size: 40pt;
+    line-height: 1.05;
+    margin: 10px 0 6px;
+    letter-spacing: -0.02em;
+  }
+  .cover .sub {
+    font-size: 15pt;
+    color: #5e6c84;
+    margin: 0 0 30px;
+    font-weight: 400;
+  }
+  .cover .meta { color: #8590a2; font-size: 10pt; }
+  .cover .balken {
+    height: 8px; width: 120px; border-radius: 99px;
+    background: linear-gradient(90deg,#4f6df5,#8270db);
+    margin: 0 0 26px;
+  }
+  .cover .hinweisbox {
+    margin-top: 34px; max-width: 135mm;
+    background: #fff7d6; color: #533f04;
+    border-radius: 10px; padding: 14px 18px; font-size: 10pt;
+  }
+
+  /* ---------- Inhaltsverzeichnis ---------- */
+  .toc { break-after: page; }
+  .toc h2 { font-size: 19pt; margin: 0 0 16px; }
+  .toc ol { list-style: none; padding: 0; margin: 0; columns: 1; }
+  .toc li {
+    display: flex; gap: 10px; align-items: baseline;
+    padding: 5px 0; border-bottom: 1px solid #f1f2f4; font-size: 10.5pt;
+  }
+  .toc .nr { color: #4f6df5; font-weight: 700; width: 22px; flex: 0 0 22px; }
+
+  /* ---------- Kapitel ---------- */
+  .chapter { break-before: page; }
+  .chapter > h2 {
+    font-size: 17pt; margin: 0 0 4px; letter-spacing: -0.01em;
+    padding-bottom: 8px; border-bottom: 3px solid #eef1ff;
+  }
+  .chapter > h2 .kn { color: #4f6df5; margin-right: 8px; }
+  h3 { font-size: 12pt; margin: 18px 0 6px; }
+  .lead { color: #44546f; font-size: 11pt; margin-bottom: 12px; }
+
+  .merke {
+    background: #eef1ff; border-left: 4px solid #4f6df5;
+    border-radius: 8px; padding: 10px 14px; margin: 12px 0; font-size: 10pt;
+  }
+  .warn {
+    background: #ffeceb; border-left: 4px solid #ca3521;
+    border-radius: 8px; padding: 10px 14px; margin: 12px 0; font-size: 10pt; color: #5d1f1a;
+  }
+  .tipp {
+    background: #dcfff1; border-left: 4px solid #22a06b;
+    border-radius: 8px; padding: 10px 14px; margin: 12px 0; font-size: 10pt; color: #143d2b;
+  }
+
+  /* ---------- Abbildungen (App-Nachbauten) ---------- */
+  figure { margin: 14px 0 16px; break-inside: avoid; }
+  figcaption {
+    font-size: 9pt; color: #8590a2; margin-top: 7px; padding-left: 2px;
+  }
+  figcaption b { color: #5e6c84; }
+  .screen {
+    background: #f4f5f7; border: 1px solid #e4e7ec; border-radius: 12px;
+    padding: 12px; overflow: hidden;
+  }
+
+  /* App-Kopfzeile */
+  .appbar {
+    background: #fff; border-radius: 9px; box-shadow: 0 1px 2px rgba(9,30,66,.08);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px; gap: 10px; margin-bottom: 10px; font-size: 8.5pt;
+  }
+  .appbar .logo { font-weight: 700; font-size: 9.5pt; }
+  .appbar .grp { display: flex; align-items: center; gap: 5px; }
+  .pill {
+    border: 2px solid #dfe1e6; background: #f7f8f9; border-radius: 7px;
+    padding: 4px 8px; color: #172b4d;
+  }
+  .pill.sel::after { content: " ▾"; color: #5e6c84; }
+  .leise { color: #5e6c84; padding: 3px 6px; }
+  .navm { display: flex; gap: 3px; }
+  .navm span { padding: 5px 9px; border-radius: 7px; color: #44546f; }
+  .navm span.akt { background: #eef1ff; color: #3d5bf0; font-weight: 600; }
+  .navm .sep { width: 1px; background: #dfe1e6; padding: 0; margin: 0 3px; align-self: stretch; }
+
+  /* Buttons */
+  .btn { display: inline-block; border-radius: 7px; padding: 7px 13px; font-size: 9pt; font-weight: 600; }
+  .btn.pri { background: #4f6df5; color: #fff; }
+  .btn.grn { background: #216e4e; color: #fff; }
+  .btn.sec { background: #fff; color: #172b4d; border: 2px solid #dfe1e6; }
+  .btn.dis { background: #c1c7d0; color: #fff; }
+  .btn.gefahr { background: #ca3521; color: #fff; }
+
+  /* Karten / Kacheln */
+  .karte {
+    background: #fff; border-radius: 10px; box-shadow: 0 1px 3px rgba(9,30,66,.12);
+    padding: 14px 16px; font-size: 9pt;
+  }
+  .karten { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .land { font-size: 7pt; font-weight: 700; letter-spacing: .03em; padding: 2px 7px; border-radius: 99px; text-transform: uppercase; }
+  .l-DE { background: #e9f2ff; color: #0055cc; }
+  .l-AT { background: #ffeceb; color: #ae2e24; }
+  .l-CH { background: #fff7d6; color: #7f5f01; }
+  .l-INT { background: #f3f0ff; color: #5e4db2; }
+
+  .chip { font-size: 7.5pt; background: #f1f2f4; color: #44546f; padding: 2px 8px; border-radius: 99px; }
+  .hoehe { color: #216e4e; font-weight: 700; }
+  .geber { color: #5e6c84; }
+
+  .badge { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px 2px 7px; border-radius: 99px; font-size: 7.5pt; font-weight: 600; }
+  .badge .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .b-blau { background: #e9f0ff; color: #2b46c4; } .b-blau .dot { background: #4f6df5; }
+  .b-gruen { background: #dcfff1; color: #216e4e; } .b-gruen .dot { background: #22a06b; }
+  .b-gelb { background: #fff7d6; color: #7f5f01; } .b-gelb .dot { background: #e2a400; }
+  .b-rot { background: #ffeceb; color: #ae2e24; } .b-rot .dot { background: #ca3521; }
+  .b-grau { background: #f1f2f4; color: #44546f; } .b-grau .dot { background: #b3bac5; }
+
+  .dot9 { width: 9px; height: 9px; border-radius: 50%; display: inline-block; vertical-align: middle; }
+
+  /* Listenzeile (Merkliste) */
+  .zeile { display: flex; gap: 12px; background: #fff; border-radius: 10px; box-shadow: 0 1px 3px rgba(9,30,66,.12); padding: 13px 16px; font-size: 9pt; }
+  .stern { color: #e2a400; font-size: 13pt; line-height: 1; }
+  .mailknopf { color: #4f6df5; }
+  .mailknopf.aus { color: #c1c7d0; }
+  .frist { font-size: 8pt; color: #8590a2; }
+  .frist.rot { color: #ae2e24; font-weight: 700; }
+
+  /* Formularfeld */
+  .feld { background: #fafbfc; border: 2px solid #dfe1e6; border-radius: 7px; padding: 6px 9px; font-size: 9pt; color: #5e6c84; }
+  .label { font-size: 8pt; font-weight: 700; color: #5e6c84; margin: 8px 0 3px; }
+
+  /* Tabellen (KFP, PDF-Aufbau) */
+  table.kfp { border-collapse: collapse; width: 100%; font-size: 8.5pt; }
+  table.kfp th, table.kfp td { border: 1px solid #e4e7ec; padding: 4px 8px; text-align: left; }
+  table.kfp th { background: #f1f2f4; }
+  table.kfp .kat td { background: #f7f8f9; font-weight: 700; }
+  table.kfp .sum td { font-weight: 700; }
+  table.kfp td.r, table.kfp th.r { text-align: right; }
+
+  .struktur { counter-reset: st; }
+  .struktur .stp {
+    display: flex; gap: 10px; align-items: flex-start; padding: 7px 10px;
+    background: #fff; border: 1px solid #e4e7ec; border-radius: 8px; margin: 6px 0; font-size: 9.5pt;
+  }
+  .struktur .num {
+    flex: 0 0 22px; width: 22px; height: 22px; border-radius: 50%;
+    background: #4f6df5; color: #fff; font-weight: 700; font-size: 9pt;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .tree { font-family: "Consolas","Courier New",monospace; font-size: 9pt; background: #fff; border: 1px solid #e4e7ec; border-radius: 8px; padding: 12px 14px; line-height: 1.7; color: #44546f; }
+  .tree b { color: #172b4d; }
+
+  .faq dt { font-weight: 700; margin-top: 12px; }
+  .faq dd { margin: 2px 0 0; color: #44546f; }
+
+  .pfad { font-family: "Consolas","Courier New",monospace; font-size: 8.5pt; background:#f1f2f4; padding:1px 5px; border-radius:4px; word-break: break-all; }
+  .ende { text-align:center; color:#8590a2; font-size:9pt; margin-top:26px; }
+</style>
+</head>
+<body>
+
+<!-- ================= DECKBLATT ================= -->
+<section class="cover">
+  <div class="marke">Benutzerhandbuch</div>
+  <h1>Antrag 3000</h1>
+  <div class="sub">Fördermittel-Anträge für Kunst &amp; Kultur – sicher auf deinem Gerät</div>
+  <div class="balken"></div>
+  <div class="meta">
+    Version 0.1.0 &nbsp;·&nbsp; Stand Juni 2026 &nbsp;·&nbsp; Windows-Desktop-App
+  </div>
+  <div class="hinweisbox">
+    <strong>Deine Daten bleiben bei dir.</strong> Alle sensiblen Angaben
+    (Name, Adresse, IBAN, Budget, Projektbeschriebe) werden ausschließlich
+    <strong>verschlüsselt auf deinem Computer</strong> gespeichert und
+    verlassen ihn nie über das Internet.
+  </div>
+</section>
+
+<!-- ================= INHALT ================= -->
+<section class="toc">
+  <h2>Inhalt</h2>
+  <ol>
+    <li><span class="nr">1</span> Einführung – was Antrag 3000 ist</li>
+    <li><span class="nr">2</span> Datensouveränität: zwei Arten von Daten</li>
+    <li><span class="nr">3</span> Erster Start: Tresor anlegen</li>
+    <li><span class="nr">4</span> Entsperren, Sperren, Neu aufsetzen</li>
+    <li><span class="nr">5</span> Projekte verwalten</li>
+    <li><span class="nr">6</span> Die Bereiche im Überblick</li>
+    <li><span class="nr">7</span> Alle Förderungen</li>
+    <li><span class="nr">8</span> Passende für mich (Matching)</li>
+    <li><span class="nr">9</span> Merkliste</li>
+    <li><span class="nr">10</span> Detailansicht: Status, Kontakt &amp; Fristen</li>
+    <li><span class="nr">11</span> Benötigte Dokumente &amp; Hochladen</li>
+    <li><span class="nr">12</span> Antrags-PDF erstellen</li>
+    <li><span class="nr">13</span> Per Mail senden</li>
+    <li><span class="nr">14</span> Fristen (Kalender)</li>
+    <li><span class="nr">15</span> Formular &amp; Word</li>
+    <li><span class="nr">16</span> Kostenplan (Kostenfinanzplan)</li>
+    <li><span class="nr">17</span> Stammdaten</li>
+    <li><span class="nr">18</span> Ordner &amp; Dateien</li>
+    <li><span class="nr">19</span> Sicherung (Backup)</li>
+    <li><span class="nr">20</span> Tipps &amp; häufige Fragen</li>
+  </ol>
+</section>
+
+<!-- ===== 1 ===== -->
+<section class="chapter">
+  <h2><span class="kn">1</span>Einführung – was Antrag 3000 ist</h2>
+  <p class="lead">Antrag 3000 hilft freischaffenden Künstler:innen und kleinen
+  Teams, Fördermittel-Anträge für Kunst- und Kulturprojekte zu
+  <strong>recherchieren, zu verwalten und vorzubereiten</strong>.</p>
+
+  <p>Die App begleitet dich von der Suche nach passenden Förderungen über die
+  Merkliste, den Status deiner Anträge, Fristen und den Kostenfinanzplan bis
+  zum fertigen, einreichfertigen <strong>Antrags-PDF</strong>. Sie läuft
+  vollständig <strong>offline</strong> auf deinem Windows-Computer – ohne Konto,
+  ohne Cloud-Zwang.</p>
+
+  <h3>Der typische Ablauf</h3>
+  <div class="struktur">
+    <div class="stp"><span class="num">1</span><div><b>Förderung finden</b> – in „Alle Förderungen" stöbern oder den Fragebogen „Passende für mich" ausfüllen.</div></div>
+    <div class="stp"><span class="num">2</span><div><b>Merken</b> – interessante Förderungen mit dem Stern auf die Merkliste setzen.</div></div>
+    <div class="stp"><span class="num">3</span><div><b>Vorbereiten</b> – Formular, Kostenplan und Stammdaten ausfüllen; Status und Fristen pflegen.</div></div>
+    <div class="stp"><span class="num">4</span><div><b>Unterlagen sammeln</b> – benötigte Dokumente abhaken und hochladen.</div></div>
+    <div class="stp"><span class="num">5</span><div><b>Einreichen</b> – das fertige Antrags-PDF erzeugen und per Mail versenden.</div></div>
+  </div>
+
+  <div class="merke">Dieses Handbuch beschreibt jeden Bereich der Reihe nach.
+  Die Abbildungen zeigen den Aufbau der Oberfläche – auf deinem Bildschirm
+  sieht es genauso aus.</div>
+</section>
+
+<!-- ===== 2 ===== -->
+<section class="chapter">
+  <h2><span class="kn">2</span>Datensouveränität: zwei Arten von Daten</h2>
+  <p class="lead">Das wichtigste Grundprinzip: Deine sensiblen Daten gehören dir
+  und bleiben auf deinem Gerät.</p>
+
+  <p>Antrag 3000 trennt streng zwischen zwei Ebenen:</p>
+
+  <figure>
+    <div class="screen">
+      <div class="karten">
+        <div class="karte" style="border-top:4px solid #22a06b">
+          <div style="font-weight:700;margin-bottom:5px">🔒 Sensibel – im Tresor</div>
+          <div class="geber">Name, Adresse, IBAN, Steuerangaben, Projekt&shy;beschriebe,
+          Budget, Kostenfinanzplan, Status, eigene Förderungen, Fristen.</div>
+          <div style="margin-top:8px"><span class="badge b-gruen"><span class="dot"></span>verschlüsselt auf deinem Computer</span></div>
+        </div>
+        <div class="karte" style="border-top:4px solid #4f6df5">
+          <div style="font-weight:700;margin-bottom:5px">🌐 Unkritisch</div>
+          <div class="geber">Die Förder-Datenbank mit öffentlichen Programm-Infos
+          (Name, Geber, Voraussetzungen, Fristen).</div>
+          <div style="margin-top:8px"><span class="badge b-blau"><span class="dot"></span>normale Datei in der App</span></div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 2.1</b> – Zwei Datenebenen: sensible Daten liegen verschlüsselt im Tresor.</figcaption>
+  </figure>
+
+  <p>Die sensible Ebene liegt in einem <strong>verschlüsselten Tresor</strong>
+  auf deinem Computer, geschützt durch dein Passwort. Diese Daten verlassen das
+  Gerät <strong>nie</strong> über eine Netzwerkverbindung.</p>
+
+  <div class="warn"><strong>Bewusste Ausgaben.</strong> Wenn du selbst ein Word,
+  eine Excel-Tabelle oder ein Antrags-PDF erzeugst, legt die App diese Datei
+  <strong>unverschlüsselt</strong> im Projektordner ab – damit du sie
+  weiterverwenden und einreichen kannst. Das ist deine bewusste Entscheidung;
+  die App weist jeweils darauf hin.</div>
+</section>
+
+<!-- ===== 3 ===== -->
+<section class="chapter">
+  <h2><span class="kn">3</span>Erster Start: Tresor anlegen</h2>
+  <p class="lead">Beim allerersten Start legst du ein Tresor-Passwort fest. Damit
+  werden alle deine Daten verschlüsselt.</p>
+
+  <figure>
+    <div class="screen" style="display:flex;justify-content:center">
+      <div class="karte" style="max-width:300px;width:100%;padding:22px">
+        <div style="font-size:14pt;font-weight:600">Antrag 3000</div>
+        <div class="geber" style="margin:2px 0 16px">Willkommen! Lege zuerst dein Tresor-Passwort fest.</div>
+        <div class="label">Passwort (mindestens 8 Zeichen)</div>
+        <div class="feld">••••••••••</div>
+        <div class="label">Passwort wiederholen</div>
+        <div class="feld">••••••••••</div>
+        <div class="btn pri" style="display:block;text-align:center;margin-top:14px">Tresor anlegen</div>
+        <div style="margin-top:14px;background:#fff7d6;color:#533f04;border-radius:7px;padding:9px 11px;font-size:8.5pt">
+          Wichtig: Dieses Passwort kann <b>nicht wiederhergestellt</b> werden.
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 3.1</b> – Tresor anlegen beim ersten Start.</figcaption>
+  </figure>
+
+  <div class="warn"><strong>Merke dir dein Passwort gut und sicher.</strong>
+  Es kann <strong>nicht</strong> wiederhergestellt werden. Ohne Passwort sind
+  die Daten endgültig verloren – das ist absichtlich so, damit niemand außer
+  dir an deine Daten kommt. Schreib es dir an einem sicheren Ort auf.</div>
+</section>
+
+<!-- ===== 4 ===== -->
+<section class="chapter">
+  <h2><span class="kn">4</span>Entsperren, Sperren, Neu aufsetzen</h2>
+
+  <h3>Entsperren</h3>
+  <p>Bei jedem Start gibst du dein Passwort ein, um den Tresor zu entsperren.
+  Erst danach sind deine Daten sichtbar.</p>
+
+  <h3>Sperren</h3>
+  <p>Oben rechts kannst du jederzeit auf <strong>Sperren</strong> klicken – dann
+  sind die Daten wieder verschlüsselt und niemand sieht sie ohne Passwort.
+  Praktisch, wenn du den Platz kurz verlässt.</p>
+
+  <h3>Passwort vergessen? „Neu aufsetzen"</h3>
+  <p>Auf der Entsperren-Seite gibt es den Link
+  <em>„Passwort vergessen? Neu aufsetzen …"</em>. Damit beginnst du mit einem
+  <strong>leeren</strong> Tresor und neuem Passwort. Zur Bestätigung tippst du
+  <code>NEU AUFSETZEN</code>.</p>
+
+  <div class="tipp"><strong>Dein alter Tresor wird nicht gelöscht</strong>,
+  sondern mit Datum beiseitegelegt – falls dir das alte Passwort doch wieder
+  einfällt. Wiederherstellen lässt er sich aber nur mit dem alten Passwort.</div>
+</section>
+
+<!-- ===== 5 ===== -->
+<section class="chapter">
+  <h2><span class="kn">5</span>Projekte verwalten</h2>
+  <p class="lead">Alles in der App gehört immer zu einem <strong>Projekt</strong>
+  – so kannst du an mehreren Vorhaben gleichzeitig arbeiten.</p>
+
+  <figure>
+    <div class="screen">
+      <div class="appbar">
+        <div class="grp">
+          <span class="logo">Antrag 3000</span>
+          <span class="pill sel">Klangraum Festival</span>
+          <span class="leise">+ Projekt</span>
+          <span class="leise">✏️</span>
+          <span class="leise">🗑</span>
+        </div>
+        <div class="grp"><span class="leise">🛡 Sicherung</span><span class="leise">Sperren</span></div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 5.1</b> – Oben links wählst und verwaltest du dein Projekt.</figcaption>
+  </figure>
+
+  <ul>
+    <li><strong>Projekt-Auswahl</strong> (Klappliste): zwischen deinen Projekten wechseln.</li>
+    <li><strong>+ Projekt</strong>: ein neues Projekt anlegen.</li>
+    <li><strong>✏️</strong>: das aktive Projekt umbenennen (der zugehörige Ordner zieht mit um).</li>
+    <li><strong>🗑</strong>: das aktive Projekt endgültig löschen (mit Rückfrage).</li>
+  </ul>
+
+  <div class="merke">Die <strong>Stammdaten</strong> (dein Name, Adresse, Bank …)
+  gelten projektübergreifend – die musst du nur einmal eingeben. Merkliste,
+  Status, Formular, Kostenplan und Fristen gehören dagegen je zum Projekt.</div>
+  <p>Ist noch kein Projekt vorhanden, fordert die App dich auf, eines zu erstellen.</p>
+</section>
+
+<!-- ===== 6 ===== -->
+<section class="chapter">
+  <h2><span class="kn">6</span>Die Bereiche im Überblick</h2>
+  <p class="lead">Über die Navigationsleiste oben erreichst du alle Bereiche.
+  Sie sind in drei Blöcke gruppiert.</p>
+
+  <figure>
+    <div class="screen">
+      <div class="appbar">
+        <div class="navm">
+          <span class="akt">Alle Förderungen</span>
+          <span>Passende für mich</span>
+          <span class="sep"></span>
+          <span>Merkliste&nbsp;(3)</span>
+          <span>Fristen</span>
+          <span>Formular</span>
+          <span>Kostenplan</span>
+          <span class="sep"></span>
+          <span>Stammdaten</span>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 6.1</b> – Die Navigation. Der aktive Bereich ist blau hinterlegt.</figcaption>
+  </figure>
+
+  <ul>
+    <li><strong>Block 1 – Finden:</strong> „Alle Förderungen" und „Passende für mich".</li>
+    <li><strong>Block 2 – Dein Projekt:</strong> „Merkliste", „Fristen", „Formular", „Kostenplan".</li>
+    <li><strong>Block 3 – Du:</strong> „Stammdaten" (projektübergreifend).</li>
+  </ul>
+  <p>Oben rechts liegen außerdem <strong>🛡 Sicherung</strong> und <strong>Sperren</strong>.</p>
+</section>
+
+<!-- ===== 7 ===== -->
+<section class="chapter">
+  <h2><span class="kn">7</span>Alle Förderungen</h2>
+  <p class="lead">Die Übersicht aller Förderungen aus der Datenbank – als Karten,
+  durchsuchbar nach Name, Geber, Land oder Sparte.</p>
+
+  <figure>
+    <div class="screen">
+      <div class="karten">
+        <div class="karte">
+          <div style="display:flex;gap:7px;align-items:center;margin-bottom:5px">
+            <span class="land l-DE">DE</span>
+            <span style="font-weight:700">Förderung Neue Musik</span>
+          </div>
+          <div class="geber">Musikfonds e. V.</div>
+          <div style="margin:7px 0"><span class="chip">Musik</span> <span class="chip">Interdisziplinär</span></div>
+          <div class="hoehe">5.000 – 25.000 €</div>
+          <div style="text-align:right;margin-top:6px"><span style="color:#e2a400;font-size:13pt">☆</span></div>
+        </div>
+        <div class="karte">
+          <div style="display:flex;gap:7px;align-items:center;margin-bottom:5px">
+            <span class="land l-CH">CH</span>
+            <span style="font-weight:700">Projektförderung Kultur</span>
+          </div>
+          <div class="geber">Pro Helvetia</div>
+          <div style="margin:7px 0"><span class="chip">Tanz</span> <span class="chip">Barrierefreiheit</span></div>
+          <div class="hoehe">bis 50.000 CHF</div>
+          <div style="text-align:right;margin-top:6px"><span style="color:#e2a400;font-size:13pt">★</span></div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 7.1</b> – Förderkarten. Mit dem ☆/★-Stern setzt du eine Förderung auf die Merkliste.</figcaption>
+  </figure>
+
+  <p>Ein Klick auf eine Karte öffnet die <strong>Details</strong>
+  (Voraussetzungen, Sparten, Frist, übliche Unterlagen) und einen Knopf, um die
+  <strong>Webseite des Fördergebers</strong> im Browser zu öffnen.</p>
+  <div class="merke">Der <strong>Stern</strong> ist überall gleich: ☆ = nicht
+  gemerkt, ★ = auf der Merkliste.</div>
+</section>
+
+<!-- ===== 8 ===== -->
+<section class="chapter">
+  <h2><span class="kn">8</span>Passende für mich (Matching)</h2>
+  <p class="lead">Ein kurzer Fragebogen filtert die Datenbank und schlägt dir die
+  am besten passenden Förderungen vor.</p>
+
+  <p>Du beantwortest acht Multiple-Choice-Fragen: Wohnsitz, Projektort, wer
+  beantragt, ob studentisch, Sparten, Projektart, Budgetgröße und Zeitpunkt.</p>
+
+  <figure>
+    <div class="screen">
+      <div class="karte" style="margin-bottom:10px">
+        <div style="font-weight:700;margin-bottom:6px">Ergebnis</div>
+        <div style="display:flex;align-items:center;gap:10px;font-size:9pt;border-bottom:1px solid #f1f2f4;padding:6px 0">
+          <span class="badge b-gruen"><span class="dot"></span>92&nbsp;%</span>
+          <span style="font-weight:600">Förderung Neue Musik</span>
+          <span class="geber">· Musikfonds e. V.</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;font-size:9pt;padding:6px 0">
+          <span class="badge b-gelb"><span class="dot"></span>67&nbsp;%</span>
+          <span style="font-weight:600">Projektförderung Kultur</span>
+          <span class="geber">· Pro Helvetia</span>
+        </div>
+      </div>
+      <div class="karte" style="border-left:4px solid #ca3521">
+        <div style="font-weight:700;color:#ae2e24;margin-bottom:3px">Weitere Vorschläge</div>
+        <div style="font-size:9pt">Erfüllen ein „hartes" Kriterium nicht –
+        z. B. <span style="color:#ae2e24">Wohnsitz nicht im geforderten Land</span> – mit Begründung.</div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 8.1</b> – Passende Förderungen nach Passung sortiert, plus „Weitere Vorschläge".</figcaption>
+  </figure>
+
+  <p><strong>Harte Kriterien</strong> (Wohnsitz, Durchführungsort, Trägerschaft)
+  führen bei Nichterfüllung in den Abschnitt „Weitere Vorschläge".
+  <strong>Weiche Kriterien</strong> (Sparte, Projektart, Budget, Zeitpunkt)
+  beeinflussen die Rangfolge. Mit „Fragebogen ändern" passt du die Antworten an;
+  sie liegen verschlüsselt im Tresor.</p>
+</section>
+
+<!-- ===== 9 ===== -->
+<section class="chapter">
+  <h2><span class="kn">9</span>Merkliste</h2>
+  <p class="lead">Die Förderungen, die du verfolgst – als übersichtliche Liste,
+  je Projekt. Jede Zeile zeigt alle wichtigen Infos auf einen Blick.</p>
+
+  <figure>
+    <div class="screen">
+      <div class="zeile">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+          <span class="stern">★</span>
+          <span class="mailknopf">✉</span>
+        </div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="land l-DE">DE</span>
+            <span style="font-weight:700">Förderung Neue Musik</span>
+            <span class="badge b-blau"><span class="dot"></span>in Bearbeitung</span>
+          </div>
+          <div class="geber" style="margin:4px 0">Musikfonds e. V. · <span class="hoehe">5.000 – 25.000 €</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div><span class="chip">Musik</span> <span class="chip">Interdisziplinär</span></div>
+            <div class="frist rot">Frist: 15.09.2026</div>
+          </div>
+          <div style="font-size:8pt;color:#44546f;margin-top:6px">👤 Frau Dr. Berg</div>
+          <div style="margin-top:8px;border-top:1px solid #f1f2f4;padding-top:7px">
+            <div style="font-size:7.5pt;font-weight:700;color:#8590a2;letter-spacing:.03em">BENÖTIGTE DOKUMENTE:</div>
+            <div style="font-size:8.5pt;margin-top:4px"><span class="dot9" style="background:#22a06b"></span> Lebenslauf <span class="geber">– abgeschlossen</span></div>
+            <div style="font-size:8.5pt;margin-top:2px"><span class="dot9" style="background:#e2a400"></span> Projektbeschreibung <span class="geber">– in Bearbeitung</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 9.1</b> – Eine Merklisten-Zeile mit Status, Frist, Kontakt und Dokumenten-Status.</figcaption>
+  </figure>
+
+  <ul>
+    <li><strong>★ Stern</strong>: von der Merkliste entfernen.</li>
+    <li><strong>✉ Brief</strong> (unter dem Stern): E-Mail an die Kontaktperson. Ausgegraut, solange keine Adresse erfasst ist.</li>
+    <li><strong>Fristen</strong> stehen rechts auf Höhe der Sparten-Tags; ab zwei Wochen vor Ablauf werden sie <span style="color:#ae2e24;font-weight:700">rot</span>.</li>
+    <li><strong>Klick auf die Zeile</strong>: öffnet die Detailansicht (siehe Kapitel 10).</li>
+  </ul>
+  <p>Über der Liste: <strong>📁 Projektordner öffnen</strong> und
+  <strong>+ Eigene Förderung</strong> (selbst recherchierte Förderung erfassen,
+  inkl. der benötigten Dokumente).</p>
+</section>
+
+<!-- ===== 10 ===== -->
+<section class="chapter">
+  <h2><span class="kn">10</span>Detailansicht: Status, Kontakt &amp; Fristen</h2>
+  <p class="lead">Ein Klick auf eine Merklisten-Zeile öffnet die Detailansicht.
+  Hier pflegst du den Stand deines Antrags.</p>
+
+  <figure>
+    <div class="screen">
+      <div class="karte">
+        <div style="display:flex;align-items:center;gap:8px"><b>Antrag-Status</b>
+          <span class="dot9" style="background:#4f6df5"></span>
+          <span class="feld" style="padding:5px 9px">in Bearbeitung ▾</span></div>
+        <div style="margin-top:12px"><b>Kontakt zum Förderer</b></div>
+        <div style="display:flex;gap:8px;margin-top:5px">
+          <div style="flex:1"><div class="label">Ansprechpartner:in</div><div class="feld">Frau Dr. Berg</div></div>
+          <div style="flex:1"><div class="label">Telefon</div><div class="feld">030 123456</div></div>
+        </div>
+        <div class="label">E-Mail</div><div class="feld">berg@musikfonds.example</div>
+        <div style="margin-top:12px"><b>Offizielle Einreichfrist</b></div>
+        <div style="margin-top:5px"><span class="feld">15.09.2026</span> <span class="leise">+ Frist</span></div>
+        <div style="font-size:8pt;color:#8590a2;margin-top:3px">Aus der Datenbank vorbefüllt – hier korrigierbar.</div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 10.1</b> – Status, Förderer-Kontakt und die editierbare offizielle Frist.</figcaption>
+  </figure>
+
+  <ul>
+    <li><strong>Antrag-Status:</strong> in Bearbeitung / abgeschickt / Zusage erhalten / Absage erhalten / muss nachgebessert werden / anderer Status (frei beschriftbar).</li>
+    <li><strong>Kontakt zum Förderer:</strong> Ansprechpartner:in, E-Mail, Telefon und Notiz – direkt hier pflegbar.</li>
+    <li><strong>Offizielle Einreichfrist:</strong> vorbefüllt, aber korrigierbar (falls die App etwas falsch übernommen hat).</li>
+    <li><strong>Eigene Fristen:</strong> zusätzliche, frei <strong>benannte</strong> Termine (z. B. interne Abgaben); erscheinen auch im Fristen-Bereich.</li>
+  </ul>
+  <div class="merke">Es wird immer nur der aktuelle Stand gezeigt – keine
+  Verlaufshistorie.</div>
+</section>
+
+<!-- ===== 11 ===== -->
+<section class="chapter">
+  <h2><span class="kn">11</span>Benötigte Dokumente &amp; Hochladen</h2>
+  <p class="lead">Darunter führst du die benötigten Dokumente als Checkliste –
+  jedes mit eigenem Status und der Möglichkeit, die Datei hochzuladen.</p>
+
+  <figure>
+    <div class="screen">
+      <div class="karte">
+        <div style="font-weight:700;margin-bottom:8px">Benötigte Dokumente</div>
+        <div style="display:flex;gap:9px;align-items:flex-start;border-bottom:1px solid #f1f2f4;padding-bottom:9px">
+          <span class="dot9" style="background:#22a06b;margin-top:3px"></span>
+          <div style="flex:1">
+            <div style="text-decoration:line-through;color:#5e6c84">Lebenslauf</div>
+            <div style="margin-top:5px"><span class="feld" style="padding:4px 8px">abgeschlossen ▾</span></div>
+            <div style="margin-top:7px"><span class="badge b-gruen" style="font-size:8pt">📎 Lebenslauf_Antrag_Klangraum Festival.pdf</span>
+              <span class="btn sec" style="padding:3px 9px;font-size:8pt">ersetzen</span>
+              <span class="leise">✕</span></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:9px;align-items:flex-start;padding-top:9px">
+          <span class="dot9" style="background:#e2a400;margin-top:3px"></span>
+          <div style="flex:1">
+            <div>Projektbeschreibung</div>
+            <div style="margin-top:5px"><span class="feld" style="padding:4px 8px">in Bearbeitung ▾</span></div>
+            <div style="margin-top:7px"><span class="btn sec" style="padding:4px 11px;font-size:8pt;color:#3d5bf0;border-color:#c7d0f8">⬆ Datei hochladen</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 11.1</b> – Oben ein hochgeladenes Dokument, unten eines, das noch fehlt.</figcaption>
+  </figure>
+
+  <ul>
+    <li>Punkte <strong>hinzufügen / entfernen</strong>; erledigte sind durchgestrichen.</li>
+    <li><strong>⬆ Datei hochladen</strong>: wähle die Datei (<strong>nur PDF, JPG oder PNG</strong>). Sie wird umbenannt zu <span class="pfad">[Dokumentart]_Antrag_[Projekt]</span> und nach <span class="pfad">…/[Förderer]/Dateien/</span> kopiert.</li>
+    <li><strong>ersetzen</strong>: eine neue Datei laden (überschreibt die alte). <strong>✕</strong>: nur die Verknüpfung lösen (die Datei bleibt im Ordner).</li>
+  </ul>
+  <div class="tipp">Diese hochgeladenen Dokumente landen später automatisch im
+  Antrags-PDF (Kapitel 12).</div>
+</section>
+
+<!-- ===== 12 ===== -->
+<section class="chapter">
+  <h2><span class="kn">12</span>Antrags-PDF erstellen</h2>
+  <p class="lead">Der Höhepunkt: Aus allem zusammen entsteht <strong>eine</strong>
+  fertige, einreichfertige PDF.</p>
+
+  <h3>Was hineinkommt</h3>
+  <div class="struktur">
+    <div class="stp"><span class="num">1</span><div><b>Stammblatt</b> – deine Stammdaten.</div></div>
+    <div class="stp"><span class="num">2</span><div><b>Daten aus dem Formular</b> – Projekttitel, Beschreibung, Ziele …</div></div>
+    <div class="stp"><span class="num">3</span><div><b>Kostenfinanzplan</b> – auf diese Förderung zugeschnitten (andere Mittel + Fehlbetrag).</div></div>
+    <div class="stp"><span class="num">4</span><div><b>Anhang</b> – eine Liste der benötigten Dokumente.</div></div>
+    <div class="stp"><span class="num">5</span><div><b>Die hochgeladenen Dokumente</b> selbst, in der Reihenfolge der Liste.</div></div>
+  </div>
+
+  <h3>Der Knopf wird erst grün, wenn alles bereit ist</h3>
+  <figure>
+    <div class="screen" style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center">
+      <div style="text-align:center">
+        <div class="btn dis" style="display:block;padding:10px 16px">📄 Antrags-PDF erstellen</div>
+        <div style="font-size:8pt;color:#8590a2;margin-top:5px;max-width:150px">ausgegraut – Hinweis nennt den Grund</div>
+      </div>
+      <div style="text-align:center">
+        <div class="btn grn" style="display:block;padding:10px 16px">📄 Antrags-PDF erstellen</div>
+        <div style="font-size:8pt;color:#216e4e;margin-top:5px;max-width:150px">aktiv – alle Dokumente bereit</div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 12.1</b> – Der Knopf ist erst aktiv, wenn alle Dokumente <i>abgeschlossen</i> <b>und</b> hochgeladen sind.</figcaption>
+  </figure>
+
+  <p>Solange der Knopf grau ist, nennt der Hinweis beim Darüberfahren den Grund:
+  <em>„nicht alle erforderlichen Dateien haben den Status abgeschlossen"</em>
+  bzw. <em>„es wurden noch nicht alle Dateien hochgeladen"</em>.</p>
+
+  <h3>Vorschau und Speichern</h3>
+  <figure>
+    <div class="screen" style="display:flex;justify-content:center">
+      <div class="karte" style="max-width:330px">
+        <div style="font-weight:700;margin-bottom:6px">Antrags-PDF – Vorschau</div>
+        <div style="font-size:9pt;color:#44546f;margin-bottom:12px">Die Vorschau wurde in deinem PDF-Programm geöffnet – prüfe sie dort. Passt alles, speichere das fertige PDF.</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span class="btn grn">✓ Speichern</span>
+          <span class="btn sec">✉ und per Mail senden</span>
+          <span class="leise">Abbrechen</span>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 12.2</b> – Erst Vorschau prüfen, dann speichern oder per Mail senden.</figcaption>
+  </figure>
+
+  <p>Beim Klick öffnet sich zuerst eine <strong>Vorschau</strong> im PDF-Programm.
+  Mit <strong>✓ Speichern</strong> wird die Datei als
+  <span class="pfad">Antrag_[Projekt]_[Förderer].pdf</span> im Förderer-Ordner
+  abgelegt und der Ordner geöffnet.</p>
+
+  <div class="warn">Diese PDF enthält Stammdaten und Kostenfinanzplan und liegt
+  <strong>unverschlüsselt</strong> im Ordner – sie ist die bewusste Ausgabe zum
+  Einreichen.</div>
+</section>
+
+<!-- ===== 13 ===== -->
+<section class="chapter">
+  <h2><span class="kn">13</span>Per Mail senden</h2>
+  <p class="lead">Im Vorschau-Fenster gibt es neben „Speichern" den Knopf
+  <strong>✉ und per Mail senden</strong>.</p>
+
+  <p>Dieser Knopf</p>
+  <ul>
+    <li>speichert die PDF ebenfalls in den Förderer-Ordner und öffnet den Ordner,</li>
+    <li>öffnet zusätzlich eine <strong>vorbereitete E-Mail</strong> an die
+    hinterlegte Kontaktperson – Betreff und Text sind schon ausgefüllt, der
+    Dateipfad steht im Text.</li>
+  </ul>
+
+  <div class="merke"><strong>Die Datei ziehst du noch selbst als Anhang</strong>
+  in die Mail. Das ist technisch bei jedem Mailprogramm so (auch bei Webmail
+  wie Proton oder Gmail) – darum öffnet die App den Ordner mit dem PDF gleich
+  mit, damit du es bequem hineinziehen kannst.</div>
+
+  <p>Ist <strong>keine E-Mailadresse</strong> der Kontaktperson hinterlegt, ist
+  der Knopf ausgegraut; beim Darüberfahren erscheint ein entsprechender Hinweis.
+  Die Kontaktperson pflegst du in der Detailansicht (Kapitel 10).</p>
+</section>
+
+<!-- ===== 14 ===== -->
+<section class="chapter">
+  <h2><span class="kn">14</span>Fristen (Kalender)</h2>
+  <p class="lead">Alle Einreichfristen deiner gemerkten Förderungen, nach Datum
+  sortiert, mit Countdown und Ampelfarben.</p>
+
+  <figure>
+    <div class="screen">
+      <div class="zeile" style="align-items:center;margin-bottom:8px">
+        <div style="width:48px;height:48px;border-radius:9px;background:#ffeceb;color:#ae2e24;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1">
+          <span style="font-size:13pt;font-weight:700">15</span><span style="font-size:7pt;font-weight:600">SEP</span></div>
+        <div style="flex:1"><div style="display:flex;gap:7px;align-items:center"><span class="land l-DE">DE</span><b>Förderung Neue Musik</b></div>
+          <div class="geber" style="font-size:8pt">Musikfonds e. V.</div></div>
+        <div class="badge b-rot"><span class="dot"></span>noch 9 Tage</div>
+      </div>
+      <div class="zeile" style="align-items:center">
+        <div style="width:48px;height:48px;border-radius:9px;background:#eae6ff;color:#5e44b0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1">
+          <span style="font-size:13pt;font-weight:700">01</span><span style="font-size:7pt;font-weight:600">SEP</span></div>
+        <div style="flex:1"><div style="display:flex;gap:7px;align-items:center"><span class="chip" style="background:#eae6ff;color:#5e44b0">📌 Intern</span><b>Teamabgabe Entwurf</b></div></div>
+        <div class="badge b-gelb"><span class="dot"></span>noch 25 Tage</div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 14.1</b> – Förder-Fristen und interne Termine gemeinsam, nach Datum.</figcaption>
+  </figure>
+
+  <p>Ampelfarben: <span style="color:#ae2e24;font-weight:700">rot</span> ≤ 14 Tage,
+  <span style="color:#7f5f01;font-weight:700">gelb</span> ≤ 30 Tage, sonst
+  <span style="color:#216e4e;font-weight:700">grün</span>. Gruppen: anstehend,
+  „laufend / ohne feste Frist", bereits vergangen.</p>
+  <p><strong>+ Interne Frist</strong>: ein eigener Termin ohne Förderung
+  (z. B. „Teamabgabe Entwurf") mit Datum und Titel.</p>
+</section>
+
+<!-- ===== 15 ===== -->
+<section class="chapter">
+  <h2><span class="kn">15</span>Formular &amp; Word</h2>
+  <p class="lead">Im Sammel-Formular beantwortest du die typischen Antragsfragen
+  <strong>einmal pro Projekt</strong>.</p>
+
+  <figure>
+    <div class="screen">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <b style="font-size:11pt">Sammel-Formular</b>
+        <div><span class="btn pri">Speichern</span> <span class="btn sec">📄 Word erstellen</span></div>
+      </div>
+      <div class="karte">
+        <div class="label">Projekttitel</div><div class="feld">Klangraum – Festival für Neue Musik</div>
+        <div class="label">Kurzbeschreibung (2–3 Sätze)</div><div class="feld" style="height:34px">Ein dreitägiges Festival …</div>
+        <div class="label">Beteiligte / Mitwirkende / Partner*innen</div><div class="feld" style="height:34px">…</div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 15.1</b> – Das Sammel-Formular mit „Speichern" und „Word erstellen".</figcaption>
+  </figure>
+
+  <ul>
+    <li><strong>Speichern</strong>: sichert die Angaben verschlüsselt im Tresor.</li>
+    <li><strong>📄 Word erstellen</strong>: legt die Projektangaben als Word-Datei
+    in den <strong>Projektordner</strong> – bewusst <strong>ohne Stammdaten und
+    ohne Kostenfinanzplan</strong>. Die Word-Datei ist eine Ausgabe; Änderungen
+    darin fließen nicht in die App zurück.</li>
+  </ul>
+  <div class="merke">Felder: Projekttitel, Kurz- und ausführliche Beschreibung,
+  Ziele/Zielgruppe, Zeitraum, Durchführungsort, Beteiligte. Kosten und
+  Finanzierung haben einen eigenen Bereich – den Kostenplan (Kapitel 16).</div>
+</section>
+
+<!-- ===== 16 ===== -->
+<section class="chapter">
+  <h2><span class="kn">16</span>Kostenplan (Kostenfinanzplan)</h2>
+  <p class="lead">Ausgaben und Finanzierung in Kategorien und Positionen – mit
+  automatischen Summen und Bilanz.</p>
+
+  <figure>
+    <div class="screen">
+      <table class="kfp">
+        <tr><th>Ausgaben</th><th>Erläuterung</th><th class="r">Betrag</th></tr>
+        <tr class="kat"><td>1 Personalkosten</td><td></td><td class="r">9.000,00 €</td></tr>
+        <tr><td>1.1 Honorar Künstler:innen</td><td>50 € × 4 × 5 × 3</td><td class="r">3.000,00 €</td></tr>
+        <tr><td>1.2 Technik-Crew</td><td>pro Tag</td><td class="r">6.000,00 €</td></tr>
+        <tr class="sum"><td>Gesamtkosten</td><td></td><td class="r">9.000,00 €</td></tr>
+      </table>
+    </div>
+    <figcaption><b>Abb. 16.1</b> – Kostentabelle mit Kategorien (fett), Positionen und Summe.</figcaption>
+  </figure>
+
+  <ul>
+    <li><strong>Rechnen im Betragsfeld:</strong> statt einer Zahl darfst du eine
+    Rechnung eintippen, z. B. <code>50 × 4 × 5 × 3</code> – daneben steht das
+    Ergebnis. Zeichen <code>× · x à</code> = mal, <code>:</code> = geteilt, dazu
+    <code>+ −</code> und Klammern.</li>
+    <li><strong>Finanzierung:</strong> jede Position ist „Eigene Drittmittel /
+    Einnahmen" oder eine <strong>Förderung aus deiner Merkliste</strong> – so
+    verknüpfst du Geldquellen mit deinen Anträgen.</li>
+    <li><strong>Reihenfolge ändern</strong> mit den ▲▼-Pfeilen.</li>
+    <li><strong>Vorschau</strong>: zeigt den Plan als Tabelle (wie im Word/Excel).</li>
+    <li><strong>Speichern</strong>: legt den Plan verschlüsselt in den Tresor.</li>
+    <li><strong>KFP generieren (Excel)</strong>: erstellt auf Knopfdruck eine
+    Excel-Datei im Projektordner (unverschlüsselt; mit Hinweis).</li>
+  </ul>
+</section>
+
+<!-- ===== 17 ===== -->
+<section class="chapter">
+  <h2><span class="kn">17</span>Stammdaten</h2>
+  <p class="lead">Deine wiederverwendbaren Angaben – einmal eingeben, überall
+  nutzen. Projektübergreifend und verschlüsselt.</p>
+
+  <figure>
+    <div class="screen">
+      <div class="karten">
+        <div class="karte"><b>Person / Träger</b><div class="geber" style="margin-top:4px">Vorname, Nachname, Künstler:innenname, Organisation</div></div>
+        <div class="karte"><b>Kontakt</b><div class="geber" style="margin-top:4px">Straße, PLZ, Ort, Land, E-Mail, Telefon, Webseite</div></div>
+        <div class="karte"><b>Bankverbindung</b><div class="geber" style="margin-top:4px">Kontoinhaber:in, IBAN, BIC, Bank</div></div>
+        <div class="karte"><b>Steuer</b><div class="geber" style="margin-top:4px">Steuernummer, USt-IdNr., Finanzamt</div></div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 17.1</b> – Stammdaten in vier Karten.</figcaption>
+  </figure>
+
+  <p>Die <strong>IBAN</strong> wird rechnerisch geprüft (Tippfehler-Hinweis,
+  blockiert aber nicht). Mit <strong>Speichern</strong> sichern. Diese Daten
+  füllen später automatisch das Stammblatt im Antrags-PDF.</p>
+  <div class="merke">Stammdaten gelten für <strong>alle</strong> Projekte – dein
+  Name ändert sich ja nicht pro Vorhaben.</div>
+</section>
+
+<!-- ===== 18 ===== -->
+<section class="chapter">
+  <h2><span class="kn">18</span>Ordner &amp; Dateien</h2>
+  <p class="lead">Die App verwaltet pro Projekt eine klare Ordnerstruktur in
+  deinem Dokumente-Ordner.</p>
+
+  <div class="tree">
+📁 Dokumente\<b>Antrag 3000</b>\<br>
+&nbsp;&nbsp;└─ 📁 <b>Klangraum Festival</b>\ &nbsp;<span style="color:#8590a2">(Projektordner)</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 📄 Projektbeschrieb - Klangraum Festival.docx<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 📊 Kostenfinanzplan.xlsx<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─ 📁 <b>Förderung Neue Musik</b>\ &nbsp;<span style="color:#8590a2">(Förderer-Ordner)</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 📁 Dateien\ &nbsp;<span style="color:#8590a2">(hochgeladene Dokumente)</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─ 📄 Antrag_Klangraum Festival_Förderung Neue Musik.pdf
+  </div>
+
+  <ul>
+    <li>Die <strong>📁-Knöpfe</strong> in der App legen den jeweiligen Ordner an und öffnen ihn.</li>
+    <li>Word und Excel sind <strong>Ausgaben</strong> – Änderungen darin fließen nicht in die App zurück.</li>
+  </ul>
+  <div class="warn">Liegt dein Dokumente-Ordner in einer Cloud (z. B. OneDrive),
+  werden diese <strong>unverschlüsselten</strong> Dateien mit synchronisiert.
+  Der Tresor selbst bleibt verschlüsselt.</div>
+</section>
+
+<!-- ===== 19 ===== -->
+<section class="chapter">
+  <h2><span class="kn">19</span>Sicherung (Backup)</h2>
+  <p class="lead">Mach regelmäßig eine Sicherung deines Tresors – oben rechts
+  unter <strong>🛡 Sicherung</strong>.</p>
+
+  <figure>
+    <div class="screen" style="display:flex;justify-content:center">
+      <div class="karte" style="max-width:330px">
+        <div style="font-weight:700;margin-bottom:8px">Sicherung</div>
+        <div style="font-size:9pt;font-weight:600">Sicherung erstellen</div>
+        <div class="geber" style="font-size:8.5pt;margin:3px 0 8px">Speichert eine verschlüsselte Kopie an einen Ort deiner Wahl.</div>
+        <div class="btn pri" style="display:inline-block">Sicherung speichern …</div>
+        <div style="border-top:1px solid #f1f2f4;margin:12px 0"></div>
+        <div style="font-size:9pt;font-weight:600">Sicherung wiederherstellen</div>
+        <div style="background:#fff7d6;color:#533f04;border-radius:7px;padding:7px 10px;font-size:8.5pt;margin:4px 0 8px">Ersetzt deinen aktuellen Tresor. Du entsperrst danach mit dem Passwort dieser Sicherung.</div>
+        <div class="btn sec" style="display:inline-block">Sicherungsdatei auswählen …</div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 19.1</b> – Sicherung erstellen und wiederherstellen.</figcaption>
+  </figure>
+
+  <ul>
+    <li><strong>Sicherung erstellen</strong>: speichert eine verschlüsselte Kopie
+    deines Tresors (USB-Stick, Cloud-Ordner …). Sie ist nur mit deinem Passwort
+    lesbar.</li>
+    <li><strong>Sicherung wiederherstellen</strong>: ersetzt den aktuellen Tresor
+    durch eine gewählte Datei. Der bisherige Tresor wird vorher beiseitegelegt
+    (nicht gelöscht).</li>
+  </ul>
+  <div class="tipp">Mach eine Sicherung besonders vor wichtigen Schritten und
+  bewahre eine Kopie an einem zweiten Ort auf.</div>
+</section>
+
+<!-- ===== 20 ===== -->
+<section class="chapter">
+  <h2><span class="kn">20</span>Tipps &amp; häufige Fragen</h2>
+
+  <dl class="faq">
+    <dt>Ich habe mein Passwort vergessen – was nun?</dt>
+    <dd>Das Passwort kann nicht wiederhergestellt werden. Du kannst mit
+    „Neu aufsetzen" frisch beginnen (Kapitel 4). Bewahre dein Passwort sicher auf
+    und mach regelmäßig Sicherungen.</dd>
+
+    <dt>Warum ist „Antrags-PDF erstellen" grau?</dt>
+    <dd>Es müssen <strong>alle</strong> benötigten Dokumente den Status
+    <i>abgeschlossen</i> haben <strong>und</strong> hochgeladen sein. Der Hinweis
+    beim Darüberfahren nennt den genauen Grund.</dd>
+
+    <dt>Kann ich Word-Dokumente als Anhang hochladen?</dt>
+    <dd>Für die Anhänge im Antrags-PDF sind <strong>PDF, JPG und PNG</strong>
+    möglich. Ein Word-Dokument speicherst du vorher selbst als PDF
+    (Word → Speichern unter → PDF).</dd>
+
+    <dt>Die E-Mail öffnet sich, aber die Datei hängt nicht an.</dt>
+    <dd>Das ist normal: E-Mail-Programme lassen keine automatischen Anhänge zu.
+    Die App öffnet den Ordner mit dem PDF – zieh die Datei selbst in die Mail.</dd>
+
+    <dt>Beim Öffnen des Installers warnt Windows.</dt>
+    <dd>Der Installer ist nicht signiert. Klicke auf „Weitere Informationen" →
+    „Trotzdem ausführen". Das betrifft nur den ersten Start.</dd>
+
+    <dt>Wo liegen meine Dateien?</dt>
+    <dd>Unter <span class="pfad">Dokumente\Antrag 3000\[Projekt]\…</span>
+    (siehe Kapitel 18). Der verschlüsselte Tresor liegt separat im
+    App-Datenordner.</dd>
+  </dl>
+
+  <div class="ende">— Ende des Handbuchs · Antrag 3000, Version 0.1.0 —</div>
+</section>
+
+</body>
+</html>
