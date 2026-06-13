@@ -637,8 +637,8 @@
             hinweisMerken={kfpHinweisMerken}
           />
         {/key}
-      {:else}
-        <Merkliste
+      {:else if bereich === "fristen"}
+        <Kalender
           merkliste={aktivesProjekt.merkliste}
           umschalten={merklisteUmschalten}
           {ordnerOeffnen}
@@ -647,8 +647,8 @@
           {antragHolen}
           antragSpeichern={tresorSpeichern}
         />
-      {:else if bereich === "fristen"}
-        <Kalender
+      {:else}
+        <Merkliste
           merkliste={aktivesProjekt.merkliste}
           umschalten={merklisteUmschalten}
           {ordnerOeffnen}
