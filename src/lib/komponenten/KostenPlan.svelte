@@ -139,9 +139,9 @@
       </p>
     </div>
     <div class="speichern-bereich">
-      {#if !veraendert && einmalGespeichert}
-        <span class="ok">✓ verschlüsselt gespeichert</span>
-      {/if}
+      <span class="ok" class:sichtbar={!veraendert && einmalGespeichert}>
+        ✓ verschlüsselt gespeichert
+      </span>
       <button class="zweit" disabled={beschaeftigt} onclick={generierenKlick}>
         KFP generieren (Excel)
       </button>
@@ -364,6 +364,16 @@
     color: #216e4e;
     font-size: 0.88rem;
     font-weight: 600;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .ok.sichtbar {
+    opacity: 1;
+  }
+  /* feste Mindestbreite verhindert das "Springen" bei "Speichert …" */
+  .speichern-bereich .primaer {
+    min-width: 124px;
   }
 
   .erzeugt-ok {
@@ -584,7 +594,7 @@
     white-space: nowrap;
   }
 
-  input {
+  input[type="text"] {
     box-sizing: border-box;
     padding: 8px 10px;
     font-size: 0.9rem;
@@ -595,7 +605,7 @@
     transition: border-color 0.15s, background 0.15s;
     min-width: 0;
   }
-  input:focus,
+  input[type="text"]:focus,
   select:focus {
     outline: none;
     border-color: #4f6df5;
