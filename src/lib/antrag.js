@@ -4,7 +4,7 @@
 // logik - Rust setzt es nur noch in eine .docx-Datei um.
 
 import { fristText } from "./begriffe";
-import { kfpAbschnitte } from "./kfp";
+import { kfpAbschnitte, kfpExport } from "./kfp";
 
 // Felder des Sammel-Formulars: [Schlüssel, Beschriftung, Eingabetyp]
 // Kosten und Finanzierung haben eine eigene Funktion: den
@@ -112,7 +112,7 @@ export function antragBauen(stammdaten, formular, foerderung, kfp) {
         foerdergeber: foerderung.foerdergeber,
       },
       formular,
-      kfp,
+      kfp: kfpExport(kfp),
       stammdaten: s,
     },
     null,

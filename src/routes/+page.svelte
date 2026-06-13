@@ -148,7 +148,7 @@
         if (p.formular.kosten.trim()) {
           p.kfp.kosten.push({
             name: "Aus dem Formular übernommen",
-            posten: [{ bezeichnung: p.formular.kosten.trim(), erlaeuterung: "", betrag: 0 }],
+            posten: [{ bezeichnung: p.formular.kosten.trim(), erlaeuterung: "", betrag: "" }],
           });
         }
         delete p.formular.kosten;
@@ -158,11 +158,23 @@
         if (p.formular.finanzierung.trim()) {
           p.kfp.finanzierung.push({
             name: "Aus dem Formular übernommen",
-            posten: [{ bezeichnung: p.formular.finanzierung.trim(), status: "geplant", betrag: 0 }],
+            posten: [{ bezeichnung: p.formular.finanzierung.trim(), betrag: "" }],
           });
         }
         delete p.formular.finanzierung;
         veraendert = true;
+      }
+      // Frueher hatten Finanzierungs-Positionen ein Status-Feld; der
+      // Status gehoert zur Foerderoption (Schritt 8), nicht in den KFP.
+      if (Array.isArray(p.kfp?.finanzierung)) {
+        for (const k of p.kfp.finanzierung) {
+          for (const po of k.posten ?? []) {
+            if ("status" in po) {
+              delete po.status;
+              veraendert = true;
+            }
+          }
+        }
       }
     }
     if (d.aktivesProjektId && !d.projekte.some((p) => p.id === d.aktivesProjektId)) {

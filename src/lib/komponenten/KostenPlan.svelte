@@ -2,10 +2,10 @@
   // Kostenfinanzplan-Editor: Kategorien mit Positionen, automatische
   // Summen, Fehlbedarfs-Anzeige. Tresor-Inhalt (Budget ist sensibel).
   import {
-    FINANZIERUNGS_STATUS,
     vorlageKfp,
-    betragParsen,
     betragFormat,
+    istFormel,
+    formelAuswerten,
     kategorieSumme,
     seitenSumme,
     differenz,
@@ -34,8 +34,16 @@
     kategorie.posten.push(
       seite === "kosten"
         ? { bezeichnung: "", erlaeuterung: "", betrag: "" }
-        : { bezeichnung: "", status: "geplant", betrag: "" }
+        : { bezeichnung: "", betrag: "" }
     );
+  }
+
+  // Kurz-Hinweis "= 3.000,00 €" neben einem Betragsfeld, wenn dort
+  // eine Rechnung statt einer reinen Zahl steht.
+  function rechenHinweis(betrag) {
+    if (!istFormel(betrag)) return "";
+    const { wert, fehler } = formelAuswerten(betrag);
+    return fehler ? "= ?" : "= " + betragFormat(wert);
   }
   function postenEntfernen(kategorie, index) {
     kategorie.posten.splice(index, 1);
@@ -44,11 +52,12 @@
   async function speichernKlick() {
     beschaeftigt = true;
     try {
-      // Betraege beim Speichern in Zahlen normalisieren.
+      // Betraege bleiben als Text erhalten (damit Rechnungen wie
+      // "50 × 4 × 5 × 3" bearbeitbar bleiben); ausgerechnet wird live.
       const sauber = structuredClone($state.snapshot(kopie));
       for (const seite of ["kosten", "finanzierung"]) {
         for (const k of sauber[seite]) {
-          for (const p of k.posten) p.betrag = betragParsen(p.betrag);
+          for (const p of k.posten) p.betrag = String(p.betrag ?? "").trim();
         }
       }
       await speichern(sauber);
@@ -152,22 +161,21 @@
                   <input
                     class="erlaeuterung"
                     type="text"
-                    placeholder="Erläuterung (z. B. 625 € × 4 Wochen)"
+                    placeholder="Erläuterung (z. B. 625 € pro Woche)"
                     bind:value={posten.erlaeuterung}
                   />
-                {:else}
-                  <select bind:value={posten.status}>
-                    {#each FINANZIERUNGS_STATUS as s (s)}
-                      <option value={s}>{s}</option>
-                    {/each}
-                  </select>
                 {/if}
-                <input
-                  class="betrag"
-                  type="text"
-                  placeholder="0,00"
-                  bind:value={posten.betrag}
-                />
+                <div class="betrag-feld">
+                  <input
+                    class="betrag"
+                    type="text"
+                    placeholder="0,00 oder 50 × 4 × 3"
+                    bind:value={posten.betrag}
+                  />
+                  {#if rechenHinweis(posten.betrag)}
+                    <span class="rechen-hinweis">{rechenHinweis(posten.betrag)}</span>
+                  {/if}
+                </div>
                 <button
                   class="entfernen"
                   title="Position entfernen"
@@ -312,19 +320,22 @@
   .erlaeuterung {
     flex: 2;
   }
-  select {
-    flex: 1;
-    max-width: 140px;
-    padding: 8px 10px;
-    font-size: 0.9rem;
-    font-family: inherit;
-    border: 2px solid #dfe1e6;
-    border-radius: 8px;
-    background: #fafbfc;
+  .betrag-feld {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    flex-shrink: 0;
   }
   .betrag {
-    width: 110px;
+    width: 150px;
     text-align: right;
+  }
+  .rechen-hinweis {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #216e4e;
+    white-space: nowrap;
   }
 
   input {
