@@ -30,6 +30,7 @@ export const PROJEKTARTEN = {
   festival: "Festival",
   veroeffentlichung: "Veröffentlichung",
   vermittlung: "Vermittlung",
+  barrierefreiheit: "Förderung für Barrierefreiheit",
 };
 
 export const TRAEGERSCHAFT = {

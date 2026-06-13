@@ -219,6 +219,10 @@
           a.eigeneFristen = [];
           veraendert = true;
         }
+        if (a && (!a.kontakt || typeof a.kontakt !== "object")) {
+          a.kontakt = { ansprechpartner: "", email: "", telefon: "", notiz: "" };
+          veraendert = true;
+        }
       }
     }
     if (d.aktivesProjektId && !d.projekte.some((p) => p.id === d.aktivesProjektId)) {
@@ -397,6 +401,7 @@
         status: ANTRAG_STANDARD,
         statusFrei: "",
         eigeneFristen: [],
+        kontakt: { ansprechpartner: "", email: "", telefon: "", notiz: "" },
         checkliste: (foerderung.checkliste_vorschlag ?? []).map((t) => ({
           text: t,
           status: CHECK_STANDARD,
@@ -406,6 +411,9 @@
       aktivesProjekt.antraege[foerderung.id] = a;
     }
     if (!Array.isArray(a.eigeneFristen)) a.eigeneFristen = [];
+    if (!a.kontakt || typeof a.kontakt !== "object") {
+      a.kontakt = { ansprechpartner: "", email: "", telefon: "", notiz: "" };
+    }
     return a;
   }
 
@@ -670,6 +678,7 @@
         <button class:aktiv={bereich === "passend"} onclick={() => (bereich = "passend")}>
           Passende für mich
         </button>
+        <span class="nav-trenner" aria-hidden="true"></span>
         <button class:aktiv={bereich === "merkliste"} onclick={() => (bereich = "merkliste")}>
           Merkliste{#if aktivesProjekt?.merkliste.length}&nbsp;({aktivesProjekt.merkliste.length}){/if}
         </button>
@@ -682,6 +691,7 @@
         <button class:aktiv={bereich === "kostenplan"} onclick={() => (bereich = "kostenplan")}>
           Kostenplan
         </button>
+        <span class="nav-trenner" aria-hidden="true"></span>
         <button class:aktiv={bereich === "stammdaten"} onclick={() => (bereich = "stammdaten")}>
           Stammdaten
         </button>
@@ -1001,6 +1011,14 @@
     background: #eef1ff;
     color: #3d5bf0;
     font-weight: 600;
+  }
+  /* trennt die drei Navigations-Blöcke */
+  .nav-trenner {
+    width: 1px;
+    align-self: center;
+    height: 22px;
+    background: #dfe1e6;
+    margin: 0 6px;
   }
 
   .links {

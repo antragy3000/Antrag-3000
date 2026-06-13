@@ -137,6 +137,8 @@ wird rechnerisch geprüft (Tippfehler-Hinweis, blockiert aber nicht). Mit
   (noch nicht bearbeitet / muss angefragt werden / angefragt, warte auf
   Antwort / alle Infos zusammen / in Bearbeitung / abgeschlossen / anderer
   Status). Punkte hinzufügen/entfernen. Erledigte sind durchgestrichen.
+- **Kontakt zum Förderer**: Ansprechpartner:in, E-Mail, Telefon und Notiz –
+  direkt hier (aus der Merkliste) pflegbar.
 - **Eigene Fristen**: zusätzliche Termine zu dieser Förderung (erscheinen
   auch im Fristen-Bereich).
 Es wird immer nur der aktuelle Stand gezeigt (keine Verlaufshistorie).
@@ -151,6 +153,10 @@ Pro Projekt verwaltet die App Ordner unter
   - `Antrag - ….docx` – die lesbare Kopie mit rotem Warnhinweis. Diese
     Word-Datei ist eine **Ausgabe** – Änderungen darin fließen nicht in die
     App zurück. PDF erzeugst du selbst (Word → Speichern unter → PDF).
+  Der Kostenfinanzplan im Word ist auf **diese** Förderung zugeschnitten: Er
+  listet die **anderen** Mittel (was du anderswo schon beantragt/sicher hast)
+  und weist die bei dieser Förderung zu beantragende Summe als **Fehlbetrag**
+  aus (Gesamtkosten − andere Mittel).
 
 ## Sicherung (Backup)
 Oben rechts **🛡 Sicherung**:

@@ -67,6 +67,24 @@
     />
   {/if}
 
+  <h4 class="check-titel">Kontakt zum Förderer</h4>
+  <div class="kontakt">
+    <div class="zwei">
+      <div>
+        <label for="kt-name">Ansprechpartner:in</label>
+        <input id="kt-name" type="text" bind:value={antrag.kontakt.ansprechpartner} onchange={aendern} />
+      </div>
+      <div>
+        <label for="kt-tel">Telefon</label>
+        <input id="kt-tel" type="text" bind:value={antrag.kontakt.telefon} onchange={aendern} />
+      </div>
+    </div>
+    <label for="kt-mail">E-Mail</label>
+    <input id="kt-mail" type="email" bind:value={antrag.kontakt.email} onchange={aendern} />
+    <label for="kt-notiz">Notiz</label>
+    <textarea id="kt-notiz" rows="2" bind:value={antrag.kontakt.notiz} onchange={aendern}></textarea>
+  </div>
+
   <h4 class="check-titel">Eigene Fristen</h4>
   {#if (antrag.eigeneFristen ?? []).length === 0}
     <p class="leer">Keine eigenen Fristen. Trage unten z. B. interne Abgabetermine ein.</p>
@@ -182,6 +200,43 @@
     color: #5e6c84;
     font-size: 0.9rem;
     margin: 0 0 10px;
+  }
+
+  .kontakt label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #5e6c84;
+    margin: 10px 0 5px;
+  }
+  .kontakt input,
+  .kontakt textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    border: 2px solid #dfe1e6;
+    border-radius: 8px;
+    background: #fafbfc;
+  }
+  .kontakt input:focus,
+  .kontakt textarea:focus {
+    outline: none;
+    border-color: #4f6df5;
+    background: #fff;
+  }
+  .kontakt textarea {
+    resize: vertical;
+    line-height: 1.5;
+  }
+  .kontakt .zwei {
+    display: flex;
+    gap: 12px;
+  }
+  .kontakt .zwei > div {
+    flex: 1;
+    min-width: 0;
   }
 
   .fristen {

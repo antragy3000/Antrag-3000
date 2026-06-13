@@ -4,7 +4,7 @@
 // logik - Rust setzt es nur noch in eine .docx-Datei um.
 
 import { fristText } from "./begriffe";
-import { kfpAbschnitte, kfpExport } from "./kfp";
+import { kfpAbschnitteFuerAntrag, kfpExport } from "./kfp";
 
 // Felder des Sammel-Formulars: [Schlüssel, Beschriftung, Eingabetyp]
 // Kosten und Finanzierung haben eine eigene Funktion: den
@@ -92,8 +92,9 @@ export function antragBauen(stammdaten, formular, foerderung, kfp) {
     if (wert) abschnitte.push({ ueberschrift: beschriftung, absaetze: [wert] });
   }
 
-  // Kostenfinanzplan als Tabellen (Kosten, Finanzierung, Bilanz).
-  for (const a of kfpAbschnitte(kfp)) abschnitte.push(a);
+  // Kostenfinanzplan auf DIESE Förderung zugeschnitten: andere Mittel
+  // plus die beantragte Summe als Fehlbetrag.
+  for (const a of kfpAbschnitteFuerAntrag(kfp, foerderung.id)) abschnitte.push(a);
 
   abschnitte.push({
     ueberschrift: "Übliche Unterlagen (Checkliste des Fördergebers)",

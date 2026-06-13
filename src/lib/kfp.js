@@ -295,3 +295,78 @@ export function kfpAbschnitte(kfp) {
 
   return abschnitte;
 }
+
+/// Word-Abschnitte FÜR EINEN bestimmten Antrag: Die Finanzierung
+/// listet nur die ANDEREN Mittel (alle Positionen, die nicht mit
+/// dieser Förderung verknüpft sind); die bei dieser Förderung zu
+/// beantragende Summe wird als Fehlbetrag ausgewiesen
+/// (Gesamtkosten − andere Mittel).
+export function kfpAbschnitteFuerAntrag(kfp, foerderungId) {
+  const abschnitte = [];
+  if (!kfp || (kfp.kosten.length === 0 && kfp.finanzierung.length === 0)) {
+    return abschnitte;
+  }
+
+  // 1. Kostenplan (vollständig)
+  if (kfp.kosten.length) {
+    const zeilen = [["Ausgaben", "Erläuterung", "Betrag"]];
+    kfp.kosten.forEach((k, i) => {
+      zeilen.push([`**${i + 1} ${k.name}`, "", "**" + betragFormat(kategorieSumme(k))]);
+      k.posten.forEach((p, j) => {
+        zeilen.push([
+          `${i + 1}.${j + 1}  ${p.bezeichnung}`,
+          p.erlaeuterung || "",
+          betragFormat(postenBetrag(p)),
+        ]);
+      });
+    });
+    zeilen.push(["**Gesamtkosten", "", "**" + betragFormat(seitenSumme(kfp.kosten))]);
+    abschnitte.push({ ueberschrift: "Kostenplan", absaetze: [], tabelle: zeilen });
+  }
+
+  // 2. Andere Mittel (alles außer der aktuellen Förderung)
+  const gesamtKosten = seitenSumme(kfp.kosten);
+  const zeilen = [["Finanzierung (andere Mittel)", "Betrag"]];
+  let summeAndere = 0;
+  let nr = 0;
+  for (const k of kfp.finanzierung) {
+    const posten = k.posten.filter((p) => (p.foerderId || "") !== foerderungId);
+    if (posten.length === 0) continue;
+    nr += 1;
+    const katSumme = posten.reduce((s, p) => s + postenBetrag(p), 0);
+    summeAndere += katSumme;
+    zeilen.push([`**${nr} ${k.name}`, "**" + betragFormat(katSumme)]);
+    for (const p of posten) {
+      zeilen.push([finanzBezeichnung(p), betragFormat(postenBetrag(p))]);
+    }
+  }
+  if (nr === 0) {
+    abschnitte.push({
+      ueberschrift: "Bereits vorhandene / beantragte Mittel",
+      absaetze: ["Keine weiteren Mittel beantragt."],
+      tabelle: [],
+    });
+  } else {
+    zeilen.push(["**Summe andere Mittel", "**" + betragFormat(summeAndere)]);
+    abschnitte.push({
+      ueberschrift: "Bereits vorhandene / beantragte Mittel",
+      absaetze: [],
+      tabelle: zeilen,
+    });
+  }
+
+  // 3. Beantragte Summe = Fehlbetrag
+  const fehlbetrag = gesamtKosten - summeAndere;
+  abschnitte.push({
+    ueberschrift: "Bei dieser Förderung beantragte Summe",
+    absaetze: [],
+    tabelle: [
+      ["Posten", "Betrag"],
+      ["Gesamtkosten", betragFormat(gesamtKosten)],
+      ["Abzüglich andere Mittel", betragFormat(summeAndere)],
+      ["**Beantragte Summe (Fehlbetrag)", "**" + betragFormat(Math.max(0, fehlbetrag))],
+    ],
+  });
+
+  return abschnitte;
+}

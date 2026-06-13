@@ -18,7 +18,7 @@
       },
       "weiche_kriterien": {
         "sparten": ["theater", "tanz", "performance"],
-        "projektarten": ["produktion", "recherche_entwicklung", "festival"],
+        "projektarten": ["produktion", "recherche_entwicklung", "festival", "barrierefreiheit"],
         "budget_min": 5000,
         "budget_max": 50000,
         "waehrung": "EUR",
@@ -204,7 +204,7 @@
       },
       "weiche_kriterien": {
         "sparten": ["musik", "theater", "tanz", "literatur", "bildende_kunst", "interdisziplinaer"],
-        "projektarten": ["produktion", "gastspiel_tournee", "veroeffentlichung"],
+        "projektarten": ["produktion", "gastspiel_tournee", "veroeffentlichung", "barrierefreiheit"],
         "budget_min": 5000,
         "budget_max": 100000,
         "waehrung": "CHF",
