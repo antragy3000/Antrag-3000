@@ -32,4 +32,8 @@ aes-gcm = "0.10"
 # docx-rs: erzeugt Word-Dateien (.docx). In CLAUDE.md als Loesung
 # fuer die Word-Ausgabe vorgesehen.
 docx-rs = "0.4"
+# rust_xlsxwriter: erzeugt Excel-Dateien (.xlsx), reine Rust-
+# Bibliothek ohne fremde Programme. Fuer den stets aktuellen
+# Kostenfinanzplan im Projektordner.
+rust_xlsxwriter = "0.79"
 

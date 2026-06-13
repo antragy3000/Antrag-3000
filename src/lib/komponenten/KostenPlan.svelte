@@ -25,6 +25,7 @@
   let kopie = $state(structuredClone($state.snapshot(kfp)));
   let einmalGespeichert = $state(false);
   let beschaeftigt = $state(false);
+  let excelWarnung = $state("");
 
   let veraendert = $derived(
     JSON.stringify($state.snapshot(kopie)) !== JSON.stringify($state.snapshot(kfp))
@@ -69,7 +70,7 @@
           for (const p of k.posten) p.betrag = String(p.betrag ?? "").trim();
         }
       }
-      await speichern(sauber);
+      excelWarnung = (await speichern(sauber)) || "";
       einmalGespeichert = true;
     } finally {
       beschaeftigt = false;
@@ -83,18 +84,23 @@
       <h2>Kostenfinanzplan</h2>
       <p class="untertitel">
         Ausgaben und Finanzierung in Kategorien, mit automatischen Summen.
-        Erscheint im Word-Antrag als Tabelle. Bleibt verschlüsselt im Tresor.
+        Bleibt verschlüsselt im Tresor; beim Speichern wird zusätzlich
+        eine aktuelle <strong>Excel-Datei</strong> im Projektordner abgelegt.
       </p>
     </div>
     <div class="speichern-bereich">
-      {#if !veraendert && einmalGespeichert}
-        <span class="ok">✓ verschlüsselt gespeichert</span>
+      {#if !veraendert && einmalGespeichert && !excelWarnung}
+        <span class="ok">✓ gespeichert (Tresor + Excel)</span>
       {/if}
       <button class="primaer" disabled={!veraendert || beschaeftigt} onclick={speichernKlick}>
         {beschaeftigt ? "Speichert …" : "Speichern"}
       </button>
     </div>
   </div>
+
+  {#if excelWarnung}
+    <div class="excel-warnung">⚠ {excelWarnung}</div>
+  {/if}
 
   {#if leer}
     <div class="karte start">
@@ -263,6 +269,15 @@
     color: #216e4e;
     font-size: 0.88rem;
     font-weight: 600;
+  }
+
+  .excel-warnung {
+    background: #fff7d6;
+    color: #533f04;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
   }
 
   .bilanz {

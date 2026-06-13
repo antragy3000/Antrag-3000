@@ -8,7 +8,7 @@
   import SammelFormular from "$lib/komponenten/SammelFormular.svelte";
   import KostenPlan from "$lib/komponenten/KostenPlan.svelte";
   import { leeresFormular, antragBauen } from "$lib/antrag";
-  import { leererKfp } from "$lib/kfp";
+  import { leererKfp, kfpExport } from "$lib/kfp";
 
   // Die App kennt fünf Ansichten:
   // laden -> einrichten (kein Tresor) ODER entsperren (Tresor da)
@@ -294,9 +294,25 @@
   }
 
   // Kostenfinanzplan des aktiven Projekts ersetzen und sichern.
+  // Zusaetzlich wird im allgemeinen Projektordner immer eine aktuelle
+  // Excel-Datei geschrieben (unabhaengig von der Word-Erzeugung).
+  // Gibt "" bei Erfolg zurueck, sonst einen Warnhinweis (Excel-Kopie).
   async function kfpSpeichern(neu) {
     aktivesProjekt.kfp = neu;
     await tresorSpeichern();
+    try {
+      await invoke("kfp_excel_schreiben", {
+        projekt: aktivesProjekt.name,
+        kfp: kfpExport($state.snapshot(neu)),
+      });
+      return "";
+    } catch (e) {
+      // Die verschluesselte Speicherung ist schon erfolgt; die Excel
+      // ist nur eine Kopie. Haeufigster Grund fuers Scheitern: die
+      // Datei ist gerade in Excel geoeffnet (Windows sperrt sie dann).
+      console.error("Excel-Export fehlgeschlagen:", e);
+      return "Gespeichert – aber die Excel-Datei konnte nicht aktualisiert werden (ist sie gerade in Excel geöffnet?).";
+    }
   }
 
   // antworten.json + Word-Datei im Foerderungs-Ordner erzeugen.
