@@ -2,6 +2,7 @@
   // Detailansicht einer Förderung als Überlagerung.
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { LAENDER, SPARTEN, PROJEKTARTEN, TRAEGERSCHAFT, fristText } from "$lib/begriffe";
+  import AntragBlock from "./AntragBlock.svelte";
 
   let {
     foerderung: f,
@@ -12,6 +13,8 @@
     umschalten = null,
     ordnerOeffnen = null,
     antragErzeugen = null,
+    antrag = null,
+    antragAendern = null,
   } = $props();
 
   let erzeugt = $state(false);
@@ -84,15 +87,21 @@
         <dd class="warn">{f.unvertraeglich_mit.map(nameVon).join("; ")}</dd>
       {/if}
 
-      <dt>Übliche Unterlagen</dt>
-      <dd>
-        <ul>
-          {#each f.checkliste_vorschlag as punkt}
-            <li>{punkt}</li>
-          {/each}
-        </ul>
-      </dd>
+      {#if !antrag}
+        <dt>Übliche Unterlagen</dt>
+        <dd>
+          <ul>
+            {#each f.checkliste_vorschlag as punkt}
+              <li>{punkt}</li>
+            {/each}
+          </ul>
+        </dd>
+      {/if}
     </dl>
+
+    {#if antrag}
+      <AntragBlock {antrag} aendern={antragAendern} />
+    {/if}
 
     <p class="datenstand">{hinweis}</p>
 

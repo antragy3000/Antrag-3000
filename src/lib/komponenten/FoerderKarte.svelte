@@ -11,6 +11,7 @@
     gruende = [],
     gemerkt = null,
     merken = null,
+    statusBadge = null,
   } = $props();
 </script>
 
@@ -60,6 +61,11 @@
       <span class="chip">+{f.weiche_kriterien.sparten.length - 3}</span>
     {/if}
   </div>
+  {#if statusBadge}
+    <p class="status-badge farbe-{statusBadge.farbe}">
+      <span class="punkt"></span>{statusBadge.label}
+    </p>
+  {/if}
   {#if treffer.length}
     <p class="treffer">passt bei: {treffer.join(", ")}</p>
   {/if}
@@ -157,6 +163,35 @@
     font-size: 0.8rem;
     color: #216e4e;
   }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    margin: 6px 0 0;
+    padding: 3px 10px 3px 8px;
+    border-radius: 99px;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .status-badge .punkt {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .status-badge.farbe-blau { background: #e9f0ff; color: #2b46c4; }
+  .status-badge.farbe-blau .punkt { background: #4f6df5; }
+  .status-badge.farbe-lila { background: #f1edff; color: #5e44b0; }
+  .status-badge.farbe-lila .punkt { background: #8270db; }
+  .status-badge.farbe-gruen { background: #dcfff1; color: #216e4e; }
+  .status-badge.farbe-gruen .punkt { background: #22a06b; }
+  .status-badge.farbe-rot { background: #ffeceb; color: #ae2e24; }
+  .status-badge.farbe-rot .punkt { background: #ca3521; }
+  .status-badge.farbe-gelb { background: #fff7d6; color: #7f5f01; }
+  .status-badge.farbe-gelb .punkt { background: #e2a400; }
+  .status-badge.farbe-grau { background: #f1f2f4; color: #44546f; }
+  .status-badge.farbe-grau .punkt { background: #b3bac5; }
   .gruende {
     margin: 4px 0 0;
     font-size: 0.8rem;

@@ -9,6 +9,7 @@
   import KostenPlan from "$lib/komponenten/KostenPlan.svelte";
   import { leeresFormular, antragBauen } from "$lib/antrag";
   import { leererKfp, kfpExport } from "$lib/kfp";
+  import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
 
   // Die App kennt fünf Ansichten:
   // laden -> einrichten (kein Tresor) ODER entsperren (Tresor da)
@@ -54,6 +55,7 @@
       formular: leeresFormular(),
       kfp: leererKfp(),
       kfpHinweisAusblenden: false,
+      antraege: {},
     };
   }
 
@@ -184,6 +186,10 @@
       }
       if (typeof p.kfpHinweisAusblenden !== "boolean") {
         p.kfpHinweisAusblenden = false;
+        veraendert = true;
+      }
+      if (!p.antraege || typeof p.antraege !== "object" || Array.isArray(p.antraege)) {
+        p.antraege = {};
         veraendert = true;
       }
     }
@@ -341,6 +347,26 @@
     } catch (e) {
       alert("Der Antrag konnte nicht erzeugt werden.\n" + e);
     }
+  }
+
+  // Liefert (und erstellt bei Bedarf) den Antrag-Status-Eintrag einer
+  // gemerkten Förderung. Die Checkliste startet mit den üblichen
+  // Unterlagen der Förderung.
+  function antragHolen(foerderung) {
+    let a = aktivesProjekt.antraege[foerderung.id];
+    if (!a) {
+      a = {
+        status: ANTRAG_STANDARD,
+        statusFrei: "",
+        checkliste: (foerderung.checkliste_vorschlag ?? []).map((t) => ({
+          text: t,
+          status: CHECK_STANDARD,
+          statusFrei: "",
+        })),
+      };
+      aktivesProjekt.antraege[foerderung.id] = a;
+    }
+    return a;
   }
 
   // Förderung auf die Merkliste des aktiven Projekts setzen bzw.
@@ -613,6 +639,9 @@
           umschalten={merklisteUmschalten}
           {ordnerOeffnen}
           {antragErzeugen}
+          antraege={aktivesProjekt.antraege}
+          {antragHolen}
+          antragSpeichern={tresorSpeichern}
         />
       {/if}
     </main>

@@ -5,10 +5,35 @@
   import datenbank from "$lib/daten/foerderungen.json";
   import FoerderKarte from "./FoerderKarte.svelte";
   import FoerderDetail from "./FoerderDetail.svelte";
+  import { ANTRAG_STATUS, ANTRAG_STANDARD, statusLabel, statusFarbe } from "$lib/status";
 
-  let { merkliste, umschalten, ordnerOeffnen = null, antragErzeugen = null } = $props();
+  let {
+    merkliste,
+    umschalten,
+    ordnerOeffnen = null,
+    antragErzeugen = null,
+    antraege = {},
+    antragHolen = null,
+    antragSpeichern = null,
+  } = $props();
 
   let ausgewaehlt = $state(null);
+  let aktuellerAntrag = $state(null);
+
+  // Antrag-Status-Etikett für eine Förderkarte.
+  function badgeFuer(id) {
+    const a = antraege[id];
+    const key = a?.status ?? ANTRAG_STANDARD;
+    return {
+      label: statusLabel(ANTRAG_STATUS, key, a?.statusFrei),
+      farbe: statusFarbe(ANTRAG_STATUS, key),
+    };
+  }
+
+  function oeffnen(f) {
+    aktuellerAntrag = antragHolen ? antragHolen(f) : null;
+    ausgewaehlt = f;
+  }
 
   let gemerkte = $derived(
     merkliste
@@ -63,7 +88,8 @@
           foerderung={f}
           gemerkt={true}
           merken={umschalten}
-          auswaehlen={(x) => (ausgewaehlt = x)}
+          statusBadge={badgeFuer(f.id)}
+          auswaehlen={oeffnen}
         />
       {/each}
     </div>
@@ -79,7 +105,12 @@
     umschalten={umschalten}
     ordnerOeffnen={ordnerOeffnen ? () => ordnerOeffnen(ausgewaehlt.name) : null}
     antragErzeugen={antragErzeugen ? () => antragErzeugen(ausgewaehlt) : null}
-    schliessen={() => (ausgewaehlt = null)}
+    antrag={aktuellerAntrag}
+    antragAendern={antragSpeichern}
+    schliessen={() => {
+      ausgewaehlt = null;
+      aktuellerAntrag = null;
+    }}
   />
 {/if}
 
