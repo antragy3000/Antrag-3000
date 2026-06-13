@@ -195,10 +195,12 @@ export function differenz(kfp) {
 /// Werten, Kategoriesummen und Gesamtsummen.
 export function kfpExport(kfp) {
   const seite = (kategorien, mitErlaeuterung) =>
-    kategorien.map((k) => ({
+    kategorien.map((k, i) => ({
+      nummer: String(i + 1),
       name: k.name,
       summe: kategorieSumme(k),
-      posten: k.posten.map((p) => ({
+      posten: k.posten.map((p, j) => ({
+        nummer: `${i + 1}.${j + 1}`,
         bezeichnung: p.bezeichnung,
         ...(mitErlaeuterung ? { erlaeuterung: p.erlaeuterung || "" } : {}),
         betrag_formel: String(p.betrag ?? ""),
@@ -225,10 +227,14 @@ export function kfpAbschnitte(kfp) {
   if (kfp.kosten.length) {
     const zeilen = [["Ausgaben", "Erläuterung", "Betrag"]];
     kfp.kosten.forEach((k, i) => {
-      zeilen.push([`**${i + 1}. ${k.name}`, "", "**" + betragFormat(kategorieSumme(k))]);
-      for (const p of k.posten) {
-        zeilen.push([p.bezeichnung, p.erlaeuterung || "", betragFormat(postenBetrag(p))]);
-      }
+      zeilen.push([`**${i + 1} ${k.name}`, "", "**" + betragFormat(kategorieSumme(k))]);
+      k.posten.forEach((p, j) => {
+        zeilen.push([
+          `${i + 1}.${j + 1}  ${p.bezeichnung}`,
+          p.erlaeuterung || "",
+          betragFormat(postenBetrag(p)),
+        ]);
+      });
     });
     zeilen.push(["**Gesamtkosten", "", "**" + betragFormat(seitenSumme(kfp.kosten))]);
     abschnitte.push({ ueberschrift: "Kostenplan", absaetze: [], tabelle: zeilen });
@@ -237,10 +243,10 @@ export function kfpAbschnitte(kfp) {
   if (kfp.finanzierung.length) {
     const zeilen = [["Finanzierung", "Betrag"]];
     kfp.finanzierung.forEach((k, i) => {
-      zeilen.push([`**${i + 1}. ${k.name}`, "**" + betragFormat(kategorieSumme(k))]);
-      for (const p of k.posten) {
-        zeilen.push([p.bezeichnung, betragFormat(postenBetrag(p))]);
-      }
+      zeilen.push([`**${i + 1} ${k.name}`, "**" + betragFormat(kategorieSumme(k))]);
+      k.posten.forEach((p, j) => {
+        zeilen.push([`${i + 1}.${j + 1}  ${p.bezeichnung}`, betragFormat(postenBetrag(p))]);
+      });
     });
     zeilen.push(["**Gesamtfinanzierung", "**" + betragFormat(seitenSumme(kfp.finanzierung))]);
     abschnitte.push({ ueberschrift: "Finanzierungsplan", absaetze: [], tabelle: zeilen });

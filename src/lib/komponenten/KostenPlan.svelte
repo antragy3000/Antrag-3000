@@ -133,6 +133,7 @@
         {#each kopie[seite] as kategorie, ki (kategorie)}
           <div class="karte kategorie">
             <div class="kategorie-kopf">
+              <span class="nummer">{ki + 1}</span>
               <input
                 class="kategorie-name"
                 type="text"
@@ -151,6 +152,7 @@
 
             {#each kategorie.posten as posten, pi (posten)}
               <div class="posten">
+                <span class="nummer klein">{ki + 1}.{pi + 1}</span>
                 <input
                   class="bezeichnung"
                   type="text"
@@ -306,6 +308,21 @@
   .kategorie-name {
     flex: 1;
     font-weight: 600;
+  }
+
+  .nummer {
+    flex-shrink: 0;
+    min-width: 22px;
+    font-weight: 700;
+    color: #44546f;
+    font-size: 0.95rem;
+    text-align: right;
+  }
+  .nummer.klein {
+    min-width: 34px;
+    font-weight: 600;
+    color: #8590a2;
+    font-size: 0.85rem;
   }
 
   .posten {
