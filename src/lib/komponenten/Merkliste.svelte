@@ -22,6 +22,7 @@
     merkliste,
     umschalten,
     ordnerOeffnen = null,
+    dokumentHochladen = null,
     antraege = {},
     antragHolen = null,
     antragSpeichern = null,
@@ -282,6 +283,7 @@
     gemerkt={merkliste.includes(ausgewaehlt.id)}
     umschalten={umschalten}
     ordnerOeffnen={ordnerOeffnen ? () => ordnerOeffnen(ausgewaehlt.name) : null}
+    hochladen={dokumentHochladen ? (art) => dokumentHochladen(ausgewaehlt.name, art) : null}
     antrag={aktuellerAntrag}
     antragAendern={antragSpeichern}
     schliessen={() => {

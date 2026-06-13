@@ -151,6 +151,12 @@ wird rechnerisch geprüft (Tippfehler-Hinweis, blockiert aber nicht). Mit
   (noch nicht bearbeitet / muss angefragt werden / angefragt, warte auf
   Antwort / alle Infos zusammen / in Bearbeitung / abgeschlossen / anderer
   Status). Punkte hinzufügen/entfernen. Erledigte sind durchgestrichen.
+- **Dokument hochladen** (Knopf unter dem Status jedes Punkts): wähle die
+  zugehörige Datei (**PDF, JPG oder PNG**). Sie wird einheitlich umbenannt zu
+  `[Dokumentart]_Antrag_[Projektname]` und in `[Projekt]/[Förderer]/Dateien/`
+  abgelegt. **„ersetzen"** lädt eine neue Datei (überschreibt die alte),
+  **„✕"** löst nur die Verknüpfung in der App (die Datei selbst bleibt im
+  Ordner). Diese Dokumente kommen später ins Antrags-PDF.
 - **Kontakt zum Förderer**: Ansprechpartner:in, E-Mail, Telefon und Notiz –
   direkt hier (aus der Merkliste) pflegbar.
 - **Offizielle Einreichfrist**: aus der Datenbank vorbefüllt, aber hier

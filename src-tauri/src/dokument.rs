@@ -136,3 +136,42 @@ pub fn formular_word_erzeugen(
 
     Ok(docx_pfad.to_string_lossy().to_string())
 }
+
+/// Kopiert eine vom Nutzer gewaehlte Datei (PDF oder Bild) in den
+/// Unterordner "Dateien" der Foerderung und benennt sie einheitlich:
+///   [Dokumentart]_Antrag_[Projekt].[ext]
+/// Eine bereits vorhandene Datei gleichen Namens wird ueberschrieben
+/// (so ersetzt ein erneutes Hochladen die alte). Gibt den neuen
+/// Dateinamen (ohne Pfad) zurueck, den das Frontend im Tresor merkt.
+#[tauri::command]
+pub fn dokument_hochladen(
+    app: tauri::AppHandle,
+    projekt: String,
+    foerderung: String,
+    dokumentart: String,
+    quelle: String,
+) -> Result<String, String> {
+    let quell_pfad = std::path::Path::new(&quelle);
+    let ext = quell_pfad
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_lowercase())
+        .unwrap_or_default();
+    const ERLAUBT: [&str; 4] = ["pdf", "jpg", "jpeg", "png"];
+    if !ERLAUBT.contains(&ext.as_str()) {
+        return Err("Nur PDF-, JPG- oder PNG-Dateien sind erlaubt.".into());
+    }
+
+    let dateien_ordner = ordner::wurzel(&app)?
+        .join(ordner::bereinigen(&projekt)?)
+        .join(ordner::bereinigen(&foerderung)?)
+        .join("Dateien");
+    fs::create_dir_all(&dateien_ordner).map_err(|e| format!("Ordner nicht anlegbar: {e}"))?;
+
+    let basis = ordner::bereinigen(&format!("{}_Antrag_{}", dokumentart.trim(), projekt.trim()))?;
+    let datei_name = format!("{basis}.{ext}");
+    let ziel = dateien_ordner.join(&datei_name);
+
+    fs::copy(quell_pfad, &ziel).map_err(|e| format!("Datei nicht kopierbar: {e}"))?;
+    Ok(datei_name)
+}

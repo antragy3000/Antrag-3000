@@ -1,6 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
+  import { open as dateiWaehlen } from "@tauri-apps/plugin-dialog";
   import Foerderungen from "$lib/komponenten/Foerderungen.svelte";
   import Matching from "$lib/komponenten/Matching.svelte";
   import Merkliste from "$lib/komponenten/Merkliste.svelte";
@@ -241,6 +242,16 @@
           a.kontakt = { ansprechpartner: "", email: "", telefon: "", notiz: "" };
           veraendert = true;
         }
+        // Checklisten-Punkte um das Feld "datei" (hochgeladenes Dokument)
+        // ergänzen.
+        if (Array.isArray(a.checkliste)) {
+          for (const punkt of a.checkliste) {
+            if (punkt && typeof punkt.datei !== "string") {
+              punkt.datei = "";
+              veraendert = true;
+            }
+          }
+        }
       }
     }
     if (d.aktivesProjektId && !d.projekte.some((p) => p.id === d.aktivesProjektId)) {
@@ -403,6 +414,29 @@
     });
   }
 
+  // Dokument zu einem Checklisten-Punkt hochladen: Datei wählen, von
+  // Rust in [Projekt]/[Förderer]/Dateien/ kopieren und einheitlich
+  // umbenennen. Gibt den neuen Dateinamen zurück (oder null).
+  async function dokumentHochladen(foerderungName, dokumentart) {
+    const pfad = await dateiWaehlen({
+      title: "Dokument auswählen (PDF oder Bild)",
+      multiple: false,
+      filters: [{ name: "PDF oder Bild", extensions: ["pdf", "jpg", "jpeg", "png"] }],
+    });
+    if (!pfad) return null; // abgebrochen
+    try {
+      return await invoke("dokument_hochladen", {
+        projekt: aktivesProjekt.name,
+        foerderung: foerderungName,
+        dokumentart,
+        quelle: pfad,
+      });
+    } catch (e) {
+      alert("Das Dokument konnte nicht hochgeladen werden.\n" + e);
+      return null;
+    }
+  }
+
   // Liefert (und erstellt bei Bedarf) den Antrag-Status-Eintrag einer
   // gemerkten Förderung. Die Checkliste startet mit den üblichen
   // Unterlagen der Förderung.
@@ -419,6 +453,7 @@
           text: t,
           status: CHECK_STANDARD,
           statusFrei: "",
+          datei: "",
         })),
       };
       aktivesProjekt.antraege[foerderung.id] = a;
@@ -781,6 +816,7 @@
           merkliste={aktivesProjekt.merkliste}
           umschalten={merklisteUmschalten}
           {ordnerOeffnen}
+          {dokumentHochladen}
           antraege={aktivesProjekt.antraege}
           {antragHolen}
           antragSpeichern={tresorSpeichern}
@@ -795,6 +831,7 @@
           merkliste={aktivesProjekt.merkliste}
           umschalten={merklisteUmschalten}
           {ordnerOeffnen}
+          {dokumentHochladen}
           antraege={aktivesProjekt.antraege}
           {antragHolen}
           antragSpeichern={tresorSpeichern}

@@ -12,6 +12,7 @@
     gemerkt = null,
     umschalten = null,
     ordnerOeffnen = null,
+    hochladen = null,
     antrag = null,
     antragAendern = null,
   } = $props();
@@ -86,7 +87,7 @@
     </dl>
 
     {#if antrag}
-      <AntragBlock {antrag} aendern={antragAendern} />
+      <AntragBlock {antrag} aendern={antragAendern} {hochladen} />
     {/if}
 
     <p class="datenstand">{hinweis}</p>

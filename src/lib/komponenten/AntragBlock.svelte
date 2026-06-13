@@ -5,18 +5,41 @@
   // und ruft danach aendern() zum verschlüsselten Speichern.
   import { ANTRAG_STATUS, CHECK_STATUS, statusFarbe } from "$lib/status";
 
-  let { antrag, aendern } = $props();
+  let { antrag, aendern, hochladen = null } = $props();
 
   let neuerPunkt = $state("");
   let neueFrist = $state("");
   let neuerFristTitel = $state("");
+  // Index des Punkts, dessen Datei gerade hochgeladen wird (-1 = keiner).
+  let laedtIdx = $state(-1);
 
   function punktHinzufuegen(event) {
     event.preventDefault();
     const t = neuerPunkt.trim();
     if (!t) return;
-    antrag.checkliste.push({ text: t, status: "noch_nicht", statusFrei: "" });
+    antrag.checkliste.push({ text: t, status: "noch_nicht", statusFrei: "", datei: "" });
     neuerPunkt = "";
+    aendern();
+  }
+
+  // Dokument zu einem Checklisten-Punkt hochladen (Datei-Dialog +
+  // Kopie in den Förderer-Ordner; merkt sich nur den Dateinamen).
+  async function dateiHochladen(i) {
+    if (!hochladen) return;
+    laedtIdx = i;
+    try {
+      const name = await hochladen(antrag.checkliste[i].text);
+      if (name) {
+        antrag.checkliste[i].datei = name;
+        aendern();
+      }
+    } finally {
+      laedtIdx = -1;
+    }
+  }
+  // Nur die Verknüpfung lösen – die Datei selbst bleibt im Ordner.
+  function dateiEntfernen(i) {
+    antrag.checkliste[i].datei = "";
     aendern();
   }
   function punktEntfernen(i) {
@@ -164,6 +187,21 @@
               />
             {/if}
           </div>
+          {#if hochladen}
+            <div class="datei-zeile">
+              {#if punkt.datei}
+                <span class="datei-name" title={punkt.datei}>📎 {punkt.datei}</span>
+                <button class="datei-knopf" disabled={laedtIdx === i} onclick={() => dateiHochladen(i)}>
+                  {laedtIdx === i ? "lädt …" : "ersetzen"}
+                </button>
+                <button class="datei-entfernen" title="Verknüpfung entfernen" onclick={() => dateiEntfernen(i)}>✕</button>
+              {:else}
+                <button class="datei-knopf hochladen" disabled={laedtIdx === i} onclick={() => dateiHochladen(i)}>
+                  {laedtIdx === i ? "lädt …" : "⬆ Datei hochladen"}
+                </button>
+              {/if}
+            </div>
+          {/if}
         </div>
         <button class="entfernen" title="Punkt entfernen" onclick={() => punktEntfernen(i)}>
           ✕
@@ -373,6 +411,61 @@
     width: auto;
     flex: 1;
     margin-top: 0;
+  }
+
+  /* Hochgeladenes Dokument je Checklisten-Punkt */
+  .datei-zeile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .datei-name {
+    font-size: 0.82rem;
+    color: #216e4e;
+    background: #dcfff1;
+    padding: 3px 10px;
+    border-radius: 99px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .datei-knopf {
+    background: none;
+    border: 2px solid #dfe1e6;
+    color: #44546f;
+    font-size: 0.82rem;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 4px 12px;
+    border-radius: 8px;
+  }
+  .datei-knopf:hover:not(:disabled) {
+    border-color: #4f6df5;
+    color: #172b4d;
+  }
+  .datei-knopf:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .datei-knopf.hochladen {
+    color: #3d5bf0;
+    border-color: #c7d0f8;
+  }
+  .datei-entfernen {
+    background: none;
+    border: none;
+    color: #8590a2;
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 6px;
+  }
+  .datei-entfernen:hover {
+    background: #ffeceb;
+    color: #ae2e24;
   }
 
   /* runder Farbpunkt je Status */

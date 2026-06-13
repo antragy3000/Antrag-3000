@@ -24,6 +24,7 @@ pub fn run() {
             ordner::ordner_oeffnen,
             ordner::ordner_umbenennen,
             dokument::formular_word_erzeugen,
+            dokument::dokument_hochladen,
             excel::kfp_excel_schreiben,
             backup::tresor_backup_erstellen,
             backup::tresor_backup_einspielen
