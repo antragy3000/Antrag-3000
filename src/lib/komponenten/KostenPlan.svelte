@@ -10,6 +10,8 @@
     kategorieSumme,
     seitenSumme,
     differenz,
+    postenBetrag,
+    finanzBezeichnung,
   } from "$lib/kfp";
 
   let {
@@ -82,6 +84,17 @@
   function postenEntfernen(kategorie, index) {
     kategorie.posten.splice(index, 1);
   }
+
+  // Reihenfolge verschieben (Position in der Kategorie bzw. Kategorie
+  // auf ihrer Seite); richtung = -1 (hoch) oder +1 (runter).
+  function verschieben(liste, i, richtung) {
+    const j = i + richtung;
+    if (j < 0 || j >= liste.length) return;
+    const [el] = liste.splice(i, 1);
+    liste.splice(j, 0, el);
+  }
+
+  let vorschauOffen = $state(false);
 
   // Betraege bleiben als Text erhalten (damit Rechnungen wie
   // "50 × 4 × 5 × 3" bearbeitbar bleiben); ausgerechnet wird live.
@@ -163,6 +176,9 @@
       <span class="ok" class:sichtbar={!veraendert && einmalGespeichert}>
         ✓ verschlüsselt gespeichert
       </span>
+      <button class="zweit" disabled={leer} onclick={() => (vorschauOffen = true)}>
+        Vorschau
+      </button>
       <button class="zweit" disabled={beschaeftigt} onclick={generierenKlick}>
         KFP generieren (Excel)
       </button>
@@ -231,6 +247,12 @@
           <div class="karte kategorie">
             <div class="kategorie-kopf">
               <span class="nummer">{ki + 1}</span>
+              <span class="verschieben">
+                <button class="pfeil" title="Kategorie nach oben" disabled={ki === 0}
+                  onclick={() => verschieben(kopie[seite], ki, -1)}>▲</button>
+                <button class="pfeil" title="Kategorie nach unten" disabled={ki === kopie[seite].length - 1}
+                  onclick={() => verschieben(kopie[seite], ki, 1)}>▼</button>
+              </span>
               <input
                 class="kategorie-name"
                 type="text"
@@ -250,6 +272,12 @@
             {#each kategorie.posten as posten, pi (posten)}
               <div class="posten">
                 <span class="nummer klein">{ki + 1}.{pi + 1}</span>
+                <span class="verschieben">
+                  <button class="pfeil" title="Position nach oben" disabled={pi === 0}
+                    onclick={() => verschieben(kategorie.posten, pi, -1)}>▲</button>
+                  <button class="pfeil" title="Position nach unten" disabled={pi === kategorie.posten.length - 1}
+                    onclick={() => verschieben(kategorie.posten, pi, 1)}>▼</button>
+                </span>
                 {#if seite === "finanzierung"}
                   <select
                     class="quelle"
@@ -349,6 +377,87 @@
         <button class="leise" onclick={() => (hinweisOffen = false)}>Abbrechen</button>
         <button class="primaer" onclick={verstandenKlick}>Verstanden, Excel erstellen</button>
       </div>
+    </div>
+  </div>
+{/if}
+
+{#if vorschauOffen}
+  <div class="schleier" onclick={() => (vorschauOffen = false)} role="presentation">
+    <div class="vorschau" onclick={(e) => e.stopPropagation()} role="presentation">
+      <div class="vorschau-kopf">
+        <h2>Vorschau Kostenfinanzplan</h2>
+        <button class="schliessen" onclick={() => (vorschauOffen = false)} aria-label="Schließen">✕</button>
+      </div>
+
+      {#if kopie.kosten.length}
+        <h3>Kostenplan</h3>
+        <table>
+          <thead>
+            <tr><th>Nr.</th><th>Ausgaben</th><th>Erläuterung</th><th class="r">Betrag</th></tr>
+          </thead>
+          <tbody>
+            {#each kopie.kosten as k, i (k)}
+              <tr class="kat">
+                <td>{i + 1}</td><td colspan="2">{k.name || "(ohne Name)"}</td>
+                <td class="r">{betragFormat(kategorieSumme(k))}</td>
+              </tr>
+              {#each k.posten as p, j (p)}
+                <tr>
+                  <td>{i + 1}.{j + 1}</td>
+                  <td>{p.bezeichnung}</td>
+                  <td class="grau">{p.erlaeuterung || ""}</td>
+                  <td class="r">{betragFormat(postenBetrag(p))}</td>
+                </tr>
+              {/each}
+            {/each}
+            <tr class="summe-zeile">
+              <td colspan="3">Gesamtkosten</td>
+              <td class="r">{betragFormat(seitenSumme(kopie.kosten))}</td>
+            </tr>
+          </tbody>
+        </table>
+      {/if}
+
+      {#if kopie.finanzierung.length}
+        <h3>Finanzierungsplan</h3>
+        <table>
+          <thead>
+            <tr><th>Nr.</th><th>Finanzierung</th><th class="r">Betrag</th></tr>
+          </thead>
+          <tbody>
+            {#each kopie.finanzierung as k, i (k)}
+              <tr class="kat">
+                <td>{i + 1}</td><td>{k.name || "(ohne Name)"}</td>
+                <td class="r">{betragFormat(kategorieSumme(k))}</td>
+              </tr>
+              {#each k.posten as p, j (p)}
+                <tr>
+                  <td>{i + 1}.{j + 1}</td>
+                  <td>{finanzBezeichnung(p)}</td>
+                  <td class="r">{betragFormat(postenBetrag(p))}</td>
+                </tr>
+              {/each}
+            {/each}
+            <tr class="summe-zeile">
+              <td colspan="2">Gesamtfinanzierung</td>
+              <td class="r">{betragFormat(seitenSumme(kopie.finanzierung))}</td>
+            </tr>
+          </tbody>
+        </table>
+      {/if}
+
+      <div class="vorschau-bilanz" class:rot={diff < -0.005} class:gruen={Math.abs(diff) < 0.005}>
+        {#if Math.abs(diff) < 0.005}
+          Ausgeglichen
+        {:else if diff < 0}
+          Fehlbedarf: {betragFormat(Math.abs(diff))}
+        {:else}
+          Überschuss: {betragFormat(diff)}
+        {/if}
+      </div>
+      <p class="vorschau-hinweis">
+        So erscheint der Plan im Word-Antrag und in der Excel-Datei.
+      </p>
     </div>
   </div>
 {/if}
@@ -707,5 +816,133 @@
   button.leise:hover {
     color: #172b4d;
     text-decoration: underline;
+  }
+  button.zweit:disabled {
+    color: #b3bac5;
+    border-color: #ebedf0;
+    cursor: default;
+  }
+  button.zweit:disabled:hover {
+    border-color: #ebedf0;
+  }
+
+  /* Verschiebe-Pfeile */
+  .verschieben {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    line-height: 0.7;
+  }
+  .pfeil {
+    background: none;
+    border: none;
+    color: #8590a2;
+    font-size: 0.7rem;
+    cursor: pointer;
+    padding: 1px 3px;
+    border-radius: 4px;
+  }
+  .pfeil:hover:not(:disabled) {
+    background: #eef1ff;
+    color: #4f6df5;
+  }
+  .pfeil:disabled {
+    color: #dfe1e6;
+    cursor: default;
+  }
+
+  /* Vorschau */
+  .vorschau {
+    background: #fff;
+    border-radius: 12px;
+    padding: 28px 32px 32px;
+    max-width: 680px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 12px 40px rgba(9, 30, 66, 0.3);
+  }
+  .vorschau-kopf {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .vorschau-kopf h2 {
+    margin: 0;
+    font-size: 1.2rem;
+  }
+  .schliessen {
+    background: none;
+    border: none;
+    font-size: 1.05rem;
+    color: #5e6c84;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 8px;
+  }
+  .schliessen:hover {
+    background: #f1f2f4;
+    color: #172b4d;
+  }
+  .vorschau h3 {
+    margin: 20px 0 8px;
+    font-size: 1rem;
+  }
+  .vorschau table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+  .vorschau th {
+    text-align: left;
+    font-weight: 600;
+    color: #5e6c84;
+    border-bottom: 2px solid #dfe1e6;
+    padding: 6px 8px;
+  }
+  .vorschau td {
+    padding: 5px 8px;
+    border-bottom: 1px solid #f1f2f4;
+    vertical-align: top;
+  }
+  .vorschau td.r,
+  .vorschau th.r {
+    text-align: right;
+    white-space: nowrap;
+  }
+  .vorschau td.grau {
+    color: #5e6c84;
+  }
+  .vorschau tr.kat td {
+    font-weight: 700;
+    background: #f7f8fa;
+  }
+  .vorschau tr.summe-zeile td {
+    font-weight: 700;
+    border-top: 2px solid #dfe1e6;
+    border-bottom: none;
+  }
+  .vorschau-bilanz {
+    margin-top: 18px;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    background: #fff7d6;
+    color: #533f04;
+  }
+  .vorschau-bilanz.rot {
+    background: #ffeceb;
+    color: #ae2e24;
+  }
+  .vorschau-bilanz.gruen {
+    background: #dcfff1;
+    color: #216e4e;
+  }
+  .vorschau-hinweis {
+    margin: 12px 0 0;
+    font-size: 0.82rem;
+    color: #8590a2;
   }
 </style>

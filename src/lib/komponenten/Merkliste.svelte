@@ -39,20 +39,31 @@
       .filter(Boolean)
   );
 
+  // Schließen sich zwei Förderungen gegenseitig aus?
+  function unvertraeglich(a, b) {
+    return (
+      (a.unvertraeglich_mit ?? []).includes(b.id) ||
+      (b.unvertraeglich_mit ?? []).includes(a.id)
+    );
+  }
+
   // Alle Paare gemerkter Förderungen, die sich gegenseitig ausschließen.
   let konflikte = $derived.by(() => {
     const paare = [];
     for (let i = 0; i < gemerkte.length; i++) {
       for (let j = i + 1; j < gemerkte.length; j++) {
-        const a = gemerkte[i];
-        const b = gemerkte[j];
-        if (a.unvertraeglich_mit.includes(b.id) || b.unvertraeglich_mit.includes(a.id)) {
-          paare.push([a, b]);
+        if (unvertraeglich(gemerkte[i], gemerkte[j])) {
+          paare.push([gemerkte[i], gemerkte[j]]);
         }
       }
     }
     return paare;
   });
+
+  // Namen der mit f unverträglichen, ebenfalls gemerkten Förderungen.
+  function konfliktNamen(f) {
+    return gemerkte.filter((g) => g.id !== f.id && unvertraeglich(f, g)).map((g) => g.name);
+  }
 
   // Antrag-Status-Etikett einer Förderung.
   function badgeFuer(id) {
@@ -227,6 +238,12 @@
             <p class="kontaktperson" class:leer-kontakt={!kontaktName(f.id)}>
               👤 {kontaktName(f.id) || "keine Kontaktperson"}
             </p>
+
+            {#if konfliktNamen(f).length}
+              <p class="konflikt-zeile">
+                ⚠ Unverträglich mit: {konfliktNamen(f).join(", ")}
+              </p>
+            {/if}
 
             <div class="dokumente">
               <span class="dok-titel">Benötigte Dokumente:</span>
@@ -476,6 +493,12 @@
   }
   .kontaktperson.leer-kontakt {
     color: #b3bac5;
+  }
+  .konflikt-zeile {
+    margin: 8px 0 0;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #ae2e24;
   }
 
   .land {

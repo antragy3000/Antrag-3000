@@ -120,6 +120,10 @@ Fehlbedarf / Überschuss).
 - **Finanzierung**: jede Position ist entweder „Eigene Drittmittel /
   Einnahmen" (frei) oder eine **Förderung aus deiner Merkliste** (per
   Auswahl) – so verknüpfst du Geldquellen mit deinen Anträgen.
+- **Reihenfolge ändern**: mit den ▲▼-Pfeilen verschiebst du Positionen
+  innerhalb einer Kategorie und Kategorien innerhalb der Seite.
+- **Vorschau**: zeigt den Plan als Tabelle – so, wie er im Word-Antrag und
+  in der Excel-Datei erscheint.
 - **Speichern**: legt den Plan verschlüsselt in den Tresor (keine Excel).
 - **KFP generieren (Excel)**: erstellt auf Knopfdruck eine Excel-Datei im
   Projektordner. **Achtung:** Diese Datei liegt **unverschlüsselt** auf dem
