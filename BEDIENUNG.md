@@ -193,11 +193,19 @@ Der Knopf ist erst aktiv, wenn **alle** benötigten Dokumente den Status
 ist, nennt der Hinweis beim Darüberfahren den Grund.
 
 Beim Klick öffnet sich zuerst eine **Vorschau** in deinem PDF-Programm.
-Passt alles, klickst du im Fenster auf **✓ Speichern** – dann wird die PDF
-als `Antrag_[Projekt]_[Förderer].pdf` im Förderer-Ordner abgelegt und der
-Ordner geöffnet. **Achtung:** Diese PDF enthält Stammdaten und
-Kostenfinanzplan und liegt **unverschlüsselt** im Ordner (sie ist die
-bewusste Ausgabe zum Einreichen).
+Passt alles, hast du zwei Möglichkeiten:
+- **✓ Speichern**: legt die PDF als `Antrag_[Projekt]_[Förderer].pdf` im
+  Förderer-Ordner ab und öffnet den Ordner.
+- **✉ und per Mail senden**: speichert die PDF ebenfalls und öffnet
+  zusätzlich eine **vorbereitete E-Mail** an die hinterlegte Kontaktperson
+  (Betreff und Text schon ausgefüllt, der Dateipfad steht im Text). Den
+  Ordner mit der PDF öffnet die App dabei – die Datei **ziehst du noch
+  selbst als Anhang** in die Mail (das ist bei jedem Mailprogramm und bei
+  Webmail wie Proton so). Ist keine E-Mailadresse der Kontaktperson
+  hinterlegt, ist der Knopf ausgegraut.
+
+**Achtung:** Diese PDF enthält Stammdaten und Kostenfinanzplan und liegt
+**unverschlüsselt** im Ordner (sie ist die bewusste Ausgabe zum Einreichen).
 
 ## Sicherung (Backup)
 Oben rechts **🛡 Sicherung**:

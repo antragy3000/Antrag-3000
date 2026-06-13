@@ -3,6 +3,7 @@
   // Dokumente, je mit eigenem Status. Wird in der Detailansicht einer
   // gemerkten Förderung gezeigt. Mutiert das antrag-Objekt (Tresor)
   // und ruft danach aendern() zum verschlüsselten Speichern.
+  import { openUrl } from "@tauri-apps/plugin-opener";
   import { ANTRAG_STATUS, CHECK_STATUS, statusFarbe } from "$lib/status";
 
   let {
@@ -63,6 +64,44 @@
       const pfad = await pdfSpeichern();
       if (pfad) {
         pdfGespeichert = pfad;
+        pdfModalOffen = false;
+      }
+    } finally {
+      pdfBeschaeftigt = false;
+    }
+  }
+
+  // E-Mail-Versand: Kontaktdaten des Förderers (aus dem Antrag-Eintrag).
+  let kontaktEmail = $derived((antrag.kontakt?.email ?? "").trim());
+  let kontaktName = $derived((antrag.kontakt?.ansprechpartner ?? "").trim());
+  let mailHinweis = $derived(
+    kontaktEmail
+      ? "Speichert das PDF und öffnet eine vorbereitete Mail an die Kontaktperson"
+      : "noch keine E-Mailadresse der Kontaktperson eingetragen"
+  );
+
+  // Speichert das PDF und öffnet eine vorbereitete Mail an die
+  // Kontaktperson. Die Datei kann mailto nicht selbst anhängen – darum
+  // wird der Ordner geöffnet (von pdfSpeichern) und der Pfad im Text
+  // genannt, damit der Nutzer sie hineinzieht.
+  async function pdfMailKlick() {
+    if (!pdfSpeichern || !kontaktEmail) return;
+    pdfBeschaeftigt = true;
+    try {
+      const pfad = await pdfSpeichern();
+      if (pfad) {
+        pdfGespeichert = pfad;
+        const betreff = "Förderantrag";
+        const text =
+          `Guten Tag${kontaktName ? " " + kontaktName : ""},\n\n` +
+          `im Anhang sende ich Ihnen meinen Förderantrag.\n` +
+          `Bitte hängen Sie diese Datei an:\n${pfad}\n\n` +
+          `Mit freundlichen Grüßen`;
+        const adresse =
+          `mailto:${encodeURIComponent(kontaktEmail)}` +
+          `?subject=${encodeURIComponent(betreff)}` +
+          `&body=${encodeURIComponent(text)}`;
+        openUrl(adresse);
         pdfModalOffen = false;
       }
     } finally {
@@ -301,10 +340,23 @@
         <button class="primaer" disabled={pdfBeschaeftigt} onclick={pdfSpeichernKlick}>
           {pdfBeschaeftigt ? "Speichert …" : "✓ Speichern"}
         </button>
+        <button
+          class="zweit"
+          disabled={pdfBeschaeftigt || !kontaktEmail}
+          title={mailHinweis}
+          onclick={pdfMailKlick}
+        >
+          ✉ und per Mail senden
+        </button>
         <button class="leise" disabled={pdfBeschaeftigt} onclick={() => (pdfModalOffen = false)}>
           Abbrechen
         </button>
       </div>
+      <p class="pdf-mail-hinweis">
+        „Per Mail senden" öffnet eine vorbereitete E-Mail an die Kontaktperson
+        und den Ordner mit dem PDF – die Datei ziehst du noch selbst als Anhang
+        hinein (das ist bei jedem Mailprogramm so).
+      </p>
     </div>
   </div>
 {/if}
@@ -713,6 +765,26 @@
     background: #c1c7d0;
     cursor: default;
   }
+  .pdf-aktionen .zweit {
+    padding: 10px 16px;
+    font-size: 0.93rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #172b4d;
+    background: #fff;
+    border: 2px solid #dfe1e6;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .pdf-aktionen .zweit:hover:not(:disabled) {
+    border-color: #4f6df5;
+  }
+  .pdf-aktionen .zweit:disabled {
+    color: #b3bac5;
+    background: #f4f5f7;
+    border-color: #ebecf0;
+    cursor: not-allowed;
+  }
   .pdf-aktionen .leise {
     background: none;
     border: none;
@@ -725,5 +797,11 @@
   .pdf-aktionen .leise:hover:not(:disabled) {
     color: #172b4d;
     text-decoration: underline;
+  }
+  .pdf-mail-hinweis {
+    margin: 14px 0 0;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: #8590a2;
   }
 </style>
