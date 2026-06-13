@@ -4,6 +4,7 @@
   import Foerderungen from "$lib/komponenten/Foerderungen.svelte";
   import Matching from "$lib/komponenten/Matching.svelte";
   import Merkliste from "$lib/komponenten/Merkliste.svelte";
+  import Kalender from "$lib/komponenten/Kalender.svelte";
   import Stammdaten from "$lib/komponenten/Stammdaten.svelte";
   import SammelFormular from "$lib/komponenten/SammelFormular.svelte";
   import KostenPlan from "$lib/komponenten/KostenPlan.svelte";
@@ -571,6 +572,9 @@
         <button class:aktiv={bereich === "merkliste"} onclick={() => (bereich = "merkliste")}>
           Merkliste{#if aktivesProjekt?.merkliste.length}&nbsp;({aktivesProjekt.merkliste.length}){/if}
         </button>
+        <button class:aktiv={bereich === "fristen"} onclick={() => (bereich = "fristen")}>
+          Fristen
+        </button>
         <button class:aktiv={bereich === "formular"} onclick={() => (bereich = "formular")}>
           Formular
         </button>
@@ -635,6 +639,16 @@
         {/key}
       {:else}
         <Merkliste
+          merkliste={aktivesProjekt.merkliste}
+          umschalten={merklisteUmschalten}
+          {ordnerOeffnen}
+          {antragErzeugen}
+          antraege={aktivesProjekt.antraege}
+          {antragHolen}
+          antragSpeichern={tresorSpeichern}
+        />
+      {:else if bereich === "fristen"}
+        <Kalender
           merkliste={aktivesProjekt.merkliste}
           umschalten={merklisteUmschalten}
           {ordnerOeffnen}
