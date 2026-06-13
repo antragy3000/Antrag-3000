@@ -8,6 +8,7 @@
   import Stammdaten from "$lib/komponenten/Stammdaten.svelte";
   import SammelFormular from "$lib/komponenten/SammelFormular.svelte";
   import KostenPlan from "$lib/komponenten/KostenPlan.svelte";
+  import Sicherung from "$lib/komponenten/Sicherung.svelte";
   import datenbank from "$lib/daten/foerderungen.json";
   import { leeresFormular, antragBauen } from "$lib/antrag";
   import { leererKfp, kfpExport } from "$lib/kfp";
@@ -39,6 +40,7 @@
   let loeschDialogOffen = $state(false);
   let umbenennenOffen = $state(false);
   let umbenennenName = $state("");
+  let sicherungOffen = $state(false);
 
   // Datenbank-Förderungen plus die eigenen Förderungen des aktiven
   // Projekts – diese Liste löst überall die IDs auf.
@@ -292,6 +294,16 @@
     daten = null;
     fehler = "";
     bereich = "alle";
+    ansicht = "entsperren";
+  }
+
+  // Nach dem Einspielen einer Sicherung: abmelden, der wiederhergestellte
+  // Tresor wird mit seinem Passwort neu entsperrt.
+  async function nachWiederherstellung() {
+    daten = null;
+    fehler = "";
+    bereich = "alle";
+    sicherungOffen = false;
     ansicht = "entsperren";
   }
 
@@ -674,7 +686,10 @@
           Stammdaten
         </button>
       </nav>
-      <button class="leise" onclick={sperren}>Sperren</button>
+      <div class="rechts">
+        <button class="leise" onclick={() => (sicherungOffen = true)}>🛡 Sicherung</button>
+        <button class="leise" onclick={sperren}>Sperren</button>
+      </div>
     </header>
     <main>
       {#if bereich === "alle"}
@@ -757,6 +772,10 @@
         />
       {/if}
     </main>
+
+    {#if sicherungOffen}
+      <Sicherung schliessen={() => (sicherungOffen = false)} {nachWiederherstellung} />
+    {/if}
 
     {#if neuesProjektOffen}
       <div class="schleier" onclick={() => (neuesProjektOffen = false)} role="presentation">
@@ -953,6 +972,11 @@
   .app header button.leise {
     width: auto;
     margin: 0;
+  }
+  .rechts {
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
 
   nav {

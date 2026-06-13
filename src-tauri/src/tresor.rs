@@ -31,7 +31,7 @@ use aes_gcm::aead::{Aead, KeyInit, OsRng};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
 use tauri::Manager;
 
-const MAGIC: &[u8; 8] = b"ANTRAG3K";
+pub(crate) const MAGIC: &[u8; 8] = b"ANTRAG3K";
 const VERSION: u8 = 1;
 const SALT_LAENGE: usize = 16;
 const NONCE_LAENGE: usize = 12;
@@ -47,11 +47,11 @@ pub struct Geheimnis {
 /// Tauri verwaltet diesen Zustand und reicht ihn an die Befehle durch.
 #[derive(Default)]
 pub struct TresorZustand {
-    geheim: Mutex<Option<Geheimnis>>,
+    pub(crate) geheim: Mutex<Option<Geheimnis>>,
 }
 
 /// Ordner fuer Anwendungsdaten (%APPDATA%\com.antrag3000.app) plus Dateiname.
-fn tresor_pfad(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+pub(crate) fn tresor_pfad(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     let ordner = app
         .path()
         .app_data_dir()

@@ -2,6 +2,7 @@
 // welche Befehle das JS-Frontend aufrufen darf (invoke_handler) und
 // welcher Zustand im Speicher verwaltet wird (manage).
 
+mod backup;
 mod dokument;
 mod excel;
 mod ordner;
@@ -11,6 +12,7 @@ mod tresor;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(tresor::TresorZustand::default())
         .invoke_handler(tauri::generate_handler![
             tresor::tresor_status,
@@ -22,7 +24,9 @@ pub fn run() {
             ordner::ordner_oeffnen,
             ordner::ordner_umbenennen,
             dokument::antrag_erzeugen,
-            excel::kfp_excel_schreiben
+            excel::kfp_excel_schreiben,
+            backup::tresor_backup_erstellen,
+            backup::tresor_backup_einspielen
         ])
         .run(tauri::generate_context!())
         .expect("Fehler beim Starten der Anwendung");

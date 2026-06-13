@@ -152,6 +152,16 @@ Pro Projekt verwaltet die App Ordner unter
     Word-Datei ist eine **Ausgabe** – Änderungen darin fließen nicht in die
     App zurück. PDF erzeugst du selbst (Word → Speichern unter → PDF).
 
+## Sicherung (Backup)
+Oben rechts **🛡 Sicherung**:
+- **Sicherung erstellen**: speichert eine verschlüsselte Kopie deines Tresors
+  an einen Ort deiner Wahl (USB-Stick, Cloud-Ordner …). Sie ist nur mit deinem
+  Passwort lesbar – mach das regelmäßig.
+- **Sicherung wiederherstellen**: ersetzt den aktuellen Tresor durch eine
+  gewählte Sicherungsdatei. Danach wirst du abgemeldet und entsperrst mit dem
+  Passwort, das zu **dieser** Sicherung gehört. Der bisherige Tresor wird
+  vorher beiseitegelegt (nicht gelöscht).
+
 ## Datensouveränität (zur Erinnerung)
 - Tresor-Daten sind verschlüsselt und verlassen das Gerät nie über das Netz.
 - Word- und Excel-Dateien legst du bewusst **unverschlüsselt** im
