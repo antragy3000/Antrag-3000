@@ -10,6 +10,7 @@
   import SammelFormular from "$lib/komponenten/SammelFormular.svelte";
   import KostenPlan from "$lib/komponenten/KostenPlan.svelte";
   import Sicherung from "$lib/komponenten/Sicherung.svelte";
+  import TeamSync from "$lib/komponenten/TeamSync.svelte";
   import datenbank from "$lib/daten/foerderungen.json";
   import { leeresFormular, formularWordBauen } from "$lib/antrag";
   import { antragsPdfBauen } from "$lib/antragsPdf";
@@ -92,6 +93,7 @@
       stammdaten: leereStammdaten(),
       projekte: [],
       aktivesProjektId: null,
+      sync: null,
     };
   }
 
@@ -261,6 +263,10 @@
     }
     if (!d.aktivesProjektId && d.projekte.length > 0) {
       d.aktivesProjektId = d.projekte[0].id;
+      veraendert = true;
+    }
+    if (d.sync === undefined) {
+      d.sync = null;
       veraendert = true;
     }
     if (d.version !== 2) {
@@ -471,6 +477,51 @@
       alert("Das Antrags-PDF konnte nicht gespeichert werden.\n" + e);
       return null;
     }
+  }
+
+  // --- Team-Synchronisation (Phase 2) ---
+  // Zugangs-Paket laden: Datei wählen, in Rust prüfen (Ausweis +
+  // Gerätename aus dem Zertifikat), verschlüsselt im Tresor ablegen.
+  async function zugangspaketLaden() {
+    const pfad = await dateiWaehlen({
+      title: "Zugangs-Paket wählen",
+      multiple: false,
+      filters: [{ name: "Zugangs-Paket", extensions: ["a3kpaket"] }],
+    });
+    if (!pfad) return null;
+    try {
+      const info = await invoke("zugangspaket_pruefen", { pfad });
+      daten.sync = {
+        adresse: info.adresse,
+        geraetName: info.geraet_name,
+        ausweisPem: info.ausweis_pem,
+        letzterAbgleich: null,
+      };
+      await tresorSpeichern();
+      return info;
+    } catch (e) {
+      alert("Das Zugangs-Paket konnte nicht geladen werden.\n" + e);
+      return null;
+    }
+  }
+
+  // Verbindungstest gegen den Team-Server (mTLS GET /api/health).
+  async function syncVerbindungTesten() {
+    if (!daten.sync) return { ok: false, fehler: "Kein Zugangs-Paket geladen." };
+    try {
+      const ok = await invoke("sync_health", {
+        adresse: daten.sync.adresse,
+        ausweisPem: daten.sync.ausweisPem,
+      });
+      return { ok, fehler: ok ? null : "Server erreichbar, aber unerwartete Antwort." };
+    } catch (e) {
+      return { ok: false, fehler: String(e) };
+    }
+  }
+
+  async function zugangspaketEntfernen() {
+    daten.sync = null;
+    await tresorSpeichern();
   }
 
   // Liefert (und erstellt bei Bedarf) den Antrag-Status-Eintrag einer
@@ -787,6 +838,9 @@
         <button class:aktiv={bereich === "stammdaten"} onclick={() => (bereich = "stammdaten")}>
           Stammdaten
         </button>
+        <button class:aktiv={bereich === "teamsync"} onclick={() => (bereich = "teamsync")}>
+          Team-Sync
+        </button>
       </nav>
       <div class="rechts">
         <button class="leise" onclick={() => (sicherungOffen = true)}>🛡 Sicherung</button>
@@ -801,6 +855,13 @@
         />
       {:else if bereich === "stammdaten"}
         <Stammdaten stammdaten={daten.stammdaten} speichern={stammdatenSpeichern} />
+      {:else if bereich === "teamsync"}
+        <TeamSync
+          sync={daten.sync}
+          laden={zugangspaketLaden}
+          testen={syncVerbindungTesten}
+          entfernen={zugangspaketEntfernen}
+        />
       {:else if !aktivesProjekt}
         <div class="leer-projekt">
           <div class="karte">

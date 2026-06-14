@@ -130,11 +130,14 @@ extendedKeyUsage=clientAuth
   # Datei. Die App liest daraus alles, prueft den Ausweis und benennt das
   # Geraet aus dem Zertifikat (CN). So entfaellt das Adresse-Eintippen.
   $paketPfad = Join-Path $devDir "$safe.a3kpaket"
+  # ReadAllText liefert einen sauberen String. (Get-Content -Raw haengt
+  # versteckte Pfad-Eigenschaften an, die ConvertTo-Json sonst als Objekt
+  # mit ausgeben wuerde.)
   $paket = [ordered]@{
     typ         = "antrag3000-zugangspaket"
     version     = 1
     adresse     = $Adresse
-    ausweis_pem = (Get-Content $pem -Raw)
+    ausweis_pem = [System.IO.File]::ReadAllText($pem)
   }
   ($paket | ConvertTo-Json) | Set-Content -Encoding ascii $paketPfad
   Write-Host "  -> $paketPfad" -ForegroundColor Green

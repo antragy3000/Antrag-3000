@@ -52,4 +52,11 @@ lopdf = "0.32"
 # PNG und JPEG zu aktivieren (genpdf selbst schaltet sie nicht ein).
 # Cargo vereint die Features auf derselben Crate-Version.
 image = { version = "0.23", default-features = false, features = ["png", "jpeg"] }
+# Phase 2 (Team-Sync): mTLS-HTTP-Client (laut CLAUDE.md vorgesehene
+# Rust-Aufgabe). reqwest mit rustls; x509-parser/rustls-pemfile, um das
+# Zugangs-Paket zu pruefen und den Geraetenamen (CN) aus dem Zertifikat
+# zu lesen.
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+x509-parser = "0.16"
+rustls-pemfile = "2"
 

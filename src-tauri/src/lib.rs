@@ -7,6 +7,7 @@ mod dokument;
 mod excel;
 mod ordner;
 mod pdf;
+mod sync;
 mod tresor;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -28,6 +29,10 @@ pub fn run() {
             dokument::dokument_hochladen,
             pdf::antrags_pdf_vorschau,
             pdf::antrags_pdf_speichern,
+            sync::zugangspaket_pruefen,
+            sync::sync_health,
+            sync::sync_get_board,
+            sync::sync_put_board,
             excel::kfp_excel_schreiben,
             backup::tresor_backup_erstellen,
             backup::tresor_backup_einspielen
