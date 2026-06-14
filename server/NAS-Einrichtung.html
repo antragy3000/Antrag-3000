@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Antrag 3000 – Sync-Server auf der Synology einrichten</title>
+<style>
+  @page { size: A4; margin: 17mm 15mm; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", system-ui, sans-serif; color: #172b4d; font-size: 10.5pt; line-height: 1.55; }
+  p { margin: 0 0 9px; }
+  ul, ol { margin: 4px 0 10px; padding-left: 20px; }
+  li { margin: 4px 0; }
+  code { background: #f1f2f4; border-radius: 4px; padding: 1px 5px; font-size: 9.3pt; font-family: "Consolas","Courier New",monospace; }
+  strong { color: #172b4d; }
+  h2 { font-size: 16pt; margin: 0 0 4px; padding-bottom: 8px; border-bottom: 3px solid #eef1ff; }
+  h2 .kn { color: #4f6df5; margin-right: 8px; }
+  h3 { font-size: 12pt; margin: 16px 0 6px; }
+  .lead { color: #44546f; font-size: 11pt; margin-bottom: 12px; }
+  .chapter { break-before: page; }
+
+  .cover { height: 250mm; display: flex; flex-direction: column; justify-content: center; break-after: page; padding: 0 4mm; }
+  .cover .marke { font-size: 12pt; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #4f6df5; }
+  .cover h1 { font-size: 32pt; margin: 10px 0 6px; letter-spacing: -0.02em; line-height: 1.1; }
+  .cover .sub { font-size: 13pt; color: #5e6c84; margin: 0 0 26px; }
+  .cover .balken { height: 8px; width: 120px; border-radius: 99px; background: linear-gradient(90deg,#4f6df5,#22a06b); margin-bottom: 24px; }
+  .cover .meta { color: #8590a2; font-size: 10pt; }
+
+  .merke { background:#eef1ff; border-left:4px solid #4f6df5; border-radius:8px; padding:10px 14px; margin:12px 0; font-size:10pt; }
+  .warn { background:#ffeceb; border-left:4px solid #ca3521; border-radius:8px; padding:10px 14px; margin:12px 0; font-size:10pt; color:#5d1f1a; }
+  .tipp { background:#dcfff1; border-left:4px solid #22a06b; border-radius:8px; padding:10px 14px; margin:12px 0; font-size:10pt; color:#143d2b; }
+  .live { background:#fff7d6; border-left:4px solid #e2a400; border-radius:8px; padding:10px 14px; margin:12px 0; font-size:10pt; color:#533f04; }
+  .live b.tag { display:inline-block; background:#e2a400; color:#fff; border-radius:5px; padding:1px 8px; font-size:8.5pt; margin-right:6px; }
+
+  figure { margin: 14px 0 16px; break-inside: avoid; }
+  figcaption { font-size: 9pt; color: #8590a2; margin-top: 7px; }
+  .flow { display:flex; align-items:stretch; gap:6px; flex-wrap:wrap; }
+  .node { background:#fff; border:2px solid #dfe1e6; border-radius:9px; padding:9px 11px; font-size:8.6pt; flex:1; min-width:84px; text-align:center; }
+  .node .t { font-weight:700; display:block; margin-bottom:2px; }
+  .node small { color:#8590a2; font-size:7.6pt; }
+  .node.aussen { border-color:#4f6df5; }
+  .node.tor { border-color:#e2a400; background:#fffdf5; }
+  .node.intern { border-color:#22a06b; background:#f6fffb; }
+  .pfeil { align-self:center; color:#8590a2; font-weight:700; font-size:12pt; padding:0 1px; }
+
+  .steps { counter-reset: st; }
+  .step { display:flex; gap:12px; align-items:flex-start; padding:9px 0; border-bottom:1px solid #f1f2f4; }
+  .step .num { flex:0 0 26px; width:26px; height:26px; border-radius:50%; background:#4f6df5; color:#fff; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .step.live-step .num { background:#e2a400; }
+  .step .body { flex:1; }
+  .step .body b { display:block; margin-bottom:2px; }
+
+  .schichten .s { display:flex; gap:10px; align-items:flex-start; background:#fff; border:1px solid #e4e7ec; border-left:5px solid #22a06b; border-radius:8px; padding:9px 12px; margin:7px 0; font-size:9.4pt; }
+  .schichten .s .nr { font-weight:700; color:#216e4e; }
+  table.k { border-collapse:collapse; width:100%; font-size:9.2pt; margin:8px 0; }
+  table.k th, table.k td { border:1px solid #e4e7ec; padding:6px 9px; text-align:left; vertical-align:top; }
+  table.k th { background:#f1f2f4; }
+  .pfad { font-family:"Consolas","Courier New",monospace; font-size:8.6pt; background:#f1f2f4; padding:1px 5px; border-radius:4px; }
+  .ende { text-align:center; color:#8590a2; font-size:9pt; margin-top:24px; }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="marke">Phase 2 · Einrichtung</div>
+  <h1>Sync-Server auf der<br>Synology einrichten</h1>
+  <div class="sub">Team-Synchronisation für Antrag 3000 – sicher über HTTPS + mTLS</div>
+  <div class="balken"></div>
+  <div class="meta">Begleitheft zum Ordner <span class="pfad">server/</span> · Stand Juni 2026</div>
+  <div class="live" style="margin-top:30px;max-width:140mm">
+    <b class="tag">LIVE</b> Gelb markierte Schritte führst du selbst an Router und NAS aus.
+    Alles andere sind Dateien, die schon vorbereitet sind.
+  </div>
+</section>
+
+<!-- 1 -->
+<section class="chapter">
+  <h2><span class="kn">1</span>Was wir aufbauen</h2>
+  <p class="lead">Ein kleiner Dienst auf deiner NAS, den nur dein Team erreicht –
+  und der nur <strong>unkritische</strong> Daten kennt.</p>
+
+  <figure>
+    <div class="flow">
+      <div class="node aussen"><span class="t">Team-Gerät</span><small>Antrag 3000 mit Geräte-Ausweis</small></div>
+      <div class="pfeil">→</div>
+      <div class="node"><span class="t">Internet</span><small>HTTPS + mTLS</small></div>
+      <div class="pfeil">→</div>
+      <div class="node tor"><span class="t">Router</span><small>nur Port 443</small></div>
+      <div class="pfeil">→</div>
+      <div class="node tor"><span class="t">Caddy</span><small>Türsteher (prüft Ausweis)</small></div>
+      <div class="pfeil">→</div>
+      <div class="node intern"><span class="t">API</span><small>nur intern</small></div>
+      <div class="pfeil">→</div>
+      <div class="node intern"><span class="t">SQLite</span><small>Board-Daten</small></div>
+    </div>
+    <figcaption><b>Abb. 1</b> – Der Weg einer Anfrage. Nur Caddy ist von außen sichtbar; alles dahinter liegt im internen Docker-Netz.</figcaption>
+  </figure>
+
+  <p>Zwei Container arbeiten zusammen (beide aus <span class="pfad">docker-compose.yml</span>):</p>
+  <ul>
+    <li><strong>Caddy</strong> – das einzige Tor nach außen. Macht HTTPS und prüft per <em>mTLS</em>, ob ein Gerät einen gültigen Team-Ausweis hat.</li>
+    <li><strong>API</strong> – der eigentliche Dienst. <strong>Von außen nicht erreichbar</strong>, nur über Caddy. Speichert die Board-Daten in einer SQLite-Datei.</li>
+  </ul>
+</section>
+
+<!-- 2 -->
+<section class="chapter">
+  <h2><span class="kn">2</span>Die zwei Ausweise</h2>
+  <p class="lead">Nicht verwechseln: Es gibt zwei verschiedene Zertifikate mit unterschiedlichen Aufgaben.</p>
+  <table class="k">
+    <tr><th></th><th>Server-Ausweis (HTTPS)</th><th>Geräte-Ausweis (mTLS)</th></tr>
+    <tr><td><b>Weist aus</b></td><td>die NAS gegenüber den Geräten</td><td>jedes Team-Gerät gegenüber dem Server</td></tr>
+    <tr><td><b>Aussteller</b></td><td>Let's Encrypt (automatisch, kostenlos)</td><td>deine eigene Team-CA (offline auf deinem PC)</td></tr>
+    <tr><td><b>Erneuerung</b></td><td>Caddy macht es selbst</td><td>läuft lange (Skript neu ausführen für neue Geräte)</td></tr>
+    <tr><td><b>Wo</b></td><td>holt Caddy selbst</td><td><span class="pfad">geraete/&lt;name&gt;.pem</span> auf jedem Gerät</td></tr>
+  </table>
+  <div class="merke">Der <strong>CA-Schlüssel</strong> (<span class="pfad">ca/team-ca.key</span>) ist der „Aussteller-Stempel" deines Teams. Er bleibt <strong>offline auf deinem PC</strong> – niemals auf die NAS. Damit kann selbst eine kompromittierte NAS keine neuen gültigen Ausweise erfinden.</div>
+</section>
+
+<!-- 3 -->
+<section class="chapter">
+  <h2><span class="kn">3</span>Schritt für Schritt</h2>
+  <p class="lead">Reihenfolge von oben nach unten. Gelbe Schritte machst du live an Router/NAS.</p>
+
+  <div class="steps">
+    <div class="step"><div class="num">1</div><div class="body">
+      <b>Zertifikate erzeugen (auf deinem PC)</b>
+      Im Ordner <span class="pfad">server/</span> ausführen:
+      <code>powershell -ExecutionPolicy Bypass -File .\zertifikate-erzeugen.ps1 -Geraete "Laptop-Jenny","Tablet-Anna"</code>
+      Ergebnis: <span class="pfad">ca/team-ca.crt</span> (für Caddy) und je Gerät <span class="pfad">geraete/&lt;name&gt;.pem</span>.
+    </div></div>
+
+    <div class="step"><div class="num">2</div><div class="body">
+      <b>.env anlegen</b>
+      Kopiere <span class="pfad">.env.example</span> zu <span class="pfad">.env</span> und trage ein:
+      <code>DOMAIN=deinname.synology.me</code> und <code>ACME_EMAIL=du@example.com</code>.
+    </div></div>
+
+    <div class="step"><div class="num">3</div><div class="body">
+      <b>Dateien auf die NAS kopieren</b>
+      Den ganzen Ordner <span class="pfad">server/</span> auf die NAS legen (z. B. nach <span class="pfad">/volume1/docker/antrag3000/</span>) – <strong>inklusive</strong> <span class="pfad">ca/team-ca.crt</span>, aber <strong>ohne</strong> <span class="pfad">ca/team-ca.key</span> und ohne den Ordner <span class="pfad">geraete/</span> (die bleiben bei dir!).
+    </div></div>
+
+    <div class="step live-step"><div class="num">4</div><div class="body">
+      <b>DDNS in DSM einrichten <span style="color:#b7791f">(live)</span></b>
+      DSM → <em>Systemsteuerung → Externer Zugriff → DDNS</em>: eine Synology-Adresse anlegen (z. B. <span class="pfad">deinname.synology.me</span>). Diese gehört in deine <span class="pfad">.env</span> als <code>DOMAIN</code>.
+    </div></div>
+
+    <div class="step live-step"><div class="num">5</div><div class="body">
+      <b>Router: Ports weiterleiten <span style="color:#b7791f">(live – machst du später heute)</span></b>
+      Im Router <strong>Port 443</strong> auf die NAS weiterleiten (für den laufenden Betrieb) und <strong>kurz Port 80</strong> (nur damit Let's Encrypt das Server-Zertifikat ausstellen kann). Mehr Tore werden <strong>nicht</strong> geöffnet.
+    </div></div>
+
+    <div class="step live-step"><div class="num">6</div><div class="body">
+      <b>Container starten <span style="color:#b7791f">(live)</span></b>
+      DSM → <em>Container Manager → Projekt → Erstellen</em>, Pfad auf den hochgeladenen <span class="pfad">server/</span>-Ordner, <span class="pfad">docker-compose.yml</span> wird erkannt → starten. (Alternativ per SSH: <code>docker compose up -d --build</code> im Ordner.) Der erste Bau dauert ein paar Minuten.
+    </div></div>
+
+    <div class="step live-step"><div class="num">7</div><div class="body">
+      <b>Testen <span style="color:#b7791f">(live)</span></b>
+      Sobald Etappe 4 (Sync im Programm) steht, verbindet sich die App mit ihrem Geräte-Ausweis. Erste grobe Prüfung schon jetzt: Caddy sollte laufen und ohne gültigen Ausweis jede Anfrage abweisen.
+    </div></div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="chapter">
+  <h2><span class="kn">4</span>NAS härten</h2>
+  <p class="lead">Mehrere Schichten – jede für sich hält schon viel ab.</p>
+  <div class="schichten">
+    <div class="s"><span class="nr">1.</span><div><b>Nur ein Tor:</b> Im Router ist nur Port 443 dauerhaft offen (80 nur kurz fürs Zertifikat). Die DSM-Verwaltung (5000/5001) bleibt aus dem Internet gesperrt; QuickConnect aus, wenn nicht gebraucht.</div></div>
+    <div class="s"><span class="nr">2.</span><div><b>Türsteher:</b> Caddy lässt nur Geräte mit gültigem Team-Ausweis durch (mTLS). Ein Port-Scan ohne Ausweis sieht praktisch nichts.</div></div>
+    <div class="s"><span class="nr">3.</span><div><b>Isolierter Dienst:</b> Der API-Container hat kein eigenes Tor nach außen, läuft nicht als root, read-only und ohne Sonderrechte.</div></div>
+    <div class="s"><span class="nr">4.</span><div><b>Nur unkritische Daten:</b> Selbst wer alles überwindet, fände nur Board-Daten – keine Stammdaten, IBAN, Budgets oder Projektbeschriebe (die bleiben verschlüsselt auf den Geräten).</div></div>
+  </div>
+  <h3>Aktuell halten &amp; sichern</h3>
+  <ul>
+    <li>DSM, Container Manager und die Images regelmäßig aktualisieren.</li>
+    <li>Synology-Firewall: nur Port 443 (und kurz 80) erlauben.</li>
+    <li>Die SQLite-Datei (im Docker-Volume <span class="pfad">api_data</span>) in die Synology-Datensicherung aufnehmen.</li>
+  </ul>
+</section>
+
+<!-- 5 -->
+<section class="chapter">
+  <h2><span class="kn">5</span>Geräte verwalten &amp; Fehlersuche</h2>
+  <h3>Neues Gerät hinzufügen</h3>
+  <p>Auf deinem PC erneut das Skript ausführen – die CA bleibt erhalten, es kommt nur ein neuer Ausweis dazu:</p>
+  <code>.\zertifikate-erzeugen.ps1 -Geraete "Neues-Geraet"</code>
+  <p style="margin-top:8px">Die neue <span class="pfad">geraete/&lt;name&gt;.pem</span> kommt offline auf das Gerät. An der NAS ist nichts zu ändern.</p>
+
+  <h3>Gerät sperren (verloren/gestohlen)</h3>
+  <p>Im MVP: in der Datenbank den Status des Geräts auf <code>gesperrt</code> setzen (das Programm bietet das später bequem an). Da jedes Gerät einen eigenen Ausweis hat, betrifft das nur dieses eine.</p>
+
+  <h3>Häufige Stolpersteine</h3>
+  <table class="k">
+    <tr><th>Symptom</th><th>Ursache / Lösung</th></tr>
+    <tr><td>Kein Zertifikat von Let's Encrypt</td><td>Port 80 (und 443) müssen während der Ausstellung vom Internet auf die NAS zeigen; DDNS muss korrekt auf deine IP zeigen.</td></tr>
+    <tr><td>App kommt nicht durch (Verbindung abgewiesen)</td><td>Geräte-Ausweis fehlt/abgelaufen, oder Caddy fand <span class="pfad">ca/team-ca.crt</span> nicht.</td></tr>
+    <tr><td>„api" startet nicht</td><td>Logs im Container Manager ansehen; meist Schreibrechte auf das Volume <span class="pfad">api_data</span>.</td></tr>
+  </table>
+
+  <div class="ende">— Begleitheft zur Server-Einrichtung · Antrag 3000 Phase 2 —</div>
+</section>
+
+</body>
+</html>

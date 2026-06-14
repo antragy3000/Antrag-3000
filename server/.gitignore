@@ -5,6 +5,8 @@ ca/*.key
 ca/*.srl
 ca/*.p12
 ca/*.pem
+# Geräte-Ausweise (enthalten private Schlüssel!) – nie versionieren:
+geraete/
 *.sqlite
 *.sqlite-*
 api/target/
