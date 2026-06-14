@@ -112,7 +112,7 @@
     <tr><td><b>Weist aus</b></td><td>die NAS gegenüber den Geräten</td><td>jedes Team-Gerät gegenüber dem Server</td></tr>
     <tr><td><b>Aussteller</b></td><td>Let's Encrypt (automatisch, kostenlos)</td><td>deine eigene Team-CA (offline auf deinem PC)</td></tr>
     <tr><td><b>Erneuerung</b></td><td>Caddy macht es selbst</td><td>läuft lange (Skript neu ausführen für neue Geräte)</td></tr>
-    <tr><td><b>Wo</b></td><td>holt Caddy selbst</td><td><span class="pfad">geraete/&lt;name&gt;.pem</span> auf jedem Gerät</td></tr>
+    <tr><td><b>Wo</b></td><td>holt Caddy selbst</td><td><span class="pfad">geraete/&lt;name&gt;.a3kpaket</span> (Zugangs-Paket) auf jedem Gerät</td></tr>
   </table>
   <div class="merke">Der <strong>CA-Schlüssel</strong> (<span class="pfad">ca/team-ca.key</span>) ist der „Aussteller-Stempel" deines Teams. Er bleibt <strong>offline auf deinem PC</strong> – niemals auf die NAS. Damit kann selbst eine kompromittierte NAS keine neuen gültigen Ausweise erfinden.</div>
 </section>
@@ -126,8 +126,8 @@
     <div class="step"><div class="num">1</div><div class="body">
       <b>Zertifikate erzeugen (auf deinem PC)</b>
       Im Ordner <span class="pfad">server/</span> ausführen:
-      <code>powershell -ExecutionPolicy Bypass -File .\zertifikate-erzeugen.ps1 -Geraete "Laptop-Jenny","Tablet-Anna"</code>
-      Ergebnis: <span class="pfad">ca/team-ca.crt</span> (für Caddy) und je Gerät <span class="pfad">geraete/&lt;name&gt;.pem</span>.
+      <code>powershell -ExecutionPolicy Bypass -File .\zertifikate-erzeugen.ps1 -Geraete "Laptop-Jenny","Tablet-Anna" -Adresse "deinteam.synology.me"</code>
+      Ergebnis: <span class="pfad">ca/team-ca.crt</span> (für Caddy) und je Gerät ein <span class="pfad">geraete/&lt;name&gt;.a3kpaket</span> – das Zugangs-Paket (Ausweis + Adresse in einer Datei).
     </div></div>
 
     <div class="step"><div class="num">2</div><div class="body">
@@ -186,8 +186,8 @@
   <h2><span class="kn">5</span>Geräte verwalten &amp; Fehlersuche</h2>
   <h3>Neues Gerät hinzufügen</h3>
   <p>Auf deinem PC erneut das Skript ausführen – die CA bleibt erhalten, es kommt nur ein neuer Ausweis dazu:</p>
-  <code>.\zertifikate-erzeugen.ps1 -Geraete "Neues-Geraet"</code>
-  <p style="margin-top:8px">Die neue <span class="pfad">geraete/&lt;name&gt;.pem</span> kommt offline auf das Gerät. An der NAS ist nichts zu ändern.</p>
+  <code>.\zertifikate-erzeugen.ps1 -Geraete "Neues-Geraet" -Adresse "deinteam.synology.me"</code>
+  <p style="margin-top:8px">Das neue <span class="pfad">geraete/&lt;name&gt;.a3kpaket</span> kommt offline auf das Gerät und wird dort in der App geladen. An der NAS ist nichts zu ändern.</p>
 
   <h3>Gerät sperren (verloren/gestohlen)</h3>
   <p>Im MVP: in der Datenbank den Status des Geräts auf <code>gesperrt</code> setzen (das Programm bietet das später bequem an). Da jedes Gerät einen eigenen Ausweis hat, betrifft das nur dieses eine.</p>

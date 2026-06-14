@@ -22,6 +22,7 @@
 
 param(
   [string[]]$Geraete = @(),
+  [string]$Adresse = "",
   [string]$Ordner = $PSScriptRoot,
   [int]$CaJahre = 10,
   [int]$GeraetTage = 825
@@ -60,6 +61,20 @@ if ($Geraete.Count -eq 0) {
 # Eingaben aufteilen (egal ob als Array oder als ein Komma-String) und saeubern.
 $Geraete = @($Geraete) | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ }
 if ($Geraete.Count -eq 0) { throw "Keine Geraetenamen angegeben." }
+
+# Team-Adresse (DDNS) fuer das Zugangs-Paket. Wenn nicht uebergeben,
+# aus .env (DOMAIN) lesen, sonst abfragen.
+if (-not $Adresse) {
+  $envPfad = Join-Path $Ordner ".env"
+  if (Test-Path $envPfad) {
+    $zeile = Get-Content $envPfad | Where-Object { $_ -match '^\s*DOMAIN\s*=' } | Select-Object -First 1
+    if ($zeile) { $Adresse = ($zeile -split '=', 2)[1].Trim() }
+  }
+}
+if (-not $Adresse) {
+  $Adresse = (Read-Host "Team-Adresse (DDNS, z. B. deinteam.synology.me)").Trim()
+}
+if (-not $Adresse) { throw "Keine Team-Adresse angegeben." }
 
 $caDir  = Join-Path $Ordner "ca"
 $devDir = Join-Path $Ordner "geraete"
@@ -110,12 +125,26 @@ extendedKeyUsage=clientAuth
   Remove-Item $csr, $ext -ErrorAction SilentlyContinue
 
   Run-SSL @("verify", "-CAfile", $caCrt, $crt)
-  Write-Host "  -> $pem (auf das Geraet '$name', OFFLINE uebergeben!)" -ForegroundColor Green
+
+  # Gebuendeltes Zugangs-Paket: Ausweis (PEM) + Team-Adresse in EINER
+  # Datei. Die App liest daraus alles, prueft den Ausweis und benennt das
+  # Geraet aus dem Zertifikat (CN). So entfaellt das Adresse-Eintippen.
+  $paketPfad = Join-Path $devDir "$safe.a3kpaket"
+  $paket = [ordered]@{
+    typ         = "antrag3000-zugangspaket"
+    version     = 1
+    adresse     = $Adresse
+    ausweis_pem = (Get-Content $pem -Raw)
+  }
+  ($paket | ConvertTo-Json) | Set-Content -Encoding ascii $paketPfad
+  Write-Host "  -> $paketPfad" -ForegroundColor Green
+  Write-Host "     Zugangs-Paket fuer '$name' - OFFLINE uebergeben (enthaelt den privaten Schluessel)!" -ForegroundColor Yellow
 }
 
 Write-Host ""
 Write-Host "Fertig." -ForegroundColor Green
 Write-Host "Naechste Schritte:" -ForegroundColor White
 Write-Host "  - ca\team-ca.crt liegt schon am richtigen Ort (Caddy nutzt sie)."
-Write-Host "  - Jede geraete\<name>.pem kommt auf das jeweilige Geraet (offline)."
+Write-Host "  - Jedes geraete\<name>.a3kpaket (Zugangs-Paket) kommt auf das"
+Write-Host "    jeweilige Geraet (offline, z. B. USB) und wird dort in der App geladen."
 Write-Host "  - ca\team-ca.key NIEMALS weitergeben oder auf die NAS kopieren."
