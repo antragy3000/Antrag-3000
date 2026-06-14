@@ -1,0 +1,28 @@
+# Caddy 2.8 – HTTPS nach außen, mTLS-Türsteher, dann intern weiterreichen.
+#
+# - {$DOMAIN}: deine Synology-DDNS-Adresse (z. B. deinname.synology.me).
+#   Caddy holt dafür automatisch ein kostenloses Let's-Encrypt-Zertifikat.
+# - client_auth require_and_verify: NUR Geräte mit einem von unserer
+#   Team-CA ausgestellten Zertifikat dürfen überhaupt herein.
+# - Das geprüfte Client-Zertifikat wird als Base64 (+ Subject) an den
+#   internen API-Dienst weitergereicht; sonst nichts.
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	tls {
+		client_auth {
+			mode require_and_verify
+			trust_pool file {
+				pem_file /etc/caddy/ca/team-ca.crt
+			}
+		}
+	}
+
+	reverse_proxy api:8080 {
+		header_up X-Client-Cert-DER {http.request.tls.client.certificate_der_base64}
+		header_up X-Client-Cert-Subject {http.request.tls.client.subject}
+	}
+}

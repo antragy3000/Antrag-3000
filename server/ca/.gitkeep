@@ -1,0 +1,3 @@
+Hier liegen später die Team-CA und Geräte-Ausweise (Etappe 3).
+Diese Dateien werden bewusst NICHT versioniert (siehe ../.gitignore).
+Mindestens benötigt Caddy hier: team-ca.crt

@@ -1,0 +1,56 @@
+# Zwei Container:
+#  - caddy: einziger Dienst nach außen (Port 443 + 80 für Let's Encrypt),
+#           macht HTTPS + prüft die Geräte-Ausweise (mTLS).
+#  - api:   der eigentliche Sync-Dienst, NUR intern erreichbar (kein
+#           "ports:"), gehärtet (nicht-root, read-only, ohne Sonderrechte).
+
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN}
+      - ACME_EMAIL=${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./ca/team-ca.crt:/etc/caddy/ca/team-ca.crt:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - intern
+    depends_on:
+      - api
+
+  api:
+    build: ./api
+    restart: unless-stopped
+    # Härtung:
+    user: "10001:10001"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    environment:
+      - DB_PFAD=/data/antrag3000.sqlite
+      - LAUSCH=0.0.0.0:8080
+    volumes:
+      - api_data:/data
+    networks:
+      - intern
+    # KEIN "ports:" – der Dienst ist von außen NICHT erreichbar,
+    # nur über Caddy im internen Netz.
+
+networks:
+  intern:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:
+  api_data:

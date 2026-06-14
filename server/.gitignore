@@ -1,0 +1,10 @@
+# Geheimnisse und Zustände NICHT versionieren:
+.env
+ca/*.crt
+ca/*.key
+ca/*.srl
+ca/*.p12
+ca/*.pem
+*.sqlite
+*.sqlite-*
+api/target/

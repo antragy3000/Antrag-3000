@@ -1,0 +1,27 @@
+[package]
+name = "antrag3000-server"
+version = "0.1.0"
+edition = "2021"
+description = "Sync-Dienst (Topf 2) fuer Antrag 3000 – nur unkritische Team-Daten"
+
+[dependencies]
+# axum: kleines, modernes Web-Framework fuer die paar REST-Endpunkte.
+axum = "0.7"
+# tokio: asynchrone Laufzeit, die axum braucht.
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "signal"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# sqlx: Datenbankzugriff. Bewusst OHNE Compile-Zeit-Makros (Laufzeit-
+# Abfragen), damit derselbe Code spaeter auch auf PostgreSQL laeuft –
+# dann nur das Feature "postgres" ergaenzen.
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite"] }
+# Fuer den Geraete-Fingerabdruck aus dem Client-Zertifikat (Caddy reicht
+# das Zertifikat als Base64 durch; wir bilden den SHA-256 selbst).
+sha2 = "0.10"
+base64 = "0.22"
+hex = "0.4"
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
