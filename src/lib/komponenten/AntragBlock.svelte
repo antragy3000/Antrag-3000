@@ -213,7 +213,10 @@
     </div>
     <label for="kt-mail">E-Mail</label>
     <input id="kt-mail" type="email" bind:value={antrag.kontakt.email} onchange={aendern} />
-    <label for="kt-notiz">Notiz</label>
+    <label for="kt-notiz">
+      Notiz
+      <span class="nur-lokal">(verlässt Dein Gerät nicht und wird nicht synchronisiert, ist also nur für Dich)</span>
+    </label>
     <textarea id="kt-notiz" rows="2" bind:value={antrag.kontakt.notiz} onchange={aendern}></textarea>
   </div>
 
@@ -425,6 +428,12 @@
     font-weight: 600;
     color: #5e6c84;
     margin: 10px 0 5px;
+  }
+  /* dezenter Hinweis: dieses Feld bleibt lokal */
+  .nur-lokal {
+    font-weight: 400;
+    font-size: 0.76rem;
+    color: #8590a2;
   }
   .kontakt input,
   .kontakt textarea {
