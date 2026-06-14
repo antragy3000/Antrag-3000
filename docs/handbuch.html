@@ -242,7 +242,9 @@
     <li><span class="nr">17</span> Stammdaten</li>
     <li><span class="nr">18</span> Ordner &amp; Dateien</li>
     <li><span class="nr">19</span> Sicherung (Backup)</li>
-    <li><span class="nr">20</span> Tipps &amp; häufige Fragen</li>
+    <li><span class="nr">20</span> Anmelden &amp; Schlüssel im Überblick</li>
+    <li><span class="nr">21</span> Team-Synchronisation (Phase 2)</li>
+    <li><span class="nr">22</span> Tipps &amp; häufige Fragen</li>
   </ol>
 </section>
 
@@ -911,7 +913,95 @@
 
 <!-- ===== 20 ===== -->
 <section class="chapter">
-  <h2><span class="kn">20</span>Tipps &amp; häufige Fragen</h2>
+  <h2><span class="kn">20</span>Anmelden &amp; Schlüssel im Überblick</h2>
+  <p class="lead">Es gibt zwei ganz verschiedene „Schlösser" – verwechsle sie nicht.
+  Das eine schützt deine Daten auf dem Gerät, das andere regelt den Zugang zum Team.</p>
+
+  <figure>
+    <div class="screen">
+      <div class="karten">
+        <div class="karte" style="border-top:4px solid #22a06b">
+          <div style="font-weight:700;margin-bottom:5px">🔑 Tresor-Passwort</div>
+          <div class="geber">Dein persönliches Passwort. Schließt deinen
+          <strong>verschlüsselten Tresor</strong> auf diesem Gerät auf
+          (Stammdaten, Budget, Projektbeschriebe …).</div>
+          <div style="margin-top:8px"><span class="badge b-gruen"><span class="dot"></span>nur lokal, bei jedem Start</span></div>
+        </div>
+        <div class="karte" style="border-top:4px solid #4f6df5">
+          <div style="font-weight:700;margin-bottom:5px">🪪 Geräte-Ausweis</div>
+          <div class="geber">Ein Zertifikat auf deinem Gerät. Erlaubt der App,
+          mit dem <strong>Team-Server</strong> zu reden (nur unkritische Daten).
+          Du tippst dafür nichts – die App weist sich automatisch aus.</div>
+          <div style="margin-top:8px"><span class="badge b-blau"><span class="dot"></span>für die Team-Synchronisation</span></div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 20.1</b> – Zwei getrennte Zugänge: das Passwort schützt deine Daten, der Ausweis regelt den Team-Zugang.</figcaption>
+  </figure>
+
+  <h3>Die Schlüssel dahinter – einfach erklärt</h3>
+  <div class="struktur">
+    <div class="stp"><span class="num">1</span><div><b>Tresor-Passwort → Schlüssel:</b> Aus deinem Passwort wird ein Schlüssel berechnet, der deinen lokalen Tresor verschlüsselt. <b>Passwort weg = Daten weg</b> (so gewollt) – siehe Kapitel 3.</div></div>
+    <div class="stp"><span class="num">2</span><div><b>Team-CA → Geräte-Ausweis:</b> Du stellst (einmalig, offline) den „Aussteller-Stempel" deines Teams aus und damit pro Gerät einen Ausweis. Nur Geräte mit gültigem Ausweis dürfen mit dem Server reden.</div></div>
+  </div>
+  <div class="merke">Wichtig: Diese beiden Dinge sind <strong>komplett getrennt</strong>.
+  Dein Tresor-Passwort verlässt dein Gerät <strong>nie</strong>. Der Geräte-Ausweis
+  öffnet nur die Tür zum Team-Server – und dort liegen ohnehin nur unkritische Daten.</div>
+</section>
+
+<!-- ===== 21 ===== -->
+<section class="chapter">
+  <h2><span class="kn">21</span>Team-Synchronisation (Phase 2)</h2>
+  <p class="lead">Damit ein kleines Team gemeinsam den Überblick behält, werden
+  ausgewählte <strong>unkritische</strong> Daten über deine eigene NAS geteilt.</p>
+
+  <div class="merke">Diese Funktion wird gerade eingebaut: Server und Ausweise
+  stehen bereits, die Synchronisation im Programm folgt als nächster Schritt.
+  Dieses Kapitel erklärt, wie der Ablauf funktioniert.</div>
+
+  <h3>Was geteilt wird – und was nicht</h3>
+  <figure>
+    <div class="screen">
+      <div class="karten">
+        <div class="karte" style="border-top:4px solid #22a06b">
+          <div style="font-weight:700;margin-bottom:5px">🔒 Bleibt lokal (Tresor)</div>
+          <div class="geber">Stammdaten, IBAN, Steuer, Projektbeschriebe,
+          Budget/Kostenfinanzplan, freie Notizen, hochgeladene Dateien.</div>
+        </div>
+        <div class="karte" style="border-top:4px solid #4f6df5">
+          <div style="font-weight:700;margin-bottom:5px">🌐 Wird geteilt (Board)</div>
+          <div class="geber">Projektname, verfolgte Förderungen, Antrag-Status,
+          Fristen/Termine, Förderer-Kontakt (ohne Notiz), Dokument-Status.</div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 21.1</b> – Nur die rechte Spalte verlässt dein Gerät – und nur zu deinem eigenen Team-Server.</figcaption>
+  </figure>
+
+  <h3>Wie dein Gerät sich anmeldet</h3>
+  <div class="struktur">
+    <div class="stp"><span class="num">1</span><div><b>Ausweis erhalten:</b> Du bekommst (offline, z. B. per USB) die Ausweis-Datei für dein Gerät und legst sie in der App ab.</div></div>
+    <div class="stp"><span class="num">2</span><div><b>Automatisch verbinden:</b> Ab dann weist sich die App bei jeder Synchronisation selbst mit diesem Ausweis aus – kein extra Login, kein zweites Passwort.</div></div>
+    <div class="stp"><span class="num">3</span><div><b>Abgleichen:</b> Die App schickt deinen Board-Stand hoch und holt die Änderungen der anderen. Bei gleichzeitigem Ändern gilt „letzte Änderung gewinnt", mit Hinweis „geändert von …".</div></div>
+  </div>
+
+  <h3>Warum das sicher ist</h3>
+  <ul>
+    <li>Nur Geräte mit gültigem <strong>Team-Ausweis</strong> kommen überhaupt an den Server (mTLS).</li>
+    <li>Der Server kennt <strong>nur Board-Daten</strong> – nie deine sensiblen Inhalte.</li>
+    <li>Der Server liegt auf <strong>deiner eigenen NAS</strong>, nicht bei einem Fremdanbieter.</li>
+  </ul>
+
+  <div class="tipp"><strong>Ausblick (in Prüfung):</strong> Ein <strong>Ende-zu-Ende
+  verschlüsselter Team-Chat</strong> würde auf genau dieser Grundlage aufsetzen:
+  jedes Gerät bekäme zusätzlich ein Schlüsselpaar (privater Teil im Tresor),
+  Nachrichten lägen auf dem Server nur als Geheimtext. Ob und wie wir das bauen,
+  entscheiden wir separat.</div>
+</section>
+
+<!-- ===== 22 ===== -->
+<section class="chapter">
+  <h2><span class="kn">22</span>Tipps &amp; häufige Fragen</h2>
 
   <dl class="faq">
     <dt>Ich habe mein Passwort vergessen – was nun?</dt>
@@ -941,6 +1031,18 @@
     <dd>Unter <span class="pfad">Dokumente\Antrag 3000\[Projekt]\…</span>
     (siehe Kapitel 18). Der verschlüsselte Tresor liegt separat im
     App-Datenordner.</dd>
+
+    <dt>Was ist der Unterschied zwischen Passwort und Geräte-Ausweis?</dt>
+    <dd>Das <strong>Tresor-Passwort</strong> schützt deine Daten auf dem Gerät
+    und verlässt es nie. Der <strong>Geräte-Ausweis</strong> ist ein Zertifikat,
+    mit dem sich dein Gerät beim Team-Server ausweist (nur für die
+    Synchronisation unkritischer Daten). Zwei getrennte Dinge – siehe Kapitel 20.</dd>
+
+    <dt>Ich habe das Gerät mit dem Team-Ausweis verloren – was tun?</dt>
+    <dd>Kein Drama: Da jedes Gerät einen <strong>eigenen</strong> Ausweis hat,
+    sperrst du nur diesen einen; die anderen laufen weiter. Für ein neues Gerät
+    erzeugst du auf deinem PC einfach einen neuen Ausweis (das Skript behält die
+    Team-CA). Deine sensiblen Daten waren auf dem Server ohnehin nie.</dd>
   </dl>
 
   <div class="ende">— Ende des Handbuchs · Antrag 3000, Version 0.1.0 —</div>
