@@ -1060,6 +1060,33 @@
   <div class="merke">Nur diese eine Person braucht „Team verwalten". Alle anderen
   bekommen ein fertiges Zugangs-Paket und folgen den drei Schritten oben.</div>
 
+  <h3>Wenn „nicht erreichbar" erscheint – Virenscanner (HTTPS-Scan)</h3>
+  <p>Die häufigste Stolperfalle ist <strong>nicht</strong> die NAS, sondern ein
+  <strong>Virenscanner auf deinem PC</strong>. Viele Schutzprogramme (z. B.
+  <strong>Norton</strong>, aber auch andere mit „SSL-Scan" / „Web-Schutz")
+  klinken sich heimlich in jede verschlüsselte Verbindung ein, um sie zu
+  durchleuchten. Dabei <strong>tauschen sie das Server-Zertifikat aus</strong> –
+  und genau das verträgt sich nicht mit der gegenseitigen Ausweis-Prüfung (mTLS)
+  von Antrag&nbsp;3000.</p>
+
+  <div class="warn"><strong>Typisches Fehlerbild:</strong> Die App meldet
+  „⚠&nbsp;Nicht erreichbar … <span class="pfad">invalid peer certificate:
+  UnknownIssuer</span>", obwohl die NAS läuft und das Lämpchen im Netzwerk grün
+  ist. Das bedeutet: Das Zertifikat, das bei der App ankommt, stammt
+  <strong>nicht</strong> von deiner Team-CA, sondern wurde vom Virenscanner
+  ersetzt (z.&nbsp;B. Aussteller „Norton Web/Mail Shield").</div>
+
+  <p><strong>So behebst du es</strong> – am besten gezielt, ohne den Virenscanner
+  ganz abzuschalten:</p>
+  <div class="struktur">
+    <div class="stp"><span class="num">1</span><div>Im Virenscanner die Funktion zum <b>Scannen verschlüsselter Verbindungen</b> suchen (bei Norton z.&nbsp;B. unter <i>Einstellungen → Firewall</i> bzw. <i>„Sicheres Surfen"</i>, Stichworte „HTTPS-Scan", „Verschlüsselte Verbindungen scannen", „Web/Mail-Shield").</div></div>
+    <div class="stp"><span class="num">2</span><div>Dort eine <b>Ausnahme</b> für deine Team-Adresse eintragen (die NAS-Adresse, z.&nbsp;B. <span class="pfad">nas-…​.ts.net</span>, ggf. zusätzlich die IP). <b>Besser als alles abschalten</b>, weil der übrige Schutz erhalten bleibt.</div></div>
+    <div class="stp"><span class="num">3</span><div>In der App erneut <b>„Verbindung testen"</b> – jetzt sollte <b>✓ Verbunden</b> erscheinen.</div></div>
+  </div>
+  <div class="merke">Wer keinen solchen HTTPS-Scan aktiv hat, ist davon nicht
+  betroffen. Bei anderen Schutzprogrammen mit „SSL-Scan" gilt dasselbe Vorgehen:
+  eine Ausnahme für die Team-Adresse setzen.</div>
+
   <h3>Warum das sicher ist</h3>
   <ul>
     <li>Nur Geräte mit gültigem <strong>Team-Ausweis</strong> kommen überhaupt an den Server (mTLS).</li>
@@ -1166,6 +1193,13 @@
     erzeugt die Verwalter:in einfach in der App ein neues Zugangs-Paket
     (die Team-CA bleibt erhalten – siehe Kapitel 21). Deine sensiblen Daten
     waren auf dem Server ohnehin nie.</dd>
+
+    <dt>Die App meldet „nicht erreichbar / UnknownIssuer", obwohl die NAS läuft.</dt>
+    <dd>Meist ist ein <strong>Virenscanner</strong> (z.&nbsp;B. Norton) schuld, der
+    verschlüsselte Verbindungen durchleuchtet und dabei das Server-Zertifikat
+    austauscht. Trage in dessen HTTPS-/SSL-Scan eine <strong>Ausnahme für deine
+    Team-Adresse</strong> ein, dann klappt die Verbindung – ausführlich in
+    Kapitel 21.</dd>
 
     <dt>Wie prüfe ich, dass keine sensiblen Daten ins Netz gehen?</dt>
     <dd>Im Bereich Team-Sync unter „Prüfen &amp; Protokoll" zeigt dir die
