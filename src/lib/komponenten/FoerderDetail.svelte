@@ -25,6 +25,11 @@
     const x = alle.find((e) => e.id === id);
     return x ? `${x.name} (${x.foerdergeber})` : id;
   }
+
+  // Wurde eines der angegebenen Felder durch ein Update geändert?
+  function neu(...keys) {
+    return keys.some((k) => geaenderteFelder.includes(k));
+  }
 </script>
 
 <div class="schleier" onclick={schliessen} role="presentation">
@@ -32,60 +37,67 @@
     <header>
       <div>
         <span class="land land-{f.land}">{LAENDER[f.land] ?? f.land}</span>
-        <h3>{f.name}</h3>
+        {#if neu("land")}<span class="neu-feld">NEU</span>{/if}
+        <h3>{f.name}{#if neu("name")}<span class="neu-feld">NEU</span>{/if}</h3>
         {#if f.nichtMehrImKatalog}
           <span class="herkunft weg">⚠ nicht mehr im Katalog</span>
         {:else if f.eigen}
           <span class="herkunft selbst">✎ selbst eingetragen</span>
         {/if}
-        <p class="geber">{f.foerdergeber}</p>
+        <p class="geber">{f.foerdergeber}{#if neu("foerdergeber")}<span class="neu-feld">NEU</span>{/if}</p>
         {#if stand}<p class="stand">zuletzt aktualisiert: {stand}</p>{/if}
       </div>
       <button class="schliessen" onclick={schliessen} aria-label="Schließen">✕</button>
     </header>
 
-    <p>{f.beschreibung}</p>
+    <p>{f.beschreibung}{#if neu("beschreibung")}<span class="neu-feld">NEU</span>{/if}</p>
 
     <dl>
       <dt>Förderhöhe</dt>
-      <dd>{f.foerderhoehe_text}{#if geaenderteFelder.includes("foerderhoehe_text")}<span class="neu-feld">NEU</span>{/if}</dd>
+      <dd>{f.foerderhoehe_text}{#if neu("foerderhoehe_text")}<span class="neu-feld">NEU</span>{/if}</dd>
 
       <dt>Einreichung</dt>
-      <dd>{fristText(f)}{#if geaenderteFelder.includes("fristen")}<span class="neu-feld">NEU</span>{/if}</dd>
+      <dd>{fristText(f)}{#if neu("fristen", "weiche_kriterien.zeitpunkt")}<span class="neu-feld">NEU</span>{/if}</dd>
 
       <dt>Wohnsitz-Anforderung</dt>
       <dd>
         {f.harte_kriterien.wohnsitz.length
           ? f.harte_kriterien.wohnsitz.map((l) => LAENDER[l] ?? l).join(", ")
-          : "keine Anforderung"}
+          : "keine Anforderung"}{#if neu("harte_kriterien.wohnsitz")}<span class="neu-feld">NEU</span>{/if}
       </dd>
 
       <dt>Durchführungsort</dt>
       <dd>
         {f.harte_kriterien.durchfuehrungsort.length
           ? f.harte_kriterien.durchfuehrungsort.map((l) => LAENDER[l] ?? l).join(", ")
-          : "frei"}
+          : "frei"}{#if neu("harte_kriterien.durchfuehrungsort")}<span class="neu-feld">NEU</span>{/if}
       </dd>
 
       <dt>Wer kann beantragen?</dt>
       <dd>
         {f.harte_kriterien.traegerschaft.map((t) => TRAEGERSCHAFT[t] ?? t).join(", ")}
-        · studentisch: {f.harte_kriterien.studentisch_erlaubt ? "ja" : "nein"}
+        · studentisch: {f.harte_kriterien.studentisch_erlaubt ? "ja" : "nein"}{#if neu("harte_kriterien.traegerschaft", "harte_kriterien.studentisch_erlaubt")}<span class="neu-feld">NEU</span>{/if}
       </dd>
 
       <dt>Sparten</dt>
-      <dd>{f.weiche_kriterien.sparten.map((s) => SPARTEN[s] ?? s).join(", ") || "spartenoffen"}</dd>
+      <dd>{f.weiche_kriterien.sparten.map((s) => SPARTEN[s] ?? s).join(", ") || "spartenoffen"}{#if neu("weiche_kriterien.sparten")}<span class="neu-feld">NEU</span>{/if}</dd>
 
       <dt>Projektarten</dt>
-      <dd>{f.weiche_kriterien.projektarten.map((p) => PROJEKTARTEN[p] ?? p).join(", ")}</dd>
+      <dd>{f.weiche_kriterien.projektarten.map((p) => PROJEKTARTEN[p] ?? p).join(", ")}{#if neu("weiche_kriterien.projektarten")}<span class="neu-feld">NEU</span>{/if}</dd>
+
+      <dt>Budget-Rahmen</dt>
+      <dd>
+        {f.weiche_kriterien.budget_min ?? "—"} – {f.weiche_kriterien.budget_max ?? "—"}
+        {f.weiche_kriterien.waehrung ?? ""}{#if neu("weiche_kriterien.budget_min", "weiche_kriterien.budget_max", "weiche_kriterien.waehrung")}<span class="neu-feld">NEU</span>{/if}
+      </dd>
 
       {#if f.unvertraeglich_mit.length}
         <dt class="warn">Unverträglich mit</dt>
-        <dd class="warn">{f.unvertraeglich_mit.map(nameVon).join("; ")}</dd>
+        <dd class="warn">{f.unvertraeglich_mit.map(nameVon).join("; ")}{#if neu("unvertraeglich_mit")}<span class="neu-feld">NEU</span>{/if}</dd>
       {/if}
 
       {#if !antrag}
-        <dt>Übliche Unterlagen</dt>
+        <dt>Übliche Unterlagen {#if neu("checkliste_vorschlag")}<span class="neu-feld">NEU</span>{/if}</dt>
         <dd>
           <ul>
             {#each f.checkliste_vorschlag as punkt}
@@ -115,6 +127,7 @@
     <button class="primaer" onclick={() => openUrl(f.webseite)}>
       Webseite des Fördergebers öffnen
     </button>
+    {#if neu("webseite")}<span class="neu-feld">Webseite NEU</span>{/if}
   </article>
 </div>
 

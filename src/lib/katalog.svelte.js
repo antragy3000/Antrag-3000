@@ -90,7 +90,23 @@ export function geaenderteFelder(alt, neu) {
   const keys = new Set([...Object.keys(alt), ...Object.keys(neu)]);
   const out = [];
   for (const k of keys) {
-    if (JSON.stringify(alt[k]) !== JSON.stringify(neu[k])) out.push(k);
+    const a = alt[k];
+    const b = neu[k];
+    if (JSON.stringify(a) === JSON.stringify(b)) continue;
+    // Eine Ebene tiefer bei reinen Objekten (harte_/weiche_kriterien),
+    // damit die „NEU"-Markierung am konkreten Unterfeld sitzt
+    // (z. B. weiche_kriterien.sparten).
+    if (
+      a && b && typeof a === "object" && typeof b === "object" &&
+      !Array.isArray(a) && !Array.isArray(b)
+    ) {
+      const subkeys = new Set([...Object.keys(a), ...Object.keys(b)]);
+      for (const sk of subkeys) {
+        if (JSON.stringify(a[sk]) !== JSON.stringify(b[sk])) out.push(k + "." + sk);
+      }
+    } else {
+      out.push(k);
+    }
   }
   return out;
 }

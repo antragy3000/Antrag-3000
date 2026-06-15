@@ -15,6 +15,11 @@
     stand = null,
     geaenderteFelder = [],
   } = $props();
+
+  // Wurde eines der angegebenen Felder durch ein Update geändert?
+  function neu(...keys) {
+    return keys.some((k) => geaenderteFelder.includes(k));
+  }
 </script>
 
 <div
@@ -52,16 +57,16 @@
       {/if}
     </span>
   </div>
-  <h3>{f.name}</h3>
+  <h3>{f.name}{#if neu("name")}<span class="neu-feld">NEU</span>{/if}</h3>
   {#if f.nichtMehrImKatalog}
     <span class="herkunft weg">⚠ nicht mehr im Katalog</span>
   {:else if f.eigen}
     <span class="herkunft selbst">✎ selbst eingetragen</span>
   {/if}
-  <p class="geber">{f.foerdergeber}</p>
+  <p class="geber">{f.foerdergeber}{#if neu("foerdergeber")}<span class="neu-feld">NEU</span>{/if}</p>
   <p class="hoehe">
     {f.foerderhoehe_text}
-    {#if geaenderteFelder.includes("foerderhoehe_text")}<span class="neu-feld">NEU</span>{/if}
+    {#if neu("foerderhoehe_text")}<span class="neu-feld">NEU</span>{/if}
   </p>
   <div class="chips">
     {#each f.weiche_kriterien.sparten.slice(0, 3) as sp}
@@ -70,6 +75,7 @@
     {#if f.weiche_kriterien.sparten.length > 3}
       <span class="chip">+{f.weiche_kriterien.sparten.length - 3}</span>
     {/if}
+    {#if neu("weiche_kriterien.sparten", "weiche_kriterien.projektarten")}<span class="neu-feld">NEU</span>{/if}
   </div>
   {#if statusBadge}
     <p class="status-badge farbe-{statusBadge.farbe}">
@@ -84,7 +90,7 @@
   {/if}
   <p class="frist">
     {fristText(f)}
-    {#if geaenderteFelder.includes("fristen")}<span class="neu-feld">NEU</span>{/if}
+    {#if neu("fristen", "weiche_kriterien.zeitpunkt")}<span class="neu-feld">NEU</span>{/if}
   </p>
   {#if stand}<p class="stand">aktualisiert: {stand}</p>{/if}
 </div>

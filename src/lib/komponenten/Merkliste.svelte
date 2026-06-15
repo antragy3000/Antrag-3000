@@ -40,6 +40,12 @@
   let aktuellerAntrag = $state(null);
   let eigeneOffen = $state(false);
 
+  // Wurde für die Förderung eines der angegebenen Felder geändert?
+  function neu(id, ...keys) {
+    const felder = neuFelderFuer ? neuFelderFuer(id) : [];
+    return keys.some((k) => felder.includes(k));
+  }
+
   let gemerkte = $derived(
     merkliste
       .map((id) => foerderungen.find((f) => f.id === id))
@@ -254,7 +260,7 @@
           <div class="haupt">
             <div class="kopf">
               <span class="land land-{f.land}">{LAENDER[f.land] ?? f.land}</span>
-              <h3>{f.name}</h3>
+              <h3>{f.name}{#if neu(f.id, "name")}<span class="neu-feld">NEU</span>{/if}</h3>
               <span class="status-badge farbe-{badge.farbe}">
                 <span class="punkt"></span>{badge.label}
               </span>
@@ -269,7 +275,7 @@
             </div>
 
             <p class="meta">
-              <span class="meta-links">{f.foerdergeber} · <span class="hoehe">{f.foerderhoehe_text}</span>{#if neuFelderFuer && neuFelderFuer(f.id).includes("foerderhoehe_text")}<span class="neu-feld">NEU</span>{/if}</span>
+              <span class="meta-links">{f.foerdergeber}{#if neu(f.id, "foerdergeber")}<span class="neu-feld">NEU</span>{/if} · <span class="hoehe">{f.foerderhoehe_text}</span>{#if neu(f.id, "foerderhoehe_text")}<span class="neu-feld">NEU</span>{/if}</span>
               {#if standFuer && standFuer(f.id)}
                 <span class="stand">aktualisiert {standFuer(f.id)}</span>
               {/if}
@@ -280,6 +286,9 @@
                 {#each f.weiche_kriterien.sparten as sp}
                   <span class="chip">{SPARTEN[sp] ?? sp}</span>
                 {/each}
+                {#if neu(f.id, "weiche_kriterien.sparten", "weiche_kriterien.projektarten")}
+                  <span class="neu-feld">NEU</span>
+                {/if}
               </div>
               <div class="fristen-rechts">
                 {#each fristenFuerListe(f) as fr (fr.label + fr.datum)}
@@ -289,7 +298,7 @@
                 {:else}
                   <span class="frist">{fristText(f)}</span>
                 {/each}
-                {#if neuFelderFuer && neuFelderFuer(f.id).includes("fristen")}
+                {#if neu(f.id, "fristen", "weiche_kriterien.zeitpunkt")}
                   <span class="neu-feld">NEU</span>
                 {/if}
               </div>
