@@ -246,7 +246,8 @@
     <li><span class="nr">19</span><span class="t">Sicherung (Backup)</span><span class="pg" data-ch="19">21</span></li>
     <li><span class="nr">20</span><span class="t">Anmelden &amp; Schlüssel im Überblick</span><span class="pg" data-ch="20">22</span></li>
     <li><span class="nr">21</span><span class="t">Team-Synchronisation (Phase 2)</span><span class="pg" data-ch="21">23</span></li>
-    <li><span class="nr">22</span><span class="t">Tipps &amp; häufige Fragen</span><span class="pg" data-ch="22">25</span></li>
+    <li><span class="nr">22</span><span class="t">Selbst prüfen: Was verlässt das Gerät?</span><span class="pg" data-ch="22">26</span></li>
+    <li><span class="nr">23</span><span class="t">Tipps &amp; häufige Fragen</span><span class="pg" data-ch="23">27</span></li>
   </ol>
 </section>
 
@@ -957,9 +958,10 @@
   <p class="lead">Damit ein kleines Team gemeinsam den Überblick behält, werden
   ausgewählte <strong>unkritische</strong> Daten über deine eigene NAS geteilt.</p>
 
-  <div class="merke">Diese Funktion wird gerade eingebaut: Server und Ausweise
-  stehen bereits, die Synchronisation im Programm folgt als nächster Schritt.
-  Dieses Kapitel erklärt, wie der Ablauf funktioniert.</div>
+  <div class="merke">Voraussetzung ist eine laufende NAS mit dem Team-Server
+  (siehe separate Anleitung „NAS-Einrichtung"). Steht der Server noch nicht,
+  kannst du dein Gerät trotzdem schon einrichten – die App zeigt dann einfach
+  „noch nicht erreichbar".</div>
 
   <h3>Was geteilt wird – und was nicht</h3>
   <figure>
@@ -1007,11 +1009,56 @@
   per E-Mail oder Chat – es enthält deinen privaten Schlüssel. Nur persönlich/offline
   weitergeben (USB-Stick). Jedes Gerät bekommt sein <strong>eigenes</strong> Paket.</div>
 
-  <h3>Danach: das Abgleichen</h3>
-  <p>Beim Öffnen (oder auf Knopfdruck) gleicht die App ab: Sie schickt deinen
-  Board-Stand hoch und holt die Änderungen der anderen. Ändern zwei Personen
-  dasselbe gleichzeitig, gilt „letzte Änderung gewinnt" – mit Hinweis
-  „geändert von …", damit du es nachvollziehen kannst.</p>
+  <h3>Synchronisieren starten und stoppen</h3>
+  <p>Das Abgleichen läuft nicht ständig im Hintergrund, sondern <strong>nur,
+  wenn du es einschaltest</strong>. So behältst du die Kontrolle.</p>
+
+  <figure>
+    <div class="screen">
+      <div class="karte">
+        <div style="font-weight:700;margin-bottom:8px">Team-Übersicht</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="btn pri">▶ Synchronisieren starten</span>
+          <span class="dot9" style="background:#36b37e"></span>
+          <span class="geber">Live – synchronisiert fortlaufend</span>
+        </div>
+        <div style="font-size:8pt;color:#8590a2;margin-top:8px">Letzte Änderung übernommen: 15.06.2026, 14:02 · zuletzt geprüft: 14:03</div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 21.3</b> – Ein Schalter: „Synchronisieren starten" wird zu „… stoppen". Das Lämpchen zeigt den Zustand.</figcaption>
+  </figure>
+
+  <ul>
+    <li><strong>▶ Synchronisieren starten</strong> ist erst aktiv, wenn die
+    Verbindung steht (sonst ausgegraut, mit Hinweis). Danach gleicht die App
+    <strong>fortlaufend von selbst</strong> ab – etwa alle 10 Sekunden.</li>
+    <li>Läuft der Sync, heißt der Knopf <strong>■ Synchronisieren stoppen</strong>.
+    Das <strong>Lämpchen</strong> ist grün (live), gelb (Verbindung kurz weg,
+    versucht weiter) oder grau (aus).</li>
+    <li>Beim <strong>Sperren</strong> des Tresors stoppt der Sync automatisch.</li>
+  </ul>
+  <p>Geteilt wird sparsam: Hochgeladen wird nur ein Projekt, dessen Board-Stand
+  sich <strong>tatsächlich geändert</strong> hat. Löschst du ein Projekt, wird es
+  auch vom Team-Board entfernt. Ändern zwei Personen dasselbe Projekt zugleich,
+  wird der Konflikt gemeldet und übersprungen (nichts wird überschrieben).</p>
+
+  <h3>Die Team-Übersicht</h3>
+  <p>Darunter zeigt die App eine <strong>schreibgeschützte</strong> Liste aller
+  Team-Projekte mit ihren verfolgten Förderungen und dem jeweiligen
+  Antrag-Status. Deine eigenen Projekte sind mit „dieses Team-Gerät" markiert.
+  Auch hier erscheinen <strong>nur unkritische</strong> Board-Felder.</p>
+
+  <h3>Für die Verwalter:in: Team einrichten (in der App)</h3>
+  <p>Eine Person im Team richtet das Team <strong>einmalig</strong> ein – komplett
+  in der App, ohne Kommandozeile. Im Bereich Team-Sync unter
+  <strong>„▸ Team verwalten"</strong>:</p>
+  <div class="struktur">
+    <div class="stp"><span class="num">1</span><div><b>Team-CA erstellen.</b> Team-Adresse (DDNS der NAS) eintippen und auf <b>„Team-CA erstellen"</b> klicken. Der „Aussteller-Stempel" entsteht und liegt <b>verschlüsselt im Tresor</b> – er wird nie angezeigt.</div></div>
+    <div class="stp"><span class="num">2</span><div><b>CA-Zertifikat für die NAS speichern.</b> Diese öffentliche Datei kommt auf die NAS (zu Caddy), damit der Server Team-Geräte erkennt.</div></div>
+    <div class="stp"><span class="num">3</span><div><b>Zugangs-Pakete erzeugen.</b> Pro Person ein <span class="pfad">.a3kpaket</span> erstellen und offline (USB) weitergeben. Das eigene Gerät kannst du auch direkt einrichten.</div></div>
+  </div>
+  <div class="merke">Nur diese eine Person braucht „Team verwalten". Alle anderen
+  bekommen ein fertiges Zugangs-Paket und folgen den drei Schritten oben.</div>
 
   <h3>Warum das sicher ist</h3>
   <ul>
@@ -1029,7 +1076,54 @@
 
 <!-- ===== 22 ===== -->
 <section class="chapter">
-  <h2><span class="kn">22</span>Tipps &amp; häufige Fragen</h2>
+  <h2><span class="kn">22</span>Selbst prüfen: Was verlässt das Gerät?</h2>
+  <p class="lead">Du musst dem Versprechen „nur unkritische Daten" nicht blind
+  glauben – du kannst es <strong>selbst nachprüfen</strong>. Dafür gibt es im
+  Bereich Team-Sync den Abschnitt <strong>„▸ Prüfen &amp; Protokoll"</strong>.</p>
+
+  <h3>1 · Sende-Vorschau (Trockenlauf)</h3>
+  <p>Ein Klick auf <strong>„Sende-Vorschau anzeigen"</strong> zeigt dir die
+  <strong>exakten</strong> Daten, die der Sync hochladen würde – <strong>ohne
+  etwas zu senden</strong>. Du siehst nur Board-Felder: Projektname,
+  Förderungs-Kürzel, Status, Fristen, öffentlicher Kontakt.</p>
+
+  <figure>
+    <div class="screen">
+      <div class="tree" style="background:#0b1020;color:#d7e0ff;border:none">
+{ "inhalt": {<br>
+&nbsp;&nbsp;"id": "p1", "name": "Klangraum Festival",<br>
+&nbsp;&nbsp;"eintraege": [ { "foerderungId": "de-musikfonds",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"status": "abgeschickt", "offizielleFristen": ["2026-09-15"] } ]<br>
+}, "basis_version": null }
+      </div>
+    </div>
+    <figcaption><b>Abb. 22.1</b> – So sieht ein Sende-Körper aus: keine Stammdaten, keine IBAN, kein Budget, keine Beschreibung.</figcaption>
+  </figure>
+
+  <h3>2 · Unabhängiger Mitschnitt</h3>
+  <p>Wer ganz sichergehen will, schaut sich an, was <strong>wirklich über die
+  Leitung</strong> geht – mit einem kleinen Mithör-Programm, unabhängig von der
+  App und ohne NAS:</p>
+  <div class="struktur">
+    <div class="stp"><span class="num">1</span><div>Im Projektordner ein Terminal öffnen und <code>node tools/echo-server.mjs</code> starten.</div></div>
+    <div class="stp"><span class="num">2</span><div>In der App unter „Prüfen &amp; Protokoll" auf <b>„An lokalen Mitschnitt senden"</b> klicken (Adresse <span class="pfad">http://127.0.0.1:8099</span>).</div></div>
+    <div class="stp"><span class="num">3</span><div>Im Terminal erscheint jeder gesendete Datensatz vollständig – Zeile für Zeile prüfbar.</div></div>
+  </div>
+
+  <h3>3 · Sync-Protokoll</h3>
+  <p>Während die Synchronisation läuft, listet das <strong>Protokoll</strong>,
+  was tatsächlich gesendet oder gelöscht wurde – mit Uhrzeit und Größe. So bleibt
+  jeder Abgleich nachvollziehbar.</p>
+
+  <div class="tipp"><strong>Eingebaute Garantie.</strong> Die App baut die
+  Sende-Daten an <strong>einer einzigen Stelle</strong> zusammen, die nur
+  unkritische Felder kennt. Ein automatischer Test wacht bei jeder Programm­änderung
+  darüber, dass dort nie ein sensibles Feld hineingerät.</div>
+</section>
+
+<!-- ===== 23 ===== -->
+<section class="chapter">
+  <h2><span class="kn">23</span>Tipps &amp; häufige Fragen</h2>
 
   <dl class="faq">
     <dt>Ich habe mein Passwort vergessen – was nun?</dt>
@@ -1069,8 +1163,15 @@
     <dt>Ich habe das Gerät mit dem Team-Ausweis verloren – was tun?</dt>
     <dd>Kein Drama: Da jedes Gerät einen <strong>eigenen</strong> Ausweis hat,
     sperrst du nur diesen einen; die anderen laufen weiter. Für ein neues Gerät
-    erzeugst du auf deinem PC einfach einen neuen Ausweis (das Skript behält die
-    Team-CA). Deine sensiblen Daten waren auf dem Server ohnehin nie.</dd>
+    erzeugt die Verwalter:in einfach in der App ein neues Zugangs-Paket
+    (die Team-CA bleibt erhalten – siehe Kapitel 21). Deine sensiblen Daten
+    waren auf dem Server ohnehin nie.</dd>
+
+    <dt>Wie prüfe ich, dass keine sensiblen Daten ins Netz gehen?</dt>
+    <dd>Im Bereich Team-Sync unter „Prüfen &amp; Protokoll" zeigt dir die
+    <strong>Sende-Vorschau</strong> die exakten Daten, und mit dem
+    <strong>lokalen Mitschnitt</strong> siehst du sie unabhängig im Terminal –
+    siehe Kapitel 22.</dd>
   </dl>
 
   <div class="ende">— Ende des Handbuchs · Antrag 3000, Version 0.1.0 —</div>

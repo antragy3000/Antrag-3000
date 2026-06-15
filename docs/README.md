@@ -6,7 +6,8 @@
 - **`handbuch-bauen.mjs`** – Bau-Skript: druckt das PDF mit
   **Seitenzahlen** und trägt die **Kapitel-Seiten ins Inhaltsverzeichnis**
   ein.
-- **`Benutzerhandbuch Antrag 3000.pdf`** – das fertige A4-PDF (25 Seiten).
+- **`Benutzerhandbuch Antrag 3000.pdf`** – das fertige A4-PDF (27 Seiten,
+  23 Kapitel inkl. Team-Synchronisation und Selbst-Prüfung).
 
 ## PDF neu erzeugen
 Im Projekt-Stammordner ausführen (braucht nur Edge + Ghostscript, beide
