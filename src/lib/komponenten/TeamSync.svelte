@@ -1,9 +1,10 @@
 <script>
+  import { onMount } from "svelte";
   import { ANTRAG_STATUS, statusLabel, statusFarbe } from "$lib/status";
 
   // Team-Synchronisation (Phase 2):
   //  - Mein Gerät: Zugangs-Paket laden / Verbindung testen.
-  //  - Abgleich: eigene Projekte hochladen + Team-Übersicht holen.
+  //  - Abgleich: fortlaufende Synchronisation starten/stoppen + Team-Übersicht.
   //  - Verwaltung: Team-CA und Zugangs-Pakete direkt in der App erzeugen
   //    (für die einrichtende Person). Der CA-Schlüssel bleibt verschlüsselt
   //    im Tresor und wird nie angezeigt.
@@ -17,7 +18,13 @@
     caExportieren,
     paketErstellen,
     geraetEinrichten,
-    abgleichen,
+    starten,
+    stoppen,
+    pruefen,
+    syncLaeuft = false,
+    syncVerbunden = false,
+    syncMeldung = null,
+    zuletztGeprueft = null,
     teamBoard,
     letzterAbgleich,
     meineProjektIds = [],
@@ -26,11 +33,26 @@
 
   let beschaeftigt = $state(false);
   let status = $state(null);
-  let abgleichStatus = $state(null);
+  let pruefe = $state(false);
   let verwaltungOffen = $state(false);
   let caAdresse = $state("");
   let neuerGeraetName = $state("");
   let meinGeraetName = $state("");
+
+  // Beim Öffnen des Tabs einmal die Verbindung prüfen, damit der
+  // Start-Knopf den richtigen Zustand zeigt (aktiv nur, wenn erreichbar).
+  onMount(() => {
+    if (sync && !syncLaeuft) verbindungPruefen();
+  });
+
+  async function verbindungPruefen() {
+    pruefe = true;
+    try {
+      await pruefen();
+    } finally {
+      pruefe = false;
+    }
+  }
 
   function zeitText(iso) {
     if (!iso) return "noch nie";
@@ -44,16 +66,6 @@
 
   function istMeines(projektId) {
     return meineProjektIds.includes(projektId);
-  }
-
-  async function abgleichenKlick() {
-    beschaeftigt = true;
-    abgleichStatus = null;
-    try {
-      abgleichStatus = await abgleichen();
-    } finally {
-      beschaeftigt = false;
-    }
   }
 
   async function paketWaehlen() {
@@ -157,32 +169,41 @@
   {#if sync}
     <h3 class="abschnitt zwischen">Team-Übersicht</h3>
     <div class="karte">
-      <div class="abgleich-kopf">
-        <div>
-          <button class="primaer" disabled={beschaeftigt} onclick={abgleichenKlick}>
-            {beschaeftigt ? "Gleicht ab …" : "🔄 Jetzt abgleichen"}
+      <div class="sync-steuer">
+        {#if !syncLaeuft}
+          <button class="primaer" disabled={!syncVerbunden || pruefe} onclick={() => starten()}>
+            ▶ Synchronisieren starten
           </button>
-          <span class="dezent letzter">Letzter Abgleich: {zeitText(letzterAbgleich)}</span>
-        </div>
+        {:else}
+          <button class="stop" onclick={() => stoppen()}>■ Synchronisieren stoppen</button>
+        {/if}
+        <span class="licht {syncLaeuft ? (syncVerbunden ? 'an' : 'warn') : 'aus'}"></span>
+        <span class="dezent zustand">
+          {#if syncLaeuft}
+            {syncVerbunden ? "Live – synchronisiert fortlaufend" : "Verbindung unterbrochen – versuche weiter …"}
+          {:else if pruefe}
+            Prüfe Verbindung …
+          {:else if !syncVerbunden}
+            Verbindung steht noch nicht – oben „Verbindung testen“.
+          {:else}
+            Bereit zum Start.
+          {/if}
+        </span>
       </div>
 
-      {#if abgleichStatus}
-        {#if abgleichStatus.ok}
-          <p class="ok klein">
-            ✓ {abgleichStatus.hochgeladen} hochgeladen · {abgleichStatus.geholt} im Team
-            {#if abgleichStatus.konflikte > 0}
-              · <span class="warn">{abgleichStatus.konflikte} Konflikt(e) übersprungen</span>
-            {/if}
-          </p>
-        {:else}
-          <p class="fehler klein">⚠ {abgleichStatus.fehler ?? "Abgleich fehlgeschlagen."}</p>
-        {/if}
+      {#if syncMeldung}
+        <p class="klein meldung {syncMeldung.art === 'ok' ? 'ok' : syncMeldung.art === 'warn' ? 'fehler' : 'dezent'}">
+          {syncMeldung.text}
+        </p>
       {/if}
+      <p class="dezent klein takt">
+        Letzte Änderung übernommen: {zeitText(letzterAbgleich)}{#if zuletztGeprueft} · zuletzt geprüft: {zeitText(zuletztGeprueft)}{/if}
+      </p>
 
       {#if !teamBoard || teamBoard.length === 0}
         <p class="dezent leer-hinweis">
-          Noch keine Team-Projekte. „Jetzt abgleichen" lädt deine Projekte hoch
-          und holt die der anderen.
+          Noch keine Team-Projekte. Sobald die Synchronisation läuft, werden
+          deine Projekte hochgeladen und die der anderen hier angezeigt.
         </p>
       {:else}
         <p class="hinweis-box">
@@ -358,28 +379,53 @@
   .zwischen {
     margin-top: 28px;
   }
-  .abgleich-kopf {
+  .sync-steuer {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     flex-wrap: wrap;
     gap: 10px;
   }
-  .letzter {
-    margin-left: 12px;
+  .licht {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
+  .licht.aus { background: #c1c7d0; }
+  .licht.an {
+    background: #36b37e;
+    box-shadow: 0 0 0 4px rgba(54, 179, 126, 0.18);
+  }
+  .licht.warn {
+    background: #ffab00;
+    box-shadow: 0 0 0 4px rgba(255, 171, 0, 0.18);
+  }
+  .zustand {
+    font-size: 0.88rem;
+  }
+  .stop {
+    padding: 10px 18px;
+    font-size: 0.93rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #fff;
+    background: #c9372c;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .stop:hover {
+    background: #ae2e24;
   }
   .klein {
     font-size: 0.85rem;
   }
-  .ok.klein {
+  .meldung {
     margin: 12px 0 0;
   }
-  .fehler.klein {
-    margin: 12px 0 0;
-  }
-  .warn {
-    color: #a54800;
-    font-weight: 600;
+  .takt {
+    margin: 8px 0 0;
   }
   .leer-hinweis {
     margin: 14px 0 0;

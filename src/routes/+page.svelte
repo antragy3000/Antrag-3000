@@ -336,6 +336,10 @@
   }
 
   async function sperren() {
+    syncLoopStoppen();
+    syncVerbunden = false;
+    syncMeldung = null;
+    zuletztGeprueft = null;
     await invoke("tresor_sperren");
     daten = null;
     fehler = "";
@@ -526,6 +530,10 @@
   }
 
   async function zugangspaketEntfernen() {
+    syncLoopStoppen();
+    syncVerbunden = false;
+    syncMeldung = null;
+    zuletztGeprueft = null;
     daten.sync = null;
     await tresorSpeichern();
   }
@@ -608,52 +616,128 @@
     }
   }
 
-  // --- Etappe 4b: Der eigentliche Abgleich ---
-  // 1. Meine Projekte (NUR die unkritische Board-Sicht aus sync.js) zum
-  //    Team-Server hochladen. 2. Das gesamte Team-Board holen und als
-  //    schreibgeschützte Übersicht zwischenspeichern. Sensible Daten sind
-  //    baulich nicht enthalten – boardAusTresor() ist die einzige Quelle.
-  async function jetztAbgleichen() {
-    if (!daten.sync) return { ok: false, fehler: "Kein Zugangs-Paket geladen." };
+  // --- Etappe 4b/4c: Fortlaufender Abgleich (Start/Stopp) ---
+  // Nach dem Start synchronisiert die App von selbst weiter: in einem
+  // kurzen Takt werden GEÄNDERTE eigene Projekte hochgeladen und das
+  // Team-Board geholt. Echte "Echtzeit" über eine Dauerverbindung
+  // (WebSocket/SSE) wäre für ein Board, das sich nur wenige Male am Tag
+  // ändert, unverhältnismäßig: persistente mTLS-Verbindung, Server-Push,
+  // Reconnect-Logik. Ein 10-Sekunden-Takt fühlt sich live an und hält die
+  // NAS-Last winzig (im Ruhezustand 1 kleine Abfrage alle 10 s, sonst
+  // nichts). Der Wert ist eine Konstante und leicht anzupassen.
+  const SYNC_INTERVALL_MS = 10000;
+
+  let syncLaeuft = $state(false);    // läuft die Dauer-Synchronisation?
+  let syncVerbunden = $state(false); // stand die Verbindung beim letzten Versuch?
+  let syncMeldung = $state(null);    // { art: "ok"|"warn"|"info", text }
+  let zuletztGeprueft = $state(null); // Zeitpunkt des letzten Takts (Liveness)
+  let syncTimer = null;              // Handle des nächsten Takts (kein $state)
+  let tickAktiv = false;            // verhindert überlappende Takte
+
+  // Einmaliger Verbindungstest; aktualisiert syncVerbunden und gibt das
+  // {ok, fehler}-Ergebnis zurück (von "Verbindung testen" genutzt).
+  async function verbindungPruefen() {
+    if (!daten?.sync) {
+      syncVerbunden = false;
+      return { ok: false, fehler: "Kein Zugangs-Paket geladen." };
+    }
+    const r = await syncVerbindungTesten();
+    syncVerbunden = !!r.ok;
+    return r;
+  }
+
+  // Ein Durchlauf: nur tatsächlich geänderte eigene Projekte senden,
+  // danach das Team-Board holen. Schreibt den Tresor nur bei Änderung,
+  // damit der Takt im Ruhezustand keine Datei-/Krypto-Last erzeugt.
+  async function einAbgleich() {
     const adresse = daten.sync.adresse;
     const ausweisPem = daten.sync.ausweisPem;
     const versionen = { ...(daten.sync.versionen ?? {}) };
-    try {
-      // 1. Hochladen: jedes eigene Projekt einzeln (mit Basis-Version für
-      //    die Konflikt-Erkennung des Servers).
-      const board = boardAusTresor($state.snapshot(daten));
-      let hochgeladen = 0;
-      let konflikte = 0;
-      for (const p of board.projekte) {
-        const body = JSON.stringify({
-          inhalt: p,
-          basis_version: versionen[p.id] ?? null,
-        });
-        const antwortText = await invoke("sync_put_board", {
-          adresse,
-          ausweisPem,
-          projektId: p.id,
-          bodyJson: body,
-        });
-        const antwort = JSON.parse(antwortText);
-        versionen[p.id] = antwort.version;
-        if (antwort.konflikt) konflikte++;
-        else hochgeladen++;
-      }
+    const gesendet = { ...(daten.sync.gesendet ?? {}) };
+    let geaendert = false;
+    let konflikte = 0;
 
-      // 2. Gesamtes Team-Board holen (schreibgeschützte Übersicht).
-      const boardText = await invoke("sync_get_board", { adresse, ausweisPem });
-      const serverBoard = JSON.parse(boardText);
-      for (const row of serverBoard) versionen[row.projekt_id] = row.version;
+    // 1. Hochladen – nur, wenn sich die Board-Sicht des Projekts seit dem
+    //    letzten Senden geändert hat (Vergleich über die exakte JSON).
+    const board = boardAusTresor($state.snapshot(daten));
+    for (const p of board.projekte) {
+      const js = JSON.stringify(p);
+      if (gesendet[p.id] === js) continue; // unverändert → nicht senden
+      const body = JSON.stringify({ inhalt: p, basis_version: versionen[p.id] ?? null });
+      const antwortText = await invoke("sync_put_board", {
+        adresse, ausweisPem, projektId: p.id, bodyJson: body,
+      });
+      const antwort = JSON.parse(antwortText);
+      versionen[p.id] = antwort.version;
+      if (antwort.konflikt) konflikte++;
+      else gesendet[p.id] = js;
+      geaendert = true;
+    }
 
-      daten.sync.versionen = versionen;
+    // 2. Team-Board holen.
+    const boardText = await invoke("sync_get_board", { adresse, ausweisPem });
+    const serverBoard = JSON.parse(boardText);
+    for (const row of serverBoard) versionen[row.projekt_id] = row.version;
+    if (JSON.stringify(daten.sync.teamBoard ?? null) !== JSON.stringify(serverBoard)) {
       daten.sync.teamBoard = serverBoard;
+      geaendert = true;
+    }
+
+    if (geaendert) {
+      daten.sync.versionen = versionen;
+      daten.sync.gesendet = gesendet;
       daten.sync.letzterAbgleich = new Date().toISOString();
       await tresorSpeichern();
-      return { ok: true, hochgeladen, konflikte, geholt: serverBoard.length };
-    } catch (e) {
-      return { ok: false, fehler: String(e) };
     }
+    return { konflikte };
+  }
+
+  // Ein Takt der Dauer-Synchronisation; plant sich selbst neu, solange
+  // syncLaeuft. Bricht bei Netzfehlern NICHT ab, sondern versucht weiter
+  // (so erholt sich der Sync von selbst, wenn die NAS zurückkommt).
+  async function syncTakt() {
+    if (!syncLaeuft || tickAktiv) return;
+    tickAktiv = true;
+    try {
+      const r = await einAbgleich();
+      syncVerbunden = true;
+      zuletztGeprueft = new Date().toISOString();
+      syncMeldung = {
+        art: r.konflikte > 0 ? "warn" : "ok",
+        text: r.konflikte > 0
+          ? `Aktiv · ${r.konflikte} Konflikt(e) übersprungen`
+          : "Aktiv · synchronisiert",
+      };
+    } catch (e) {
+      syncVerbunden = false;
+      syncMeldung = { art: "warn", text: "Verbindung unterbrochen – versuche weiter …" };
+    } finally {
+      tickAktiv = false;
+      if (syncLaeuft) syncTimer = setTimeout(syncTakt, SYNC_INTERVALL_MS);
+    }
+  }
+
+  // Loop stoppen ohne Tresor-Schreiben (für Sperren/Abmelden).
+  function syncLoopStoppen() {
+    syncLaeuft = false;
+    if (syncTimer) { clearTimeout(syncTimer); syncTimer = null; }
+  }
+
+  async function autoSyncStarten() {
+    if (!daten?.sync || syncLaeuft) return;
+    const r = await verbindungPruefen();
+    if (!r.ok) {
+      syncMeldung = { art: "warn", text: "Verbindung steht noch nicht – zuerst „Verbindung testen“." };
+      return;
+    }
+    syncLaeuft = true;
+    syncMeldung = { art: "info", text: "Synchronisation gestartet." };
+    syncTakt(); // sofort der erste Durchlauf, dann im Takt weiter
+  }
+
+  function autoSyncStoppen() {
+    syncLoopStoppen();
+    syncMeldung = { art: "info", text: "Synchronisation gestoppt." };
   }
 
   // ids meiner lokalen Projekte – damit die Team-Übersicht markieren kann,
@@ -1006,13 +1090,19 @@
           sync={daten.sync}
           teamCa={daten.teamCa}
           laden={zugangspaketLaden}
-          testen={syncVerbindungTesten}
+          testen={verbindungPruefen}
           entfernen={zugangspaketEntfernen}
           caErstellen={teamCaErstellen}
           caExportieren={teamCaExportieren}
           paketErstellen={geraetPaketErstellen}
           geraetEinrichten={diesesGeraetEinrichten}
-          abgleichen={jetztAbgleichen}
+          starten={autoSyncStarten}
+          stoppen={autoSyncStoppen}
+          pruefen={verbindungPruefen}
+          {syncLaeuft}
+          {syncVerbunden}
+          {syncMeldung}
+          {zuletztGeprueft}
           teamBoard={daten.sync?.teamBoard ?? null}
           letzterAbgleich={daten.sync?.letzterAbgleich ?? null}
           {meineProjektIds}
