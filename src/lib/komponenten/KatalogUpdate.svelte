@@ -182,8 +182,9 @@
       <h3>Problem melden</h3>
       <p class="dezent">
         Stimmt etwas nicht (veraltete Frist, falscher Geber, Förderung gibt es
-        nicht mehr)? Melde es – die Meldung geht ans Team/an die Pflege
-        (Versand sobald die NAS verbunden ist).
+        nicht mehr)? Melde es – die Meldung wird beim <strong>laufenden
+        Synchronisieren</strong> automatisch ans Team/an die Pflege gesendet
+        (sonst bleibt sie „noch nicht gesendet").
       </p>
       <label for="m-f">Förderung</label>
       <select id="m-f" bind:value={mFoerderung}>

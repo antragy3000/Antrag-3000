@@ -37,6 +37,7 @@ pub fn run() {
             sync::sync_delete_board,
             sync::sync_trockenlauf,
             sync::sync_katalog_holen,
+            sync::sync_meldung_senden,
             sync::team_ca_erstellen,
             sync::geraet_paket_speichern,
             sync::geraet_paket_direkt,

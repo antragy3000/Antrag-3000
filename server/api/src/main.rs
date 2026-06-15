@@ -23,8 +23,11 @@
 // `X-Client-Cert-DER`.
 // ============================================================
 
+use std::collections::HashMap;
 use std::env;
 use std::net::SocketAddr;
+use std::sync::{Arc, Mutex};
+use std::time::Instant;
 
 use axum::{
     extract::{Path, State},
@@ -40,6 +43,38 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
 #[derive(Clone)]
 struct AppState {
     pool: SqlitePool,
+    // Tempo-Bremse gegen Spam: je Gerät die Zeitpunkte der letzten
+    // Schreibvorgänge (Meldungen/Förderer). Liegt im Speicher (reicht
+    // gegen Flutung; nach Neustart leer). Siehe tempo_ok().
+    schreib: Arc<Mutex<HashMap<i64, Vec<Instant>>>>,
+}
+
+// --- Spam-/Missbrauchs-Schutz (serverseitig; der Client ist nicht
+//     vertrauenswürdig). Startwerte bewusst grosszügig, leicht tunbar. ---
+/// Zeitfenster der Tempo-Bremse (Sekunden).
+const TEMPO_FENSTER_S: u64 = 60;
+/// Erlaubte Schreibvorgänge je Gerät und Zeitfenster (sonst 429).
+const TEMPO_MAX: usize = 30;
+/// Höchstzahl OFFENER Meldungen je Gerät (Kontingent).
+const MELDUNG_QUOTA: i64 = 50;
+/// Längenlimit für kurze Felder (id, Name, Art).
+const FELD_MAX: usize = 200;
+/// Längenlimit für die freie Anmerkung einer Meldung.
+const TEXT_MAX: usize = 1000;
+
+/// Tempo-Bremse: Gibt true zurück, wenn das Gerät noch schreiben darf,
+/// und merkt sich diesen Schreibvorgang. Alte Einträge ausserhalb des
+/// Fensters werden dabei verworfen.
+fn tempo_ok(st: &AppState, geraet_id: i64) -> bool {
+    let jetzt = Instant::now();
+    let mut map = st.schreib.lock().unwrap();
+    let liste = map.entry(geraet_id).or_default();
+    liste.retain(|t| jetzt.duration_since(*t).as_secs() < TEMPO_FENSTER_S);
+    if liste.len() >= TEMPO_MAX {
+        return false;
+    }
+    liste.push(jetzt);
+    true
 }
 
 #[tokio::main]
@@ -66,7 +101,11 @@ async fn main() {
         .route("/api/board/:projekt_id", put(board_schreiben).delete(board_loeschen))
         .route("/api/katalog", get(katalog_lesen))
         .route("/api/katalog/version", get(katalog_version))
-        .with_state(AppState { pool });
+        .route("/api/meldung/:meldung_id", put(meldung_schreiben))
+        .with_state(AppState {
+            pool,
+            schreib: Arc::new(Mutex::new(HashMap::new())),
+        });
 
     let addr: SocketAddr = lausch.parse().expect("LAUSCH ist keine gültige Adresse");
     println!("Antrag-3000-Sync-Dienst lauscht intern auf {addr}");
@@ -113,6 +152,22 @@ async fn schema_anlegen(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             geaendert_am TEXT NOT NULL DEFAULT (datetime('now')),
             geaendert_von_geraet INTEGER REFERENCES geraet(id),
             PRIMARY KEY (konto_id, projekt_id)
+        )",
+        // Gemeldete Fehler/veraltete Daten zu Katalog-Förderungen. Fliessen
+        // in die Admin-Kuratierung (Etappe 4). Upsert per (konto_id, id):
+        // erneutes Senden derselben Meldung überschreibt, häuft nicht an.
+        "CREATE TABLE IF NOT EXISTS meldung (
+            id TEXT NOT NULL,
+            konto_id INTEGER NOT NULL REFERENCES konto(id),
+            geraet_id INTEGER NOT NULL REFERENCES geraet(id),
+            foerderung_id TEXT NOT NULL,
+            foerderung_name TEXT,
+            art TEXT NOT NULL,
+            text TEXT,
+            status TEXT NOT NULL DEFAULT 'offen',
+            erstellt_am TEXT NOT NULL DEFAULT (datetime('now')),
+            geaendert_am TEXT NOT NULL DEFAULT (datetime('now')),
+            PRIMARY KEY (konto_id, id)
         )",
         // MVP: ein gemeinsames Team-Konto + Team-Nutzer.
         "INSERT OR IGNORE INTO konto (id, name) VALUES (1, 'Team')",
@@ -382,4 +437,91 @@ async fn katalog_version(
         stand: v.get("stand").and_then(|x| x.as_str()).map(|s| s.to_string()),
         schema_version: v.get("schema_version").and_then(|x| x.as_i64()),
     }))
+}
+
+// ============================================================
+// Meldungen (Phase 3 / Etappe 3 Teil 2): Nutzer:innen melden falsche/
+// veraltete Förderungen. Die Meldungen fliessen in die Admin-Kuratierung.
+// Hier greift der serverseitige Spam-Schutz (Tempo-Limit, Kontingent,
+// Größen-Limit, Upsert per id) – der Client ist nicht vertrauenswürdig.
+// ============================================================
+
+#[derive(Deserialize)]
+struct MeldungBody {
+    #[serde(rename = "foerderungId")]
+    foerderung_id: String,
+    #[serde(rename = "foerderungName")]
+    foerderung_name: Option<String>,
+    art: String,
+    text: Option<String>,
+}
+
+/// Eine Meldung anlegen/aktualisieren (PUT /api/meldung/{id}). Die id wird
+/// vom Client vergeben; erneutes Senden überschreibt denselben Eintrag
+/// (kein Anhäufen). Antworten: 204 ok, 429 zu schnell, 413 zu gross,
+/// 403 Kontingent voll, 400 ungültig.
+async fn meldung_schreiben(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    Path(meldung_id): Path<String>,
+    Json(body): Json<MeldungBody>,
+) -> Result<StatusCode, StatusCode> {
+    let (konto_id, geraet_id) = konto_und_geraet(&st.pool, &headers).await?;
+
+    // 1. Tempo-Bremse (Schreibvorgänge/Minute je Gerät).
+    if !tempo_ok(&st, geraet_id) {
+        return Err(StatusCode::TOO_MANY_REQUESTS);
+    }
+
+    // 2. Größen-Limit (Datensatz/Feld).
+    if meldung_id.len() > FELD_MAX
+        || body.foerderung_id.len() > FELD_MAX
+        || body.art.len() > FELD_MAX
+        || body.foerderung_name.as_deref().unwrap_or("").len() > FELD_MAX
+        || body.text.as_deref().unwrap_or("").len() > TEXT_MAX
+    {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+    if body.foerderung_id.trim().is_empty() || body.art.trim().is_empty() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // 3. Kontingent: Zahl der OFFENEN Meldungen je Gerät begrenzen. Ein
+    //    Upsert der gleichen id zählt nicht mit (id <> ?).
+    let offen: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM meldung WHERE geraet_id = ? AND status = 'offen' AND id <> ?",
+    )
+    .bind(geraet_id)
+    .bind(&meldung_id)
+    .fetch_one(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if offen >= MELDUNG_QUOTA {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    // 4. Upsert per (konto_id, id).
+    sqlx::query(
+        "INSERT INTO meldung
+            (id, konto_id, geraet_id, foerderung_id, foerderung_name, art, text, status, erstellt_am, geaendert_am)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'offen', datetime('now'), datetime('now'))
+         ON CONFLICT(konto_id, id) DO UPDATE SET
+            foerderung_id = excluded.foerderung_id,
+            foerderung_name = excluded.foerderung_name,
+            art = excluded.art,
+            text = excluded.text,
+            geaendert_am = excluded.geaendert_am",
+    )
+    .bind(&meldung_id)
+    .bind(konto_id)
+    .bind(geraet_id)
+    .bind(body.foerderung_id.trim())
+    .bind(body.foerderung_name.as_deref().unwrap_or("").trim())
+    .bind(body.art.trim())
+    .bind(body.text.as_deref().unwrap_or("").trim())
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(StatusCode::NO_CONTENT)
 }

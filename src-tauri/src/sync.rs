@@ -113,7 +113,7 @@ fn client_mit_ausweis(ausweis_pem: &str, ca_pem: &str) -> Result<reqwest::Client
 
 /// Hängt die Ursachen-Kette eines Fehlers an (reqwest versteckt den
 /// eigentlichen TLS-Grund in der `source`).
-fn fehler_kette(e: &(dyn std::error::Error)) -> String {
+fn fehler_kette(e: &dyn std::error::Error) -> String {
     let mut s = e.to_string();
     let mut cur = e.source();
     while let Some(inner) = cur {
@@ -250,6 +250,37 @@ pub async fn sync_katalog_holen(adresse: String, ausweis_pem: String, ca_pem: St
         return Err(format!("Server antwortete mit {}", r.status()));
     }
     r.text().await.map_err(|e| format!("Antwort nicht lesbar: {e}"))
+}
+
+/// Sendet EINE Katalog-Meldung an den Team-Server (mTLS PUT
+/// /api/meldung/{id}). Der Server macht Upsert per id; der Body
+/// (foerderungId/Name/Art/Text) wird vom Frontend gebaut. Bei einer
+/// Spam-Bremse (429) o. Ä. kommt ein klarer Fehler zurück, den der
+/// Sync-Takt einfach beim nächsten Mal erneut versucht.
+#[tauri::command]
+pub async fn sync_meldung_senden(
+    adresse: String,
+    ausweis_pem: String,
+    ca_pem: String,
+    meldung_id: String,
+    body_json: String,
+) -> Result<(), String> {
+    let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
+    let url = format!("{}/api/meldung/{}", basis_url(&adresse), meldung_id);
+    let r = client
+        .put(&url)
+        .header("content-type", "application/json")
+        .body(body_json)
+        .send()
+        .await
+        .map_err(|e| format!("Senden fehlgeschlagen: {}", fehler_kette(&e)))?;
+    if r.status().as_u16() == 429 {
+        return Err("Zu viele Anfragen – wird später erneut versucht.".into());
+    }
+    if !r.status().is_success() {
+        return Err(format!("Server antwortete mit {}", r.status()));
+    }
+    Ok(())
 }
 
 // --- Zertifikate erzeugen (Admin / Verwalter:in), reines Rust ----------

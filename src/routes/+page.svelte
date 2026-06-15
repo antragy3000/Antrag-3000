@@ -796,6 +796,40 @@
       geaendert = true;
     }
 
+    // 4. Offene Katalog-Meldungen senden (Upsert per id auf dem Server).
+    //    Schlägt eine Meldung fehl (z. B. Tempo-Bremse 429), wird sie
+    //    einfach beim nächsten Takt erneut versucht – nicht abbrechen.
+    for (const m of daten.katalogMeldungen ?? []) {
+      if (m.gesendet) continue;
+      const body = JSON.stringify({
+        foerderungId: m.foerderungId,
+        foerderungName: m.foerderungName,
+        art: m.art,
+        text: m.text,
+      });
+      try {
+        await invoke("sync_meldung_senden", {
+          adresse, ausweisPem, caPem, meldungId: m.id, bodyJson: body,
+        });
+        m.gesendet = true;
+        geaendert = true;
+        protZeilen.push({
+          projektId: `Meldung: ${m.foerderungName || m.foerderungId}`,
+          aktion: "Meldung gesendet",
+          bytes: body.length,
+          body,
+        });
+      } catch (e) {
+        // Fehler (Netz/Tempo-Bremse) protokollieren, aber weitermachen.
+        protZeilen.push({
+          projektId: `Meldung: ${m.foerderungName || m.foerderungId}`,
+          aktion: `nicht gesendet (${e})`,
+          bytes: 0,
+          body: null,
+        });
+      }
+    }
+
     // Nur protokollieren, wenn etwas gesendet/gelöscht wurde (kein Spam
     // bei reinen Abfrage-Takten).
     if (protZeilen.length > 0) {
