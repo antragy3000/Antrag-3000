@@ -264,9 +264,9 @@
             </div>
 
             <p class="meta">
-              {f.foerdergeber} · <span class="hoehe">{f.foerderhoehe_text}</span>
+              <span class="meta-links">{f.foerdergeber} · <span class="hoehe">{f.foerderhoehe_text}</span></span>
               {#if standFuer && standFuer(f.id)}
-                <span class="stand">· aktualisiert {standFuer(f.id)}</span>
+                <span class="stand">aktualisiert {standFuer(f.id)}</span>
               {/if}
             </p>
 
@@ -532,7 +532,12 @@
     margin: 6px 0 0;
     color: #5e6c84;
     font-size: 0.85rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
   }
+  .meta-links { min-width: 0; }
   .hoehe {
     color: #216e4e;
     font-weight: 600;
@@ -689,7 +694,7 @@
     color: #ae2e24;
     border: 1px solid #f4b1a8;
   }
-  .stand { color: #a9b0bd; font-size: 0.82rem; }
+  .stand { color: #a9b0bd; font-size: 0.82rem; white-space: nowrap; }
   .status-badge.farbe-blau { background: #e9f0ff; color: #2b46c4; }
   .status-badge.farbe-lila { background: #f1edff; color: #5e44b0; }
   .status-badge.farbe-gruen { background: #dcfff1; color: #216e4e; }

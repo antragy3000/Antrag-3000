@@ -1333,10 +1333,7 @@
         </button>
         <span class="nav-trenner" aria-hidden="true"></span>
         <button class:aktiv={bereich === "stammdaten"} onclick={() => (bereich = "stammdaten")}>
-          Stammdaten
-        </button>
-        <button class:aktiv={bereich === "teamsync"} onclick={() => (bereich = "teamsync")}>
-          Team-Sync
+          Stammdaten &amp; Team
         </button>
       </nav>
       <div class="rechts">
@@ -1353,33 +1350,38 @@
           standFuer={katalogStandFuer}
         />
       {:else if bereich === "stammdaten"}
-        <Stammdaten stammdaten={daten.stammdaten} speichern={stammdatenSpeichern} />
-      {:else if bereich === "teamsync"}
-        <TeamSync
-          sync={daten.sync}
-          teamCa={daten.teamCa}
-          laden={zugangspaketLaden}
-          testen={verbindungPruefen}
-          entfernen={zugangspaketEntfernen}
-          caErstellen={teamCaErstellen}
-          caExportieren={teamCaExportieren}
-          paketErstellen={geraetPaketErstellen}
-          geraetEinrichten={diesesGeraetEinrichten}
-          starten={autoSyncStarten}
-          stoppen={autoSyncStoppen}
-          pruefen={verbindungPruefen}
-          {syncLaeuft}
-          {syncVerbunden}
-          {syncMeldung}
-          {zuletztGeprueft}
-          {protokoll}
-          trockenlaufBauen={trockenlaufKoerper}
-          trockenlaufSenden={trockenlaufSenden}
-          teamBoard={daten.sync?.teamBoard ?? null}
-          letzterAbgleich={daten.sync?.letzterAbgleich ?? null}
-          {meineProjektIds}
-          foerderungLabel={boardFoerderungLabel}
-        />
+        <div class="konto-seite">
+          <div class="konto-spalte">
+            <Stammdaten stammdaten={daten.stammdaten} speichern={stammdatenSpeichern} />
+          </div>
+          <div class="konto-reihe">
+            <TeamSync
+              sync={daten.sync}
+              teamCa={daten.teamCa}
+              laden={zugangspaketLaden}
+              testen={verbindungPruefen}
+              entfernen={zugangspaketEntfernen}
+              caErstellen={teamCaErstellen}
+              caExportieren={teamCaExportieren}
+              paketErstellen={geraetPaketErstellen}
+              geraetEinrichten={diesesGeraetEinrichten}
+              starten={autoSyncStarten}
+              stoppen={autoSyncStoppen}
+              pruefen={verbindungPruefen}
+              {syncLaeuft}
+              {syncVerbunden}
+              {syncMeldung}
+              {zuletztGeprueft}
+              {protokoll}
+              trockenlaufBauen={trockenlaufKoerper}
+              trockenlaufSenden={trockenlaufSenden}
+              teamBoard={daten.sync?.teamBoard ?? null}
+              letzterAbgleich={daten.sync?.letzterAbgleich ?? null}
+              {meineProjektIds}
+              foerderungLabel={boardFoerderungLabel}
+            />
+          </div>
+        </div>
       {:else if !aktivesProjekt}
         <div class="leer-projekt">
           <div class="karte">
@@ -1757,5 +1759,16 @@
     display: grid;
     place-items: center;
     padding: 64px 24px;
+  }
+
+  /* Zusammengeführter Reiter „Stammdaten & Team": oben die Stammdaten-
+     Spalte, darunter als eigene Reihe die Synchronisation. */
+  .konto-seite {
+    display: flex;
+    flex-direction: column;
+  }
+  .konto-reihe {
+    border-top: 1px solid #e4e7ec;
+    margin-top: 8px;
   }
 </style>

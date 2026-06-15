@@ -178,6 +178,7 @@
     margin: 2px 0 0;
     font-size: 0.72rem;
     color: #a9b0bd;
+    text-align: right;
   }
   .treffer {
     margin: 4px 0 0;
