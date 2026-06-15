@@ -28,8 +28,8 @@ services:
   api:
     build: ./api
     restart: unless-stopped
-    # Härtung wie in der Standard-Variante:
-    user: "10001:10001"
+    # Härtung wie in der Standard-Variante (root wegen Volume-Ownership):
+    user: "0:0"
     read_only: true
     cap_drop:
       - ALL

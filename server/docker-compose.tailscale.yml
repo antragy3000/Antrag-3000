@@ -35,7 +35,11 @@ services:
   api:
     build: ./api
     restart: unless-stopped
-    user: "10001:10001"
+    # Der frische Daten-Ordner (Volume) gehoert auf der NAS root; damit der
+    # Dienst die SQLite-Datei anlegen darf, laeuft er als root. Die uebrige
+    # Haertung bleibt (keine Capabilities, keine Rechte-Eskalation,
+    # read-only Dateisystem; nur /data und /tmp sind beschreibbar).
+    user: "0:0"
     read_only: true
     cap_drop:
       - ALL

@@ -27,8 +27,9 @@ services:
   api:
     build: ./api
     restart: unless-stopped
-    # Härtung:
-    user: "10001:10001"
+    # Härtung (laeuft als root, weil der frische Daten-Ordner auf der NAS
+    # root gehoert; ohne Capabilities, ohne Rechte-Eskalation, read-only):
+    user: "0:0"
     read_only: true
     cap_drop:
       - ALL
