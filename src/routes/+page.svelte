@@ -11,7 +11,7 @@
   import KostenPlan from "$lib/komponenten/KostenPlan.svelte";
   import Sicherung from "$lib/komponenten/Sicherung.svelte";
   import TeamSync from "$lib/komponenten/TeamSync.svelte";
-  import { katalog, setzeKatalog, setzeStandardKatalog, standardKatalog, pruefeKatalog, vergleicheKataloge } from "$lib/katalog.svelte.js";
+  import { katalog, setzeKatalog, setzeStandardKatalog, standardKatalog, pruefeKatalog, vergleicheKataloge, geaenderteFelder } from "$lib/katalog.svelte.js";
   import KatalogUpdate from "$lib/komponenten/KatalogUpdate.svelte";
   import { leeresFormular, formularWordBauen } from "$lib/antrag";
   import { antragsPdfBauen } from "$lib/antragsPdf";
@@ -105,6 +105,7 @@
       teamCa: null,
       katalogMeldungen: [],
       katalogStand: {},
+      katalogFeldDiff: {},
     };
   }
 
@@ -302,6 +303,10 @@
     }
     if (!d.katalogStand || typeof d.katalogStand !== "object" || Array.isArray(d.katalogStand)) {
       d.katalogStand = {};
+      veraendert = true;
+    }
+    if (!d.katalogFeldDiff || typeof d.katalogFeldDiff !== "object" || Array.isArray(d.katalogFeldDiff)) {
+      d.katalogFeldDiff = {};
       veraendert = true;
     }
     if (d.version !== 2) {
@@ -908,6 +913,14 @@
       for (const e of [...diff.neu, ...diff.geaendert]) {
         daten.katalogStand[e.id] = obj.stand;
       }
+      // Welche FELDER sich je geänderter Förderung geändert haben –
+      // für die „NEU"-Markierung am konkreten Feld (z. B. Förderhöhe).
+      if (!daten.katalogFeldDiff) daten.katalogFeldDiff = {};
+      const altMap = new Map(altKatalog.map((f) => [f.id, f]));
+      const neuMap = new Map(obj.foerderungen.map((f) => [f.id, f]));
+      for (const e of diff.geaendert) {
+        daten.katalogFeldDiff[e.id] = geaenderteFelder(altMap.get(e.id), neuMap.get(e.id));
+      }
       setzeKatalog(obj, "datei");
       await tresorSpeichern();
       return { ok: true, diff, stand: obj.stand };
@@ -926,6 +939,15 @@
     if (!iso) return null;
     const d = new Date(iso);
     return isNaN(d) ? iso : d.toLocaleDateString("de-CH");
+  }
+
+  // Welche Felder einer Förderung als „NEU" markiert werden sollen:
+  // nur, solange die Förderung im aktiven Projekt als „aktualisiert" gilt
+  // (also bis „OK, verstanden"). Liste der geänderten Feld-Schlüssel.
+  function katalogNeuFelder(id) {
+    if (!aktivesProjekt) return [];
+    if (!(aktivesProjekt.katalogAktualisiert ?? []).includes(id)) return [];
+    return daten?.katalogFeldDiff?.[id] ?? [];
   }
 
   // Den „aktualisiert"-Hinweis des aktiven Projekts wegklicken.
@@ -967,6 +989,7 @@
       katalogGhostsAktualisieren(katalog.daten.foerderungen, standardKatalog().foerderungen);
       for (const projekt of daten.projekte ?? []) projekt.katalogAktualisiert = [];
       daten.katalogStand = {};
+      daten.katalogFeldDiff = {};
       setzeStandardKatalog();
       await tresorSpeichern();
       return { ok: true };
@@ -1348,7 +1371,7 @@
           umschalten={merklisteUmschalten}
           oeffneKatalog={() => (katalogOffen = true)}
           standFuer={katalogStandFuer}
-          aktualisierteIds={aktivesProjekt?.katalogAktualisiert ?? []}
+          neuFelderFuer={katalogNeuFelder}
         />
       {:else if bereich === "stammdaten"}
         <div class="konto-seite">
@@ -1406,7 +1429,7 @@
             umschalten={merklisteUmschalten}
             oeffneKatalog={() => (katalogOffen = true)}
             standFuer={katalogStandFuer}
-            aktualisierteIds={aktivesProjekt.katalogAktualisiert ?? []}
+            neuFelderFuer={katalogNeuFelder}
           />
         {/key}
       {:else if bereich === "formular"}
@@ -1465,6 +1488,7 @@
           aktualisierteIds={aktivesProjekt.katalogAktualisiert ?? []}
           hinweisVerwerfen={katalogHinweisVerwerfen}
           standFuer={katalogStandFuer}
+          neuFelderFuer={katalogNeuFelder}
         />
       {/if}
     </main>

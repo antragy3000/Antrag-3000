@@ -13,7 +13,7 @@
     merken = null,
     statusBadge = null,
     stand = null,
-    neu = false,
+    geaenderteFelder = [],
   } = $props();
 </script>
 
@@ -53,18 +53,16 @@
     </span>
   </div>
   <h3>{f.name}</h3>
-  <div class="marker">
-    {#if neu}
-      <span class="herkunft neu">NEU</span>
-    {/if}
-    {#if f.nichtMehrImKatalog}
-      <span class="herkunft weg">⚠ nicht mehr im Katalog</span>
-    {:else if f.eigen}
-      <span class="herkunft selbst">✎ selbst eingetragen</span>
-    {/if}
-  </div>
+  {#if f.nichtMehrImKatalog}
+    <span class="herkunft weg">⚠ nicht mehr im Katalog</span>
+  {:else if f.eigen}
+    <span class="herkunft selbst">✎ selbst eingetragen</span>
+  {/if}
   <p class="geber">{f.foerdergeber}</p>
-  <p class="hoehe">{f.foerderhoehe_text}</p>
+  <p class="hoehe">
+    {f.foerderhoehe_text}
+    {#if geaenderteFelder.includes("foerderhoehe_text")}<span class="neu-feld">NEU</span>{/if}
+  </p>
   <div class="chips">
     {#each f.weiche_kriterien.sparten.slice(0, 3) as sp}
       <span class="chip">{SPARTEN[sp] ?? sp}</span>
@@ -84,7 +82,10 @@
   {#if gruende.length}
     <p class="gruende">{gruende.join(" · ")}</p>
   {/if}
-  <p class="frist">{fristText(f)}</p>
+  <p class="frist">
+    {fristText(f)}
+    {#if geaenderteFelder.includes("fristen")}<span class="neu-feld">NEU</span>{/if}
+  </p>
   {#if stand}<p class="stand">aktualisiert: {stand}</p>{/if}
 </div>
 
@@ -155,11 +156,6 @@
     color: #e2a400;
   }
 
-  .marker {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
   .herkunft {
     align-self: flex-start;
     font-size: 0.72rem;
@@ -169,9 +165,15 @@
   }
   .herkunft.selbst { background: #eef1ff; color: #3b4fb0; }
   .herkunft.weg { background: #ffeceb; color: #ae2e24; }
-  .herkunft.neu {
+  .neu-feld {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 0.62rem;
     font-weight: 700;
     letter-spacing: 0.04em;
+    vertical-align: middle;
+    padding: 1px 6px;
+    border-radius: 99px;
     background: #e9f0ff;
     color: #2b46c4;
     border: 1px solid #b9c7f7;

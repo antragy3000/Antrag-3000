@@ -33,6 +33,7 @@
     aktualisierteIds = [],
     hinweisVerwerfen = null,
     standFuer = null,
+    neuFelderFuer = null,
   } = $props();
 
   let ausgewaehlt = $state(null);
@@ -263,12 +264,12 @@
                 <span class="herkunft selbst">✎ selbst eingetragen</span>
               {/if}
               {#if aktualisierteIds.includes(f.id)}
-                <span class="herkunft akt">NEU</span>
+                <span class="herkunft akt">✦ aktualisiert</span>
               {/if}
             </div>
 
             <p class="meta">
-              <span class="meta-links">{f.foerdergeber} · <span class="hoehe">{f.foerderhoehe_text}</span></span>
+              <span class="meta-links">{f.foerdergeber} · <span class="hoehe">{f.foerderhoehe_text}</span>{#if neuFelderFuer && neuFelderFuer(f.id).includes("foerderhoehe_text")}<span class="neu-feld">NEU</span>{/if}</span>
               {#if standFuer && standFuer(f.id)}
                 <span class="stand">aktualisiert {standFuer(f.id)}</span>
               {/if}
@@ -288,6 +289,9 @@
                 {:else}
                   <span class="frist">{fristText(f)}</span>
                 {/each}
+                {#if neuFelderFuer && neuFelderFuer(f.id).includes("fristen")}
+                  <span class="neu-feld">NEU</span>
+                {/if}
               </div>
             </div>
 
@@ -345,7 +349,7 @@
     antrag={aktuellerAntrag}
     antragAendern={antragSpeichern}
     stand={standFuer ? standFuer(ausgewaehlt.id) : null}
-    neu={aktualisierteIds.includes(ausgewaehlt.id)}
+    geaenderteFelder={neuFelderFuer ? neuFelderFuer(ausgewaehlt.id) : []}
     schliessen={() => {
       ausgewaehlt = null;
       aktuellerAntrag = null;
@@ -713,6 +717,19 @@
     border: 1px solid #f4b1a8;
   }
   .stand { color: #a9b0bd; font-size: 0.82rem; white-space: nowrap; }
+  .neu-feld {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+    padding: 1px 6px;
+    border-radius: 99px;
+    background: #e9f0ff;
+    color: #2b46c4;
+    border: 1px solid #b9c7f7;
+  }
   .status-badge.farbe-blau { background: #e9f0ff; color: #2b46c4; }
   .status-badge.farbe-lila { background: #f1edff; color: #5e44b0; }
   .status-badge.farbe-gruen { background: #dcfff1; color: #216e4e; }

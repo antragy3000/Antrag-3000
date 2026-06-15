@@ -82,6 +82,19 @@ export function vergleicheKataloge(altArr, neuArr) {
   return { neu, geaendert, entfernt };
 }
 
+/// Welche (obersten) Felder unterscheiden sich zwischen zwei Fassungen
+/// derselben Förderung? Für die „NEU"-Markierung am konkret geänderten
+/// Feld (z. B. foerderhoehe_text, fristen).
+export function geaenderteFelder(alt, neu) {
+  if (!alt || !neu) return [];
+  const keys = new Set([...Object.keys(alt), ...Object.keys(neu)]);
+  const out = [];
+  for (const k of keys) {
+    if (JSON.stringify(alt[k]) !== JSON.stringify(neu[k])) out.push(k);
+  }
+  return out;
+}
+
 // --- Bequeme Lese-Helfer (auch aus reinen .js-Modulen nutzbar) ---
 export function foerderungen() {
   return katalog.daten.foerderungen ?? [];

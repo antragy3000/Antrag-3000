@@ -18,7 +18,7 @@
     antrag = null,
     antragAendern = null,
     stand = null,
-    neu = false,
+    geaenderteFelder = [],
   } = $props();
 
   function nameVon(id) {
@@ -33,9 +33,6 @@
       <div>
         <span class="land land-{f.land}">{LAENDER[f.land] ?? f.land}</span>
         <h3>{f.name}</h3>
-        {#if neu}
-          <span class="herkunft neu">NEU</span>
-        {/if}
         {#if f.nichtMehrImKatalog}
           <span class="herkunft weg">⚠ nicht mehr im Katalog</span>
         {:else if f.eigen}
@@ -51,10 +48,10 @@
 
     <dl>
       <dt>Förderhöhe</dt>
-      <dd>{f.foerderhoehe_text}</dd>
+      <dd>{f.foerderhoehe_text}{#if geaenderteFelder.includes("foerderhoehe_text")}<span class="neu-feld">NEU</span>{/if}</dd>
 
       <dt>Einreichung</dt>
-      <dd>{fristText(f)}</dd>
+      <dd>{fristText(f)}{#if geaenderteFelder.includes("fristen")}<span class="neu-feld">NEU</span>{/if}</dd>
 
       <dt>Wohnsitz-Anforderung</dt>
       <dd>
@@ -171,9 +168,15 @@
   }
   .herkunft.selbst { background: #eef1ff; color: #3b4fb0; }
   .herkunft.weg { background: #ffeceb; color: #ae2e24; }
-  .herkunft.neu {
+  .neu-feld {
+    display: inline-block;
+    margin-left: 8px;
+    font-size: 0.64rem;
     font-weight: 700;
     letter-spacing: 0.04em;
+    vertical-align: middle;
+    padding: 1px 7px;
+    border-radius: 99px;
     background: #e9f0ff;
     color: #2b46c4;
     border: 1px solid #b9c7f7;
