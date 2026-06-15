@@ -220,6 +220,11 @@
               <span class="status-badge farbe-{badge.farbe}">
                 <span class="punkt"></span>{badge.label}
               </span>
+              {#if f.nichtMehrImKatalog}
+                <span class="herkunft weg">⚠ nicht mehr im Katalog</span>
+              {:else if f.eigen}
+                <span class="herkunft selbst">✎ selbst eingetragen</span>
+              {/if}
             </div>
 
             <p class="meta">
@@ -595,6 +600,14 @@
     font-size: 0.78rem;
     font-weight: 600;
   }
+  .herkunft {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 99px;
+  }
+  .herkunft.selbst { background: #eef1ff; color: #3b4fb0; }
+  .herkunft.weg { background: #ffeceb; color: #ae2e24; }
   .status-badge.farbe-blau { background: #e9f0ff; color: #2b46c4; }
   .status-badge.farbe-lila { background: #f1edff; color: #5e44b0; }
   .status-badge.farbe-gruen { background: #dcfff1; color: #216e4e; }

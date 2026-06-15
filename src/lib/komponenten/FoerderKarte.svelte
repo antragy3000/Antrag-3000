@@ -51,6 +51,11 @@
     </span>
   </div>
   <h3>{f.name}</h3>
+  {#if f.nichtMehrImKatalog}
+    <span class="herkunft weg">⚠ nicht mehr im Katalog</span>
+  {:else if f.eigen}
+    <span class="herkunft selbst">✎ selbst eingetragen</span>
+  {/if}
   <p class="geber">{f.foerdergeber}</p>
   <p class="hoehe">{f.foerderhoehe_text}</p>
   <div class="chips">
@@ -142,6 +147,15 @@
     color: #e2a400;
   }
 
+  .herkunft {
+    align-self: flex-start;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 99px;
+  }
+  .herkunft.selbst { background: #eef1ff; color: #3b4fb0; }
+  .herkunft.weg { background: #ffeceb; color: #ae2e24; }
   .geber {
     margin: 0;
     color: #5e6c84;

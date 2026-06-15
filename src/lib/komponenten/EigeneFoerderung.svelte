@@ -14,6 +14,7 @@
   let dokumente = $state([]);
   let neuesDok = $state("");
   let beschaeftigt = $state(false);
+  let fehler = $state("");
 
   function dokHinzufuegen() {
     const t = neuesDok.trim();
@@ -29,8 +30,9 @@
     event.preventDefault();
     if (!name.trim()) return;
     beschaeftigt = true;
+    fehler = "";
     try {
-      await anlegen({
+      const r = await anlegen({
         name,
         foerdergeber,
         land,
@@ -41,6 +43,10 @@
         frist: laufend ? "" : frist,
         dokumente: [...dokumente],
       });
+      if (r && r.ok === false) {
+        fehler = r.fehler;
+        return;
+      }
       schliessen();
     } finally {
       beschaeftigt = false;
@@ -121,6 +127,8 @@
         + Dokument
       </button>
     </div>
+
+    {#if fehler}<p class="fehler">⚠ {fehler}</p>{/if}
 
     <div class="knoepfe">
       <button type="button" class="leise" onclick={schliessen}>Abbrechen</button>
@@ -277,6 +285,12 @@
     min-width: 0;
   }
 
+  .fehler {
+    color: #ae2e24;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin: 14px 0 0;
+  }
   .knoepfe {
     display: flex;
     justify-content: flex-end;

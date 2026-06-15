@@ -11,7 +11,7 @@
   import KostenPlan from "$lib/komponenten/KostenPlan.svelte";
   import Sicherung from "$lib/komponenten/Sicherung.svelte";
   import TeamSync from "$lib/komponenten/TeamSync.svelte";
-  import { katalog, setzeKatalog, setzeStandardKatalog, pruefeKatalog, vergleicheKataloge } from "$lib/katalog.svelte.js";
+  import { katalog, setzeKatalog, setzeStandardKatalog, standardKatalog, pruefeKatalog, vergleicheKataloge } from "$lib/katalog.svelte.js";
   import KatalogUpdate from "$lib/komponenten/KatalogUpdate.svelte";
   import { leeresFormular, formularWordBauen } from "$lib/antrag";
   import { antragsPdfBauen } from "$lib/antragsPdf";
@@ -53,6 +53,9 @@
   let alleFoerderungen = $derived([
     ...katalog.daten.foerderungen,
     ...(aktivesProjekt?.eigeneFoerderungen ?? []),
+    // Ehemalige Katalog-Förderungen, die ein Update entfernt hat, die du
+    // aber noch gemerkt hast – bleiben als „nicht mehr im Katalog" sichtbar.
+    ...(aktivesProjekt?.katalogGhosts ?? []),
   ]);
 
   // Eindeutige Kennung für neue Projekte.
@@ -75,6 +78,7 @@
       antraege: {},
       eigeneFoerderungen: [],
       interneFristen: [],
+      katalogGhosts: [],
     };
   }
 
@@ -222,8 +226,16 @@
         p.interneFristen = [];
         veraendert = true;
       }
+      if (!Array.isArray(p.katalogGhosts)) {
+        p.katalogGhosts = [];
+        veraendert = true;
+      }
       // Antrag-Einträge älterer Stände um eigene Fristen ergänzen.
-      const alleFoerd = [...katalog.daten.foerderungen, ...(p.eigeneFoerderungen ?? [])];
+      const alleFoerd = [
+        ...katalog.daten.foerderungen,
+        ...(p.eigeneFoerderungen ?? []),
+        ...(p.katalogGhosts ?? []),
+      ];
       for (const [id, a] of Object.entries(p.antraege)) {
         if (!a) continue;
         if (!Array.isArray(a.eigeneFristen)) {
@@ -865,20 +877,50 @@
     const p = pruefeKatalog(obj);
     if (!p.ok) return { ok: false, fehler: p.fehler };
 
-    const diff = vergleicheKataloge(katalog.daten.foerderungen, obj.foerderungen);
+    const altKatalog = katalog.daten.foerderungen;
+    const diff = vergleicheKataloge(altKatalog, obj.foerderungen);
     try {
       await invoke("katalog_speichern", { inhalt: JSON.stringify(obj) });
+      katalogGhostsAktualisieren(altKatalog, obj.foerderungen);
       setzeKatalog(obj, "datei");
+      await tresorSpeichern();
       return { ok: true, diff, stand: obj.stand };
     } catch (e) {
       return { ok: false, fehler: "Konnte nicht gespeichert werden: " + e };
     }
   }
 
+  // Pflegt je Projekt die „nicht mehr im Katalog"-Schattenkopien:
+  //  - entfernte, aber noch gemerkte/bearbeitete Förderungen als Ghost
+  //    sichern (damit Name + gespeicherter Status sichtbar bleiben),
+  //  - Ghosts wieder entfernen, sobald die Förderung zurück im Katalog ist.
+  function katalogGhostsAktualisieren(altArr, neuArr) {
+    const alt = new Map((altArr ?? []).map((f) => [f.id, f]));
+    const neueIds = new Set((neuArr ?? []).map((f) => f.id));
+    for (const projekt of daten.projekte ?? []) {
+      const ghosts = Array.isArray(projekt.katalogGhosts) ? projekt.katalogGhosts : [];
+      const referenziert = new Set([
+        ...(projekt.merkliste ?? []),
+        ...Object.keys(projekt.antraege ?? {}),
+      ]);
+      for (const [id, f] of alt) {
+        if (neueIds.has(id)) continue;          // noch im Katalog
+        if (!referenziert.has(id)) continue;    // nicht genutzt
+        if ((projekt.eigeneFoerderungen ?? []).some((e) => e.id === id)) continue;
+        if (ghosts.some((g) => g.id === id)) continue;
+        ghosts.push({ ...f, nichtMehrImKatalog: true });
+      }
+      // Ghosts entfernen, deren Förderung wieder im Katalog ist.
+      projekt.katalogGhosts = ghosts.filter((g) => !neueIds.has(g.id));
+    }
+  }
+
   async function katalogZuruecksetzen() {
     try {
       await invoke("katalog_zuruecksetzen");
+      katalogGhostsAktualisieren(katalog.daten.foerderungen, standardKatalog().foerderungen);
       setzeStandardKatalog();
+      await tresorSpeichern();
       return { ok: true };
     } catch (e) {
       return { ok: false, fehler: String(e) };
@@ -892,6 +934,9 @@
   function meldungAnlegen(foerderungId, foerderungName, art, text) {
     const t = (text ?? "").trim().slice(0, MELDUNG_MAX);
     if (!foerderungId || !art) return { ok: false, fehler: "Bitte Förderung und Art angeben." };
+    if ((daten.katalogMeldungen ?? []).length >= MELDUNG_CAP) {
+      return { ok: false, fehler: `Es warten schon viele Meldungen (Grenze ${MELDUNG_CAP}). Bitte zuerst senden/aufräumen.` };
+    }
     const offen = (daten.katalogMeldungen ?? []).some(
       (m) => !m.gesendet && m.foerderungId === foerderungId && m.art === art,
     );
@@ -952,9 +997,20 @@
     return a;
   }
 
+  // Sanfte Obergrenzen im Client (freundlicher Hinweis). Die echte
+  // Spam-Bremse sitzt später serverseitig (Etappe 3/4).
+  const EIGENE_CAP = 200;
+  const MELDUNG_CAP = 50;
+
   // Eigene (selbst recherchierte) Förderung anlegen und direkt auf die
   // Merkliste setzen. Liegt verschlüsselt im Projekt (Tresor).
   async function eigeneFoerderungAnlegen(eingabe) {
+    if ((aktivesProjekt.eigeneFoerderungen ?? []).length >= EIGENE_CAP) {
+      return {
+        ok: false,
+        fehler: `Du hast in diesem Projekt schon sehr viele eigene Förderungen (Grenze ${EIGENE_CAP}). Bitte räume zuerst auf.`,
+      };
+    }
     const f = {
       id: "eigen-" + neueId(),
       eigen: true,
@@ -989,6 +1045,7 @@
       aktivesProjekt.merkliste.push(f.id);
     }
     await tresorSpeichern();
+    return { ok: true };
   }
 
   // Interne Frist (unabhängig von Förderungen) anlegen / entfernen.
