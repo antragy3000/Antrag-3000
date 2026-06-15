@@ -79,6 +79,7 @@
       eigeneFoerderungen: [],
       interneFristen: [],
       katalogGhosts: [],
+      katalogAktualisiert: [],
     };
   }
 
@@ -228,6 +229,10 @@
       }
       if (!Array.isArray(p.katalogGhosts)) {
         p.katalogGhosts = [];
+        veraendert = true;
+      }
+      if (!Array.isArray(p.katalogAktualisiert)) {
+        p.katalogAktualisiert = [];
         veraendert = true;
       }
       // Antrag-Einträge älterer Stände um eigene Fristen ergänzen.
@@ -882,11 +887,30 @@
     try {
       await invoke("katalog_speichern", { inhalt: JSON.stringify(obj) });
       katalogGhostsAktualisieren(altKatalog, obj.foerderungen);
+      // Gemerkte Förderungen vormerken, deren Angaben sich geändert haben –
+      // für den Hinweis oben auf der Merkliste.
+      const geaendertIds = new Set(diff.geaendert.map((e) => e.id));
+      for (const projekt of daten.projekte ?? []) {
+        const betroffen = (projekt.merkliste ?? []).filter((id) => geaendertIds.has(id));
+        if (betroffen.length) {
+          const bisher = new Set(projekt.katalogAktualisiert ?? []);
+          for (const id of betroffen) bisher.add(id);
+          projekt.katalogAktualisiert = [...bisher];
+        }
+      }
       setzeKatalog(obj, "datei");
       await tresorSpeichern();
       return { ok: true, diff, stand: obj.stand };
     } catch (e) {
       return { ok: false, fehler: "Konnte nicht gespeichert werden: " + e };
+    }
+  }
+
+  // Den „aktualisiert"-Hinweis des aktiven Projekts wegklicken.
+  async function katalogHinweisVerwerfen() {
+    if (aktivesProjekt) {
+      aktivesProjekt.katalogAktualisiert = [];
+      await tresorSpeichern();
     }
   }
 
@@ -919,6 +943,7 @@
     try {
       await invoke("katalog_zuruecksetzen");
       katalogGhostsAktualisieren(katalog.daten.foerderungen, standardKatalog().foerderungen);
+      for (const projekt of daten.projekte ?? []) projekt.katalogAktualisiert = [];
       setzeStandardKatalog();
       await tresorSpeichern();
       return { ok: true };
@@ -1408,6 +1433,8 @@
           antragSpeichern={tresorSpeichern}
           eigeneAnlegen={eigeneFoerderungAnlegen}
           oeffneKatalog={() => (katalogOffen = true)}
+          aktualisierteIds={aktivesProjekt.katalogAktualisiert ?? []}
+          hinweisVerwerfen={katalogHinweisVerwerfen}
         />
       {/if}
     </main>

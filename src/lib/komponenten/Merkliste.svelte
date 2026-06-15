@@ -30,6 +30,8 @@
     antragSpeichern = null,
     eigeneAnlegen = null,
     oeffneKatalog = null,
+    aktualisierteIds = [],
+    hinweisVerwerfen = null,
   } = $props();
 
   let ausgewaehlt = $state(null);
@@ -40,6 +42,14 @@
     merkliste
       .map((id) => foerderungen.find((f) => f.id === id))
       .filter(Boolean)
+  );
+
+  // Hinweis-Zähler: gemerkte Förderungen, die nicht mehr im Katalog sind
+  // bzw. deren Angaben ein Update geändert hat (nur solche, die noch
+  // gemerkt sind).
+  let entferntAnzahl = $derived(gemerkte.filter((f) => f.nichtMehrImKatalog).length);
+  let aktualisiertAnzahl = $derived(
+    (aktualisierteIds ?? []).filter((id) => merkliste.includes(id)).length
   );
 
   // Schließen sich zwei Förderungen gegenseitig aus?
@@ -154,6 +164,30 @@
     </div>
   </div>
 
+  {#if entferntAnzahl > 0 || aktualisiertAnzahl > 0}
+    <div class="katalog-hinweis">
+      <div class="kh-text">
+        {#if entferntAnzahl > 0}
+          <div class="kh-zeile weg">
+            <strong>⚠ {entferntAnzahl}</strong>
+            {entferntAnzahl === 1 ? "gemerkte Förderung ist" : "gemerkte Förderungen sind"}
+            <strong>nicht mehr im Katalog</strong> (unten rot markiert).
+          </div>
+        {/if}
+        {#if aktualisiertAnzahl > 0}
+          <div class="kh-zeile akt">
+            <strong>ℹ {aktualisiertAnzahl}</strong>
+            {aktualisiertAnzahl === 1 ? "gemerkte Förderung wurde" : "gemerkte Förderungen wurden"}
+            durch ein Update <strong>aktualisiert</strong> – prüfe die Angaben.
+          </div>
+        {/if}
+      </div>
+      {#if aktualisiertAnzahl > 0 && hinweisVerwerfen}
+        <button class="kh-ok" onclick={hinweisVerwerfen}>OK, verstanden</button>
+      {/if}
+    </div>
+  {/if}
+
   {#each konflikte as [a, b]}
     <div class="konflikt">
       <strong>⚠ Unverträglich:</strong>
@@ -175,6 +209,7 @@
         {@const badge = badgeFuer(f.id)}
         <div
           class="zeile"
+          class:weg={f.nichtMehrImKatalog}
           role="button"
           tabindex="0"
           onclick={() => oeffnen(f)}
@@ -392,6 +427,40 @@
     outline: 2px solid #4f6df5;
     outline-offset: 2px;
   }
+  .zeile.weg {
+    border-left: 5px solid #ca3521;
+    background: #fff8f7;
+  }
+
+  .katalog-hinweis {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    background: #fff7ef;
+    border: 1px solid #ffd9b0;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+  }
+  .kh-text { display: flex; flex-direction: column; gap: 4px; }
+  .kh-zeile { font-size: 0.92rem; line-height: 1.45; }
+  .kh-zeile.weg { color: #ae2e24; }
+  .kh-zeile.akt { color: #7a4a00; }
+  .kh-ok {
+    background: #fff;
+    border: 2px solid #e7c9a3;
+    border-radius: 8px;
+    padding: 7px 13px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #7a4a00;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .kh-ok:hover { background: #fdf1e3; }
 
   .aktionen {
     display: flex;
@@ -607,7 +676,14 @@
     border-radius: 99px;
   }
   .herkunft.selbst { background: #eef1ff; color: #3b4fb0; }
-  .herkunft.weg { background: #ffeceb; color: #ae2e24; }
+  .herkunft.weg {
+    font-size: 0.76rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    background: #ffeceb;
+    color: #ae2e24;
+    border: 1px solid #f4b1a8;
+  }
   .status-badge.farbe-blau { background: #e9f0ff; color: #2b46c4; }
   .status-badge.farbe-lila { background: #f1edff; color: #5e44b0; }
   .status-badge.farbe-gruen { background: #dcfff1; color: #216e4e; }
