@@ -17,10 +17,13 @@ Daten bleiben verschlüsselt auf den Geräten und erreichen diesen Dienst
 | `api/` | Der eigentliche Sync-Dienst – ein winziges Rust-Programm. Es kann nur „Board lesen" und „Board schreiben". |
 | `api/src/main.rs` | Der ganze Dienst: Datenbank-Tabellen, Geräte-Erkennung, die paar Endpunkte. |
 | `api/Dockerfile` | Bauanleitung für das Programm-Image (erst übersetzen, dann winziges Laufzeit-Image ohne Shell). |
-| `Caddyfile` | Der „Türsteher" Caddy: macht HTTPS nach außen und lässt **nur Geräte mit gültigem Team-Ausweis** durch (mTLS). |
-| `docker-compose.yml` | Startet beide Container zusammen. Wichtig: Der Dienst `api` ist **von außen nicht erreichbar**, nur über Caddy. |
-| `.env.example` | Vorlage für deine Einstellungen (Adresse + E-Mail). Kopieren zu `.env`. |
-| `ca/` | Hier liegen später die Zertifikate (Etappe 3). Werden **nicht** versioniert. |
+| `Caddyfile` | Der „Türsteher" Caddy (Variante B): macht HTTPS nach außen und lässt **nur Geräte mit gültigem Team-Ausweis** durch (mTLS). |
+| `docker-compose.yml` | **Variante B** (DDNS + Port 443): Caddy + api. |
+| `docker-compose.cloudflare.yml` | **Variante A** (empfohlen): Cloudflare Tunnel + api, **keine offenen Ports**. mTLS macht Cloudflare Access. Siehe `Cloudflare-Einrichtung.md`. |
+| `Cloudflare-Einrichtung.md` | Schritt-für-Schritt: Tunnel + Access-mTLS + Start. |
+| `katalog/` | Hier legt der Admin den verteilten Förder-Katalog ab (`foerderungen.json`). Upload-Werkzeug folgt in Etappe 4. |
+| `.env.example` | Vorlage für deine Einstellungen. Kopieren zu `.env`. |
+| `ca/` | Hier liegen die Zertifikate. Werden **nicht** versioniert. |
 
 ## Datenmodell (mandantenfähig von Anfang an)
 - **konto** – ein Team/Abo (MVP: genau eines, „Team").
@@ -37,10 +40,13 @@ und ein **Abo-Modell** erweitern, ohne das Schema umzubauen.
 - `GET  /api/board` – alle Board-Projekte des eigenen Teams holen.
 - `PUT  /api/board/{projekt_id}` – ein Board-Projekt anlegen/aktualisieren.
 - `DELETE /api/board/{projekt_id}` – ein Board-Projekt entfernen.
+- `GET  /api/katalog` – den verteilten Förder-Katalog holen (Phase 3).
+- `GET  /api/katalog/version` – nur Stand/Version (schnelle „Gibt's Neues?"-Abfrage).
 
-Jede Anfrage wird über das **Geräte-Zertifikat** dem Team-Konto zugeordnet
-(Caddy reicht das geprüfte Zertifikat durch; der Dienst bildet daraus den
-Fingerabdruck).
+Jede Anfrage wird über das **Geräte-Zertifikat** dem Team-Konto zugeordnet.
+Der Dienst liest dazu den Header **`Cf-Client-Cert-Der-Base64`** (Cloudflare
+Access, Variante A) **oder** `X-Client-Cert-DER` (Caddy, Variante B) und
+bildet daraus den Fingerabdruck.
 
 ## Lokal übersetzen (zum Prüfen, ohne Docker)
 Im Ordner `api/`:

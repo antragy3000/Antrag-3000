@@ -39,8 +39,13 @@ services:
     environment:
       - DB_PFAD=/data/antrag3000.sqlite
       - LAUSCH=0.0.0.0:8080
+      # Förder-Katalog, den der Server verteilt (Phase 3). Der Admin legt
+      # ihn unter ./katalog/foerderungen.json ab (Upload-Werkzeug folgt in
+      # Etappe 4).
+      - KATALOG_PFAD=/srv/foerderungen.json
     volumes:
       - api_data:/data
+      - ./katalog:/srv:ro
     networks:
       - intern
     # KEIN "ports:" – der Dienst ist von außen NICHT erreichbar,

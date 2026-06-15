@@ -1,0 +1,3 @@
+# Hier legt der Admin den verteilten Foerder-Katalog ab:
+#   server/katalog/foerderungen.json
+# (Upload-Werkzeug folgt in Etappe 4.)

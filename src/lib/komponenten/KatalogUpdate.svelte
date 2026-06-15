@@ -10,6 +10,8 @@
   let {
     schliessen,
     updateAusDatei,
+    updateVomServer = null,
+    syncEingerichtet = false,
     zuruecksetzen,
     meldungen = [],
     meldungAnlegen,
@@ -60,6 +62,16 @@
     }
   }
 
+  async function updateServer() {
+    beschaeftigt = true;
+    ergebnis = null;
+    try {
+      ergebnis = await updateVomServer();
+    } finally {
+      beschaeftigt = false;
+    }
+  }
+
   async function zuruecksetzenJetzt() {
     beschaeftigt = true;
     try {
@@ -94,7 +106,11 @@
     <section>
       <h3>Aktueller Stand</h3>
       <div class="zeile"><span class="etikett">Quelle</span>
-        <span>{katalog.quelle === "datei" ? "aktualisierte Fassung" : "mitgelieferte Standard-Fassung"}</span></div>
+        <span>{katalog.quelle === "server"
+          ? "aktualisiert vom Team-Server"
+          : katalog.quelle === "datei"
+            ? "aktualisierte Fassung (Datei)"
+            : "mitgelieferte Standard-Fassung"}</span></div>
       <div class="zeile"><span class="etikett">Stand</span><span>{standText(katalog.daten.stand)}</span></div>
       <div class="zeile"><span class="etikett">Förderungen</span><span>{katalog.daten.foerderungen?.length ?? 0}</span></div>
     </section>
@@ -103,17 +119,24 @@
       <h3>Update einspielen</h3>
       <p class="dezent">
         Ein Update wird nach einer Prüfung <strong>automatisch übernommen</strong>;
-        anschließend siehst du, was sich geändert hat. (In der Pilotphase aus einer
-        Datei – später automatisch von der Team-NAS.)
+        anschließend siehst du, was sich geändert hat.
       </p>
       <div class="knoepfe">
-        <button class="primaer" disabled={beschaeftigt} onclick={updateLaden}>
-          {beschaeftigt ? "Wird geprüft …" : "Update aus Datei laden …"}
+        {#if updateVomServer}
+          <button class="primaer" disabled={beschaeftigt || !syncEingerichtet} onclick={updateServer}>
+            {beschaeftigt ? "Wird geprüft …" : "🔄 Vom Team-Server holen"}
+          </button>
+        {/if}
+        <button class="zweit" disabled={beschaeftigt} onclick={updateLaden}>
+          Update aus Datei laden …
         </button>
         <button class="leise" disabled={beschaeftigt} onclick={() => (resetFrage = true)}>
           Auf Werkszustand zurücksetzen
         </button>
       </div>
+      {#if updateVomServer && !syncEingerichtet}
+        <p class="dezent klein">Für den Abruf vom Team-Server zuerst im Reiter „Stammdaten &amp; Team" ein Zugangs-Paket laden.</p>
+      {/if}
 
       {#if resetFrage}
         <div class="hinweisbox warn">

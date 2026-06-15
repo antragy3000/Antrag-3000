@@ -14,6 +14,13 @@
 //
 // Datenmodell ist mandantenfähig (Konto → Nutzer → Geräte), auch wenn
 // das MVP nur ein gemeinsames Team-Konto nutzt.
+//
+// Transport (entschieden): Cloudflare Tunnel + Cloudflare Access mit
+// mTLS. Cloudflare prueft das Geraete-Zertifikat (eigene Team-CA dort
+// hinterlegt) und reicht es als Header `Cf-Client-Cert-Der-Base64`
+// durch. Damit der Dienst auch hinter Caddy (direkter DDNS-Weg)
+// funktioniert, akzeptiert er ZUSAETZLICH den alten Header
+// `X-Client-Cert-DER`.
 // ============================================================
 
 use std::env;
@@ -57,6 +64,8 @@ async fn main() {
         .route("/api/health", get(health))
         .route("/api/board", get(board_lesen))
         .route("/api/board/:projekt_id", put(board_schreiben).delete(board_loeschen))
+        .route("/api/katalog", get(katalog_lesen))
+        .route("/api/katalog/version", get(katalog_version))
         .with_state(AppState { pool });
 
     let addr: SocketAddr = lausch.parse().expect("LAUSCH ist keine gültige Adresse");
@@ -115,10 +124,18 @@ async fn schema_anlegen(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
-/// Bildet den Geräte-Fingerabdruck aus dem von Caddy durchgereichten
-/// Client-Zertifikat (Base64-DER → SHA-256-Hex). None, wenn keins da ist.
+/// Bildet den Geräte-Fingerabdruck aus dem durchgereichten Client-
+/// Zertifikat (Base64-DER → SHA-256-Hex). Akzeptiert den Cloudflare-
+/// Header `Cf-Client-Cert-Der-Base64` ODER Caddys `X-Client-Cert-DER`.
+/// None, wenn keins da ist.
 fn fingerprint(headers: &HeaderMap) -> Option<String> {
-    let der_b64 = headers.get("x-client-cert-der")?.to_str().ok()?.trim().to_string();
+    let der_b64 = headers
+        .get("cf-client-cert-der-base64")
+        .or_else(|| headers.get("x-client-cert-der"))?
+        .to_str()
+        .ok()?
+        .trim()
+        .to_string();
     if der_b64.is_empty() {
         return None;
     }
@@ -302,4 +319,56 @@ async fn board_loeschen(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+// ============================================================
+// Förder-Katalog (Phase 3 / Etappe 3): der Server verteilt den
+// zentral gepflegten Katalog (unkritisch). In Etappe 3 wird die Datei
+// vom Admin bereitgestellt (Pfad ENV KATALOG_PFAD); die eigene Admin-
+// Anwendung zum Hochladen folgt in Etappe 4. Nur Geräte mit gültigem
+// Team-Zertifikat dürfen ihn abrufen.
+// ============================================================
+
+fn katalog_pfad() -> String {
+    env::var("KATALOG_PFAD").unwrap_or_else(|_| "katalog.json".into())
+}
+
+/// Liefert den aktuellen Förder-Katalog (rohes JSON).
+async fn katalog_lesen(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+) -> Result<(StatusCode, [(axum::http::HeaderName, &'static str); 1], String), StatusCode> {
+    konto_und_geraet(&st.pool, &headers).await?;
+    let text = tokio::fs::read_to_string(katalog_pfad())
+        .await
+        .map_err(|_| StatusCode::NOT_FOUND)?;
+    Ok((
+        StatusCode::OK,
+        [(axum::http::header::CONTENT_TYPE, "application/json")],
+        text,
+    ))
+}
+
+#[derive(Serialize)]
+struct KatalogVersion {
+    stand: Option<String>,
+    schema_version: Option<i64>,
+}
+
+/// Liefert nur Stand/Version des Katalogs (für schnelle „Gibt es Neues?"-
+/// Abfragen, ohne den ganzen Katalog zu übertragen).
+async fn katalog_version(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<KatalogVersion>, StatusCode> {
+    konto_und_geraet(&st.pool, &headers).await?;
+    let text = tokio::fs::read_to_string(katalog_pfad())
+        .await
+        .map_err(|_| StatusCode::NOT_FOUND)?;
+    let v: serde_json::Value =
+        serde_json::from_str(&text).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(Json(KatalogVersion {
+        stand: v.get("stand").and_then(|x| x.as_str()).map(|s| s.to_string()),
+        schema_version: v.get("schema_version").and_then(|x| x.as_i64()),
+    }))
 }

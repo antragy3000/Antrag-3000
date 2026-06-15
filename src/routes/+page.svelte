@@ -870,25 +870,11 @@
     return f ? f.name : "Förderung";
   }
 
-  // --- Phase 3 / Etappe 2: Katalog-Update + Melde-Funktion ---
-  // Update aus einer Datei prüfen und (nach Schema-Prüfung) automatisch
-  // übernehmen. Gibt den Vergleich für den Hinweis zurück. In Etappe 3
-  // kommt die Datei stattdessen von der NAS – die Prüf-/Anwende-Logik
-  // bleibt dieselbe.
-  async function katalogUpdateAusDatei() {
-    const pfad = await dateiWaehlen({
-      title: "Förder-Katalog-Update wählen",
-      multiple: false,
-      filters: [{ name: "Katalog (JSON)", extensions: ["json"] }],
-    });
-    if (!pfad) return null;
-    let obj;
-    try {
-      const roh = await invoke("katalog_kandidat_lesen", { pfad });
-      obj = JSON.parse(roh);
-    } catch (e) {
-      return { ok: false, fehler: "Datei nicht lesbar oder kein gültiges JSON." };
-    }
+  // --- Phase 3 / Etappe 2+3: Katalog-Update (Datei ODER Team-Server) ---
+  // Gemeinsame Anwende-Logik: prüfen, automatisch übernehmen, Vergleich +
+  // Feld-Diff + „zuletzt aktualisiert"-Stand merken. Quelle ist egal –
+  // eine lokale Datei (Pilot) oder die NAS (Etappe 3).
+  async function katalogUpdateAnwenden(obj, quelle = "datei") {
     const p = pruefeKatalog(obj);
     if (!p.ok) return { ok: false, fehler: p.fehler };
 
@@ -921,12 +907,49 @@
       for (const e of diff.geaendert) {
         daten.katalogFeldDiff[e.id] = geaenderteFelder(altMap.get(e.id), neuMap.get(e.id));
       }
-      setzeKatalog(obj, "datei");
+      setzeKatalog(obj, quelle);
       await tresorSpeichern();
       return { ok: true, diff, stand: obj.stand };
     } catch (e) {
       return { ok: false, fehler: "Konnte nicht gespeichert werden: " + e };
     }
+  }
+
+  // Update aus einer lokalen Datei (Pilot/Test).
+  async function katalogUpdateAusDatei() {
+    const pfad = await dateiWaehlen({
+      title: "Förder-Katalog-Update wählen",
+      multiple: false,
+      filters: [{ name: "Katalog (JSON)", extensions: ["json"] }],
+    });
+    if (!pfad) return null;
+    let obj;
+    try {
+      const roh = await invoke("katalog_kandidat_lesen", { pfad });
+      obj = JSON.parse(roh);
+    } catch (e) {
+      return { ok: false, fehler: "Datei nicht lesbar oder kein gültiges JSON." };
+    }
+    return katalogUpdateAnwenden(obj, "datei");
+  }
+
+  // Update vom Team-Server holen (mTLS) – Etappe 3. Braucht ein
+  // eingerichtetes Gerät (Zugangs-Paket geladen).
+  async function katalogUpdateVomServer() {
+    if (!daten.sync) {
+      return { ok: false, fehler: "Kein Zugangs-Paket geladen (Team-Sync)." };
+    }
+    let obj;
+    try {
+      const roh = await invoke("sync_katalog_holen", {
+        adresse: daten.sync.adresse,
+        ausweisPem: daten.sync.ausweisPem,
+      });
+      obj = JSON.parse(roh);
+    } catch (e) {
+      return { ok: false, fehler: "Vom Team-Server nicht ladbar: " + e };
+    }
+    return katalogUpdateAnwenden(obj, "server");
   }
 
   // „Zuletzt aktualisiert"-Datum für eine Förderung (formatiert) oder null.
@@ -1501,6 +1524,8 @@
       <KatalogUpdate
         schliessen={() => (katalogOffen = false)}
         updateAusDatei={katalogUpdateAusDatei}
+        updateVomServer={katalogUpdateVomServer}
+        syncEingerichtet={!!daten.sync}
         zuruecksetzen={katalogZuruecksetzen}
         meldungen={daten.katalogMeldungen ?? []}
         {meldungAnlegen}

@@ -1,0 +1,56 @@
+# Variante "Cloudflare Tunnel + Cloudflare Access (mTLS)".
+#
+# Unterschied zur Standard-Datei (docker-compose.yml):
+#  - KEIN Caddy, KEINE offenen Ports am Router. cloudflared baut eine
+#    AUSGEHENDE Verbindung zu Cloudflare auf.
+#  - Cloudflare Access prueft das Geraete-Zertifikat (deine Team-CA dort
+#    hochgeladen) und reicht es als Header `Cf-Client-Cert-Der-Base64`
+#    an den api-Dienst durch.
+#
+# Start (im server/-Ordner):
+#   docker compose -f docker-compose.cloudflare.yml up -d --build
+#
+# Voraussetzung: in der .env steht TUNNEL_TOKEN (aus dem Cloudflare-
+# Zero-Trust-Dashboard, "Tunnel"). Siehe Cloudflare-Einrichtung.md.
+
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    networks:
+      - intern
+    depends_on:
+      - api
+
+  api:
+    build: ./api
+    restart: unless-stopped
+    # Härtung wie in der Standard-Variante:
+    user: "10001:10001"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    environment:
+      - DB_PFAD=/data/antrag3000.sqlite
+      - LAUSCH=0.0.0.0:8080
+      - KATALOG_PFAD=/srv/foerderungen.json
+    volumes:
+      - api_data:/data
+      - ./katalog:/srv:ro
+    networks:
+      - intern
+    # KEIN "ports:" – nur ueber den Tunnel erreichbar.
+
+networks:
+  intern:
+    driver: bridge
+
+volumes:
+  api_data:

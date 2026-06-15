@@ -10,3 +10,5 @@ geraete/
 *.sqlite
 *.sqlite-*
 api/target/
+# Verteilter Foerder-Katalog (Daten, kein Quellcode):
+katalog/foerderungen.json

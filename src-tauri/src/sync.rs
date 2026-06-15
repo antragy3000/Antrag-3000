@@ -198,6 +198,24 @@ pub async fn sync_trockenlauf(ziel_url: String, koerper: Vec<String>) -> Result<
     Ok(gesendet)
 }
 
+/// Holt den aktuellen Förder-Katalog vom Team-Server (mTLS GET
+/// /api/katalog). Gibt das rohe JSON zurück; Pruefung/Anwendung macht
+/// das Frontend (gleiche Logik wie beim Update aus einer Datei).
+#[tauri::command]
+pub async fn sync_katalog_holen(adresse: String, ausweis_pem: String) -> Result<String, String> {
+    let client = client_mit_ausweis(&ausweis_pem)?;
+    let url = format!("{}/api/katalog", basis_url(&adresse));
+    let r = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Abruf fehlgeschlagen: {e}"))?;
+    if !r.status().is_success() {
+        return Err(format!("Server antwortete mit {}", r.status()));
+    }
+    r.text().await.map_err(|e| format!("Antwort nicht lesbar: {e}"))
+}
+
 // --- Zertifikate erzeugen (Admin / Verwalter:in), reines Rust ----------
 
 #[derive(Serialize)]
