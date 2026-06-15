@@ -1351,10 +1351,10 @@
         />
       {:else if bereich === "stammdaten"}
         <div class="konto-seite">
-          <div class="konto-spalte">
+          <div class="konto-spalte konto-links">
             <Stammdaten stammdaten={daten.stammdaten} speichern={stammdatenSpeichern} />
           </div>
-          <div class="konto-reihe">
+          <div class="konto-spalte konto-rechts">
             <TeamSync
               sync={daten.sync}
               teamCa={daten.teamCa}
@@ -1761,14 +1761,27 @@
     padding: 64px 24px;
   }
 
-  /* Zusammengeführter Reiter „Stammdaten & Team": oben die Stammdaten-
-     Spalte, darunter als eigene Reihe die Synchronisation. */
+  /* Zusammengeführter Reiter „Stammdaten & Team": zwei Spalten
+     nebeneinander (links Stammdaten, rechts Synchronisation), mit einer
+     feinen Trennlinie. Auf schmalen Fenstern untereinander. */
   .konto-seite {
     display: flex;
-    flex-direction: column;
+    align-items: stretch;
   }
-  .konto-reihe {
-    border-top: 1px solid #e4e7ec;
-    margin-top: 8px;
+  .konto-spalte {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .konto-rechts {
+    border-left: 1px solid #e4e7ec;
+  }
+  @media (max-width: 900px) {
+    .konto-seite {
+      flex-direction: column;
+    }
+    .konto-rechts {
+      border-left: none;
+      border-top: 1px solid #e4e7ec;
+    }
   }
 </style>

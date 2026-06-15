@@ -211,6 +211,7 @@
         <div
           class="zeile"
           class:weg={f.nichtMehrImKatalog}
+          class:akt={aktualisierteIds.includes(f.id)}
           role="button"
           tabindex="0"
           onclick={() => oeffnen(f)}
@@ -260,6 +261,9 @@
                 <span class="herkunft weg">⚠ nicht mehr im Katalog</span>
               {:else if f.eigen}
                 <span class="herkunft selbst">✎ selbst eingetragen</span>
+              {/if}
+              {#if aktualisierteIds.includes(f.id)}
+                <span class="herkunft akt">✦ aktualisiert</span>
               {/if}
             </div>
 
@@ -436,6 +440,10 @@
     border-left: 5px solid #ca3521;
     background: #fff8f7;
   }
+  .zeile.akt {
+    border-left: 5px solid #4f6df5;
+    background: #f7f9ff;
+  }
 
   .katalog-hinweis {
     display: flex;
@@ -572,8 +580,9 @@
     padding-top: 2px;
   }
   .frist {
-    font-size: 0.8rem;
-    color: #8590a2;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #5e6c84;
     white-space: nowrap;
   }
   .frist.dringend {
@@ -686,6 +695,14 @@
     border-radius: 99px;
   }
   .herkunft.selbst { background: #eef1ff; color: #3b4fb0; }
+  .herkunft.akt {
+    font-size: 0.76rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    background: #e9f0ff;
+    color: #2b46c4;
+    border: 1px solid #b9c7f7;
+  }
   .herkunft.weg {
     font-size: 0.76rem;
     font-weight: 700;
