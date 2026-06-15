@@ -5,6 +5,7 @@
 mod backup;
 mod dokument;
 mod excel;
+mod katalog;
 mod ordner;
 mod pdf;
 mod sync;
@@ -40,6 +41,9 @@ pub fn run() {
             sync::geraet_paket_direkt,
             sync::team_ca_cert_exportieren,
             excel::kfp_excel_schreiben,
+            katalog::katalog_laden,
+            katalog::katalog_speichern,
+            katalog::katalog_zuruecksetzen,
             backup::tresor_backup_erstellen,
             backup::tresor_backup_einspielen
         ])

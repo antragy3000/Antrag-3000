@@ -3,7 +3,7 @@
   // Antworten da sind) oder das Matching-Ergebnis in zwei Abschnitten:
   // Rangliste der passenden Förderungen + "Weitere Vorschläge" mit
   // Begründung, welches harte Kriterium nicht erfüllt ist.
-  import datenbank from "$lib/daten/foerderungen.json";
+  import { katalog } from "$lib/katalog.svelte.js";
   import { matchen } from "$lib/matching";
   import Fragebogen from "./Fragebogen.svelte";
   import FoerderKarte from "./FoerderKarte.svelte";
@@ -15,7 +15,7 @@
   let ausgewaehlt = $state(null);
 
   let ergebnis = $derived(
-    antworten && !bearbeiten ? matchen(datenbank.foerderungen, antworten) : null
+    antworten && !bearbeiten ? matchen(katalog.daten.foerderungen, antworten) : null
   );
 
   async function fragebogenFertig(neue) {
@@ -87,8 +87,8 @@
 {#if ausgewaehlt}
   <FoerderDetail
     foerderung={ausgewaehlt}
-    alle={datenbank.foerderungen}
-    hinweis={datenbank.hinweis}
+    alle={katalog.daten.foerderungen}
+    hinweis={katalog.daten.hinweis}
     gemerkt={merkliste.includes(ausgewaehlt.id)}
     umschalten={umschalten}
     schliessen={() => (ausgewaehlt = null)}

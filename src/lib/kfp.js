@@ -17,11 +17,11 @@
 // Tresor-Inhalt: Budget ist laut CLAUDE.md sensibel.
 // ============================================================
 
-import datenbank from "./daten/foerderungen.json";
+import { foerderungen } from "./katalog.svelte.js";
 
 /// Anzeigename einer verknuepften Foerderung oder null.
 export function foerderLabel(id) {
-  const f = datenbank.foerderungen.find((x) => x.id === id);
+  const f = foerderungen().find((x) => x.id === id);
   return f ? `${f.name} (${f.foerdergeber})` : null;
 }
 

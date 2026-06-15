@@ -11,7 +11,7 @@
   import KostenPlan from "$lib/komponenten/KostenPlan.svelte";
   import Sicherung from "$lib/komponenten/Sicherung.svelte";
   import TeamSync from "$lib/komponenten/TeamSync.svelte";
-  import datenbank from "$lib/daten/foerderungen.json";
+  import { katalog, setzeKatalog, pruefeKatalog } from "$lib/katalog.svelte.js";
   import { leeresFormular, formularWordBauen } from "$lib/antrag";
   import { antragsPdfBauen } from "$lib/antragsPdf";
   import { leererKfp, kfpExport } from "$lib/kfp";
@@ -49,7 +49,7 @@
   // Datenbank-Förderungen plus die eigenen Förderungen des aktiven
   // Projekts – diese Liste löst überall die IDs auf.
   let alleFoerderungen = $derived([
-    ...datenbank.foerderungen,
+    ...katalog.daten.foerderungen,
     ...(aktivesProjekt?.eigeneFoerderungen ?? []),
   ]);
 
@@ -220,7 +220,7 @@
         veraendert = true;
       }
       // Antrag-Einträge älterer Stände um eigene Fristen ergänzen.
-      const alleFoerd = [...datenbank.foerderungen, ...(p.eigeneFoerderungen ?? [])];
+      const alleFoerd = [...katalog.daten.foerderungen, ...(p.eigeneFoerderungen ?? [])];
       for (const [id, a] of Object.entries(p.antraege)) {
         if (!a) continue;
         if (!Array.isArray(a.eigeneFristen)) {
@@ -283,6 +283,19 @@
   }
 
   onMount(async () => {
+    // Aktualisierten Förder-Katalog laden, falls vorhanden (Phase 3).
+    // Liegt keiner vor oder passt er nicht, bleibt die mitgelieferte
+    // Standard-Fassung aktiv.
+    try {
+      const roh = await invoke("katalog_laden");
+      if (roh) {
+        const obj = JSON.parse(roh);
+        if (pruefeKatalog(obj).ok) setzeKatalog(obj, "datei");
+      }
+    } catch (e) {
+      console.warn("Katalog-Override nicht ladbar:", e);
+    }
+
     const status = await invoke("tresor_status");
     ansicht = status === "fehlt" ? "einrichten" : "entsperren";
   });
@@ -819,7 +832,7 @@
   // das mitgeschickte Label, sonst aus der (öffentlichen) Förder-Datenbank.
   function boardFoerderungLabel(eintrag) {
     if (eintrag?.eigenesLabel) return eintrag.eigenesLabel;
-    const f = datenbank.foerderungen.find((x) => x.id === eintrag?.foerderungId);
+    const f = katalog.daten.foerderungen.find((x) => x.id === eintrag?.foerderungId);
     return f ? f.name : "Förderung";
   }
 
@@ -1227,7 +1240,7 @@
       {:else if bereich === "fristen"}
         <Kalender
           foerderungen={alleFoerderungen}
-          hinweis={datenbank.hinweis}
+          hinweis={katalog.daten.hinweis}
           merkliste={aktivesProjekt.merkliste}
           umschalten={merklisteUmschalten}
           {ordnerOeffnen}
@@ -1244,7 +1257,7 @@
       {:else}
         <Merkliste
           foerderungen={alleFoerderungen}
-          hinweis={datenbank.hinweis}
+          hinweis={katalog.daten.hinweis}
           merkliste={aktivesProjekt.merkliste}
           umschalten={merklisteUmschalten}
           {ordnerOeffnen}

@@ -1,13 +1,13 @@
 <script>
-  // Förder-Datenbank: unkritische Sync-Ebene, daher eine normale
-  // JSON-Datei (KEIN Tresor-Inhalt). In Phase 2 kommt genau diese
-  // Struktur von der NAS.
-  import datenbank from "$lib/daten/foerderungen.json";
+  // Förder-Katalog: unkritische Sync-Ebene (KEIN Tresor-Inhalt). Kommt
+  // aus dem zentralen, zur Laufzeit aktualisierbaren Katalog-Store, damit
+  // ein Update (Phase 3) hier sofort wirkt.
+  import { katalog } from "$lib/katalog.svelte.js";
   import { LAENDER, SPARTEN } from "$lib/begriffe";
   import FoerderKarte from "./FoerderKarte.svelte";
   import FoerderDetail from "./FoerderDetail.svelte";
 
-  const foerderungen = datenbank.foerderungen;
+  let foerderungen = $derived(katalog.daten.foerderungen);
 
   // merkliste = null bedeutet: kein aktives Projekt, Sterne ausblenden.
   let { merkliste = null, umschalten = null } = $props();
@@ -43,7 +43,7 @@
   </div>
 
   <p class="datenstand">
-    Beispieldaten, Stand {new Date(datenbank.stand).toLocaleDateString("de-DE")} –
+    Beispieldaten, Stand {new Date(katalog.daten.stand).toLocaleDateString("de-DE")} –
     vor Antragstellung immer beim Fördergeber prüfen.
   </p>
 
@@ -65,7 +65,7 @@
   <FoerderDetail
     foerderung={ausgewaehlt}
     alle={foerderungen}
-    hinweis={datenbank.hinweis}
+    hinweis={katalog.daten.hinweis}
     gemerkt={merkliste?.includes(ausgewaehlt.id) ?? null}
     umschalten={merkliste ? umschalten : null}
     schliessen={() => (ausgewaehlt = null)}
