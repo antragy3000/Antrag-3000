@@ -646,9 +646,19 @@
     return r;
   }
 
-  // Ein Durchlauf: nur tatsächlich geänderte eigene Projekte senden,
-  // danach das Team-Board holen. Schreibt den Tresor nur bei Änderung,
-  // damit der Takt im Ruhezustand keine Datei-/Krypto-Last erzeugt.
+  // Sync-Protokoll (nur im Speicher, max. 50 Einträge): zeigt transparent,
+  // was tatsächlich gesendet/gelöscht wurde. Wird nicht in den Tresor
+  // geschrieben (reine Anzeige).
+  let protokoll = $state([]);
+  function protokollEintrag(e) {
+    protokoll.unshift({ zeit: new Date().toISOString(), ...e });
+    if (protokoll.length > 50) protokoll.length = 50;
+  }
+
+  // Ein Durchlauf: gelöschte Projekte abmelden, nur tatsächlich geänderte
+  // eigene Projekte senden, danach das Team-Board holen. Schreibt den
+  // Tresor nur bei Änderung, damit der Takt im Ruhezustand keine Datei-/
+  // Krypto-Last erzeugt.
   async function einAbgleich() {
     const adresse = daten.sync.adresse;
     const ausweisPem = daten.sync.ausweisPem;
@@ -656,10 +666,24 @@
     const gesendet = { ...(daten.sync.gesendet ?? {}) };
     let geaendert = false;
     let konflikte = 0;
+    const protZeilen = [];
 
-    // 1. Hochladen – nur, wenn sich die Board-Sicht des Projekts seit dem
-    //    letzten Senden geändert hat (Vergleich über die exakte JSON).
     const board = boardAusTresor($state.snapshot(daten));
+    const aktuelleIds = new Set(board.projekte.map((p) => p.id));
+
+    // 1. Löschungen: früher gesendete Projekte, die es lokal nicht mehr
+    //    gibt, vom Team-Board entfernen (sonst bleiben sie als Leiche).
+    for (const id of Object.keys(gesendet)) {
+      if (aktuelleIds.has(id)) continue;
+      await invoke("sync_delete_board", { adresse, ausweisPem, projektId: id });
+      delete gesendet[id];
+      delete versionen[id];
+      protZeilen.push({ projektId: id, aktion: "gelöscht", bytes: 0, body: null });
+      geaendert = true;
+    }
+
+    // 2. Hochladen – nur, wenn sich die Board-Sicht des Projekts seit dem
+    //    letzten Senden geändert hat (Vergleich über die exakte JSON).
     for (const p of board.projekte) {
       const js = JSON.stringify(p);
       if (gesendet[p.id] === js) continue; // unverändert → nicht senden
@@ -671,16 +695,28 @@
       versionen[p.id] = antwort.version;
       if (antwort.konflikt) konflikte++;
       else gesendet[p.id] = js;
+      protZeilen.push({
+        projektId: p.id,
+        aktion: antwort.konflikt ? "Konflikt – übersprungen" : "gesendet",
+        bytes: body.length,
+        body,
+      });
       geaendert = true;
     }
 
-    // 2. Team-Board holen.
+    // 3. Team-Board holen.
     const boardText = await invoke("sync_get_board", { adresse, ausweisPem });
     const serverBoard = JSON.parse(boardText);
     for (const row of serverBoard) versionen[row.projekt_id] = row.version;
     if (JSON.stringify(daten.sync.teamBoard ?? null) !== JSON.stringify(serverBoard)) {
       daten.sync.teamBoard = serverBoard;
       geaendert = true;
+    }
+
+    // Nur protokollieren, wenn etwas gesendet/gelöscht wurde (kein Spam
+    // bei reinen Abfrage-Takten).
+    if (protZeilen.length > 0) {
+      protokollEintrag({ zeilen: protZeilen, geholt: serverBoard.length });
     }
 
     if (geaendert) {
@@ -738,6 +774,39 @@
   function autoSyncStoppen() {
     syncLoopStoppen();
     syncMeldung = { art: "info", text: "Synchronisation gestoppt." };
+  }
+
+  // --- Etappe 5: Trockenlauf / Transparenz ---
+  // Baut die EXAKTEN Sende-Körper, die der echte Sync hochladen würde –
+  // ohne irgendetwas zu senden. Quelle ist allein boardAusTresor().
+  function trockenlaufKoerper() {
+    const board = boardAusTresor($state.snapshot(daten ?? {}));
+    return board.projekte.map((p) =>
+      JSON.stringify({ inhalt: p, basis_version: null }, null, 2),
+    );
+  }
+
+  // Schickt dieselben Körper an einen lokalen Mitschnitt-Server (ohne
+  // Ausweis/TLS), damit man unabhängig sieht, was ins Netz ginge.
+  async function trockenlaufSenden(zielUrl) {
+    const koerper = trockenlaufKoerper().map((s) => JSON.stringify(JSON.parse(s)));
+    try {
+      const n = await invoke("sync_trockenlauf", { zielUrl, koerper });
+      protokollEintrag({
+        trockenlauf: true,
+        ziel: zielUrl,
+        zeilen: koerper.map((b, i) => ({
+          projektId: "(Projekt " + (i + 1) + ")",
+          aktion: "Trockenlauf gesendet",
+          bytes: b.length,
+          body: b,
+        })),
+        geholt: 0,
+      });
+      return { ok: true, n };
+    } catch (e) {
+      return { ok: false, fehler: String(e) };
+    }
   }
 
   // ids meiner lokalen Projekte – damit die Team-Übersicht markieren kann,
@@ -1103,6 +1172,9 @@
           {syncVerbunden}
           {syncMeldung}
           {zuletztGeprueft}
+          {protokoll}
+          trockenlaufBauen={trockenlaufKoerper}
+          trockenlaufSenden={trockenlaufSenden}
           teamBoard={daten.sync?.teamBoard ?? null}
           letzterAbgleich={daten.sync?.letzterAbgleich ?? null}
           {meineProjektIds}

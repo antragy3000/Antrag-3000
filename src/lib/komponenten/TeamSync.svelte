@@ -25,6 +25,9 @@
     syncVerbunden = false,
     syncMeldung = null,
     zuletztGeprueft = null,
+    protokoll = [],
+    trockenlaufBauen,
+    trockenlaufSenden,
     teamBoard,
     letzterAbgleich,
     meineProjektIds = [],
@@ -35,9 +38,26 @@
   let status = $state(null);
   let pruefe = $state(false);
   let verwaltungOffen = $state(false);
+  let pruefenOffen = $state(false);
   let caAdresse = $state("");
   let neuerGeraetName = $state("");
   let meinGeraetName = $state("");
+  let vorschau = $state(null);          // Array der Sende-Körper (Trockenlauf)
+  let mitschnittUrl = $state("http://127.0.0.1:8099");
+  let mitschnittStatus = $state(null);
+
+  function vorschauAnzeigen() {
+    vorschau = trockenlaufBauen();
+  }
+  async function mitschnittSenden() {
+    beschaeftigt = true;
+    mitschnittStatus = null;
+    try {
+      mitschnittStatus = await trockenlaufSenden(mitschnittUrl.trim());
+    } finally {
+      beschaeftigt = false;
+    }
+  }
 
   // Beim Öffnen des Tabs einmal die Verbindung prüfen, damit der
   // Start-Knopf den richtigen Zustand zeigt (aktiv nur, wenn erreichbar).
@@ -240,6 +260,81 @@
         </ul>
       {/if}
     </div>
+
+    <button class="verwaltung-toggle" onclick={() => (pruefenOffen = !pruefenOffen)}>
+      {pruefenOffen ? "▾" : "▸"} Prüfen &amp; Protokoll
+      <span class="dezent">(was verlässt das Gerät?)</span>
+    </button>
+
+    {#if pruefenOffen}
+      <div class="karte verwaltung">
+        <p>
+          Hier kannst du <strong>selbst nachprüfen</strong>, welche Felder die
+          App ins Netz geben würde. Sensible Daten (Stammdaten, IBAN, Steuer,
+          Budget/KFP, Formular-Texte, Projektbeschriebe) sind baulich
+          ausgeschlossen.
+        </p>
+
+        <div class="block">
+          <span class="block-titel">Sende-Vorschau (Trockenlauf)</span>
+          <p class="dezent">Zeigt die exakten Daten – ohne etwas zu senden.</p>
+          <button class="zweit" onclick={vorschauAnzeigen}>Sende-Vorschau anzeigen</button>
+          {#if vorschau}
+            {#if vorschau.length === 0}
+              <p class="dezent klein nichts">Keine Projekte – es würde nichts gesendet.</p>
+            {:else}
+              {#each vorschau as koerper}
+                <pre class="payload">{koerper}</pre>
+              {/each}
+            {/if}
+          {/if}
+        </div>
+
+        <div class="block">
+          <span class="block-titel">Unabhängiger Mitschnitt</span>
+          <p class="dezent">
+            Starte im Projektordner <code>node tools/echo-server.mjs</code> und
+            sende die Daten an diesen lokalen Server – im Terminal siehst du
+            jedes Byte, das die App schicken würde (ohne NAS).
+          </p>
+          <div class="reihe">
+            <input type="text" bind:value={mitschnittUrl} />
+            <button class="zweit" disabled={beschaeftigt} onclick={mitschnittSenden}>
+              {beschaeftigt ? "Sendet …" : "An lokalen Mitschnitt senden"}
+            </button>
+          </div>
+          {#if mitschnittStatus}
+            {#if mitschnittStatus.ok}
+              <p class="ok klein">✓ {mitschnittStatus.n} Sende-Körper an den Mitschnitt geschickt – prüfe das Terminal.</p>
+            {:else}
+              <p class="fehler klein">⚠ {mitschnittStatus.fehler} (Läuft der Mitschnitt-Server?)</p>
+            {/if}
+          {/if}
+        </div>
+
+        <div class="block">
+          <span class="block-titel">Sync-Protokoll</span>
+          <p class="dezent">Was bei der laufenden Synchronisation tatsächlich gesendet/gelöscht wurde.</p>
+          {#if protokoll.length === 0}
+            <p class="dezent klein nichts">Noch nichts gesendet.</p>
+          {:else}
+            <ul class="protokoll">
+              {#each protokoll as e}
+                <li class="prot">
+                  <span class="prot-zeit">{zeitText(e.zeit)}</span>
+                  <span class="prot-text">
+                    {#if e.trockenlauf}Trockenlauf → {e.ziel}{/if}
+                    {#each e.zeilen as z}
+                      <span class="prot-zeile">{z.aktion}: {z.projektId}{#if z.bytes} ({z.bytes} B){/if}</span>
+                    {/each}
+                  </span>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+      </div>
+    {/if}
   {/if}
 
   <button class="verwaltung-toggle" onclick={() => (verwaltungOffen = !verwaltungOffen)}>
@@ -507,6 +602,47 @@
   .chip.rot { background: #ffecec; color: #ae2e24; }
   .chip.gelb { background: #fff4e5; color: #a54800; }
   .chip.grau { background: #f1f2f4; color: #5e6c84; }
+
+  .payload {
+    margin: 8px 0 0;
+    padding: 10px 12px;
+    background: #0b1020;
+    color: #d7e0ff;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 220px;
+    overflow: auto;
+  }
+  .protokoll {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .prot {
+    display: flex;
+    gap: 10px;
+    font-size: 0.82rem;
+  }
+  .prot-zeit {
+    flex: 0 0 64px;
+    color: #8590a2;
+    font-variant-numeric: tabular-nums;
+  }
+  .prot-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    color: #44546f;
+  }
+  .prot-zeile {
+    color: #172b4d;
+  }
 
   .verwaltung-toggle {
     margin: 22px 0 0;

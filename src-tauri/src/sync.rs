@@ -150,6 +150,54 @@ pub async fn sync_put_board(
     r.text().await.map_err(|e| format!("Antwort nicht lesbar: {e}"))
 }
 
+/// Entfernt ein Board-Projekt vom Team-Server (DELETE /api/board/{id}).
+/// Wird genutzt, wenn ein Projekt lokal geloescht wurde – damit es nicht
+/// als Leiche auf dem Team-Board stehen bleibt.
+#[tauri::command]
+pub async fn sync_delete_board(
+    adresse: String,
+    ausweis_pem: String,
+    projekt_id: String,
+) -> Result<(), String> {
+    let client = client_mit_ausweis(&ausweis_pem)?;
+    let url = format!("{}/api/board/{}", basis_url(&adresse), projekt_id);
+    let r = client
+        .delete(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Loeschen fehlgeschlagen: {e}"))?;
+    if !r.status().is_success() {
+        return Err(format!("Server antwortete mit {}", r.status()));
+    }
+    Ok(())
+}
+
+/// Transparenz-Werkzeug ("Trockenlauf"): sendet die EXAKTEN Sende-Koerper,
+/// die der echte Sync hochladen wuerde, an einen lokalen Mitschnitt-Server
+/// (z. B. http://127.0.0.1:8099). So kann man UNABHAENGIG von der App und
+/// ohne NAS nachpruefen, welche Felder die App ins Netz geben wuerde.
+/// Nutzt bewusst KEINEN Ausweis und KEIN TLS – reiner Test gegen localhost.
+#[tauri::command]
+pub async fn sync_trockenlauf(ziel_url: String, koerper: Vec<String>) -> Result<usize, String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|e| format!("Client-Fehler: {e}"))?;
+    let basis = basis_url(&ziel_url);
+    let mut gesendet = 0;
+    for body in &koerper {
+        client
+            .post(format!("{}/api/board/trockenlauf", basis))
+            .header("content-type", "application/json")
+            .body(body.clone())
+            .send()
+            .await
+            .map_err(|e| format!("Senden an den Mitschnitt fehlgeschlagen: {e}"))?;
+        gesendet += 1;
+    }
+    Ok(gesendet)
+}
+
 // --- Zertifikate erzeugen (Admin / Verwalter:in), reines Rust ----------
 
 #[derive(Serialize)]

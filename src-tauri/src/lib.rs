@@ -33,6 +33,8 @@ pub fn run() {
             sync::sync_health,
             sync::sync_get_board,
             sync::sync_put_board,
+            sync::sync_delete_board,
+            sync::sync_trockenlauf,
             sync::team_ca_erstellen,
             sync::geraet_paket_speichern,
             sync::geraet_paket_direkt,
