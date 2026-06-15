@@ -59,4 +59,8 @@ image = { version = "0.23", default-features = false, features = ["png", "jpeg"]
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 x509-parser = "0.16"
 rustls-pemfile = "2"
+# rcgen: erzeugt die Team-CA und Geraete-Ausweise direkt in der App
+# (reines Rust, kein OpenSSL/Kommandozeile noetig). Feature x509-parser
+# fuer from_ca_cert_pem (CA aus dem Tresor zum Signieren laden).
+rcgen = { version = "0.13", features = ["x509-parser"] }
 

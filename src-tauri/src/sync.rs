@@ -150,6 +150,107 @@ pub async fn sync_put_board(
     r.text().await.map_err(|e| format!("Antwort nicht lesbar: {e}"))
 }
 
+// --- Zertifikate erzeugen (Admin / Verwalter:in), reines Rust ----------
+
+#[derive(Serialize)]
+pub struct TeamCa {
+    pub cert_pem: String,
+    pub key_pem: String,
+}
+
+/// Erzeugt eine neue Team-CA (Aussteller-Stempel). Den privaten
+/// Schluessel legt das Frontend verschluesselt in den Tresor.
+#[tauri::command]
+pub fn team_ca_erstellen() -> Result<TeamCa, String> {
+    let key = rcgen::KeyPair::generate().map_err(|e| format!("Schluessel nicht erzeugbar: {e}"))?;
+    let mut p = rcgen::CertificateParams::new(Vec::<String>::new())
+        .map_err(|e| format!("Zertifikat nicht vorbereitbar: {e}"))?;
+    p.distinguished_name.push(rcgen::DnType::OrganizationName, "Antrag 3000 Team");
+    p.distinguished_name.push(rcgen::DnType::CommonName, "Antrag 3000 Team CA");
+    p.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Constrained(0));
+    p.key_usages = vec![rcgen::KeyUsagePurpose::KeyCertSign, rcgen::KeyUsagePurpose::CrlSign];
+    p.not_before = rcgen::date_time_ymd(2024, 1, 1);
+    p.not_after = rcgen::date_time_ymd(2035, 1, 1);
+    let cert = p.self_signed(&key).map_err(|e| format!("CA nicht signierbar: {e}"))?;
+    Ok(TeamCa { cert_pem: cert.pem(), key_pem: key.serialize_pem() })
+}
+
+/// Baut den Geraete-Ausweis (PEM: privater Schluessel + Zertifikat),
+/// signiert von der Team-CA.
+fn baue_geraet_pem(ca_cert_pem: &str, ca_key_pem: &str, geraet_name: &str) -> Result<String, String> {
+    if geraet_name.is_empty() {
+        return Err("Bitte einen Geraetenamen angeben.".into());
+    }
+    let ca_key = rcgen::KeyPair::from_pem(ca_key_pem)
+        .map_err(|e| format!("CA-Schluessel ungueltig: {e}"))?;
+    let ca_params = rcgen::CertificateParams::from_ca_cert_pem(ca_cert_pem)
+        .map_err(|e| format!("CA-Zertifikat ungueltig: {e}"))?;
+    let ca_cert = ca_params
+        .self_signed(&ca_key)
+        .map_err(|e| format!("CA nicht ladbar: {e}"))?;
+    let dev_key = rcgen::KeyPair::generate().map_err(|e| format!("Schluessel nicht erzeugbar: {e}"))?;
+    let mut p = rcgen::CertificateParams::new(Vec::<String>::new())
+        .map_err(|e| format!("Zertifikat nicht vorbereitbar: {e}"))?;
+    p.distinguished_name.push(rcgen::DnType::OrganizationName, "Antrag 3000 Team");
+    p.distinguished_name.push(rcgen::DnType::CommonName, geraet_name);
+    p.is_ca = rcgen::IsCa::NoCa;
+    p.key_usages = vec![rcgen::KeyUsagePurpose::DigitalSignature];
+    p.extended_key_usages = vec![rcgen::ExtendedKeyUsagePurpose::ClientAuth];
+    p.not_before = rcgen::date_time_ymd(2024, 1, 1);
+    p.not_after = rcgen::date_time_ymd(2030, 1, 1);
+    let cert = p
+        .signed_by(&dev_key, &ca_cert, &ca_key)
+        .map_err(|e| format!("Geraete-Zertifikat nicht signierbar: {e}"))?;
+    Ok(format!("{}{}", dev_key.serialize_pem(), cert.pem()))
+}
+
+fn paket_json(adresse: &str, pem: &str) -> String {
+    serde_json::to_string_pretty(&serde_json::json!({
+        "typ": "antrag3000-zugangspaket",
+        "version": 1,
+        "adresse": adresse.trim(),
+        "ausweis_pem": pem,
+    }))
+    .unwrap_or_default()
+}
+
+/// Erzeugt ein Zugangs-Paket fuer ein Geraet und speichert es als Datei.
+#[tauri::command]
+pub fn geraet_paket_speichern(
+    ca_cert_pem: String,
+    ca_key_pem: String,
+    geraet_name: String,
+    adresse: String,
+    ziel: String,
+) -> Result<(), String> {
+    let pem = baue_geraet_pem(&ca_cert_pem, &ca_key_pem, geraet_name.trim())?;
+    std::fs::write(&ziel, paket_json(&adresse, &pem))
+        .map_err(|e| format!("Datei nicht schreibbar: {e}"))
+}
+
+/// Erzeugt ein Zugangs-Paket fuer DIESES Geraet und gibt es direkt
+/// zurueck (zum sofortigen Einrichten ohne Datei).
+#[tauri::command]
+pub fn geraet_paket_direkt(
+    ca_cert_pem: String,
+    ca_key_pem: String,
+    geraet_name: String,
+    adresse: String,
+) -> Result<ZugangsInfo, String> {
+    let pem = baue_geraet_pem(&ca_cert_pem, &ca_key_pem, geraet_name.trim())?;
+    Ok(ZugangsInfo {
+        adresse: adresse.trim().to_string(),
+        geraet_name: geraet_name.trim().to_string(),
+        ausweis_pem: pem,
+    })
+}
+
+/// Speichert das CA-Zertifikat (oeffentlich) als Datei fuer die NAS (Caddy).
+#[tauri::command]
+pub fn team_ca_cert_exportieren(cert_pem: String, ziel: String) -> Result<(), String> {
+    std::fs::write(&ziel, cert_pem).map_err(|e| format!("Datei nicht schreibbar: {e}"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -179,5 +280,36 @@ mod tests {
         let paket: serde_json::Value = serde_json::from_str(FIXTURE).unwrap();
         let pem = paket["ausweis_pem"].as_str().unwrap();
         client_mit_ausweis(pem).expect("Client sollte mit dem Ausweis baubar sein");
+    }
+
+    #[test]
+    fn in_app_paket_ist_parsebar() {
+        // Team-CA + Geraete-Paket komplett in Rust erzeugen ...
+        let ca = team_ca_erstellen().unwrap();
+        let info = geraet_paket_direkt(
+            ca.cert_pem.clone(),
+            ca.key_pem.clone(),
+            "Test-Geraet".into(),
+            "team.example".into(),
+        )
+        .unwrap();
+        assert_eq!(info.geraet_name, "Test-Geraet");
+        assert_eq!(info.adresse, "team.example");
+        client_mit_ausweis(&info.ausweis_pem)
+            .expect("rcgen-Ausweis muss vom mTLS-Client angenommen werden");
+
+        // ... als Datei speichern und wieder einlesen (Rundlauf).
+        let pfad = std::env::temp_dir().join("a3000-inapp-test.a3kpaket");
+        geraet_paket_speichern(
+            ca.cert_pem.clone(),
+            ca.key_pem.clone(),
+            "Tablet-X".into(),
+            "team.example".into(),
+            pfad.to_string_lossy().to_string(),
+        )
+        .unwrap();
+        let geprueft = zugangspaket_pruefen(pfad.to_string_lossy().to_string()).unwrap();
+        assert_eq!(geprueft.geraet_name, "Tablet-X");
+        let _ = std::fs::remove_file(&pfad);
     }
 }

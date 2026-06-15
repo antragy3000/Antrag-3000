@@ -1,7 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
-  import { open as dateiWaehlen } from "@tauri-apps/plugin-dialog";
+  import { open as dateiWaehlen, save as dateiSpeichern } from "@tauri-apps/plugin-dialog";
   import Foerderungen from "$lib/komponenten/Foerderungen.svelte";
   import Matching from "$lib/komponenten/Matching.svelte";
   import Merkliste from "$lib/komponenten/Merkliste.svelte";
@@ -94,6 +94,7 @@
       projekte: [],
       aktivesProjektId: null,
       sync: null,
+      teamCa: null,
     };
   }
 
@@ -267,6 +268,10 @@
     }
     if (d.sync === undefined) {
       d.sync = null;
+      veraendert = true;
+    }
+    if (d.teamCa === undefined) {
+      d.teamCa = null;
       veraendert = true;
     }
     if (d.version !== 2) {
@@ -522,6 +527,84 @@
   async function zugangspaketEntfernen() {
     daten.sync = null;
     await tresorSpeichern();
+  }
+
+  // --- Team verwalten (Admin): CA + Zugangs-Pakete in der App erzeugen ---
+  async function teamCaErstellen(adresse) {
+    try {
+      const ca = await invoke("team_ca_erstellen");
+      daten.teamCa = { certPem: ca.cert_pem, keyPem: ca.key_pem, adresse: adresse.trim() };
+      await tresorSpeichern();
+      return true;
+    } catch (e) {
+      alert("Die Team-CA konnte nicht erstellt werden.\n" + e);
+      return false;
+    }
+  }
+
+  // Öffentliches CA-Zertifikat als Datei speichern (für die NAS / Caddy).
+  async function teamCaExportieren() {
+    if (!daten.teamCa) return;
+    const ziel = await dateiSpeichern({
+      title: "Team-CA-Zertifikat speichern",
+      defaultPath: "team-ca.crt",
+      filters: [{ name: "Zertifikat", extensions: ["crt"] }],
+    });
+    if (!ziel) return;
+    try {
+      await invoke("team_ca_cert_exportieren", { certPem: daten.teamCa.certPem, ziel });
+      alert("Gespeichert:\n" + ziel + "\n\nDiese Datei kommt zu Caddy auf die NAS.");
+    } catch (e) {
+      alert("Konnte nicht gespeichert werden.\n" + e);
+    }
+  }
+
+  // Zugangs-Paket für ein (anderes) Gerät erzeugen und als Datei speichern.
+  async function geraetPaketErstellen(geraetName) {
+    if (!daten.teamCa) return;
+    const sicher = (geraetName.trim().replace(/[^A-Za-z0-9_.-]/g, "_")) || "Geraet";
+    const ziel = await dateiSpeichern({
+      title: "Zugangs-Paket speichern",
+      defaultPath: sicher + ".a3kpaket",
+      filters: [{ name: "Zugangs-Paket", extensions: ["a3kpaket"] }],
+    });
+    if (!ziel) return;
+    try {
+      await invoke("geraet_paket_speichern", {
+        caCertPem: daten.teamCa.certPem,
+        caKeyPem: daten.teamCa.keyPem,
+        geraetName: geraetName.trim(),
+        adresse: daten.teamCa.adresse,
+        ziel,
+      });
+      alert("Zugangs-Paket gespeichert:\n" + ziel + "\n\nGib es offline an das Gerät weiter (z. B. USB) – nicht per Mail.");
+    } catch (e) {
+      alert("Das Zugangs-Paket konnte nicht erstellt werden.\n" + e);
+    }
+  }
+
+  // Dieses Gerät direkt einrichten (ohne Datei-Umweg).
+  async function diesesGeraetEinrichten(geraetName) {
+    if (!daten.teamCa) return null;
+    try {
+      const info = await invoke("geraet_paket_direkt", {
+        caCertPem: daten.teamCa.certPem,
+        caKeyPem: daten.teamCa.keyPem,
+        geraetName: geraetName.trim(),
+        adresse: daten.teamCa.adresse,
+      });
+      daten.sync = {
+        adresse: info.adresse,
+        geraetName: info.geraet_name,
+        ausweisPem: info.ausweis_pem,
+        letzterAbgleich: null,
+      };
+      await tresorSpeichern();
+      return info;
+    } catch (e) {
+      alert("Das Gerät konnte nicht eingerichtet werden.\n" + e);
+      return null;
+    }
   }
 
   // Liefert (und erstellt bei Bedarf) den Antrag-Status-Eintrag einer
@@ -858,9 +941,14 @@
       {:else if bereich === "teamsync"}
         <TeamSync
           sync={daten.sync}
+          teamCa={daten.teamCa}
           laden={zugangspaketLaden}
           testen={syncVerbindungTesten}
           entfernen={zugangspaketEntfernen}
+          caErstellen={teamCaErstellen}
+          caExportieren={teamCaExportieren}
+          paketErstellen={geraetPaketErstellen}
+          geraetEinrichten={diesesGeraetEinrichten}
         />
       {:else if !aktivesProjekt}
         <div class="leer-projekt">

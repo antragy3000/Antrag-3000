@@ -33,6 +33,10 @@ pub fn run() {
             sync::sync_health,
             sync::sync_get_board,
             sync::sync_put_board,
+            sync::team_ca_erstellen,
+            sync::geraet_paket_speichern,
+            sync::geraet_paket_direkt,
+            sync::team_ca_cert_exportieren,
             excel::kfp_excel_schreiben,
             backup::tresor_backup_erstellen,
             backup::tresor_backup_einspielen
