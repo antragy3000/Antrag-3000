@@ -111,6 +111,19 @@ fn client_mit_ausweis(ausweis_pem: &str, ca_pem: &str) -> Result<reqwest::Client
         .map_err(|e| format!("Verbindungs-Client nicht erstellbar: {e}"))
 }
 
+/// Hängt die Ursachen-Kette eines Fehlers an (reqwest versteckt den
+/// eigentlichen TLS-Grund in der `source`).
+fn fehler_kette(e: &(dyn std::error::Error)) -> String {
+    let mut s = e.to_string();
+    let mut cur = e.source();
+    while let Some(inner) = cur {
+        s.push_str(" → ");
+        s.push_str(&inner.to_string());
+        cur = inner.source();
+    }
+    s
+}
+
 fn basis_url(adresse: &str) -> String {
     let a = adresse.trim().trim_end_matches('/');
     if a.starts_with("http://") || a.starts_with("https://") {
@@ -129,7 +142,7 @@ pub async fn sync_health(adresse: String, ausweis_pem: String, ca_pem: String) -
         .get(&url)
         .send()
         .await
-        .map_err(|e| format!("Nicht erreichbar: {e}"))?;
+        .map_err(|e| format!("Nicht erreichbar: {}", fehler_kette(&e)))?;
     Ok(r.status().is_success())
 }
 
