@@ -18,8 +18,10 @@ services:
   caddy:
     image: caddy:2.8-alpine
     restart: unless-stopped
+    # Host-Port 8443 statt 443: Auf der Synology belegt DSM selbst den
+    # Port 443. Die App spricht die NAS daher unter ...:8443 an.
     ports:
-      - "443:443"
+      - "8443:443"
     volumes:
       - ./Caddyfile.tailscale:/etc/caddy/Caddyfile:ro
       - ./ca/team-ca.crt:/etc/caddy/ca/team-ca.crt:ro

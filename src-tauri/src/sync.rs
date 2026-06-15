@@ -367,6 +367,11 @@ pub fn server_zertifikat_speichern(
     if host.is_empty() {
         return Err("Bitte eine NAS-Adresse angeben.".into());
     }
+    // Port fuer den SAN entfernen – Zertifikate enthalten keinen Port.
+    let host = match host.rsplit_once(':') {
+        Some((h, p)) if !p.is_empty() && p.chars().all(|c| c.is_ascii_digit()) => h.to_string(),
+        _ => host,
+    };
 
     let ca_key = rcgen::KeyPair::from_pem(&ca_key_pem)
         .map_err(|e| format!("CA-Schluessel ungueltig: {e}"))?;
