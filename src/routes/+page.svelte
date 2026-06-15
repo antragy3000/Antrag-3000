@@ -1235,7 +1235,6 @@
         </button>
       </nav>
       <div class="rechts">
-        <button class="leise" onclick={() => (katalogOffen = true)}>🗂 Förder-Datenbank</button>
         <button class="leise" onclick={() => (sicherungOffen = true)}>🛡 Sicherung</button>
         <button class="leise" onclick={sperren}>Sperren</button>
       </div>
@@ -1245,6 +1244,7 @@
         <Foerderungen
           merkliste={aktivesProjekt?.merkliste ?? null}
           umschalten={merklisteUmschalten}
+          oeffneKatalog={() => (katalogOffen = true)}
         />
       {:else if bereich === "stammdaten"}
         <Stammdaten stammdaten={daten.stammdaten} speichern={stammdatenSpeichern} />
@@ -1295,6 +1295,7 @@
             speichern={fragebogenSpeichern}
             merkliste={aktivesProjekt.merkliste}
             umschalten={merklisteUmschalten}
+            oeffneKatalog={() => (katalogOffen = true)}
           />
         {/key}
       {:else if bereich === "formular"}
@@ -1349,6 +1350,7 @@
           {antragHolen}
           antragSpeichern={tresorSpeichern}
           eigeneAnlegen={eigeneFoerderungAnlegen}
+          oeffneKatalog={() => (katalogOffen = true)}
         />
       {/if}
     </main>

@@ -9,7 +9,7 @@
   import FoerderKarte from "./FoerderKarte.svelte";
   import FoerderDetail from "./FoerderDetail.svelte";
 
-  let { antworten = null, speichern, merkliste = [], umschalten = null } = $props();
+  let { antworten = null, speichern, merkliste = [], umschalten = null, oeffneKatalog = null } = $props();
 
   let bearbeiten = $state(false);
   let ausgewaehlt = $state(null);
@@ -37,9 +37,14 @@
         Passende Förderungen
         <span class="anzahl">{ergebnis.passende.length}</span>
       </h2>
-      <button class="leise" onclick={() => (bearbeiten = true)}>
-        Fragebogen ändern
-      </button>
+      <div class="kopf-knoepfe">
+        {#if oeffneKatalog}
+          <button class="db-knopf" onclick={oeffneKatalog}>🗂 Förder-Datenbank</button>
+        {/if}
+        <button class="leise" onclick={() => (bearbeiten = true)}>
+          Fragebogen ändern
+        </button>
+      </div>
     </div>
 
     <div class="raster">
@@ -149,5 +154,25 @@
   .leise:hover {
     color: #172b4d;
     text-decoration: underline;
+  }
+  .kopf-knoepfe {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .db-knopf {
+    background: #f1f2f4;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 11px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #44546f;
+    cursor: pointer;
+  }
+  .db-knopf:hover {
+    background: #e4e7ec;
+    color: #172b4d;
   }
 </style>

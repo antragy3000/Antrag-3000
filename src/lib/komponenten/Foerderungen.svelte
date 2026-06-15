@@ -10,7 +10,7 @@
   let foerderungen = $derived(katalog.daten.foerderungen);
 
   // merkliste = null bedeutet: kein aktives Projekt, Sterne ausblenden.
-  let { merkliste = null, umschalten = null } = $props();
+  let { merkliste = null, umschalten = null, oeffneKatalog = null } = $props();
 
   let suche = $state("");
   let ausgewaehlt = $state(null);
@@ -45,6 +45,9 @@
   <p class="datenstand">
     Beispieldaten, Stand {new Date(katalog.daten.stand).toLocaleDateString("de-DE")} –
     vor Antragstellung immer beim Fördergeber prüfen.
+    {#if oeffneKatalog}
+      <button class="db-knopf" onclick={oeffneKatalog}>🗂 Förder-Datenbank</button>
+    {/if}
   </p>
 
   <div class="raster">
@@ -116,6 +119,22 @@
     color: #8590a2;
     font-size: 0.8rem;
     margin: 10px 0 24px;
+  }
+  .db-knopf {
+    margin-left: 8px;
+    background: #f1f2f4;
+    border: none;
+    border-radius: 6px;
+    padding: 3px 9px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #44546f;
+    cursor: pointer;
+  }
+  .db-knopf:hover {
+    background: #e4e7ec;
+    color: #172b4d;
   }
 
   .raster {

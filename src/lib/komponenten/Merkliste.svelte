@@ -29,6 +29,7 @@
     antragHolen = null,
     antragSpeichern = null,
     eigeneAnlegen = null,
+    oeffneKatalog = null,
   } = $props();
 
   let ausgewaehlt = $state(null);
@@ -135,6 +136,11 @@
   <div class="kopfzeile">
     <h2>Merkliste <span class="anzahl">{gemerkte.length}</span></h2>
     <div class="kopf-knoepfe">
+      {#if oeffneKatalog}
+        <button class="ordner" onclick={oeffneKatalog}>
+          🗂 Förder-Datenbank
+        </button>
+      {/if}
       {#if eigeneAnlegen}
         <button class="ordner" onclick={() => (eigeneOffen = true)}>
           + Eigene Förderung
