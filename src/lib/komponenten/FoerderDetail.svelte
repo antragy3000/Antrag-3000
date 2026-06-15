@@ -18,6 +18,7 @@
     antrag = null,
     antragAendern = null,
     stand = null,
+    neu = false,
   } = $props();
 
   function nameVon(id) {
@@ -32,6 +33,9 @@
       <div>
         <span class="land land-{f.land}">{LAENDER[f.land] ?? f.land}</span>
         <h3>{f.name}</h3>
+        {#if neu}
+          <span class="herkunft neu">NEU</span>
+        {/if}
         {#if f.nichtMehrImKatalog}
           <span class="herkunft weg">⚠ nicht mehr im Katalog</span>
         {:else if f.eigen}
@@ -167,6 +171,13 @@
   }
   .herkunft.selbst { background: #eef1ff; color: #3b4fb0; }
   .herkunft.weg { background: #ffeceb; color: #ae2e24; }
+  .herkunft.neu {
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    background: #e9f0ff;
+    color: #2b46c4;
+    border: 1px solid #b9c7f7;
+  }
   .stand {
     margin: 4px 0 0;
     font-size: 0.78rem;

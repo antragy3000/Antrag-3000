@@ -263,7 +263,7 @@
                 <span class="herkunft selbst">✎ selbst eingetragen</span>
               {/if}
               {#if aktualisierteIds.includes(f.id)}
-                <span class="herkunft akt">✦ aktualisiert</span>
+                <span class="herkunft akt">NEU</span>
               {/if}
             </div>
 
@@ -345,6 +345,7 @@
     antrag={aktuellerAntrag}
     antragAendern={antragSpeichern}
     stand={standFuer ? standFuer(ausgewaehlt.id) : null}
+    neu={aktualisierteIds.includes(ausgewaehlt.id)}
     schliessen={() => {
       ausgewaehlt = null;
       aktuellerAntrag = null;

@@ -1348,6 +1348,7 @@
           umschalten={merklisteUmschalten}
           oeffneKatalog={() => (katalogOffen = true)}
           standFuer={katalogStandFuer}
+          aktualisierteIds={aktivesProjekt?.katalogAktualisiert ?? []}
         />
       {:else if bereich === "stammdaten"}
         <div class="konto-seite">
@@ -1405,6 +1406,7 @@
             umschalten={merklisteUmschalten}
             oeffneKatalog={() => (katalogOffen = true)}
             standFuer={katalogStandFuer}
+            aktualisierteIds={aktivesProjekt.katalogAktualisiert ?? []}
           />
         {/key}
       {:else if bereich === "formular"}

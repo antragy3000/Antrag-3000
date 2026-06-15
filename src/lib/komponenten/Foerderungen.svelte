@@ -10,7 +10,7 @@
   let foerderungen = $derived(katalog.daten.foerderungen);
 
   // merkliste = null bedeutet: kein aktives Projekt, Sterne ausblenden.
-  let { merkliste = null, umschalten = null, oeffneKatalog = null, standFuer = null } = $props();
+  let { merkliste = null, umschalten = null, oeffneKatalog = null, standFuer = null, aktualisierteIds = [] } = $props();
 
   let suche = $state("");
   let ausgewaehlt = $state(null);
@@ -58,6 +58,7 @@
         merken={merkliste ? umschalten : null}
         auswaehlen={(x) => (ausgewaehlt = x)}
         stand={standFuer ? standFuer(f.id) : null}
+        neu={aktualisierteIds.includes(f.id)}
       />
     {:else}
       <p class="leer">Keine Förderung passt zu deiner Suche.</p>
@@ -74,6 +75,7 @@
     umschalten={merkliste ? umschalten : null}
     schliessen={() => (ausgewaehlt = null)}
     stand={standFuer ? standFuer(ausgewaehlt.id) : null}
+    neu={aktualisierteIds.includes(ausgewaehlt.id)}
   />
 {/if}
 
