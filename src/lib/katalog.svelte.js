@@ -11,11 +11,21 @@
 import standard from "./daten/foerderungen.json";
 
 // Reaktiver Container. `daten` ist die aktive Katalog-Fassung,
-// `quelle` zeigt, woher sie stammt ("standard" oder "datei").
+// `quelle` zeigt, woher sie stammt ("standard"/"datei"/"server").
+// `geteilt` sind die vom TEAM geteilten eigenen Förderer (Etappe 3
+// Teil 2b) in Katalog-Form, jeweils mit `geteilt: true` markiert. Sie
+// liegen bewusst getrennt von `daten`, damit Katalog-Updates/Diffs sie
+// nicht berühren.
 export const katalog = $state({
   daten: standard,
   quelle: "standard",
+  geteilt: [],
 });
+
+/// Setzt die vom Team geteilten Förderer (Katalog-Form, `geteilt: true`).
+export function setzeGeteilteFoerderer(liste) {
+  katalog.geteilt = Array.isArray(liste) ? liste : [];
+}
 
 /// Die mitgelieferte Standard-Fassung (Werkszustand).
 export function standardKatalog() {

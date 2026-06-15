@@ -268,6 +268,8 @@
                 <span class="herkunft weg">⚠ nicht mehr im Katalog</span>
               {:else if f.eigen}
                 <span class="herkunft selbst">✎ selbst eingetragen</span>
+              {:else if f.geteilt}
+                <span class="herkunft geteilt">👥 vom Team geteilt</span>
               {/if}
               {#if aktualisierteIds.includes(f.id)}
                 <span class="herkunft akt">✦ aktualisiert</span>
@@ -709,6 +711,7 @@
     border-radius: 99px;
   }
   .herkunft.selbst { background: #eef1ff; color: #3b4fb0; }
+  .herkunft.geteilt { background: #e6f4ff; color: #0c5a8f; }
   .herkunft.akt {
     font-size: 0.76rem;
     font-weight: 700;

@@ -11,13 +11,13 @@
   import KostenPlan from "$lib/komponenten/KostenPlan.svelte";
   import Sicherung from "$lib/komponenten/Sicherung.svelte";
   import TeamSync from "$lib/komponenten/TeamSync.svelte";
-  import { katalog, setzeKatalog, setzeStandardKatalog, standardKatalog, pruefeKatalog, vergleicheKataloge, geaenderteFelder } from "$lib/katalog.svelte.js";
+  import { katalog, setzeKatalog, setzeStandardKatalog, standardKatalog, pruefeKatalog, vergleicheKataloge, geaenderteFelder, setzeGeteilteFoerderer } from "$lib/katalog.svelte.js";
   import KatalogUpdate from "$lib/komponenten/KatalogUpdate.svelte";
   import { leeresFormular, formularWordBauen } from "$lib/antrag";
   import { antragsPdfBauen } from "$lib/antragsPdf";
   import { leererKfp, kfpExport } from "$lib/kfp";
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
-  import { boardAusTresor } from "$lib/sync";
+  import { boardAusTresor, geteilteFoerdererAusTresor } from "$lib/sync";
 
   // Die App kennt fünf Ansichten:
   // laden -> einrichten (kein Tresor) ODER entsperren (Tresor da)
@@ -48,15 +48,61 @@
   let sicherungOffen = $state(false);
   let katalogOffen = $state(false);
 
-  // Datenbank-Förderungen plus die eigenen Förderungen des aktiven
-  // Projekts – diese Liste löst überall die IDs auf.
+  // Datenbank-Förderungen, die vom Team geteilten eigenen Förderer und
+  // die eigenen Förderungen des aktiven Projekts – diese Liste löst
+  // überall die IDs auf.
   let alleFoerderungen = $derived([
     ...katalog.daten.foerderungen,
+    ...katalog.geteilt,
     ...(aktivesProjekt?.eigeneFoerderungen ?? []),
     // Ehemalige Katalog-Förderungen, die ein Update entfernt hat, die du
     // aber noch gemerkt hast – bleiben als „nicht mehr im Katalog" sichtbar.
     ...(aktivesProjekt?.katalogGhosts ?? []),
   ]);
+
+  // Wandelt die vom Server geholten geteilten Förderer in Katalog-Form um
+  // (markiert mit `geteilt: true`). Robust gegen fehlende Felder, damit
+  // ein unvollständiger Datensatz die Anzeige nicht zerlegt.
+  function teamFoerdererZuKatalog(roh) {
+    return (roh ?? []).map((r) => {
+      const i = r.inhalt ?? {};
+      const hk = i.harte_kriterien ?? {};
+      const wk = i.weiche_kriterien ?? {};
+      return {
+        id: r.id,
+        geteilt: true,
+        name: i.name || "(ohne Name)",
+        foerdergeber: i.foerdergeber ?? "",
+        land: i.land ?? "ANDERES",
+        beschreibung: "", // bewusst leer – bleibt lokal beim Ersteller
+        webseite: i.webseite ?? "",
+        foerderhoehe_text: i.foerderhoehe_text || "—",
+        fristen: Array.isArray(i.fristen) ? i.fristen : [],
+        unvertraeglich_mit: Array.isArray(i.unvertraeglich_mit) ? i.unvertraeglich_mit : [],
+        checkliste_vorschlag: Array.isArray(i.checkliste_vorschlag) ? i.checkliste_vorschlag : [],
+        harte_kriterien: {
+          wohnsitz: Array.isArray(hk.wohnsitz) ? hk.wohnsitz : [],
+          durchfuehrungsort: Array.isArray(hk.durchfuehrungsort) ? hk.durchfuehrungsort : [],
+          traegerschaft: Array.isArray(hk.traegerschaft) ? hk.traegerschaft : [],
+          studentisch_erlaubt: hk.studentisch_erlaubt ?? true,
+        },
+        weiche_kriterien: {
+          sparten: Array.isArray(wk.sparten) ? wk.sparten : [],
+          projektarten: Array.isArray(wk.projektarten) ? wk.projektarten : [],
+          budget_min: wk.budget_min ?? null,
+          budget_max: wk.budget_max ?? null,
+          waehrung: wk.waehrung ?? "EUR",
+          zeitpunkt: wk.zeitpunkt ?? "fristen",
+        },
+      };
+    });
+  }
+
+  // Hält den Katalog-Store mit den geteilten Team-Förderern synchron,
+  // sobald der Sync neue holt (oder beim Entsperren aus dem Tresor).
+  $effect(() => {
+    setzeGeteilteFoerderer(teamFoerdererZuKatalog(daten?.sync?.teamFoerderer));
+  });
 
   // Eindeutige Kennung für neue Projekte.
   function neueId() {
@@ -830,6 +876,64 @@
       }
     }
 
+    // 5. Eigene Förderer teilen (nur öffentliche Felder; Quelle ist
+    //    allein geteilteFoerdererAusTresor – die Beschreibung bleibt lokal).
+    const geteilt = geteilteFoerdererAusTresor($state.snapshot(daten));
+    const gesendetF = { ...(daten.sync.gesendetFoerderer ?? {}) };
+    const aktuelleFIds = new Set(geteilt.foerderer.map((f) => f.id));
+
+    // 5a. Zurückziehen: früher geteilte, die es lokal nicht mehr gibt.
+    for (const id of Object.keys(gesendetF)) {
+      if (aktuelleFIds.has(id)) continue;
+      try {
+        await invoke("sync_foerderer_loeschen", { adresse, ausweisPem, caPem, foerdererId: id });
+        delete gesendetF[id];
+        protZeilen.push({ projektId: `Förderer zurückgezogen: ${id}`, aktion: "gelöscht", bytes: 0, body: null });
+        geaendert = true;
+      } catch (e) { /* nächster Takt erneut */ }
+    }
+
+    // 5b. Teilen – nur, wenn sich die öffentliche Sicht geändert hat.
+    for (const f of geteilt.foerderer) {
+      const js = JSON.stringify(f.inhalt);
+      if (gesendetF[f.id] === js) continue;
+      const body = JSON.stringify({ inhalt: f.inhalt });
+      try {
+        await invoke("sync_foerderer_senden", {
+          adresse, ausweisPem, caPem, foerdererId: f.id, bodyJson: body,
+        });
+        gesendetF[f.id] = js;
+        geaendert = true;
+        protZeilen.push({
+          projektId: `Förderer geteilt: ${f.inhalt.name || f.id}`,
+          aktion: "gesendet", bytes: body.length, body,
+        });
+      } catch (e) {
+        protZeilen.push({
+          projektId: `Förderer: ${f.inhalt.name || f.id}`,
+          aktion: `nicht geteilt (${e})`, bytes: 0, body: null,
+        });
+      }
+    }
+    if (JSON.stringify(daten.sync.gesendetFoerderer ?? {}) !== JSON.stringify(gesendetF)) {
+      daten.sync.gesendetFoerderer = gesendetF;
+      geaendert = true;
+    }
+
+    // 6. Team-Förderer holen. Eigene (lokal vorhandene) ids ausschließen,
+    //    damit man sich nicht selbst doppelt im Katalog sieht.
+    const foerdererText = await invoke("sync_foerderer_holen", { adresse, ausweisPem, caPem });
+    const serverFoerderer = JSON.parse(foerdererText);
+    const eigeneIds = new Set();
+    for (const p of daten.projekte) {
+      for (const e of p.eigeneFoerderungen ?? []) eigeneIds.add(e.id);
+    }
+    const fremde = serverFoerderer.filter((r) => !eigeneIds.has(r.id));
+    if (JSON.stringify(daten.sync.teamFoerderer ?? null) !== JSON.stringify(fremde)) {
+      daten.sync.teamFoerderer = fremde;
+      geaendert = true;
+    }
+
     // Nur protokollieren, wenn etwas gesendet/gelöscht wurde (kein Spam
     // bei reinen Abfrage-Takten).
     if (protZeilen.length > 0) {
@@ -895,12 +999,19 @@
 
   // --- Etappe 5: Trockenlauf / Transparenz ---
   // Baut die EXAKTEN Sende-Körper, die der echte Sync hochladen würde –
-  // ohne irgendetwas zu senden. Quelle ist allein boardAusTresor().
+  // ohne irgendetwas zu senden. Quellen sind allein boardAusTresor() und
+  // geteilteFoerdererAusTresor() (dieselben Stellen wie im echten Sync).
   function trockenlaufKoerper() {
-    const board = boardAusTresor($state.snapshot(daten ?? {}));
-    return board.projekte.map((p) =>
+    const schnapp = $state.snapshot(daten ?? {});
+    const board = boardAusTresor(schnapp);
+    const projektKoerper = board.projekte.map((p) =>
       JSON.stringify({ inhalt: p, basis_version: null }, null, 2),
     );
+    const geteilt = geteilteFoerdererAusTresor(schnapp);
+    const foerdererKoerper = geteilt.foerderer.map((f) =>
+      JSON.stringify({ inhalt: f.inhalt }, null, 2),
+    );
+    return [...projektKoerper, ...foerdererKoerper];
   }
 
   // Schickt dieselben Körper an einen lokalen Mitschnitt-Server (ohne

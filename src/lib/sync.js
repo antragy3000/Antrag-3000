@@ -103,3 +103,56 @@ export function boardAusTresor(daten) {
   const projekte = (daten?.projekte ?? []).map(projektFuerBoard);
   return { schema: BOARD_SCHEMA_VERSION, projekte };
 }
+
+/// Oeffentliche Projektion EINER eigenen (selbst recherchierten)
+/// Foerderung fuer das Team: NUR Programm-Infos (Name, Geber, Land,
+/// Webseite, Foerderhoehe, Fristen, Kriterien). Die freie BESCHREIBUNG
+/// wird BEWUSST nicht uebernommen – sie bleibt lokal/verschluesselt
+/// (Entscheidung des Nutzers, wie bei der Kontakt-Notiz).
+function eigeneFoerderungOeffentlich(f) {
+  const hk = f.harte_kriterien ?? {};
+  const wk = f.weiche_kriterien ?? {};
+  return {
+    id: f.id,
+    name: (f.name ?? "").trim(),
+    foerdergeber: (f.foerdergeber ?? "").trim(),
+    land: f.land ?? "ANDERES",
+    webseite: (f.webseite ?? "").trim(),
+    foerderhoehe_text: (f.foerderhoehe_text ?? "").trim(),
+    fristen: Array.isArray(f.fristen) ? f.fristen.filter(Boolean) : [],
+    unvertraeglich_mit: Array.isArray(f.unvertraeglich_mit) ? f.unvertraeglich_mit : [],
+    checkliste_vorschlag: Array.isArray(f.checkliste_vorschlag) ? f.checkliste_vorschlag : [],
+    harte_kriterien: {
+      wohnsitz: Array.isArray(hk.wohnsitz) ? hk.wohnsitz : [],
+      durchfuehrungsort: Array.isArray(hk.durchfuehrungsort) ? hk.durchfuehrungsort : [],
+      traegerschaft: Array.isArray(hk.traegerschaft) ? hk.traegerschaft : [],
+      studentisch_erlaubt: hk.studentisch_erlaubt ?? true,
+    },
+    weiche_kriterien: {
+      sparten: Array.isArray(wk.sparten) ? wk.sparten : [],
+      projektarten: Array.isArray(wk.projektarten) ? wk.projektarten : [],
+      budget_min: wk.budget_min ?? null,
+      budget_max: wk.budget_max ?? null,
+      waehrung: wk.waehrung ?? "EUR",
+      zeitpunkt: wk.zeitpunkt ?? "fristen",
+    },
+  };
+}
+
+/// Baut die team-teilbaren EIGENEN Foerderer (oeffentliche Felder) aus
+/// dem Tresor. Wie boardAusTresor die EINZIGE Stelle, an der diese Daten
+/// entstehen – der Waechter-Test prueft auch dieses Paket. Dedupe per id
+/// ueber alle Projekte (dieselbe eigene Foerderung kann mehrfach gemerkt
+/// sein).
+export function geteilteFoerdererAusTresor(daten) {
+  const gesehen = new Set();
+  const foerderer = [];
+  for (const p of daten?.projekte ?? []) {
+    for (const f of p.eigeneFoerderungen ?? []) {
+      if (!f || !f.id || gesehen.has(f.id)) continue;
+      gesehen.add(f.id);
+      foerderer.push({ id: f.id, inhalt: eigeneFoerderungOeffentlich(f) });
+    }
+  }
+  return { schema: BOARD_SCHEMA_VERSION, foerderer };
+}

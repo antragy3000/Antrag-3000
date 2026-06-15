@@ -43,6 +43,8 @@
           <span class="herkunft weg">⚠ nicht mehr im Katalog</span>
         {:else if f.eigen}
           <span class="herkunft selbst">✎ selbst eingetragen</span>
+        {:else if f.geteilt}
+          <span class="herkunft geteilt">👥 vom Team geteilt</span>
         {/if}
         <p class="geber">{f.foerdergeber}{#if neu("foerdergeber")}<span class="neu-feld">NEU</span>{/if}</p>
         {#if stand}<p class="stand">zuletzt aktualisiert: {stand}</p>{/if}
@@ -180,6 +182,7 @@
     border-radius: 99px;
   }
   .herkunft.selbst { background: #eef1ff; color: #3b4fb0; }
+  .herkunft.geteilt { background: #e6f4ff; color: #0c5a8f; }
   .herkunft.weg { background: #ffeceb; color: #ae2e24; }
   .neu-feld {
     display: inline-block;

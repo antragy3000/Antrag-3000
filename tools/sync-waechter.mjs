@@ -10,7 +10,7 @@
 // Ausführen:  npm run waechter   (oder: node tools/sync-waechter.mjs)
 // ============================================================
 
-import { boardAusTresor } from "../src/lib/sync.js";
+import { boardAusTresor, geteilteFoerdererAusTresor } from "../src/lib/sync.js";
 
 // Unverwechselbare Markierungen für sensible Werte.
 const S = {
@@ -82,7 +82,10 @@ const daten = {
 };
 
 const board = boardAusTresor(daten);
-const json = JSON.stringify(board);
+// Auch das Paket der team-geteilten EIGENEN Foerderer wird geprueft –
+// die freie Beschreibung (S.eigenBeschr) darf darin NICHT auftauchen.
+const geteilt = geteilteFoerdererAusTresor(daten);
+const json = JSON.stringify(board) + "\n" + JSON.stringify(geteilt);
 const jsonKlein = json.toLowerCase();
 
 let leck = false;
@@ -120,6 +123,7 @@ if (leck) {
 
 console.log("✓ Wächter OK: keine sensiblen Werte und keine verbotenen Felder im Sende-Paket.");
 console.log("  (Die erwarteten unkritischen Board-Daten sind enthalten.)\n");
-console.log("Zur Kontrolle – so sieht das Sende-Paket aus:\n");
-console.log(JSON.stringify(board, null, 2));
+console.log("Zur Kontrolle – so sehen die Sende-Pakete aus:\n");
+console.log("Board:\n" + JSON.stringify(board, null, 2));
+console.log("\nGeteilte eigene Förderer (ohne Beschreibung):\n" + JSON.stringify(geteilt, null, 2));
 process.exit(0);

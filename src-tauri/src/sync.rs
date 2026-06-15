@@ -283,6 +283,71 @@ pub async fn sync_meldung_senden(
     Ok(())
 }
 
+/// Holt die vom Team geteilten eigenen Förderer (mTLS GET
+/// /api/foerderer). Gibt die rohe JSON-Liste zurück; das Frontend
+/// wandelt sie in Katalog-Form um.
+#[tauri::command]
+pub async fn sync_foerderer_holen(adresse: String, ausweis_pem: String, ca_pem: String) -> Result<String, String> {
+    let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
+    let url = format!("{}/api/foerderer", basis_url(&adresse));
+    let r = client.get(&url).send().await.map_err(|e| format!("Abruf fehlgeschlagen: {e}"))?;
+    if !r.status().is_success() {
+        return Err(format!("Server antwortete mit {}", r.status()));
+    }
+    r.text().await.map_err(|e| format!("Antwort nicht lesbar: {e}"))
+}
+
+/// Teilt/aktualisiert EINEN eigenen Förderer (mTLS PUT
+/// /api/foerderer/{id}). Der Body (nur öffentliche Felder) wird vom
+/// Frontend gebaut; Upsert per id auf dem Server.
+#[tauri::command]
+pub async fn sync_foerderer_senden(
+    adresse: String,
+    ausweis_pem: String,
+    ca_pem: String,
+    foerderer_id: String,
+    body_json: String,
+) -> Result<(), String> {
+    let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
+    let url = format!("{}/api/foerderer/{}", basis_url(&adresse), foerderer_id);
+    let r = client
+        .put(&url)
+        .header("content-type", "application/json")
+        .body(body_json)
+        .send()
+        .await
+        .map_err(|e| format!("Senden fehlgeschlagen: {}", fehler_kette(&e)))?;
+    if r.status().as_u16() == 429 {
+        return Err("Zu viele Anfragen – wird später erneut versucht.".into());
+    }
+    if !r.status().is_success() {
+        return Err(format!("Server antwortete mit {}", r.status()));
+    }
+    Ok(())
+}
+
+/// Zieht einen geteilten eigenen Förderer zurück (mTLS DELETE
+/// /api/foerderer/{id}).
+#[tauri::command]
+pub async fn sync_foerderer_loeschen(
+    adresse: String,
+    ausweis_pem: String,
+    ca_pem: String,
+    foerderer_id: String,
+) -> Result<(), String> {
+    let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
+    let url = format!("{}/api/foerderer/{}", basis_url(&adresse), foerderer_id);
+    let r = client
+        .delete(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Loeschen fehlgeschlagen: {e}"))?;
+    if !r.status().is_success() {
+        return Err(format!("Server antwortete mit {}", r.status()));
+    }
+    Ok(())
+}
+
 // --- Zertifikate erzeugen (Admin / Verwalter:in), reines Rust ----------
 
 #[derive(Serialize)]

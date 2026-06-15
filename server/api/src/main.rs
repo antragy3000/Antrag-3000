@@ -57,6 +57,10 @@ const TEMPO_FENSTER_S: u64 = 60;
 const TEMPO_MAX: usize = 30;
 /// Höchstzahl OFFENER Meldungen je Gerät (Kontingent).
 const MELDUNG_QUOTA: i64 = 50;
+/// Höchstzahl geteilter eigener Förderer je Gerät (Kontingent).
+const FOERDERER_QUOTA: i64 = 100;
+/// Größenlimit für einen geteilten Förderer-Datensatz (JSON, Bytes).
+const FOERDERER_MAX_BYTES: usize = 8192;
 /// Längenlimit für kurze Felder (id, Name, Art).
 const FELD_MAX: usize = 200;
 /// Längenlimit für die freie Anmerkung einer Meldung.
@@ -102,6 +106,8 @@ async fn main() {
         .route("/api/katalog", get(katalog_lesen))
         .route("/api/katalog/version", get(katalog_version))
         .route("/api/meldung/:meldung_id", put(meldung_schreiben))
+        .route("/api/foerderer", get(foerderer_lesen))
+        .route("/api/foerderer/:foerderer_id", put(foerderer_schreiben).delete(foerderer_loeschen))
         .with_state(AppState {
             pool,
             schreib: Arc::new(Mutex::new(HashMap::new())),
@@ -166,6 +172,17 @@ async fn schema_anlegen(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             text TEXT,
             status TEXT NOT NULL DEFAULT 'offen',
             erstellt_am TEXT NOT NULL DEFAULT (datetime('now')),
+            geaendert_am TEXT NOT NULL DEFAULT (datetime('now')),
+            PRIMARY KEY (konto_id, id)
+        )",
+        // Vom Team geteilte EIGENE Förderer (öffentliche Felder; die freie
+        // Beschreibung bleibt lokal beim Ersteller). Upsert per (konto_id,
+        // id); geraet_id zeigt, wer ihn beigetragen hat.
+        "CREATE TABLE IF NOT EXISTS geteilte_foerderung (
+            id TEXT NOT NULL,
+            konto_id INTEGER NOT NULL REFERENCES konto(id),
+            geraet_id INTEGER NOT NULL REFERENCES geraet(id),
+            inhalt_json TEXT NOT NULL,
             geaendert_am TEXT NOT NULL DEFAULT (datetime('now')),
             PRIMARY KEY (konto_id, id)
         )",
@@ -523,5 +540,142 @@ async fn meldung_schreiben(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
+    Ok(StatusCode::NO_CONTENT)
+}
+
+// ============================================================
+// Geteilte eigene Förderer (Phase 3 / Etappe 3 Teil 2b): das Team teilt
+// die ÖFFENTLICHEN Felder selbst recherchierter Förderer. Die freie
+// Beschreibung bleibt lokal (Client sendet sie gar nicht erst). Auch hier
+// greift der serverseitige Spam-Schutz.
+// ============================================================
+
+#[derive(Serialize)]
+struct GeteilteFoerderung {
+    id: String,
+    geraet_id: i64,
+    inhalt: serde_json::Value,
+    geaendert_am: String,
+}
+
+/// Alle geteilten Förderer des Kontos (GET /api/foerderer).
+async fn foerderer_lesen(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<GeteilteFoerderung>>, StatusCode> {
+    let (konto_id, _) = konto_und_geraet(&st.pool, &headers).await?;
+    let rows = sqlx::query_as::<_, (String, i64, String, String)>(
+        "SELECT id, geraet_id, inhalt_json, geaendert_am
+         FROM geteilte_foerderung WHERE konto_id = ? ORDER BY geaendert_am DESC",
+    )
+    .bind(konto_id)
+    .fetch_all(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let liste = rows
+        .into_iter()
+        .map(|(id, geraet_id, json, geaendert_am)| GeteilteFoerderung {
+            id,
+            geraet_id,
+            inhalt: serde_json::from_str(&json).unwrap_or(serde_json::Value::Null),
+            geaendert_am,
+        })
+        .collect();
+    Ok(Json(liste))
+}
+
+#[derive(Deserialize)]
+struct FoerdererBody {
+    inhalt: serde_json::Value,
+}
+
+/// Einen eigenen Förderer teilen/aktualisieren (PUT /api/foerderer/{id}).
+/// Upsert per id; nur das eigene Gerät darf seinen Eintrag ändern.
+/// Antworten wie bei Meldungen (429/413/403/400).
+async fn foerderer_schreiben(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    Path(foerderer_id): Path<String>,
+    Json(body): Json<FoerdererBody>,
+) -> Result<StatusCode, StatusCode> {
+    let (konto_id, geraet_id) = konto_und_geraet(&st.pool, &headers).await?;
+
+    if !tempo_ok(&st, geraet_id) {
+        return Err(StatusCode::TOO_MANY_REQUESTS);
+    }
+
+    let inhalt_str = serde_json::to_string(&body.inhalt).map_err(|_| StatusCode::BAD_REQUEST)?;
+    if foerderer_id.len() > FELD_MAX || inhalt_str.len() > FOERDERER_MAX_BYTES {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+
+    // Kontingent: Zahl der geteilten Förderer dieses Geräts begrenzen
+    // (Upsert der gleichen id zählt nicht mit).
+    let anzahl: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM geteilte_foerderung WHERE geraet_id = ? AND id <> ?",
+    )
+    .bind(geraet_id)
+    .bind(&foerderer_id)
+    .fetch_one(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if anzahl >= FOERDERER_QUOTA {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    // Upsert nur auf den EIGENEN Eintrag: Ein anderes Gerät darf einen
+    // fremden Datensatz nicht überschreiben (geraet_id im WHERE der
+    // Update-Klausel ist über das ON CONFLICT nicht möglich; daher prüfen
+    // wir vorher, ob die id schon einem anderen Gerät gehört).
+    if let Some(besitzer) = sqlx::query_scalar::<_, i64>(
+        "SELECT geraet_id FROM geteilte_foerderung WHERE konto_id = ? AND id = ?",
+    )
+    .bind(konto_id)
+    .bind(&foerderer_id)
+    .fetch_optional(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+    {
+        if besitzer != geraet_id {
+            return Err(StatusCode::FORBIDDEN);
+        }
+    }
+
+    sqlx::query(
+        "INSERT INTO geteilte_foerderung (id, konto_id, geraet_id, inhalt_json, geaendert_am)
+         VALUES (?, ?, ?, ?, datetime('now'))
+         ON CONFLICT(konto_id, id) DO UPDATE SET
+            inhalt_json = excluded.inhalt_json,
+            geaendert_am = excluded.geaendert_am",
+    )
+    .bind(&foerderer_id)
+    .bind(konto_id)
+    .bind(geraet_id)
+    .bind(&inhalt_str)
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Einen eigenen geteilten Förderer zurückziehen (DELETE
+/// /api/foerderer/{id}). Nur das eigene Gerät darf löschen.
+async fn foerderer_loeschen(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    Path(foerderer_id): Path<String>,
+) -> Result<StatusCode, StatusCode> {
+    let (konto_id, geraet_id) = konto_und_geraet(&st.pool, &headers).await?;
+    sqlx::query(
+        "DELETE FROM geteilte_foerderung WHERE konto_id = ? AND id = ? AND geraet_id = ?",
+    )
+    .bind(konto_id)
+    .bind(&foerderer_id)
+    .bind(geraet_id)
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(StatusCode::NO_CONTENT)
 }
