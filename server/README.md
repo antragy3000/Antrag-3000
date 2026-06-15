@@ -44,9 +44,10 @@ und ein **Abo-Modell** erweitern, ohne das Schema umzubauen.
 - `GET  /api/katalog/version` – nur Stand/Version (schnelle „Gibt's Neues?"-Abfrage).
 
 Jede Anfrage wird über das **Geräte-Zertifikat** dem Team-Konto zugeordnet.
-Der Dienst liest dazu den Header **`Cf-Client-Cert-Der-Base64`** (Cloudflare
-Access, Variante A) **oder** `X-Client-Cert-DER` (Caddy, Variante B) und
-bildet daraus den Fingerabdruck.
+Der Dienst liest dazu **`Cf-Client-Cert-Sha256`** (Cloudflare, per Transform
+Rule – einfachster Weg), **oder** `Cf-Client-Cert-Der-Base64` (Cloudflare),
+**oder** `X-Client-Cert-DER` (Caddy, Variante B) und bildet daraus den
+Fingerabdruck.
 
 ## Lokal übersetzen (zum Prüfen, ohne Docker)
 Im Ordner `api/`:

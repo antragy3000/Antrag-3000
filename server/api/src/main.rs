@@ -124,11 +124,22 @@ async fn schema_anlegen(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
-/// Bildet den Geräte-Fingerabdruck aus dem durchgereichten Client-
-/// Zertifikat (Base64-DER → SHA-256-Hex). Akzeptiert den Cloudflare-
-/// Header `Cf-Client-Cert-Der-Base64` ODER Caddys `X-Client-Cert-DER`.
-/// None, wenn keins da ist.
+/// Bildet den Geräte-Fingerabdruck (SHA-256-Hex des Zertifikats). Drei
+/// Wege werden akzeptiert:
+///  1. `Cf-Client-Cert-Sha256` – fertiger Fingerabdruck von Cloudflare
+///     (per Transform Rule weitergegeben; einfachster Weg).
+///  2. `Cf-Client-Cert-Der-Base64` – das DER-Zertifikat von Cloudflare.
+///  3. `X-Client-Cert-DER` – das DER-Zertifikat von Caddy (DDNS-Variante).
+/// None, wenn nichts Brauchbares da ist.
 fn fingerprint(headers: &HeaderMap) -> Option<String> {
+    // 1. Fertiger SHA-256-Fingerabdruck (Cloudflare).
+    if let Some(fp) = headers.get("cf-client-cert-sha256").and_then(|v| v.to_str().ok()) {
+        let norm = fp.trim().to_lowercase().replace(':', "");
+        if norm.len() == 64 && norm.chars().all(|c| c.is_ascii_hexdigit()) {
+            return Some(norm);
+        }
+    }
+    // 2./3. Sonst das DER-Zertifikat selbst hashen.
     let der_b64 = headers
         .get("cf-client-cert-der-base64")
         .or_else(|| headers.get("x-client-cert-der"))?

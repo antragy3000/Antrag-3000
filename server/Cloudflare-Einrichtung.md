@@ -32,10 +32,15 @@ günstig registrierte Domain), und die kostenlose **Cloudflare Zero Trust**
 3. In der Access-Anwendung eine **Policy** anlegen:
    - Action: **Service Auth** (kein interaktives Login)
    - Include / Require: **Valid Certificate** (das mTLS-Zertifikat von oben)
-4. **Client-Zertifikat an den Ursprung weiterreichen:** In den
-   mTLS-Einstellungen die Weitergabe des Zertifikats aktivieren, damit der
-   Header **`Cf-Client-Cert-Der-Base64`** beim Dienst ankommt. (Der
-   Antrag-3000-Server liest genau diesen Header.)
+4. **Geprüften Fingerabdruck an den Ursprung weiterreichen** (Transform
+   Rule): Cloudflare-Dashboard (Domain `vaultyh.de`) → **Rules → Transform
+   Rules → Modify Request Header → Create rule**:
+   - Wenn **Hostname** gleich `antrag3000.vaultyh.de`
+   - **Set dynamic**: Header-Name **`Cf-Client-Cert-Sha256`**,
+     Wert (Expression) **`cf.tls_client_auth.cert_fingerprint_sha256`**
+   - Deploy. (Der Server liest genau diesen Header und erkennt damit das
+     Gerät. Da Access ohne gültiges Zertifikat ohnehin nichts durchlässt,
+     überschreibt diese Regel jeden gefälschten Wert.)
 
 ## 3. Dienst auf der NAS starten
 Im Ordner `server/` (vorher `.env` mit `TUNNEL_TOKEN` füllen):
