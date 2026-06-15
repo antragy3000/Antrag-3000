@@ -52,6 +52,14 @@ pub fn katalog_speichern(app: tauri::AppHandle, inhalt: String) -> Result<(), St
     Ok(())
 }
 
+/// Liest eine vom Nutzer gewaehlte Kandidaten-Datei (Update zum Pruefen).
+/// Gibt den rohen Text zurueck; Pruefung/Anwendung macht das Frontend.
+/// In Etappe 3 wird diese Datei stattdessen von der NAS geholt.
+#[tauri::command]
+pub fn katalog_kandidat_lesen(pfad: String) -> Result<String, String> {
+    std::fs::read_to_string(&pfad).map_err(|e| format!("Datei nicht lesbar: {e}"))
+}
+
 /// Entfernt den Override -> die App nutzt wieder die mitgelieferte
 /// Standard-Fassung ("Werkszustand").
 #[tauri::command]

@@ -60,6 +60,28 @@ export function setzeStandardKatalog() {
   katalog.quelle = "standard";
 }
 
+/// Vergleicht zwei Förderungs-Listen (alt vs. neu) anhand der id und
+/// liefert die Änderungen für den Hinweis: was ist NEU, GEÄNDERT (gleiche
+/// id, aber anderer Inhalt) oder ENTFERNT. Je Eintrag {id, name}.
+export function vergleicheKataloge(altArr, neuArr) {
+  const alt = new Map((altArr ?? []).map((f) => [f.id, f]));
+  const neuM = new Map((neuArr ?? []).map((f) => [f.id, f]));
+  const neu = [];
+  const geaendert = [];
+  for (const [id, f] of neuM) {
+    if (!alt.has(id)) {
+      neu.push({ id, name: f.name });
+    } else if (JSON.stringify(alt.get(id)) !== JSON.stringify(f)) {
+      geaendert.push({ id, name: f.name });
+    }
+  }
+  const entfernt = [];
+  for (const [id, f] of alt) {
+    if (!neuM.has(id)) entfernt.push({ id, name: f.name });
+  }
+  return { neu, geaendert, entfernt };
+}
+
 // --- Bequeme Lese-Helfer (auch aus reinen .js-Modulen nutzbar) ---
 export function foerderungen() {
   return katalog.daten.foerderungen ?? [];

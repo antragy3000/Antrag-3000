@@ -43,6 +43,7 @@ pub fn run() {
             excel::kfp_excel_schreiben,
             katalog::katalog_laden,
             katalog::katalog_speichern,
+            katalog::katalog_kandidat_lesen,
             katalog::katalog_zuruecksetzen,
             backup::tresor_backup_erstellen,
             backup::tresor_backup_einspielen

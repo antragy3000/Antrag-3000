@@ -11,7 +11,8 @@
   import KostenPlan from "$lib/komponenten/KostenPlan.svelte";
   import Sicherung from "$lib/komponenten/Sicherung.svelte";
   import TeamSync from "$lib/komponenten/TeamSync.svelte";
-  import { katalog, setzeKatalog, pruefeKatalog } from "$lib/katalog.svelte.js";
+  import { katalog, setzeKatalog, setzeStandardKatalog, pruefeKatalog, vergleicheKataloge } from "$lib/katalog.svelte.js";
+  import KatalogUpdate from "$lib/komponenten/KatalogUpdate.svelte";
   import { leeresFormular, formularWordBauen } from "$lib/antrag";
   import { antragsPdfBauen } from "$lib/antragsPdf";
   import { leererKfp, kfpExport } from "$lib/kfp";
@@ -45,6 +46,7 @@
   let umbenennenOffen = $state(false);
   let umbenennenName = $state("");
   let sicherungOffen = $state(false);
+  let katalogOffen = $state(false);
 
   // Datenbank-Förderungen plus die eigenen Förderungen des aktiven
   // Projekts – diese Liste löst überall die IDs auf.
@@ -96,6 +98,7 @@
       aktivesProjektId: null,
       sync: null,
       teamCa: null,
+      katalogMeldungen: [],
     };
   }
 
@@ -273,6 +276,10 @@
     }
     if (d.teamCa === undefined) {
       d.teamCa = null;
+      veraendert = true;
+    }
+    if (!Array.isArray(d.katalogMeldungen)) {
+      d.katalogMeldungen = [];
       veraendert = true;
     }
     if (d.version !== 2) {
@@ -836,6 +843,79 @@
     return f ? f.name : "Förderung";
   }
 
+  // --- Phase 3 / Etappe 2: Katalog-Update + Melde-Funktion ---
+  // Update aus einer Datei prüfen und (nach Schema-Prüfung) automatisch
+  // übernehmen. Gibt den Vergleich für den Hinweis zurück. In Etappe 3
+  // kommt die Datei stattdessen von der NAS – die Prüf-/Anwende-Logik
+  // bleibt dieselbe.
+  async function katalogUpdateAusDatei() {
+    const pfad = await dateiWaehlen({
+      title: "Förder-Katalog-Update wählen",
+      multiple: false,
+      filters: [{ name: "Katalog (JSON)", extensions: ["json"] }],
+    });
+    if (!pfad) return null;
+    let obj;
+    try {
+      const roh = await invoke("katalog_kandidat_lesen", { pfad });
+      obj = JSON.parse(roh);
+    } catch (e) {
+      return { ok: false, fehler: "Datei nicht lesbar oder kein gültiges JSON." };
+    }
+    const p = pruefeKatalog(obj);
+    if (!p.ok) return { ok: false, fehler: p.fehler };
+
+    const diff = vergleicheKataloge(katalog.daten.foerderungen, obj.foerderungen);
+    try {
+      await invoke("katalog_speichern", { inhalt: JSON.stringify(obj) });
+      setzeKatalog(obj, "datei");
+      return { ok: true, diff, stand: obj.stand };
+    } catch (e) {
+      return { ok: false, fehler: "Konnte nicht gespeichert werden: " + e };
+    }
+  }
+
+  async function katalogZuruecksetzen() {
+    try {
+      await invoke("katalog_zuruecksetzen");
+      setzeStandardKatalog();
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, fehler: String(e) };
+    }
+  }
+
+  // Eine Melde-Warteschlange im Tresor (Versand an den Server kommt mit
+  // der NAS). Client-Schutz: Grund-Pflicht, Längenlimit, keine doppelte
+  // offene Meldung zur selben Förderung + Art.
+  const MELDUNG_MAX = 500;
+  function meldungAnlegen(foerderungId, foerderungName, art, text) {
+    const t = (text ?? "").trim().slice(0, MELDUNG_MAX);
+    if (!foerderungId || !art) return { ok: false, fehler: "Bitte Förderung und Art angeben." };
+    const offen = (daten.katalogMeldungen ?? []).some(
+      (m) => !m.gesendet && m.foerderungId === foerderungId && m.art === art,
+    );
+    if (offen) return { ok: false, fehler: "Dazu gibt es schon eine offene Meldung." };
+    daten.katalogMeldungen = [
+      {
+        id: neueId(),
+        foerderungId,
+        foerderungName: (foerderungName ?? "").trim(),
+        art,
+        text: t,
+        zeit: new Date().toISOString(),
+        gesendet: false,
+      },
+      ...(daten.katalogMeldungen ?? []),
+    ];
+    tresorSpeichern();
+    return { ok: true };
+  }
+  function meldungEntfernen(id) {
+    daten.katalogMeldungen = (daten.katalogMeldungen ?? []).filter((m) => m.id !== id);
+    tresorSpeichern();
+  }
+
   // Liefert (und erstellt bei Bedarf) den Antrag-Status-Eintrag einer
   // gemerkten Förderung. Die Checkliste startet mit den üblichen
   // Unterlagen der Förderung.
@@ -1155,6 +1235,7 @@
         </button>
       </nav>
       <div class="rechts">
+        <button class="leise" onclick={() => (katalogOffen = true)}>🗂 Förder-Datenbank</button>
         <button class="leise" onclick={() => (sicherungOffen = true)}>🛡 Sicherung</button>
         <button class="leise" onclick={sperren}>Sperren</button>
       </div>
@@ -1274,6 +1355,17 @@
 
     {#if sicherungOffen}
       <Sicherung schliessen={() => (sicherungOffen = false)} {nachWiederherstellung} />
+    {/if}
+
+    {#if katalogOffen}
+      <KatalogUpdate
+        schliessen={() => (katalogOffen = false)}
+        updateAusDatei={katalogUpdateAusDatei}
+        zuruecksetzen={katalogZuruecksetzen}
+        meldungen={daten.katalogMeldungen ?? []}
+        {meldungAnlegen}
+        {meldungEntfernen}
+      />
     {/if}
 
     {#if neuesProjektOffen}
