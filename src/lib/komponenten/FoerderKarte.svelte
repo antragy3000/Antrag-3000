@@ -12,6 +12,7 @@
     gemerkt = null,
     merken = null,
     statusBadge = null,
+    stand = null,
   } = $props();
 </script>
 
@@ -78,6 +79,7 @@
     <p class="gruende">{gruende.join(" · ")}</p>
   {/if}
   <p class="frist">{fristText(f)}</p>
+  {#if stand}<p class="stand">aktualisiert: {stand}</p>{/if}
 </div>
 
 <style>
@@ -171,6 +173,11 @@
     margin: 6px 0 0;
     font-size: 0.8rem;
     color: #8590a2;
+  }
+  .stand {
+    margin: 2px 0 0;
+    font-size: 0.72rem;
+    color: #a9b0bd;
   }
   .treffer {
     margin: 4px 0 0;

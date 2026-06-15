@@ -17,6 +17,7 @@
     pdfSpeichern = null,
     antrag = null,
     antragAendern = null,
+    stand = null,
   } = $props();
 
   function nameVon(id) {
@@ -37,6 +38,7 @@
           <span class="herkunft selbst">✎ selbst eingetragen</span>
         {/if}
         <p class="geber">{f.foerdergeber}</p>
+        {#if stand}<p class="stand">zuletzt aktualisiert: {stand}</p>{/if}
       </div>
       <button class="schliessen" onclick={schliessen} aria-label="Schließen">✕</button>
     </header>
@@ -165,6 +167,11 @@
   }
   .herkunft.selbst { background: #eef1ff; color: #3b4fb0; }
   .herkunft.weg { background: #ffeceb; color: #ae2e24; }
+  .stand {
+    margin: 4px 0 0;
+    font-size: 0.78rem;
+    color: #a9b0bd;
+  }
 
   .land {
     display: inline-block;

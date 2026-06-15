@@ -104,6 +104,7 @@
       sync: null,
       teamCa: null,
       katalogMeldungen: [],
+      katalogStand: {},
     };
   }
 
@@ -297,6 +298,10 @@
     }
     if (!Array.isArray(d.katalogMeldungen)) {
       d.katalogMeldungen = [];
+      veraendert = true;
+    }
+    if (!d.katalogStand || typeof d.katalogStand !== "object" || Array.isArray(d.katalogStand)) {
+      d.katalogStand = {};
       veraendert = true;
     }
     if (d.version !== 2) {
@@ -898,12 +903,29 @@
           projekt.katalogAktualisiert = [...bisher];
         }
       }
+      // Pro-Förderung den „zuletzt aktualisiert"-Stand merken (neu + geändert).
+      if (!daten.katalogStand) daten.katalogStand = {};
+      for (const e of [...diff.neu, ...diff.geaendert]) {
+        daten.katalogStand[e.id] = obj.stand;
+      }
       setzeKatalog(obj, "datei");
       await tresorSpeichern();
       return { ok: true, diff, stand: obj.stand };
     } catch (e) {
       return { ok: false, fehler: "Konnte nicht gespeichert werden: " + e };
     }
+  }
+
+  // „Zuletzt aktualisiert"-Datum für eine Förderung (formatiert) oder null.
+  // Bekannter Pro-Eintrag-Stand, sonst der globale Katalog-Stand (nur für
+  // echte Katalog-Einträge; eigene/Ghost-Einträge bekommen keins).
+  function katalogStandFuer(id) {
+    if (!daten) return null;
+    const iso = daten.katalogStand?.[id]
+      ?? (katalog.daten.foerderungen.some((f) => f.id === id) ? katalog.daten.stand : null);
+    if (!iso) return null;
+    const d = new Date(iso);
+    return isNaN(d) ? iso : d.toLocaleDateString("de-CH");
   }
 
   // Den „aktualisiert"-Hinweis des aktiven Projekts wegklicken.
@@ -944,6 +966,7 @@
       await invoke("katalog_zuruecksetzen");
       katalogGhostsAktualisieren(katalog.daten.foerderungen, standardKatalog().foerderungen);
       for (const projekt of daten.projekte ?? []) projekt.katalogAktualisiert = [];
+      daten.katalogStand = {};
       setzeStandardKatalog();
       await tresorSpeichern();
       return { ok: true };
@@ -1327,6 +1350,7 @@
           merkliste={aktivesProjekt?.merkliste ?? null}
           umschalten={merklisteUmschalten}
           oeffneKatalog={() => (katalogOffen = true)}
+          standFuer={katalogStandFuer}
         />
       {:else if bereich === "stammdaten"}
         <Stammdaten stammdaten={daten.stammdaten} speichern={stammdatenSpeichern} />
@@ -1378,6 +1402,7 @@
             merkliste={aktivesProjekt.merkliste}
             umschalten={merklisteUmschalten}
             oeffneKatalog={() => (katalogOffen = true)}
+            standFuer={katalogStandFuer}
           />
         {/key}
       {:else if bereich === "formular"}
@@ -1435,6 +1460,7 @@
           oeffneKatalog={() => (katalogOffen = true)}
           aktualisierteIds={aktivesProjekt.katalogAktualisiert ?? []}
           hinweisVerwerfen={katalogHinweisVerwerfen}
+          standFuer={katalogStandFuer}
         />
       {/if}
     </main>

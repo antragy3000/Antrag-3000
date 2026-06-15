@@ -9,7 +9,7 @@
   import FoerderKarte from "./FoerderKarte.svelte";
   import FoerderDetail from "./FoerderDetail.svelte";
 
-  let { antworten = null, speichern, merkliste = [], umschalten = null, oeffneKatalog = null } = $props();
+  let { antworten = null, speichern, merkliste = [], umschalten = null, oeffneKatalog = null, standFuer = null } = $props();
 
   let bearbeiten = $state(false);
   let ausgewaehlt = $state(null);
@@ -56,6 +56,7 @@
           gemerkt={merkliste.includes(e.foerderung.id)}
           merken={umschalten}
           auswaehlen={(f) => (ausgewaehlt = f)}
+          stand={standFuer ? standFuer(e.foerderung.id) : null}
         />
       {:else}
         <p class="leer">
@@ -82,6 +83,7 @@
             gemerkt={merkliste.includes(e.foerderung.id)}
             merken={umschalten}
             auswaehlen={(f) => (ausgewaehlt = f)}
+            stand={standFuer ? standFuer(e.foerderung.id) : null}
           />
         {/each}
       </div>
@@ -97,6 +99,7 @@
     gemerkt={merkliste.includes(ausgewaehlt.id)}
     umschalten={umschalten}
     schliessen={() => (ausgewaehlt = null)}
+    stand={standFuer ? standFuer(ausgewaehlt.id) : null}
   />
 {/if}
 
