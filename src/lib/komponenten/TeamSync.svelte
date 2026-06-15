@@ -1,6 +1,9 @@
 <script>
+  import { ANTRAG_STATUS, statusLabel, statusFarbe } from "$lib/status";
+
   // Team-Synchronisation (Phase 2):
   //  - Mein Gerät: Zugangs-Paket laden / Verbindung testen.
+  //  - Abgleich: eigene Projekte hochladen + Team-Übersicht holen.
   //  - Verwaltung: Team-CA und Zugangs-Pakete direkt in der App erzeugen
   //    (für die einrichtende Person). Der CA-Schlüssel bleibt verschlüsselt
   //    im Tresor und wird nie angezeigt.
@@ -14,14 +17,44 @@
     caExportieren,
     paketErstellen,
     geraetEinrichten,
+    abgleichen,
+    teamBoard,
+    letzterAbgleich,
+    meineProjektIds = [],
+    foerderungLabel,
   } = $props();
 
   let beschaeftigt = $state(false);
   let status = $state(null);
+  let abgleichStatus = $state(null);
   let verwaltungOffen = $state(false);
   let caAdresse = $state("");
   let neuerGeraetName = $state("");
   let meinGeraetName = $state("");
+
+  function zeitText(iso) {
+    if (!iso) return "noch nie";
+    const d = new Date(iso);
+    if (isNaN(d)) return iso;
+    return d.toLocaleString("de-CH", {
+      day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    });
+  }
+
+  function istMeines(projektId) {
+    return meineProjektIds.includes(projektId);
+  }
+
+  async function abgleichenKlick() {
+    beschaeftigt = true;
+    abgleichStatus = null;
+    try {
+      abgleichStatus = await abgleichen();
+    } finally {
+      beschaeftigt = false;
+    }
+  }
 
   async function paketWaehlen() {
     beschaeftigt = true;
@@ -118,6 +151,73 @@
         </button>
         <button class="leise" disabled={beschaeftigt} onclick={entfernenKlick}>Ausweis entfernen</button>
       </div>
+    </div>
+  {/if}
+
+  {#if sync}
+    <h3 class="abschnitt zwischen">Team-Übersicht</h3>
+    <div class="karte">
+      <div class="abgleich-kopf">
+        <div>
+          <button class="primaer" disabled={beschaeftigt} onclick={abgleichenKlick}>
+            {beschaeftigt ? "Gleicht ab …" : "🔄 Jetzt abgleichen"}
+          </button>
+          <span class="dezent letzter">Letzter Abgleich: {zeitText(letzterAbgleich)}</span>
+        </div>
+      </div>
+
+      {#if abgleichStatus}
+        {#if abgleichStatus.ok}
+          <p class="ok klein">
+            ✓ {abgleichStatus.hochgeladen} hochgeladen · {abgleichStatus.geholt} im Team
+            {#if abgleichStatus.konflikte > 0}
+              · <span class="warn">{abgleichStatus.konflikte} Konflikt(e) übersprungen</span>
+            {/if}
+          </p>
+        {:else}
+          <p class="fehler klein">⚠ {abgleichStatus.fehler ?? "Abgleich fehlgeschlagen."}</p>
+        {/if}
+      {/if}
+
+      {#if !teamBoard || teamBoard.length === 0}
+        <p class="dezent leer-hinweis">
+          Noch keine Team-Projekte. „Jetzt abgleichen" lädt deine Projekte hoch
+          und holt die der anderen.
+        </p>
+      {:else}
+        <p class="hinweis-box">
+          Schreibgeschützte Sicht. Hier erscheinen <strong>nur unkritische</strong>
+          Felder (Projektname, Förder-Status, Fristen, Förderer-Kontakt) – keine
+          Stammdaten, Budgets oder Projektbeschriebe.
+        </p>
+        <ul class="board">
+          {#each teamBoard as eintrag (eintrag.projekt_id)}
+            <li class="board-projekt">
+              <div class="bp-kopf">
+                <span class="bp-name">{eintrag.inhalt?.name || "Ohne Namen"}</span>
+                {#if istMeines(eintrag.projekt_id)}
+                  <span class="badge eigen">dieses Team-Gerät</span>
+                {/if}
+                <span class="bp-zeit">{zeitText(eintrag.geaendert_am)}</span>
+              </div>
+              {#if (eintrag.inhalt?.eintraege ?? []).length === 0}
+                <p class="dezent klein nichts">keine gemerkten Förderungen</p>
+              {:else}
+                <ul class="foerderliste">
+                  {#each eintrag.inhalt.eintraege as f}
+                    <li class="foerd">
+                      <span class="foerd-name">{foerderungLabel(f)}</span>
+                      <span class="chip {statusFarbe(ANTRAG_STATUS, f.status)}">
+                        {statusLabel(ANTRAG_STATUS, f.status, f.statusFrei)}
+                      </span>
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+      {/if}
     </div>
   {/if}
 
@@ -254,6 +354,113 @@
     gap: 12px;
     margin-top: 18px;
   }
+
+  .zwischen {
+    margin-top: 28px;
+  }
+  .abgleich-kopf {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .letzter {
+    margin-left: 12px;
+  }
+  .klein {
+    font-size: 0.85rem;
+  }
+  .ok.klein {
+    margin: 12px 0 0;
+  }
+  .fehler.klein {
+    margin: 12px 0 0;
+  }
+  .warn {
+    color: #a54800;
+    font-weight: 600;
+  }
+  .leer-hinweis {
+    margin: 14px 0 0;
+    line-height: 1.5;
+  }
+  .hinweis-box {
+    margin: 14px 0 6px;
+    padding: 10px 12px;
+    background: #f4f7ff;
+    border: 1px solid #dce4fb;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: #44546f;
+  }
+  .board {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+  }
+  .board-projekt {
+    padding: 12px 0;
+    border-top: 1px solid #f1f2f4;
+  }
+  .bp-kopf {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .bp-name {
+    font-weight: 600;
+    color: #172b4d;
+  }
+  .bp-zeit {
+    margin-left: auto;
+    font-size: 0.78rem;
+    color: #8590a2;
+  }
+  .badge.eigen {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #0055cc;
+    background: #e9f2ff;
+    border-radius: 10px;
+    padding: 1px 8px;
+  }
+  .nichts {
+    margin: 4px 0 0;
+  }
+  .foerderliste {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .foerd {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.88rem;
+  }
+  .foerd-name {
+    color: #44546f;
+  }
+  .chip {
+    margin-left: auto;
+    font-size: 0.74rem;
+    font-weight: 600;
+    border-radius: 10px;
+    padding: 2px 9px;
+    white-space: nowrap;
+  }
+  .chip.blau { background: #e9f2ff; color: #0055cc; }
+  .chip.lila { background: #f3eefe; color: #5e3bb7; }
+  .chip.gruen { background: #e3fcef; color: #216e4e; }
+  .chip.rot { background: #ffecec; color: #ae2e24; }
+  .chip.gelb { background: #fff4e5; color: #a54800; }
+  .chip.grau { background: #f1f2f4; color: #5e6c84; }
 
   .verwaltung-toggle {
     margin: 22px 0 0;

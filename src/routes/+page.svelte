@@ -16,6 +16,7 @@
   import { antragsPdfBauen } from "$lib/antragsPdf";
   import { leererKfp, kfpExport } from "$lib/kfp";
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
+  import { boardAusTresor } from "$lib/sync";
 
   // Die App kennt fünf Ansichten:
   // laden -> einrichten (kein Tresor) ODER entsperren (Tresor da)
@@ -607,6 +608,68 @@
     }
   }
 
+  // --- Etappe 4b: Der eigentliche Abgleich ---
+  // 1. Meine Projekte (NUR die unkritische Board-Sicht aus sync.js) zum
+  //    Team-Server hochladen. 2. Das gesamte Team-Board holen und als
+  //    schreibgeschützte Übersicht zwischenspeichern. Sensible Daten sind
+  //    baulich nicht enthalten – boardAusTresor() ist die einzige Quelle.
+  async function jetztAbgleichen() {
+    if (!daten.sync) return { ok: false, fehler: "Kein Zugangs-Paket geladen." };
+    const adresse = daten.sync.adresse;
+    const ausweisPem = daten.sync.ausweisPem;
+    const versionen = { ...(daten.sync.versionen ?? {}) };
+    try {
+      // 1. Hochladen: jedes eigene Projekt einzeln (mit Basis-Version für
+      //    die Konflikt-Erkennung des Servers).
+      const board = boardAusTresor($state.snapshot(daten));
+      let hochgeladen = 0;
+      let konflikte = 0;
+      for (const p of board.projekte) {
+        const body = JSON.stringify({
+          inhalt: p,
+          basis_version: versionen[p.id] ?? null,
+        });
+        const antwortText = await invoke("sync_put_board", {
+          adresse,
+          ausweisPem,
+          projektId: p.id,
+          bodyJson: body,
+        });
+        const antwort = JSON.parse(antwortText);
+        versionen[p.id] = antwort.version;
+        if (antwort.konflikt) konflikte++;
+        else hochgeladen++;
+      }
+
+      // 2. Gesamtes Team-Board holen (schreibgeschützte Übersicht).
+      const boardText = await invoke("sync_get_board", { adresse, ausweisPem });
+      const serverBoard = JSON.parse(boardText);
+      for (const row of serverBoard) versionen[row.projekt_id] = row.version;
+
+      daten.sync.versionen = versionen;
+      daten.sync.teamBoard = serverBoard;
+      daten.sync.letzterAbgleich = new Date().toISOString();
+      await tresorSpeichern();
+      return { ok: true, hochgeladen, konflikte, geholt: serverBoard.length };
+    } catch (e) {
+      return { ok: false, fehler: String(e) };
+    }
+  }
+
+  // ids meiner lokalen Projekte – damit die Team-Übersicht markieren kann,
+  // welche Einträge von diesem Gerät stammen.
+  let meineProjektIds = $derived(
+    daten ? (daten.projekte ?? []).map((p) => p.id) : [],
+  );
+
+  // Klarname einer Förderung für die Team-Übersicht: bei eigener Förderung
+  // das mitgeschickte Label, sonst aus der (öffentlichen) Förder-Datenbank.
+  function boardFoerderungLabel(eintrag) {
+    if (eintrag?.eigenesLabel) return eintrag.eigenesLabel;
+    const f = datenbank.foerderungen.find((x) => x.id === eintrag?.foerderungId);
+    return f ? f.name : "Förderung";
+  }
+
   // Liefert (und erstellt bei Bedarf) den Antrag-Status-Eintrag einer
   // gemerkten Förderung. Die Checkliste startet mit den üblichen
   // Unterlagen der Förderung.
@@ -949,6 +1012,11 @@
           caExportieren={teamCaExportieren}
           paketErstellen={geraetPaketErstellen}
           geraetEinrichten={diesesGeraetEinrichten}
+          abgleichen={jetztAbgleichen}
+          teamBoard={daten.sync?.teamBoard ?? null}
+          letzterAbgleich={daten.sync?.letzterAbgleich ?? null}
+          {meineProjektIds}
+          foerderungLabel={boardFoerderungLabel}
         />
       {:else if !aktivesProjekt}
         <div class="leer-projekt">
