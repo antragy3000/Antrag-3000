@@ -41,6 +41,7 @@ pub fn run() {
             sync::geraet_paket_speichern,
             sync::geraet_paket_direkt,
             sync::team_ca_cert_exportieren,
+            sync::server_zertifikat_speichern,
             excel::kfp_excel_schreiben,
             katalog::katalog_laden,
             katalog::katalog_speichern,

@@ -1,0 +1,27 @@
+# Caddy 2.8 – Variante "Tailscale".
+#
+# Erreichbar nur im privaten Tailnet (kein offener Router-Port). Caddy
+# nutzt ein von DEINER Team-CA signiertes Server-Zertifikat (server.crt /
+# server.key, in der App erzeugt) – KEIN Let's Encrypt. Davor steht wie
+# gewohnt die mTLS-Pruefung: nur Geraete mit gueltigem Team-Ausweis.
+
+{
+	# Kein automatisches HTTPS/ACME – wir bringen das Zertifikat selbst mit.
+	auto_https off
+}
+
+:443 {
+	tls /etc/caddy/server.crt /etc/caddy/server.key {
+		client_auth {
+			mode require_and_verify
+			trust_pool file {
+				pem_file /etc/caddy/ca/team-ca.crt
+			}
+		}
+	}
+
+	reverse_proxy api:8080 {
+		header_up X-Client-Cert-DER {http.request.tls.client.certificate_der_base64}
+		header_up X-Client-Cert-Subject {http.request.tls.client.subject}
+	}
+}

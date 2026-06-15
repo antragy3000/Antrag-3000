@@ -21,6 +21,11 @@ struct Paket {
     adresse: String,
     #[serde(default)]
     ausweis_pem: String,
+    // Oeffentliches Team-CA-Zertifikat, damit die App auch dem
+    // Server-Zertifikat (von derselben CA signiert) vertraut. Optional,
+    // damit aeltere Pakete weiter funktionieren.
+    #[serde(default)]
+    ca_pem: String,
 }
 
 #[derive(Serialize)]
@@ -28,6 +33,7 @@ pub struct ZugangsInfo {
     pub adresse: String,
     pub geraet_name: String,
     pub ausweis_pem: String,
+    pub ca_pem: String,
 }
 
 /// Liest und prueft ein Zugangs-Paket (.a3kpaket).
@@ -55,7 +61,12 @@ pub fn zugangspaket_pruefen(pfad: String) -> Result<ZugangsInfo, String> {
         return Err("Im Paket fehlt der private Schluessel.".into());
     }
 
-    Ok(ZugangsInfo { adresse, geraet_name, ausweis_pem: paket.ausweis_pem })
+    Ok(ZugangsInfo {
+        adresse,
+        geraet_name,
+        ausweis_pem: paket.ausweis_pem,
+        ca_pem: paket.ca_pem,
+    })
 }
 
 /// Liest den Common Name (Geraetenamen) aus dem ersten Zertifikat im PEM.
@@ -80,12 +91,22 @@ fn geraet_name_aus_pem(pem: &str) -> Result<String, String> {
 
 // --- mTLS-HTTP -----------------------------------------------------------
 
-fn client_mit_ausweis(ausweis_pem: &str) -> Result<reqwest::Client, String> {
+fn client_mit_ausweis(ausweis_pem: &str, ca_pem: &str) -> Result<reqwest::Client, String> {
     let id = reqwest::Identity::from_pem(ausweis_pem.as_bytes())
         .map_err(|e| format!("Ausweis ungueltig: {e}"))?;
-    reqwest::Client::builder()
+    let mut builder = reqwest::Client::builder()
         .identity(id)
-        .timeout(std::time::Duration::from_secs(12))
+        .timeout(std::time::Duration::from_secs(12));
+    // Wenn ein Team-CA-Zertifikat vorliegt, ihm auch fuer die Server-Seite
+    // vertrauen (das Server-Zertifikat ist von derselben CA signiert).
+    // Sonst gelten die normalen oeffentlichen Wurzeln (z. B. Let's Encrypt).
+    let ca = ca_pem.trim();
+    if !ca.is_empty() {
+        let root = reqwest::Certificate::from_pem(ca.as_bytes())
+            .map_err(|e| format!("Team-CA-Zertifikat ungueltig: {e}"))?;
+        builder = builder.add_root_certificate(root);
+    }
+    builder
         .build()
         .map_err(|e| format!("Verbindungs-Client nicht erstellbar: {e}"))
 }
@@ -101,8 +122,8 @@ fn basis_url(adresse: &str) -> String {
 
 /// Verbindungstest: GET /api/health mit Geraete-Ausweis.
 #[tauri::command]
-pub async fn sync_health(adresse: String, ausweis_pem: String) -> Result<bool, String> {
-    let client = client_mit_ausweis(&ausweis_pem)?;
+pub async fn sync_health(adresse: String, ausweis_pem: String, ca_pem: String) -> Result<bool, String> {
+    let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
     let url = format!("{}/api/health", basis_url(&adresse));
     let r = client
         .get(&url)
@@ -115,8 +136,8 @@ pub async fn sync_health(adresse: String, ausweis_pem: String) -> Result<bool, S
 /// Holt alle Board-Projekte des Teams (GET /api/board). Gibt die rohe
 /// JSON-Antwort als Text zurueck; das Frontend wertet sie aus.
 #[tauri::command]
-pub async fn sync_get_board(adresse: String, ausweis_pem: String) -> Result<String, String> {
-    let client = client_mit_ausweis(&ausweis_pem)?;
+pub async fn sync_get_board(adresse: String, ausweis_pem: String, ca_pem: String) -> Result<String, String> {
+    let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
     let url = format!("{}/api/board", basis_url(&adresse));
     let r = client.get(&url).send().await.map_err(|e| format!("Abruf fehlgeschlagen: {e}"))?;
     if !r.status().is_success() {
@@ -132,10 +153,11 @@ pub async fn sync_get_board(adresse: String, ausweis_pem: String) -> Result<Stri
 pub async fn sync_put_board(
     adresse: String,
     ausweis_pem: String,
+    ca_pem: String,
     projekt_id: String,
     body_json: String,
 ) -> Result<String, String> {
-    let client = client_mit_ausweis(&ausweis_pem)?;
+    let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
     let url = format!("{}/api/board/{}", basis_url(&adresse), projekt_id);
     let r = client
         .put(&url)
@@ -157,9 +179,10 @@ pub async fn sync_put_board(
 pub async fn sync_delete_board(
     adresse: String,
     ausweis_pem: String,
+    ca_pem: String,
     projekt_id: String,
 ) -> Result<(), String> {
-    let client = client_mit_ausweis(&ausweis_pem)?;
+    let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
     let url = format!("{}/api/board/{}", basis_url(&adresse), projekt_id);
     let r = client
         .delete(&url)
@@ -202,8 +225,8 @@ pub async fn sync_trockenlauf(ziel_url: String, koerper: Vec<String>) -> Result<
 /// /api/katalog). Gibt das rohe JSON zurück; Pruefung/Anwendung macht
 /// das Frontend (gleiche Logik wie beim Update aus einer Datei).
 #[tauri::command]
-pub async fn sync_katalog_holen(adresse: String, ausweis_pem: String) -> Result<String, String> {
-    let client = client_mit_ausweis(&ausweis_pem)?;
+pub async fn sync_katalog_holen(adresse: String, ausweis_pem: String, ca_pem: String) -> Result<String, String> {
+    let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
     let url = format!("{}/api/katalog", basis_url(&adresse));
     let r = client
         .get(&url)
@@ -270,12 +293,13 @@ fn baue_geraet_pem(ca_cert_pem: &str, ca_key_pem: &str, geraet_name: &str) -> Re
     Ok(format!("{}{}", dev_key.serialize_pem(), cert.pem()))
 }
 
-fn paket_json(adresse: &str, pem: &str) -> String {
+fn paket_json(adresse: &str, pem: &str, ca_pem: &str) -> String {
     serde_json::to_string_pretty(&serde_json::json!({
         "typ": "antrag3000-zugangspaket",
         "version": 1,
         "adresse": adresse.trim(),
         "ausweis_pem": pem,
+        "ca_pem": ca_pem,
     }))
     .unwrap_or_default()
 }
@@ -290,7 +314,7 @@ pub fn geraet_paket_speichern(
     ziel: String,
 ) -> Result<(), String> {
     let pem = baue_geraet_pem(&ca_cert_pem, &ca_key_pem, geraet_name.trim())?;
-    std::fs::write(&ziel, paket_json(&adresse, &pem))
+    std::fs::write(&ziel, paket_json(&adresse, &pem, &ca_cert_pem))
         .map_err(|e| format!("Datei nicht schreibbar: {e}"))
 }
 
@@ -308,6 +332,7 @@ pub fn geraet_paket_direkt(
         adresse: adresse.trim().to_string(),
         geraet_name: geraet_name.trim().to_string(),
         ausweis_pem: pem,
+        ca_pem: ca_cert_pem,
     })
 }
 
@@ -315,6 +340,70 @@ pub fn geraet_paket_direkt(
 #[tauri::command]
 pub fn team_ca_cert_exportieren(cert_pem: String, ziel: String) -> Result<(), String> {
     std::fs::write(&ziel, cert_pem).map_err(|e| format!("Datei nicht schreibbar: {e}"))
+}
+
+/// Erzeugt ein NAS-Server-Zertifikat (von der Team-CA signiert) fuer die
+/// angegebene Adresse (Tailscale-Name oder 100.x-IP) und speichert
+/// `server.crt` + `server.key` neben dem gewaehlten Ziel. Caddy auf der
+/// NAS nutzt diese fuer HTTPS; die App vertraut der Team-CA und damit
+/// diesem Zertifikat – ganz ohne Let's Encrypt/Cloudflare.
+#[tauri::command]
+pub fn server_zertifikat_speichern(
+    ca_cert_pem: String,
+    ca_key_pem: String,
+    adresse: String,
+    ziel_crt: String,
+) -> Result<(), String> {
+    // Host aus der Adresse loesen (Schema/Pfad entfernen).
+    let host = adresse
+        .trim()
+        .trim_start_matches("https://")
+        .trim_start_matches("http://")
+        .split('/')
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    if host.is_empty() {
+        return Err("Bitte eine NAS-Adresse angeben.".into());
+    }
+
+    let ca_key = rcgen::KeyPair::from_pem(&ca_key_pem)
+        .map_err(|e| format!("CA-Schluessel ungueltig: {e}"))?;
+    let ca_params = rcgen::CertificateParams::from_ca_cert_pem(&ca_cert_pem)
+        .map_err(|e| format!("CA-Zertifikat ungueltig: {e}"))?;
+    let ca_cert = ca_params
+        .self_signed(&ca_key)
+        .map_err(|e| format!("CA nicht ladbar: {e}"))?;
+
+    let srv_key = rcgen::KeyPair::generate().map_err(|e| format!("Schluessel nicht erzeugbar: {e}"))?;
+    let mut p = rcgen::CertificateParams::new(Vec::<String>::new())
+        .map_err(|e| format!("Zertifikat nicht vorbereitbar: {e}"))?;
+    p.distinguished_name.push(rcgen::DnType::CommonName, host.clone());
+    // SAN passend zum Host: IP-Adresse oder DNS-Name.
+    let san = match host.parse::<std::net::IpAddr>() {
+        Ok(ip) => rcgen::SanType::IpAddress(ip),
+        Err(_) => rcgen::SanType::DnsName(
+            host.clone().try_into().map_err(|_| "Adresse ist kein gueltiger Name.".to_string())?,
+        ),
+    };
+    p.subject_alt_names = vec![san];
+    p.is_ca = rcgen::IsCa::NoCa;
+    p.key_usages = vec![rcgen::KeyUsagePurpose::DigitalSignature];
+    p.extended_key_usages = vec![rcgen::ExtendedKeyUsagePurpose::ServerAuth];
+    p.not_before = rcgen::date_time_ymd(2024, 1, 1);
+    p.not_after = rcgen::date_time_ymd(2030, 1, 1);
+    let cert = p
+        .signed_by(&srv_key, &ca_cert, &ca_key)
+        .map_err(|e| format!("Server-Zertifikat nicht signierbar: {e}"))?;
+
+    // server.crt (an die gewaehlte Stelle) und server.key (daneben).
+    std::fs::write(&ziel_crt, cert.pem())
+        .map_err(|e| format!("server.crt nicht schreibbar: {e}"))?;
+    let key_pfad = std::path::Path::new(&ziel_crt).with_file_name("server.key");
+    std::fs::write(&key_pfad, srv_key.serialize_pem())
+        .map_err(|e| format!("server.key nicht schreibbar: {e}"))?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -345,7 +434,7 @@ mod tests {
         // angenommen wird (ohne Netzwerk).
         let paket: serde_json::Value = serde_json::from_str(FIXTURE).unwrap();
         let pem = paket["ausweis_pem"].as_str().unwrap();
-        client_mit_ausweis(pem).expect("Client sollte mit dem Ausweis baubar sein");
+        client_mit_ausweis(pem, "").expect("Client sollte mit dem Ausweis baubar sein");
     }
 
     #[test]
@@ -361,8 +450,24 @@ mod tests {
         .unwrap();
         assert_eq!(info.geraet_name, "Test-Geraet");
         assert_eq!(info.adresse, "team.example");
-        client_mit_ausweis(&info.ausweis_pem)
+        assert!(info.ca_pem.contains("BEGIN CERTIFICATE"));
+        client_mit_ausweis(&info.ausweis_pem, &info.ca_pem)
             .expect("rcgen-Ausweis muss vom mTLS-Client angenommen werden");
+
+        // Server-Zertifikat aus derselben CA erzeugen (SAN = Adresse).
+        let crt = std::env::temp_dir().join("a3000-server-test.crt");
+        server_zertifikat_speichern(
+            ca.cert_pem.clone(),
+            ca.key_pem.clone(),
+            "nas.example.ts.net".into(),
+            crt.to_string_lossy().to_string(),
+        )
+        .expect("Server-Zertifikat muss erzeugbar sein");
+        assert!(crt.exists());
+        let key = crt.with_file_name("server.key");
+        assert!(key.exists());
+        let _ = std::fs::remove_file(&crt);
+        let _ = std::fs::remove_file(&key);
 
         // ... als Datei speichern und wieder einlesen (Rundlauf).
         let pfad = std::env::temp_dir().join("a3000-inapp-test.a3kpaket");

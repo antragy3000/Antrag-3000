@@ -552,6 +552,7 @@
         adresse: info.adresse,
         geraetName: info.geraet_name,
         ausweisPem: info.ausweis_pem,
+        caPem: info.ca_pem ?? "",
         letzterAbgleich: null,
       };
       await tresorSpeichern();
@@ -569,6 +570,7 @@
       const ok = await invoke("sync_health", {
         adresse: daten.sync.adresse,
         ausweisPem: daten.sync.ausweisPem,
+        caPem: daten.sync.caPem ?? "",
       });
       return { ok, fehler: ok ? null : "Server erreichbar, aber unerwartete Antwort." };
     } catch (e) {
@@ -615,6 +617,38 @@
     }
   }
 
+  // NAS-Server-Zertifikat (von der Team-CA signiert) für die angegebene
+  // Tailscale-Adresse erzeugen. Schreibt server.crt + server.key, die auf
+  // die NAS kommen. Die App vertraut der Team-CA und damit diesem Server.
+  async function serverZertErstellen(nasAdresse) {
+    if (!daten.teamCa) return;
+    const adr = (nasAdresse ?? "").trim();
+    if (!adr) return;
+    const ziel = await dateiSpeichern({
+      title: "NAS-Server-Zertifikat speichern (server.crt)",
+      defaultPath: "server.crt",
+      filters: [{ name: "Zertifikat", extensions: ["crt"] }],
+    });
+    if (!ziel) return;
+    try {
+      await invoke("server_zertifikat_speichern", {
+        caCertPem: daten.teamCa.certPem,
+        caKeyPem: daten.teamCa.keyPem,
+        adresse: adr,
+        zielCrt: ziel,
+      });
+      // Adresse fürs Team merken, damit Geräte-Pakete genau diese nutzen.
+      daten.teamCa.adresse = adr;
+      await tresorSpeichern();
+      alert(
+        "Gespeichert: server.crt und server.key (im selben Ordner).\n\n" +
+          "Beide Dateien kommen auf die NAS (zu Caddy). Adresse fürs Team: " + adr,
+      );
+    } catch (e) {
+      alert("Das Server-Zertifikat konnte nicht erstellt werden.\n" + e);
+    }
+  }
+
   // Zugangs-Paket für ein (anderes) Gerät erzeugen und als Datei speichern.
   async function geraetPaketErstellen(geraetName) {
     if (!daten.teamCa) return;
@@ -653,6 +687,7 @@
         adresse: info.adresse,
         geraetName: info.geraet_name,
         ausweisPem: info.ausweis_pem,
+        caPem: info.ca_pem ?? "",
         letzterAbgleich: null,
       };
       await tresorSpeichern();
@@ -709,6 +744,7 @@
   async function einAbgleich() {
     const adresse = daten.sync.adresse;
     const ausweisPem = daten.sync.ausweisPem;
+    const caPem = daten.sync.caPem ?? "";
     const versionen = { ...(daten.sync.versionen ?? {}) };
     const gesendet = { ...(daten.sync.gesendet ?? {}) };
     let geaendert = false;
@@ -722,7 +758,7 @@
     //    gibt, vom Team-Board entfernen (sonst bleiben sie als Leiche).
     for (const id of Object.keys(gesendet)) {
       if (aktuelleIds.has(id)) continue;
-      await invoke("sync_delete_board", { adresse, ausweisPem, projektId: id });
+      await invoke("sync_delete_board", { adresse, ausweisPem, caPem, projektId: id });
       delete gesendet[id];
       delete versionen[id];
       protZeilen.push({ projektId: id, aktion: "gelöscht", bytes: 0, body: null });
@@ -736,7 +772,7 @@
       if (gesendet[p.id] === js) continue; // unverändert → nicht senden
       const body = JSON.stringify({ inhalt: p, basis_version: versionen[p.id] ?? null });
       const antwortText = await invoke("sync_put_board", {
-        adresse, ausweisPem, projektId: p.id, bodyJson: body,
+        adresse, ausweisPem, caPem, projektId: p.id, bodyJson: body,
       });
       const antwort = JSON.parse(antwortText);
       versionen[p.id] = antwort.version;
@@ -752,7 +788,7 @@
     }
 
     // 3. Team-Board holen.
-    const boardText = await invoke("sync_get_board", { adresse, ausweisPem });
+    const boardText = await invoke("sync_get_board", { adresse, ausweisPem, caPem });
     const serverBoard = JSON.parse(boardText);
     for (const row of serverBoard) versionen[row.projekt_id] = row.version;
     if (JSON.stringify(daten.sync.teamBoard ?? null) !== JSON.stringify(serverBoard)) {
@@ -944,6 +980,7 @@
       const roh = await invoke("sync_katalog_holen", {
         adresse: daten.sync.adresse,
         ausweisPem: daten.sync.ausweisPem,
+        caPem: daten.sync.caPem ?? "",
       });
       obj = JSON.parse(roh);
     } catch (e) {
@@ -1410,6 +1447,7 @@
               entfernen={zugangspaketEntfernen}
               caErstellen={teamCaErstellen}
               caExportieren={teamCaExportieren}
+              serverZert={serverZertErstellen}
               paketErstellen={geraetPaketErstellen}
               geraetEinrichten={diesesGeraetEinrichten}
               starten={autoSyncStarten}

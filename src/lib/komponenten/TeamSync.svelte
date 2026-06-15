@@ -16,6 +16,7 @@
     entfernen,
     caErstellen,
     caExportieren,
+    serverZert,
     paketErstellen,
     geraetEinrichten,
     starten,
@@ -40,6 +41,7 @@
   let verwaltungOffen = $state(false);
   let pruefenOffen = $state(false);
   let caAdresse = $state("");
+  let nasAdresse = $state("");
   let neuerGeraetName = $state("");
   let meinGeraetName = $state("");
   let vorschau = $state(null);          // Array der Sende-Körper (Trockenlauf)
@@ -140,6 +142,16 @@
     try {
       const info = await geraetEinrichten(meinGeraetName.trim());
       if (info) status = await testen();
+    } finally {
+      beschaeftigt = false;
+    }
+  }
+  async function serverZertKlick() {
+    const adr = (nasAdresse || teamCa?.adresse || "").trim();
+    if (!adr) return;
+    beschaeftigt = true;
+    try {
+      await serverZert(adr);
     } finally {
       beschaeftigt = false;
     }
@@ -364,6 +376,26 @@
           <button class="zweit" disabled={beschaeftigt} onclick={() => caExportieren()}>
             Team-CA-Zertifikat speichern …
           </button>
+        </div>
+
+        <div class="block">
+          <span class="block-titel">1b · NAS-Server-Zertifikat (Tailscale)</span>
+          <p class="dezent">
+            Erzeugt <code>server.crt</code> + <code>server.key</code> für die
+            Tailscale-Adresse deiner NAS (von deiner Team-CA signiert). Beide
+            Dateien kommen ebenfalls zu Caddy. Diese Adresse wird auch für die
+            Zugangs-Pakete verwendet.
+          </p>
+          <div class="reihe">
+            <input
+              type="text"
+              placeholder={teamCa.adresse || "z. B. nas.dein-tailnet.ts.net"}
+              bind:value={nasAdresse}
+            />
+            <button class="zweit" disabled={beschaeftigt} onclick={serverZertKlick}>
+              Server-Zertifikat speichern …
+            </button>
+          </div>
         </div>
 
         <div class="block">
