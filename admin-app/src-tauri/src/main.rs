@@ -224,6 +224,40 @@ async fn admin_foerderer(adresse: String, ausweis_pem: String, ca_pem: String, t
     admin_get(&adresse, &ausweis_pem, &ca_pem, &token, "/api/admin/foerderer").await
 }
 
+#[tauri::command]
+async fn admin_vorschlaege(adresse: String, ausweis_pem: String, ca_pem: String, token: String) -> Result<String, String> {
+    admin_get(&adresse, &ausweis_pem, &ca_pem, &token, "/api/admin/vorschlaege").await
+}
+
+/// Gemeinsamer POST ohne Body für die Vorschlags-Aktionen.
+async fn admin_post(adresse: &str, ausweis_pem: &str, ca_pem: &str, token: &str, pfad: &str) -> Result<(), String> {
+    let client = client_mit_ausweis(ausweis_pem, ca_pem)?;
+    let url = format!("{}{}", basis_url(adresse), pfad);
+    let r = client
+        .post(&url)
+        .header("x-admin-token", token)
+        .send()
+        .await
+        .map_err(|e| format!("Senden fehlgeschlagen: {}", fehler_kette(&e)))?;
+    if r.status().as_u16() == 401 {
+        return Err("Sitzung abgelaufen – bitte neu anmelden.".into());
+    }
+    if !r.status().is_success() {
+        return Err(format!("Server antwortete mit {}.", r.status()));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn admin_vorschlag_freigeben(adresse: String, ausweis_pem: String, ca_pem: String, token: String, vorschlag_id: String) -> Result<(), String> {
+    admin_post(&adresse, &ausweis_pem, &ca_pem, &token, &format!("/api/admin/vorschlaege/{vorschlag_id}/freigeben")).await
+}
+
+#[tauri::command]
+async fn admin_vorschlag_verwerfen(adresse: String, ausweis_pem: String, ca_pem: String, token: String, vorschlag_id: String) -> Result<(), String> {
+    admin_post(&adresse, &ausweis_pem, &ca_pem, &token, &format!("/api/admin/vorschlaege/{vorschlag_id}/verwerfen")).await
+}
+
 /// Setzt den Status einer Meldung (offen/erledigt/verworfen).
 #[tauri::command]
 async fn admin_meldung_status(
@@ -316,8 +350,11 @@ fn main() {
             admin_anmelden,
             admin_meldungen,
             admin_foerderer,
+            admin_vorschlaege,
             admin_meldung_status,
             admin_foerderer_loeschen,
+            admin_vorschlag_freigeben,
+            admin_vorschlag_verwerfen,
             admin_katalog_hochladen,
         ])
         .run(tauri::generate_context!())

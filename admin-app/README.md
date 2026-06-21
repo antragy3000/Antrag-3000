@@ -42,7 +42,26 @@ npm run tauri build    # erzeugt die fertige Admin-App
 1. **Zugangs-Paket wählen** (`.a3kpaket`).
 2. **Authenticator-Code** (6-stellig) eingeben → **Anmelden**.
    Der Server prüft den Code und gibt eine 30-Minuten-Sitzung zurück.
-3. Tabs nutzen: **Meldungen**, **Geteilte Förderer**, **Katalog hochladen**.
+3. Tabs nutzen: **Vorschläge**, **Meldungen**, **Geteilte Förderer**,
+   **Katalog hochladen**.
+
+## Sammler (Hybrid-Update)
+
+Der Sammler vergleicht eine Rohquelle (Kandidaten-Liste) mit dem aktuellen
+Katalog und legt **Vorschläge** an (neu/geändert), die du im Tab
+**Vorschläge** freigibst (→ in den Katalog übernehmen) oder verwirfst.
+
+Sammler-Lauf auf dem Server (Quelldatei z. B. unter `server/katalog/`, dort
+nach `/srv` gemountet):
+
+```
+docker compose -f docker-compose.tailscale.yml run --rm api sammeln /srv/rohquelle.json
+```
+
+Ein Beispiel liegt in `server/katalog/rohquelle-beispiel.json`. Für einen
+**wöchentlichen** Lauf kann dieser Befehl per DSM-Aufgabenplaner (Synology)
+oder Cron zeitgesteuert werden. Freigegebene Vorschläge landen sofort im
+verteilten Katalog (`GET /api/katalog`).
 
 ## Sicherheit
 

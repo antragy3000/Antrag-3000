@@ -82,6 +82,39 @@ const FELD_MAX: usize = 200;
 /// Längenlimit für die freie Anmerkung einer Meldung.
 const TEXT_MAX: usize = 1000;
 
+/// Bildet aus dem aktuellen Katalog und Sammler-Kandidaten die Vorschläge:
+/// NEU (id fehlt im Katalog) oder GEÄNDERT (id vorhanden, Inhalt anders).
+/// Unveränderte werden übersprungen. Reines Datenmodell (testbar).
+/// Rückgabe je Eintrag: (art, foerderung_id, vorgeschlagener Inhalt).
+fn vorschlaege_bilden(
+    katalog: &[serde_json::Value],
+    kandidaten: &[serde_json::Value],
+) -> Vec<(String, String, serde_json::Value)> {
+    let mut vorhanden: HashMap<String, &serde_json::Value> = HashMap::new();
+    for f in katalog {
+        if let Some(id) = f.get("id").and_then(|x| x.as_str()) {
+            vorhanden.insert(id.to_string(), f);
+        }
+    }
+    let mut out = Vec::new();
+    for k in kandidaten {
+        let Some(id) = k.get("id").and_then(|x| x.as_str()) else { continue };
+        // Mindestens id + name, sonst unbrauchbar.
+        if k.get("name").and_then(|x| x.as_str()).unwrap_or("").is_empty() {
+            continue;
+        }
+        match vorhanden.get(id) {
+            None => out.push(("neu".to_string(), id.to_string(), k.clone())),
+            Some(alt) => {
+                if **alt != *k {
+                    out.push(("geaendert".to_string(), id.to_string(), k.clone()));
+                }
+            }
+        }
+    }
+    out
+}
+
 /// Tempo-Bremse: Gibt true zurück, wenn das Gerät noch schreiben darf,
 /// und merkt sich diesen Schreibvorgang. Alte Einträge ausserhalb des
 /// Fensters werden dabei verworfen.
@@ -119,6 +152,30 @@ async fn main() {
         return;
     }
 
+    // Sammler-Lauf (Etappe 4 Teil 3):
+    //   server sammeln <quelle.json>
+    // Vergleicht die Kandidaten aus der Quelldatei mit dem aktuellen
+    // Katalog und legt offene Vorschläge an (neu/geändert). Gedacht für
+    // einen wöchentlichen Cron-Aufruf; der Admin gibt sie danach in der
+    // Admin-App frei.
+    if args.get(1).map(|s| s.as_str()) == Some("sammeln") {
+        let quelle = args.get(2).cloned().unwrap_or_default();
+        if quelle.is_empty() {
+            eprintln!("Aufruf: server sammeln <quelle.json>");
+            std::process::exit(2);
+        }
+        match sammeln_lauf(&quelle).await {
+            Ok((neu, geaendert)) => {
+                println!("Sammler fertig: {neu} neu, {geaendert} geändert (offene Vorschläge).");
+            }
+            Err(e) => {
+                eprintln!("Sammler-Fehler: {e}");
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+
     let db_pfad = env::var("DB_PFAD").unwrap_or_else(|_| "antrag3000.sqlite".into());
     let lausch = env::var("LAUSCH").unwrap_or_else(|_| "0.0.0.0:8080".into());
 
@@ -151,6 +208,9 @@ async fn main() {
         .route("/api/admin/foerderer", get(admin_foerderer))
         .route("/api/admin/foerderer/:foerderer_id", delete(admin_foerderer_loeschen))
         .route("/api/admin/katalog", put(admin_katalog_hochladen))
+        .route("/api/admin/vorschlaege", get(admin_vorschlaege))
+        .route("/api/admin/vorschlaege/:vid/freigeben", post(admin_vorschlag_freigeben))
+        .route("/api/admin/vorschlaege/:vid/verwerfen", post(admin_vorschlag_verwerfen))
         .with_state(AppState {
             pool,
             schreib: Arc::new(Mutex::new(HashMap::new())),
@@ -229,6 +289,21 @@ async fn schema_anlegen(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             schema_version INTEGER,
             geaendert_am TEXT NOT NULL DEFAULT (datetime('now')),
             geaendert_von_geraet INTEGER REFERENCES geraet(id)
+        )",
+        // Sammler-Vorschläge (Etappe 4 Teil 3): der Sammler schlägt neue/
+        // geänderte Förderungen vor; der Admin gibt sie frei oder verwirft
+        // sie VOR der Verteilung. id = foerderung_id (ein offener Vorschlag
+        // je Förderung).
+        "CREATE TABLE IF NOT EXISTS vorschlag (
+            id TEXT NOT NULL,
+            konto_id INTEGER NOT NULL REFERENCES konto(id),
+            foerderung_id TEXT NOT NULL,
+            art TEXT NOT NULL,
+            inhalt_json TEXT NOT NULL,
+            quelle TEXT,
+            status TEXT NOT NULL DEFAULT 'offen',
+            erstellt_am TEXT NOT NULL DEFAULT (datetime('now')),
+            PRIMARY KEY (konto_id, id)
         )",
         // Vom Team geteilte EIGENE Förderer (öffentliche Felder; die freie
         // Beschreibung bleibt lokal beim Ersteller). Upsert per (konto_id,
@@ -1059,6 +1134,249 @@ async fn admin_katalog_hochladen(
     Ok(Json(KatalogHochladenAntwort { stand, schema_version, anzahl }))
 }
 
+// ============================================================
+// Sammler-Vorschläge (Etappe 4 Teil 3): der Sammler (CLI `server sammeln`)
+// legt Vorschläge an; der Admin gibt sie hier frei (in den Katalog
+// übernehmen) oder verwirft sie.
+// ============================================================
+
+/// Ein Sammler-Lauf: liest Kandidaten aus der Quelldatei, vergleicht mit
+/// dem aktuellen Katalog (Konto 1) und legt offene Vorschläge an. Gibt
+/// (neu, geaendert) zurück. Wird von `server sammeln <quelle.json>`
+/// aufgerufen (z. B. wöchentlich per Cron).
+async fn sammeln_lauf(quelle_pfad: &str) -> Result<(usize, usize), String> {
+    let db_pfad = env::var("DB_PFAD").unwrap_or_else(|_| "antrag3000.sqlite".into());
+    let opts = SqliteConnectOptions::new().filename(&db_pfad).create_if_missing(true);
+    let pool = SqlitePoolOptions::new()
+        .max_connections(2)
+        .connect_with(opts)
+        .await
+        .map_err(|e| format!("Datenbank: {e}"))?;
+    schema_anlegen(&pool).await.map_err(|e| format!("Schema: {e}"))?;
+
+    let roh = tokio::fs::read_to_string(quelle_pfad)
+        .await
+        .map_err(|e| format!("Quelle nicht lesbar: {e}"))?;
+    let v: serde_json::Value =
+        serde_json::from_str(&roh).map_err(|e| format!("Quelle ist kein JSON: {e}"))?;
+    let kandidaten: Vec<serde_json::Value> = if let Some(a) = v.as_array() {
+        a.clone()
+    } else if let Some(a) = v.get("foerderungen").and_then(|x| x.as_array()) {
+        a.clone()
+    } else {
+        return Err("Quelle enthält keine Förderungs-Liste.".into());
+    };
+
+    let konto_id = 1i64;
+    let katalog_roh = katalog_text(&pool, konto_id).await.unwrap_or_else(|| "{}".into());
+    let katalog_v: serde_json::Value =
+        serde_json::from_str(&katalog_roh).unwrap_or(serde_json::Value::Null);
+    let katalog_liste: Vec<serde_json::Value> = katalog_v
+        .get("foerderungen")
+        .and_then(|x| x.as_array())
+        .cloned()
+        .unwrap_or_default();
+
+    let vorschlaege = vorschlaege_bilden(&katalog_liste, &kandidaten);
+    let quelle_name = std::path::Path::new(quelle_pfad)
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or("sammler")
+        .to_string();
+
+    let mut neu = 0usize;
+    let mut geaendert = 0usize;
+    for (art, fid, inhalt) in &vorschlaege {
+        let inhalt_str = inhalt.to_string();
+        // Einen bestehenden Vorschlag mit gleichem Inhalt nicht anrühren –
+        // sonst würde ein bereits verworfener wieder geöffnet.
+        let vorhanden: Option<(String,)> =
+            sqlx::query_as("SELECT inhalt_json FROM vorschlag WHERE konto_id = ? AND id = ?")
+                .bind(konto_id)
+                .bind(fid)
+                .fetch_optional(&pool)
+                .await
+                .map_err(|e| e.to_string())?;
+        if let Some((alt,)) = &vorhanden {
+            if alt == &inhalt_str {
+                continue;
+            }
+        }
+        sqlx::query(
+            "INSERT INTO vorschlag (id, konto_id, foerderung_id, art, inhalt_json, quelle, status, erstellt_am)
+             VALUES (?, ?, ?, ?, ?, ?, 'offen', datetime('now'))
+             ON CONFLICT(konto_id, id) DO UPDATE SET
+                art = excluded.art, inhalt_json = excluded.inhalt_json,
+                quelle = excluded.quelle, status = 'offen', erstellt_am = datetime('now')",
+        )
+        .bind(fid)
+        .bind(konto_id)
+        .bind(fid)
+        .bind(art)
+        .bind(&inhalt_str)
+        .bind(&quelle_name)
+        .execute(&pool)
+        .await
+        .map_err(|e| e.to_string())?;
+        if art == "neu" {
+            neu += 1;
+        } else {
+            geaendert += 1;
+        }
+    }
+    Ok((neu, geaendert))
+}
+
+#[derive(Serialize)]
+struct VorschlagZeile {
+    id: String,
+    foerderung_id: String,
+    art: String,
+    inhalt: serde_json::Value,
+    quelle: Option<String>,
+    erstellt_am: String,
+}
+
+/// Offene Vorschläge (GET /api/admin/vorschlaege).
+async fn admin_vorschlaege(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<VorschlagZeile>>, StatusCode> {
+    let (konto_id, _) = admin_pruefen(&st, &headers).await?;
+    let rows = sqlx::query_as::<_, (String, String, String, String, Option<String>, String)>(
+        "SELECT id, foerderung_id, art, inhalt_json, quelle, erstellt_am
+         FROM vorschlag WHERE konto_id = ? AND status = 'offen' ORDER BY erstellt_am DESC",
+    )
+    .bind(konto_id)
+    .fetch_all(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let liste = rows
+        .into_iter()
+        .map(|(id, foerderung_id, art, json, quelle, erstellt_am)| VorschlagZeile {
+            id,
+            foerderung_id,
+            art,
+            inhalt: serde_json::from_str(&json).unwrap_or(serde_json::Value::Null),
+            quelle,
+            erstellt_am,
+        })
+        .collect();
+    Ok(Json(liste))
+}
+
+/// Übernimmt eine (neue oder geänderte) Förderung in den verteilten
+/// Katalog (Tabelle katalog_aktuell): ersetzt den Eintrag gleicher id oder
+/// hängt ihn an, setzt `stand` auf heute.
+async fn katalog_eintrag_anwenden(
+    pool: &SqlitePool,
+    konto_id: i64,
+    geraet_id: i64,
+    foerderung: serde_json::Value,
+) -> Result<(), StatusCode> {
+    let text = katalog_text(pool, konto_id).await.ok_or(StatusCode::NOT_FOUND)?;
+    let mut v: serde_json::Value =
+        serde_json::from_str(&text).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let fid = foerderung
+        .get("id")
+        .and_then(|x| x.as_str())
+        .ok_or(StatusCode::BAD_REQUEST)?
+        .to_string();
+    let arr = v
+        .get_mut("foerderungen")
+        .and_then(|x| x.as_array_mut())
+        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+    if let Some(pos) = arr
+        .iter()
+        .position(|f| f.get("id").and_then(|x| x.as_str()) == Some(fid.as_str()))
+    {
+        arr[pos] = foerderung;
+    } else {
+        arr.push(foerderung);
+    }
+    // Stand auf heute setzen (Datum aus SQLite, ohne Extra-Abhängigkeit).
+    let (heute,): (String,) = sqlx::query_as("SELECT date('now')")
+        .fetch_one(pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    v["stand"] = serde_json::Value::String(heute);
+
+    let neu_str = v.to_string();
+    let stand = v.get("stand").and_then(|x| x.as_str()).map(|s| s.to_string());
+    let schema_version = v.get("schema_version").and_then(|x| x.as_i64());
+    sqlx::query(
+        "INSERT INTO katalog_aktuell
+            (konto_id, inhalt_json, stand, schema_version, geaendert_am, geaendert_von_geraet)
+         VALUES (?, ?, ?, ?, datetime('now'), ?)
+         ON CONFLICT(konto_id) DO UPDATE SET
+            inhalt_json = excluded.inhalt_json, stand = excluded.stand,
+            schema_version = excluded.schema_version, geaendert_am = excluded.geaendert_am,
+            geaendert_von_geraet = excluded.geaendert_von_geraet",
+    )
+    .bind(konto_id)
+    .bind(&neu_str)
+    .bind(&stand)
+    .bind(schema_version)
+    .bind(geraet_id)
+    .execute(pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(())
+}
+
+/// Vorschlag freigeben (POST /api/admin/vorschlaege/{id}/freigeben):
+/// übernimmt ihn in den Katalog und markiert ihn als freigegeben.
+async fn admin_vorschlag_freigeben(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    Path(vid): Path<String>,
+) -> Result<StatusCode, StatusCode> {
+    let (konto_id, geraet_id) = admin_pruefen(&st, &headers).await?;
+    let row: Option<(String,)> = sqlx::query_as(
+        "SELECT inhalt_json FROM vorschlag WHERE konto_id = ? AND id = ? AND status = 'offen'",
+    )
+    .bind(konto_id)
+    .bind(&vid)
+    .fetch_optional(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let Some((inhalt_str,)) = row else {
+        return Err(StatusCode::NOT_FOUND);
+    };
+    let foerderung: serde_json::Value =
+        serde_json::from_str(&inhalt_str).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    katalog_eintrag_anwenden(&st.pool, konto_id, geraet_id, foerderung).await?;
+
+    sqlx::query("UPDATE vorschlag SET status = 'freigegeben' WHERE konto_id = ? AND id = ?")
+        .bind(konto_id)
+        .bind(&vid)
+        .execute(&st.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Vorschlag verwerfen (POST /api/admin/vorschlaege/{id}/verwerfen).
+async fn admin_vorschlag_verwerfen(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    Path(vid): Path<String>,
+) -> Result<StatusCode, StatusCode> {
+    let (konto_id, _) = admin_pruefen(&st, &headers).await?;
+    let res = sqlx::query("UPDATE vorschlag SET status = 'verworfen' WHERE konto_id = ? AND id = ?")
+        .bind(konto_id)
+        .bind(&vid)
+        .execute(&st.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if res.rows_affected() == 0 {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    Ok(StatusCode::NO_CONTENT)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1084,5 +1402,32 @@ mod tests {
         // Ohne gesetztes Geheimnis ist der Admin-Zugang deaktiviert.
         std::env::remove_var("ADMIN_TOTP_SECRET");
         assert!(!totp_ok(&code));
+    }
+
+    /// Der Sammler erkennt neue, geänderte und unveränderte Förderungen.
+    #[test]
+    fn sammler_vorschlaege() {
+        let katalog = vec![
+            serde_json::json!({ "id": "a", "name": "Alpha", "foerderhoehe_text": "1000" }),
+            serde_json::json!({ "id": "b", "name": "Beta" }),
+        ];
+        let kandidaten = vec![
+            // unverändert -> kein Vorschlag
+            serde_json::json!({ "id": "a", "name": "Alpha", "foerderhoehe_text": "1000" }),
+            // geändert -> Vorschlag
+            serde_json::json!({ "id": "b", "name": "Beta", "foerderhoehe_text": "2000" }),
+            // neu -> Vorschlag
+            serde_json::json!({ "id": "c", "name": "Gamma" }),
+            // ohne name -> ignoriert
+            serde_json::json!({ "id": "d" }),
+        ];
+        let v = vorschlaege_bilden(&katalog, &kandidaten);
+        assert_eq!(v.len(), 2);
+        let neu: Vec<_> = v.iter().filter(|(art, _, _)| art == "neu").collect();
+        let geaendert: Vec<_> = v.iter().filter(|(art, _, _)| art == "geaendert").collect();
+        assert_eq!(neu.len(), 1);
+        assert_eq!(neu[0].1, "c");
+        assert_eq!(geaendert.len(), 1);
+        assert_eq!(geaendert[0].1, "b");
     }
 }

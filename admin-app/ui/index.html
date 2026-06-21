@@ -88,12 +88,20 @@
     <!-- 2) Angemeldet: Funktionen -->
     <section id="app" class="verborgen">
       <nav>
-        <button data-tab="meldungen" class="aktiv">Meldungen</button>
+        <button data-tab="vorschlaege" class="aktiv">Vorschläge</button>
+        <button data-tab="meldungen">Meldungen</button>
         <button data-tab="foerderer">Geteilte Förderer</button>
         <button data-tab="katalog">Katalog hochladen</button>
       </nav>
 
-      <div id="tab-meldungen" class="karte tab">
+      <div id="tab-vorschlaege" class="karte tab">
+        <h2>Sammler-Vorschläge</h2>
+        <p class="dezent">Vom Sammler vorgeschlagene neue oder geänderte Förderungen. <strong>Freigeben</strong> übernimmt sie in den verteilten Katalog, <strong>verwerfen</strong> lehnt sie ab.</p>
+        <div class="knoepfe"><button id="vorschlaegeBtn" class="zweit">Aktualisieren</button></div>
+        <div id="vorschlaegeInhalt"></div>
+      </div>
+
+      <div id="tab-meldungen" class="karte tab verborgen">
         <h2>Gemeldete Probleme</h2>
         <p class="dezent">Was Nutzer:innen an falschen/veralteten Förderungen gemeldet haben.</p>
         <div class="knoepfe"><button id="meldungenBtn" class="zweit">Aktualisieren</button></div>
@@ -183,7 +191,7 @@
         $("geraetLabel").textContent = `angemeldet · ${zugang.geraet_name}`;
         $("verbinden").classList.add("verborgen");
         $("app").classList.remove("verborgen");
-        ladeMeldungen();
+        ladeVorschlaege();
       } catch (e) {
         meldung("verbindenMeldung", "fehler", "⚠ " + e);
         $("anmeldenBtn").disabled = false;
@@ -199,6 +207,36 @@
         $("tab-" + b.dataset.tab).classList.remove("verborgen");
       };
     });
+
+    // --- Vorschläge ---
+    $("vorschlaegeBtn").onclick = ladeVorschlaege;
+    async function ladeVorschlaege() {
+      $("vorschlaegeInhalt").innerHTML = '<p class="leer">Lade …</p>';
+      try {
+        const roh = await gemeinsam("admin_vorschlaege");
+        const liste = JSON.parse(roh);
+        if (!liste.length) { $("vorschlaegeInhalt").innerHTML = '<p class="leer">Keine offenen Vorschläge.</p>'; return; }
+        const zeilen = liste.map((v) => {
+          const i = v.inhalt || {};
+          const id = escape(v.id);
+          const farbe = v.art === "neu" ? "background:#e3fcef;color:#216e4e" : "background:#fff7d6;color:#7a5c00";
+          return `<tr>
+            <td>${escape(i.name || v.foerderung_id)}<div class="dezent">${escape(i.foerdergeber || "")}</div></td>
+            <td><span class="pill" style="${farbe}">${v.art === "neu" ? "neu" : "geändert"}</span></td>
+            <td>${escape(i.foerderhoehe_text || "—")}</td>
+            <td class="dezent">${escape(v.quelle || "—")} · ${escape(zeit(v.erstellt_am))}</td>
+            <td>
+              <button class="mini" data-vakt="freigeben" data-id="${id}">freigeben</button>
+              <button class="mini gefahr" data-vakt="verwerfen" data-id="${id}">verwerfen</button>
+            </td>
+          </tr>`;
+        }).join("");
+        $("vorschlaegeInhalt").innerHTML =
+          `<table><thead><tr><th>Förderung</th><th>Art</th><th>Förderhöhe</th><th>Quelle · Stand</th><th>Aktion</th></tr></thead><tbody>${zeilen}</tbody></table>`;
+      } catch (e) {
+        $("vorschlaegeInhalt").innerHTML = `<div class="meld fehler">⚠ ${escape(e)}</div>`;
+      }
+    }
 
     // --- Meldungen ---
     const ART = { veraltet: "veraltete Angaben", falsch: "falsche Angaben", weg: "gibt es nicht mehr", sonstiges: "Sonstiges" };
@@ -313,6 +351,17 @@
       try {
         await invoke("admin_meldung_status", { ...basisArgs(), meldungId: b.dataset.id, status: b.dataset.status });
         ladeMeldungen();
+      } catch (err) { alert("⚠ " + err); b.disabled = false; }
+    };
+
+    // Vorschlag freigeben/verwerfen (delegiert auf die Tabelle).
+    $("vorschlaegeInhalt").onclick = async (e) => {
+      const b = e.target.closest("button[data-vakt]");
+      if (!b) return;
+      b.disabled = true;
+      try {
+        await invoke("admin_vorschlag_" + b.dataset.vakt, { ...basisArgs(), vorschlagId: b.dataset.id });
+        ladeVorschlaege();
       } catch (err) { alert("⚠ " + err); b.disabled = false; }
     };
 
