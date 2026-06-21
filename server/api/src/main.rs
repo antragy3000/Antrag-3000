@@ -27,10 +27,8 @@ use std::collections::HashMap;
 use std::env;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
-use argon2::password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
-use argon2::Argon2;
 use axum::{
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
@@ -38,6 +36,7 @@ use axum::{
     Json, Router,
 };
 use base64::Engine;
+use totp_rs::{Algorithm, Secret, TOTP};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
@@ -49,6 +48,17 @@ struct AppState {
     // Schreibvorgänge (Meldungen/Förderer). Liegt im Speicher (reicht
     // gegen Flutung; nach Neustart leer). Siehe tempo_ok().
     schreib: Arc<Mutex<HashMap<i64, Vec<Instant>>>>,
+    // Admin-Sitzungen: Token -> Sitzung. Entstehen beim Anmelden (nach
+    // gültigem TOTP-Code) und laufen nach SITZUNG_TTL_S ab. Im Speicher;
+    // nach Neustart muss sich der Admin neu anmelden.
+    sitzungen: Arc<Mutex<HashMap<String, AdminSitzung>>>,
+}
+
+/// Eine offene Admin-Sitzung (an ein Gerät gebunden, mit Ablaufzeit).
+struct AdminSitzung {
+    konto_id: i64,
+    geraet_id: i64,
+    ablauf: Instant,
 }
 
 // --- Spam-/Missbrauchs-Schutz (serverseitig; der Client ist nicht
@@ -65,6 +75,8 @@ const FOERDERER_QUOTA: i64 = 100;
 const FOERDERER_MAX_BYTES: usize = 8192;
 /// Größenlimit für den hochgeladenen Gesamt-Katalog (JSON, Bytes).
 const KATALOG_MAX_BYTES: usize = 2_000_000;
+/// Gültigkeitsdauer einer Admin-Sitzung (Sekunden).
+const SITZUNG_TTL_S: u64 = 1800;
 /// Längenlimit für kurze Felder (id, Name, Art).
 const FELD_MAX: usize = 200;
 /// Längenlimit für die freie Anmerkung einer Meldung.
@@ -87,23 +99,23 @@ fn tempo_ok(st: &AppState, geraet_id: i64) -> bool {
 
 #[tokio::main]
 async fn main() {
-    // Hilfsmodus zum Erzeugen des Admin-Passwort-Hashes:
-    //   server hash "meinPasswort"
-    // Den ausgegebenen Hash trägt der Admin als ENV ADMIN_PASSWORT_HASH
-    // ein. So liegt nie das Klartext-Passwort auf dem Server.
+    // Hilfsmodus zum Einrichten des Admin-Zugangs (TOTP):
+    //   server totp
+    // Erzeugt ein neues Geheimnis und gibt es als ADMIN_TOTP_SECRET sowie
+    // als otpauth://-URL aus. Das Geheimnis kommt in die server/.env, die
+    // URL scannst du EINMAL mit einer Authenticator-App (Google
+    // Authenticator, Aegis, 1Password …).
     let args: Vec<String> = env::args().collect();
-    if args.get(1).map(|s| s.as_str()) == Some("hash") {
-        let pw = args.get(2).cloned().unwrap_or_default();
-        if pw.is_empty() {
-            eprintln!("Aufruf: server hash <passwort>");
-            std::process::exit(2);
-        }
-        let salt = SaltString::generate(&mut OsRng);
-        let hash = Argon2::default()
-            .hash_password(pw.as_bytes(), &salt)
-            .expect("Hash fehlgeschlagen")
-            .to_string();
-        println!("{hash}");
+    if args.get(1).map(|s| s.as_str()) == Some("totp") {
+        let secret = Secret::generate_secret();
+        let b32 = match secret.to_encoded() {
+            Secret::Encoded(s) => s,
+            Secret::Raw(b) => Secret::Raw(b).to_encoded().to_string(),
+        };
+        let totp = totp_bauen(secret.to_bytes().expect("Secret-Bytes"))
+            .expect("TOTP-Aufbau fehlgeschlagen");
+        println!("ADMIN_TOTP_SECRET={b32}");
+        println!("{}", totp.get_url());
         return;
     }
 
@@ -140,6 +152,7 @@ async fn main() {
         .with_state(AppState {
             pool,
             schreib: Arc::new(Mutex::new(HashMap::new())),
+            sitzungen: Arc::new(Mutex::new(HashMap::new())),
         });
 
     let addr: SocketAddr = lausch.parse().expect("LAUSCH ist keine gültige Adresse");
@@ -747,71 +760,112 @@ async fn foerderer_loeschen(
 // Admin (Phase 3 / Etappe 4): zentrale Pflege der Förder-Datenbank.
 //
 // Zwei-Faktor-Schutz, weil ein Admin viel bewegen kann:
-//  1. BESITZ: ein gültiges Team-Gerät (mTLS) – und dieses Gerät muss als
-//     Admin hinterlegt sein (geraet.ist_admin = 1).
-//  2. WISSEN: das Admin-Passwort (Header X-Admin-Passwort), geprüft gegen
-//     den argon2-Hash aus ENV ADMIN_PASSWORT_HASH.
-// Ist kein ADMIN_PASSWORT_HASH gesetzt, ist der Admin-Zugang deaktiviert.
+//  1. BESITZ Team-Gerät: ein gültiges Team-Zertifikat (mTLS).
+//  2. BESITZ Authenticator: ein gültiger TOTP-Code (Header X-Admin-Code)
+//     gegen das Geheimnis aus ENV ADMIN_TOTP_SECRET.
+// Beim Anmelden werden beide geprüft; danach hält ein kurzlebiges
+// Sitzungs-Token (Header X-Admin-Token) die Sitzung, weil TOTP-Codes nach
+// 30 s ablaufen. Ohne ADMIN_TOTP_SECRET ist der Admin-Zugang deaktiviert.
 // ============================================================
 
-/// Prüft ein Klartext-Passwort gegen den hinterlegten argon2-Hash.
-fn passwort_ok(klartext: &str) -> bool {
-    let hash = match env::var("ADMIN_PASSWORT_HASH") {
-        Ok(h) if !h.trim().is_empty() => h,
-        _ => return false, // kein Passwort gesetzt → Admin deaktiviert
-    };
-    let parsed = match PasswordHash::new(hash.trim()) {
-        Ok(p) => p,
-        Err(_) => return false,
-    };
-    Argon2::default()
-        .verify_password(klartext.as_bytes(), &parsed)
-        .is_ok()
+/// Baut ein TOTP-Objekt aus rohen Geheimnis-Bytes (SHA1, 6 Stellen,
+/// 30-s-Schritt, ±1 Schritt Toleranz – die üblichen Authenticator-Werte).
+fn totp_bauen(bytes: Vec<u8>) -> Result<TOTP, String> {
+    TOTP::new(
+        Algorithm::SHA1,
+        6,
+        1,
+        30,
+        bytes,
+        Some("Antrag 3000".to_string()),
+        "Admin".to_string(),
+    )
+    .map_err(|e| e.to_string())
 }
 
-/// Beide Faktoren prüfen. Gibt (konto_id, geraet_id) zurück oder einen
-/// Fehlerstatus (401 Passwort, 403 kein Admin-Gerät).
+/// Liest das Admin-TOTP aus der Umgebung (None = Admin deaktiviert).
+fn totp_aus_env() -> Option<TOTP> {
+    let b32 = env::var("ADMIN_TOTP_SECRET").ok().filter(|s| !s.trim().is_empty())?;
+    let bytes = Secret::Encoded(b32.trim().to_string()).to_bytes().ok()?;
+    totp_bauen(bytes).ok()
+}
+
+/// Prüft einen TOTP-Code (6 Ziffern) gegen das Admin-Geheimnis.
+fn totp_ok(code: &str) -> bool {
+    match totp_aus_env() {
+        Some(t) => t.check_current(code.trim()).unwrap_or(false),
+        None => false,
+    }
+}
+
+/// Legt eine neue Admin-Sitzung an und gibt ihr Token zurück. Das Token
+/// ist ein zufälliges 160-Bit-Geheimnis (base32).
+fn sitzung_anlegen(st: &AppState, konto_id: i64, geraet_id: i64) -> String {
+    let token = match Secret::generate_secret().to_encoded() {
+        Secret::Encoded(s) => s,
+        Secret::Raw(b) => Secret::Raw(b).to_encoded().to_string(),
+    };
+    let mut map = st.sitzungen.lock().unwrap();
+    let jetzt = Instant::now();
+    map.retain(|_, s| s.ablauf > jetzt); // abgelaufene aufräumen
+    map.insert(
+        token.clone(),
+        AdminSitzung {
+            konto_id,
+            geraet_id,
+            ablauf: jetzt + Duration::from_secs(SITZUNG_TTL_S),
+        },
+    );
+    token
+}
+
+/// Prüft das Sitzungs-Token aus dem Header X-Admin-Token. Gibt
+/// (konto_id, geraet_id) zurück oder 401, wenn keine gültige Sitzung.
 async fn admin_pruefen(st: &AppState, headers: &HeaderMap) -> Result<(i64, i64), StatusCode> {
-    let (konto_id, geraet_id) = konto_und_geraet(&st.pool, headers).await?;
-    // Faktor 2: Passwort-Header.
-    let pw = headers
-        .get("x-admin-passwort")
+    // Das Zertifikat (Faktor 1) wird ohnehin von Caddy/mTLS erzwungen.
+    let token = headers
+        .get("x-admin-token")
         .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
-    if pw.is_empty() || !passwort_ok(pw) {
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    if token.is_empty() {
         return Err(StatusCode::UNAUTHORIZED);
     }
-    // Faktor 1: dieses Gerät muss als Admin hinterlegt sein.
-    let ist: i64 = sqlx::query_scalar("SELECT COALESCE(ist_admin, 0) FROM geraet WHERE id = ?")
-        .bind(geraet_id)
-        .fetch_one(&st.pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    if ist != 1 {
-        return Err(StatusCode::FORBIDDEN);
+    let mut map = st.sitzungen.lock().unwrap();
+    let jetzt = Instant::now();
+    map.retain(|_, s| s.ablauf > jetzt);
+    match map.get(&token) {
+        Some(s) => Ok((s.konto_id, s.geraet_id)),
+        None => Err(StatusCode::UNAUTHORIZED),
     }
-    Ok((konto_id, geraet_id))
 }
 
 #[derive(Deserialize)]
 struct AnmeldeBody {
-    passwort: String,
+    code: String,
 }
 
-/// Admin-Login (POST /api/admin/anmelden): Beweist das Passwort und macht
-/// DAS AUFRUFENDE Gerät zum Admin-Gerät (bindet Faktor 1 an dieses
-/// Zertifikat). Danach verlangen alle Admin-Endpunkte zusätzlich den
-/// Passwort-Header. Tempo-Bremse gegen Passwort-Raten.
+#[derive(Serialize)]
+struct AnmeldeAntwort {
+    token: String,
+    gueltig_s: u64,
+}
+
+/// Admin-Login (POST /api/admin/anmelden): prüft den TOTP-Code, markiert
+/// das aufrufende Gerät als Admin und gibt ein Sitzungs-Token zurück, das
+/// die App danach als Header X-Admin-Token mitschickt. Tempo-Bremse gegen
+/// Code-Raten.
 async fn admin_anmelden(
     State(st): State<AppState>,
     headers: HeaderMap,
     Json(body): Json<AnmeldeBody>,
-) -> Result<StatusCode, StatusCode> {
-    let (_konto_id, geraet_id) = konto_und_geraet(&st.pool, &headers).await?;
+) -> Result<Json<AnmeldeAntwort>, StatusCode> {
+    let (konto_id, geraet_id) = konto_und_geraet(&st.pool, &headers).await?;
     if !tempo_ok(&st, geraet_id) {
         return Err(StatusCode::TOO_MANY_REQUESTS);
     }
-    if body.passwort.is_empty() || !passwort_ok(&body.passwort) {
+    if body.code.trim().is_empty() || !totp_ok(&body.code) {
         return Err(StatusCode::UNAUTHORIZED);
     }
     sqlx::query("UPDATE geraet SET ist_admin = 1 WHERE id = ?")
@@ -819,7 +873,8 @@ async fn admin_anmelden(
         .execute(&st.pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    Ok(StatusCode::NO_CONTENT)
+    let token = sitzung_anlegen(&st, konto_id, geraet_id);
+    Ok(Json(AnmeldeAntwort { token, gueltig_s: SITZUNG_TTL_S }))
 }
 
 #[derive(Serialize)]
@@ -955,23 +1010,26 @@ async fn admin_katalog_hochladen(
 mod tests {
     use super::*;
 
-    /// Erzeugt einen Hash wie der `hash`-Hilfsmodus und prüft, dass
-    /// passwort_ok das richtige Passwort akzeptiert und falsche ablehnt.
+    /// Erzeugt ein Geheimnis wie der `totp`-Hilfsmodus, bildet den aktuell
+    /// gültigen Code und prüft, dass totp_ok ihn akzeptiert und falsche
+    /// Codes ablehnt.
     #[test]
-    fn admin_passwort_roundtrip() {
-        let salt = SaltString::generate(&mut OsRng);
-        let hash = Argon2::default()
-            .hash_password(b"GeheimesAdminPasswort", &salt)
-            .unwrap()
-            .to_string();
-        std::env::set_var("ADMIN_PASSWORT_HASH", &hash);
+    fn admin_totp_roundtrip() {
+        let secret = Secret::generate_secret();
+        let b32 = match secret.to_encoded() {
+            Secret::Encoded(s) => s,
+            Secret::Raw(b) => Secret::Raw(b).to_encoded().to_string(),
+        };
+        std::env::set_var("ADMIN_TOTP_SECRET", &b32);
 
-        assert!(passwort_ok("GeheimesAdminPasswort"));
-        assert!(!passwort_ok("falsch"));
-        assert!(!passwort_ok(""));
+        let totp = totp_bauen(secret.to_bytes().unwrap()).unwrap();
+        let code = totp.generate_current().unwrap();
+        assert!(totp_ok(&code));
+        assert!(!totp_ok("000000"));
+        assert!(!totp_ok(""));
 
-        // Ohne gesetzten Hash ist der Admin-Zugang deaktiviert.
-        std::env::remove_var("ADMIN_PASSWORT_HASH");
-        assert!(!passwort_ok("GeheimesAdminPasswort"));
+        // Ohne gesetztes Geheimnis ist der Admin-Zugang deaktiviert.
+        std::env::remove_var("ADMIN_TOTP_SECRET");
+        assert!(!totp_ok(&code));
     }
 }
