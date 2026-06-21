@@ -63,6 +63,8 @@ const MELDUNG_QUOTA: i64 = 50;
 const FOERDERER_QUOTA: i64 = 100;
 /// Größenlimit für einen geteilten Förderer-Datensatz (JSON, Bytes).
 const FOERDERER_MAX_BYTES: usize = 8192;
+/// Größenlimit für den hochgeladenen Gesamt-Katalog (JSON, Bytes).
+const KATALOG_MAX_BYTES: usize = 2_000_000;
 /// Längenlimit für kurze Felder (id, Name, Art).
 const FELD_MAX: usize = 200;
 /// Längenlimit für die freie Anmerkung einer Meldung.
@@ -134,6 +136,7 @@ async fn main() {
         .route("/api/admin/anmelden", post(admin_anmelden))
         .route("/api/admin/meldungen", get(admin_meldungen))
         .route("/api/admin/foerderer", get(admin_foerderer))
+        .route("/api/admin/katalog", put(admin_katalog_hochladen))
         .with_state(AppState {
             pool,
             schreib: Arc::new(Mutex::new(HashMap::new())),
@@ -200,6 +203,17 @@ async fn schema_anlegen(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             erstellt_am TEXT NOT NULL DEFAULT (datetime('now')),
             geaendert_am TEXT NOT NULL DEFAULT (datetime('now')),
             PRIMARY KEY (konto_id, id)
+        )",
+        // Der zentral gepflegte Förder-Katalog (Etappe 4): der Admin lädt
+        // ihn hoch, der Server verteilt ihn. In der DB (statt nur Datei),
+        // damit der Upload ohne beschreibbares Datei-Volume funktioniert.
+        "CREATE TABLE IF NOT EXISTS katalog_aktuell (
+            konto_id INTEGER PRIMARY KEY REFERENCES konto(id),
+            inhalt_json TEXT NOT NULL,
+            stand TEXT,
+            schema_version INTEGER,
+            geaendert_am TEXT NOT NULL DEFAULT (datetime('now')),
+            geaendert_von_geraet INTEGER REFERENCES geraet(id)
         )",
         // Vom Team geteilte EIGENE Förderer (öffentliche Felder; die freie
         // Beschreibung bleibt lokal beim Ersteller). Upsert per (konto_id,
@@ -448,15 +462,32 @@ fn katalog_pfad() -> String {
     env::var("KATALOG_PFAD").unwrap_or_else(|_| "katalog.json".into())
 }
 
+/// Liefert den aktuellen Katalog-Text: zuerst aus der DB (vom Admin
+/// hochgeladen), sonst aus der mitgelieferten Datei (KATALOG_PFAD). So
+/// funktioniert der erste Start ohne Upload, und ab dem ersten Upload
+/// gewinnt die DB-Fassung.
+async fn katalog_text(pool: &SqlitePool, konto_id: i64) -> Option<String> {
+    if let Ok(Some((json,))) = sqlx::query_as::<_, (String,)>(
+        "SELECT inhalt_json FROM katalog_aktuell WHERE konto_id = ?",
+    )
+    .bind(konto_id)
+    .fetch_optional(pool)
+    .await
+    {
+        return Some(json);
+    }
+    tokio::fs::read_to_string(katalog_pfad()).await.ok()
+}
+
 /// Liefert den aktuellen Förder-Katalog (rohes JSON).
 async fn katalog_lesen(
     State(st): State<AppState>,
     headers: HeaderMap,
 ) -> Result<(StatusCode, [(axum::http::HeaderName, &'static str); 1], String), StatusCode> {
-    konto_und_geraet(&st.pool, &headers).await?;
-    let text = tokio::fs::read_to_string(katalog_pfad())
+    let (konto_id, _) = konto_und_geraet(&st.pool, &headers).await?;
+    let text = katalog_text(&st.pool, konto_id)
         .await
-        .map_err(|_| StatusCode::NOT_FOUND)?;
+        .ok_or(StatusCode::NOT_FOUND)?;
     Ok((
         StatusCode::OK,
         [(axum::http::header::CONTENT_TYPE, "application/json")],
@@ -476,10 +507,10 @@ async fn katalog_version(
     State(st): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<KatalogVersion>, StatusCode> {
-    konto_und_geraet(&st.pool, &headers).await?;
-    let text = tokio::fs::read_to_string(katalog_pfad())
+    let (konto_id, _) = konto_und_geraet(&st.pool, &headers).await?;
+    let text = katalog_text(&st.pool, konto_id)
         .await
-        .map_err(|_| StatusCode::NOT_FOUND)?;
+        .ok_or(StatusCode::NOT_FOUND)?;
     let v: serde_json::Value =
         serde_json::from_str(&text).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(KatalogVersion {
@@ -855,6 +886,69 @@ async fn admin_foerderer(
         })
         .collect();
     Ok(Json(liste))
+}
+
+#[derive(Serialize)]
+struct KatalogHochladenAntwort {
+    stand: Option<String>,
+    schema_version: Option<i64>,
+    anzahl: usize,
+}
+
+/// Lädt einen neuen Gesamt-Katalog hoch (PUT /api/admin/katalog). Body =
+/// das rohe Katalog-JSON. Wird geprüft (Objekt mit schema_version und
+/// Liste foerderungen, jede mit id+name) und in der DB abgelegt; ab dann
+/// liefert GET /api/katalog diese Fassung. Nur für Admins.
+async fn admin_katalog_hochladen(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    body: String,
+) -> Result<Json<KatalogHochladenAntwort>, StatusCode> {
+    let (konto_id, geraet_id) = admin_pruefen(&st, &headers).await?;
+
+    if body.len() > KATALOG_MAX_BYTES {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+    let v: serde_json::Value = serde_json::from_str(&body).map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    // Mindest-Prüfung (wie der Client beim Einspielen): Objekt mit
+    // schema_version und einer Liste foerderungen, jede mit id und name.
+    let schema_version = v.get("schema_version").and_then(|x| x.as_i64());
+    let foerderungen = v.get("foerderungen").and_then(|x| x.as_array());
+    let (Some(_), Some(liste)) = (schema_version, foerderungen) else {
+        return Err(StatusCode::BAD_REQUEST);
+    };
+    for f in liste {
+        let hat_id = f.get("id").and_then(|x| x.as_str()).is_some_and(|s| !s.is_empty());
+        let hat_name = f.get("name").and_then(|x| x.as_str()).is_some_and(|s| !s.is_empty());
+        if !hat_id || !hat_name {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    }
+    let stand = v.get("stand").and_then(|x| x.as_str()).map(|s| s.to_string());
+    let anzahl = liste.len();
+
+    sqlx::query(
+        "INSERT INTO katalog_aktuell
+            (konto_id, inhalt_json, stand, schema_version, geaendert_am, geaendert_von_geraet)
+         VALUES (?, ?, ?, ?, datetime('now'), ?)
+         ON CONFLICT(konto_id) DO UPDATE SET
+            inhalt_json = excluded.inhalt_json,
+            stand = excluded.stand,
+            schema_version = excluded.schema_version,
+            geaendert_am = excluded.geaendert_am,
+            geaendert_von_geraet = excluded.geaendert_von_geraet",
+    )
+    .bind(konto_id)
+    .bind(&body)
+    .bind(&stand)
+    .bind(schema_version)
+    .bind(geraet_id)
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(KatalogHochladenAntwort { stand, schema_version, anzahl }))
 }
 
 #[cfg(test)]
