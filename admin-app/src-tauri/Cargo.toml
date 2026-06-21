@@ -1,0 +1,26 @@
+[package]
+name = "antrag3000-admin"
+version = "0.1.0"
+description = "Antrag 3000 – Admin-Werkzeug (Förder-Datenbank pflegen)"
+authors = ["Antrag 3000 Team"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+# Datei-Auswahl (Zugangs-Paket, Katalog-Datei).
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# mTLS-HTTP-Client (wie in der Nutzer-App): reqwest mit rustls.
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+# Zugangs-Paket prüfen + Gerätenamen (CN) aus dem Zertifikat lesen.
+rustls-pemfile = "2"
+x509-parser = "0.16"
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true

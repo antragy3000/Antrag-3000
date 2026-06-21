@@ -1,0 +1,4 @@
+# Abhängigkeiten und Build-Artefakte der Admin-App
+node_modules/
+src-tauri/target/
+src-tauri/gen/
