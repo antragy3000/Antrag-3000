@@ -224,6 +224,60 @@ async fn admin_foerderer(adresse: String, ausweis_pem: String, ca_pem: String, t
     admin_get(&adresse, &ausweis_pem, &ca_pem, &token, "/api/admin/foerderer").await
 }
 
+/// Setzt den Status einer Meldung (offen/erledigt/verworfen).
+#[tauri::command]
+async fn admin_meldung_status(
+    adresse: String,
+    ausweis_pem: String,
+    ca_pem: String,
+    token: String,
+    meldung_id: String,
+    status: String,
+) -> Result<(), String> {
+    let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
+    let url = format!("{}/api/admin/meldungen/{}", basis_url(&adresse), meldung_id);
+    let r = client
+        .put(&url)
+        .header("x-admin-token", &token)
+        .json(&serde_json::json!({ "status": status }))
+        .send()
+        .await
+        .map_err(|e| format!("Senden fehlgeschlagen: {}", fehler_kette(&e)))?;
+    if r.status().as_u16() == 401 {
+        return Err("Sitzung abgelaufen – bitte neu anmelden.".into());
+    }
+    if !r.status().is_success() {
+        return Err(format!("Server antwortete mit {}.", r.status()));
+    }
+    Ok(())
+}
+
+/// Entfernt einen geteilten Förderer (Admin darf jeden Eintrag löschen).
+#[tauri::command]
+async fn admin_foerderer_loeschen(
+    adresse: String,
+    ausweis_pem: String,
+    ca_pem: String,
+    token: String,
+    foerderer_id: String,
+) -> Result<(), String> {
+    let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
+    let url = format!("{}/api/admin/foerderer/{}", basis_url(&adresse), foerderer_id);
+    let r = client
+        .delete(&url)
+        .header("x-admin-token", &token)
+        .send()
+        .await
+        .map_err(|e| format!("Löschen fehlgeschlagen: {}", fehler_kette(&e)))?;
+    if r.status().as_u16() == 401 {
+        return Err("Sitzung abgelaufen – bitte neu anmelden.".into());
+    }
+    if !r.status().is_success() {
+        return Err(format!("Server antwortete mit {}.", r.status()));
+    }
+    Ok(())
+}
+
 /// Lädt einen neuen Gesamt-Katalog hoch (PUT /api/admin/katalog).
 #[tauri::command]
 async fn admin_katalog_hochladen(
@@ -262,6 +316,8 @@ fn main() {
             admin_anmelden,
             admin_meldungen,
             admin_foerderer,
+            admin_meldung_status,
+            admin_foerderer_loeschen,
             admin_katalog_hochladen,
         ])
         .run(tauri::generate_context!())

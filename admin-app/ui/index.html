@@ -34,6 +34,9 @@
     button:disabled { background: #c1c7d0; cursor: default; }
     button.zweit { color: var(--dunkel); background: #fff; border: 2px solid var(--rand); }
     button.zweit:hover:not(:disabled) { border-color: var(--blau); background: #fff; }
+    button.mini { padding: 4px 9px; font-size: 0.78rem; margin: 0 4px 4px 0; }
+    button.mini.gefahr { background: #ca3521; }
+    button.mini.gefahr:hover:not(:disabled) { background: #ae2e24; }
     .knoepfe { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
     .meld { margin-top: 12px; padding: 10px 12px; border-radius: 8px; font-size: 0.9rem; }
     .meld.ok { background: #e3fcef; color: #143d2b; }
@@ -206,16 +209,24 @@
         const roh = await gemeinsam("admin_meldungen");
         const liste = JSON.parse(roh);
         if (!liste.length) { $("meldungenInhalt").innerHTML = '<p class="leer">Keine Meldungen.</p>'; return; }
-        const zeilen = liste.map((m) => `
-          <tr>
+        const zeilen = liste.map((m) => {
+          const id = escape(m.id);
+          const aktionen = [
+            m.status !== "erledigt" ? `<button class="mini" data-akt="status" data-id="${id}" data-status="erledigt">erledigt</button>` : "",
+            m.status !== "verworfen" ? `<button class="mini zweit" data-akt="status" data-id="${id}" data-status="verworfen">verwerfen</button>` : "",
+            m.status !== "offen" ? `<button class="mini zweit" data-akt="status" data-id="${id}" data-status="offen">öffnen</button>` : "",
+          ].join("");
+          return `<tr>
             <td>${escape(m.foerderung_name || m.foerderung_id)}</td>
             <td><span class="pill">${escape(ART[m.art] || m.art)}</span></td>
             <td>${escape(m.text || "—")}</td>
             <td>${escape(m.status)}</td>
             <td class="dezent">#${escape(m.geraet_id)} · ${escape(zeit(m.geaendert_am))}</td>
-          </tr>`).join("");
+            <td>${aktionen}</td>
+          </tr>`;
+        }).join("");
         $("meldungenInhalt").innerHTML =
-          `<table><thead><tr><th>Förderung</th><th>Art</th><th>Anmerkung</th><th>Status</th><th>Gerät · Stand</th></tr></thead><tbody>${zeilen}</tbody></table>`;
+          `<table><thead><tr><th>Förderung</th><th>Art</th><th>Anmerkung</th><th>Status</th><th>Gerät · Stand</th><th>Aktion</th></tr></thead><tbody>${zeilen}</tbody></table>`;
       } catch (e) {
         $("meldungenInhalt").innerHTML = `<div class="meld fehler">⚠ ${escape(e)}</div>`;
       }
@@ -236,10 +247,11 @@
             <td>${escape(i.foerdergeber || "—")}</td>
             <td>${escape(i.land || "—")}</td>
             <td class="dezent">#${escape(f.geraet_id)} · ${escape(zeit(f.geaendert_am))}</td>
+            <td><button class="mini gefahr" data-del="${escape(f.id)}">entfernen</button></td>
           </tr>`;
         }).join("");
         $("foerdererInhalt").innerHTML =
-          `<table><thead><tr><th>Name</th><th>Geber</th><th>Land</th><th>Gerät · Stand</th></tr></thead><tbody>${zeilen}</tbody></table>`;
+          `<table><thead><tr><th>Name</th><th>Geber</th><th>Land</th><th>Gerät · Stand</th><th>Aktion</th></tr></thead><tbody>${zeilen}</tbody></table>`;
       } catch (e) {
         $("foerdererInhalt").innerHTML = `<div class="meld fehler">⚠ ${escape(e)}</div>`;
       }
@@ -289,6 +301,32 @@
         adresse: zugang.adresse, ausweisPem: zugang.ausweis_pem, caPem: zugang.ca_pem, token,
       });
     }
+    function basisArgs() {
+      return { adresse: zugang.adresse, ausweisPem: zugang.ausweis_pem, caPem: zugang.ca_pem, token };
+    }
+
+    // Meldung-Status setzen (delegiert auf die Tabelle).
+    $("meldungenInhalt").onclick = async (e) => {
+      const b = e.target.closest("button[data-akt='status']");
+      if (!b) return;
+      b.disabled = true;
+      try {
+        await invoke("admin_meldung_status", { ...basisArgs(), meldungId: b.dataset.id, status: b.dataset.status });
+        ladeMeldungen();
+      } catch (err) { alert("⚠ " + err); b.disabled = false; }
+    };
+
+    // Geteilten Förderer entfernen (delegiert auf die Tabelle).
+    $("foerdererInhalt").onclick = async (e) => {
+      const b = e.target.closest("button[data-del]");
+      if (!b) return;
+      if (!confirm("Diesen geteilten Förderer wirklich entfernen?")) return;
+      b.disabled = true;
+      try {
+        await invoke("admin_foerderer_loeschen", { ...basisArgs(), foerdererId: b.dataset.del });
+        ladeFoerderer();
+      } catch (err) { alert("⚠ " + err); b.disabled = false; }
+    };
   </script>
 </body>
 </html>

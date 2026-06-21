@@ -32,7 +32,7 @@ use std::time::{Duration, Instant};
 use axum::{
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
-    routing::{get, post, put},
+    routing::{delete, get, post, put},
     Json, Router,
 };
 use base64::Engine;
@@ -147,7 +147,9 @@ async fn main() {
         // Admin (Etappe 4): Zwei-Faktor (Admin-Gerät + Passwort).
         .route("/api/admin/anmelden", post(admin_anmelden))
         .route("/api/admin/meldungen", get(admin_meldungen))
+        .route("/api/admin/meldungen/:meldung_id", put(admin_meldung_status))
         .route("/api/admin/foerderer", get(admin_foerderer))
+        .route("/api/admin/foerderer/:foerderer_id", delete(admin_foerderer_loeschen))
         .route("/api/admin/katalog", put(admin_katalog_hochladen))
         .with_state(AppState {
             pool,
@@ -913,6 +915,57 @@ async fn admin_meldungen(
         })
         .collect();
     Ok(Json(liste))
+}
+
+#[derive(Deserialize)]
+struct StatusBody {
+    status: String,
+}
+
+/// Setzt den Status einer Meldung (PUT /api/admin/meldungen/{id}). Erlaubt:
+/// offen, erledigt, verworfen. Nur für Admins.
+async fn admin_meldung_status(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    Path(meldung_id): Path<String>,
+    Json(body): Json<StatusBody>,
+) -> Result<StatusCode, StatusCode> {
+    let (konto_id, _) = admin_pruefen(&st, &headers).await?;
+    if !["offen", "erledigt", "verworfen"].contains(&body.status.as_str()) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    let res = sqlx::query(
+        "UPDATE meldung SET status = ?, geaendert_am = datetime('now')
+         WHERE konto_id = ? AND id = ?",
+    )
+    .bind(&body.status)
+    .bind(konto_id)
+    .bind(&meldung_id)
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if res.rows_affected() == 0 {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Entfernt einen geteilten Förderer (DELETE /api/admin/foerderer/{id}).
+/// Anders als der Nutzer-Endpunkt darf der Admin JEDEN Eintrag des Kontos
+/// löschen (z. B. einen unpassenden). Nur für Admins.
+async fn admin_foerderer_loeschen(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    Path(foerderer_id): Path<String>,
+) -> Result<StatusCode, StatusCode> {
+    let (konto_id, _) = admin_pruefen(&st, &headers).await?;
+    sqlx::query("DELETE FROM geteilte_foerderung WHERE konto_id = ? AND id = ?")
+        .bind(konto_id)
+        .bind(&foerderer_id)
+        .execute(&st.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Alle geteilten Förderer des Kontos (GET /api/admin/foerderer) – für die
