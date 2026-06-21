@@ -29,10 +29,12 @@ use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
+use argon2::password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
+use argon2::Argon2;
 use axum::{
     extract::{Path, State},
     http::{HeaderMap, StatusCode},
-    routing::{get, put},
+    routing::{get, post, put},
     Json, Router,
 };
 use base64::Engine;
@@ -83,6 +85,26 @@ fn tempo_ok(st: &AppState, geraet_id: i64) -> bool {
 
 #[tokio::main]
 async fn main() {
+    // Hilfsmodus zum Erzeugen des Admin-Passwort-Hashes:
+    //   server hash "meinPasswort"
+    // Den ausgegebenen Hash trägt der Admin als ENV ADMIN_PASSWORT_HASH
+    // ein. So liegt nie das Klartext-Passwort auf dem Server.
+    let args: Vec<String> = env::args().collect();
+    if args.get(1).map(|s| s.as_str()) == Some("hash") {
+        let pw = args.get(2).cloned().unwrap_or_default();
+        if pw.is_empty() {
+            eprintln!("Aufruf: server hash <passwort>");
+            std::process::exit(2);
+        }
+        let salt = SaltString::generate(&mut OsRng);
+        let hash = Argon2::default()
+            .hash_password(pw.as_bytes(), &salt)
+            .expect("Hash fehlgeschlagen")
+            .to_string();
+        println!("{hash}");
+        return;
+    }
+
     let db_pfad = env::var("DB_PFAD").unwrap_or_else(|_| "antrag3000.sqlite".into());
     let lausch = env::var("LAUSCH").unwrap_or_else(|_| "0.0.0.0:8080".into());
 
@@ -108,6 +130,10 @@ async fn main() {
         .route("/api/meldung/:meldung_id", put(meldung_schreiben))
         .route("/api/foerderer", get(foerderer_lesen))
         .route("/api/foerderer/:foerderer_id", put(foerderer_schreiben).delete(foerderer_loeschen))
+        // Admin (Etappe 4): Zwei-Faktor (Admin-Gerät + Passwort).
+        .route("/api/admin/anmelden", post(admin_anmelden))
+        .route("/api/admin/meldungen", get(admin_meldungen))
+        .route("/api/admin/foerderer", get(admin_foerderer))
         .with_state(AppState {
             pool,
             schreib: Arc::new(Mutex::new(HashMap::new())),
@@ -193,6 +219,12 @@ async fn schema_anlegen(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     for s in stmts {
         sqlx::query(s).execute(pool).await?;
     }
+    // Admin-Kennzeichen am Gerät (Etappe 4). Per ALTER ergänzt, damit auch
+    // bestehende Datenbanken nachgezogen werden; bei vorhandener Spalte
+    // schlägt ALTER fehl – das ignorieren wir bewusst.
+    let _ = sqlx::query("ALTER TABLE geraet ADD COLUMN ist_admin INTEGER NOT NULL DEFAULT 0")
+        .execute(pool)
+        .await;
     Ok(())
 }
 
@@ -678,4 +710,174 @@ async fn foerderer_loeschen(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+// ============================================================
+// Admin (Phase 3 / Etappe 4): zentrale Pflege der Förder-Datenbank.
+//
+// Zwei-Faktor-Schutz, weil ein Admin viel bewegen kann:
+//  1. BESITZ: ein gültiges Team-Gerät (mTLS) – und dieses Gerät muss als
+//     Admin hinterlegt sein (geraet.ist_admin = 1).
+//  2. WISSEN: das Admin-Passwort (Header X-Admin-Passwort), geprüft gegen
+//     den argon2-Hash aus ENV ADMIN_PASSWORT_HASH.
+// Ist kein ADMIN_PASSWORT_HASH gesetzt, ist der Admin-Zugang deaktiviert.
+// ============================================================
+
+/// Prüft ein Klartext-Passwort gegen den hinterlegten argon2-Hash.
+fn passwort_ok(klartext: &str) -> bool {
+    let hash = match env::var("ADMIN_PASSWORT_HASH") {
+        Ok(h) if !h.trim().is_empty() => h,
+        _ => return false, // kein Passwort gesetzt → Admin deaktiviert
+    };
+    let parsed = match PasswordHash::new(hash.trim()) {
+        Ok(p) => p,
+        Err(_) => return false,
+    };
+    Argon2::default()
+        .verify_password(klartext.as_bytes(), &parsed)
+        .is_ok()
+}
+
+/// Beide Faktoren prüfen. Gibt (konto_id, geraet_id) zurück oder einen
+/// Fehlerstatus (401 Passwort, 403 kein Admin-Gerät).
+async fn admin_pruefen(st: &AppState, headers: &HeaderMap) -> Result<(i64, i64), StatusCode> {
+    let (konto_id, geraet_id) = konto_und_geraet(&st.pool, headers).await?;
+    // Faktor 2: Passwort-Header.
+    let pw = headers
+        .get("x-admin-passwort")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    if pw.is_empty() || !passwort_ok(pw) {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    // Faktor 1: dieses Gerät muss als Admin hinterlegt sein.
+    let ist: i64 = sqlx::query_scalar("SELECT COALESCE(ist_admin, 0) FROM geraet WHERE id = ?")
+        .bind(geraet_id)
+        .fetch_one(&st.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if ist != 1 {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    Ok((konto_id, geraet_id))
+}
+
+#[derive(Deserialize)]
+struct AnmeldeBody {
+    passwort: String,
+}
+
+/// Admin-Login (POST /api/admin/anmelden): Beweist das Passwort und macht
+/// DAS AUFRUFENDE Gerät zum Admin-Gerät (bindet Faktor 1 an dieses
+/// Zertifikat). Danach verlangen alle Admin-Endpunkte zusätzlich den
+/// Passwort-Header. Tempo-Bremse gegen Passwort-Raten.
+async fn admin_anmelden(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<AnmeldeBody>,
+) -> Result<StatusCode, StatusCode> {
+    let (_konto_id, geraet_id) = konto_und_geraet(&st.pool, &headers).await?;
+    if !tempo_ok(&st, geraet_id) {
+        return Err(StatusCode::TOO_MANY_REQUESTS);
+    }
+    if body.passwort.is_empty() || !passwort_ok(&body.passwort) {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    sqlx::query("UPDATE geraet SET ist_admin = 1 WHERE id = ?")
+        .bind(geraet_id)
+        .execute(&st.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Serialize)]
+struct MeldungZeile {
+    id: String,
+    geraet_id: i64,
+    foerderung_id: String,
+    foerderung_name: Option<String>,
+    art: String,
+    text: Option<String>,
+    status: String,
+    erstellt_am: String,
+    geaendert_am: String,
+}
+
+/// Alle Meldungen des Kontos (GET /api/admin/meldungen) – die Eingangsbox
+/// der Kuratierung. Nur für Admins.
+async fn admin_meldungen(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<MeldungZeile>>, StatusCode> {
+    let (konto_id, _) = admin_pruefen(&st, &headers).await?;
+    let rows = sqlx::query_as::<_, (String, i64, String, Option<String>, String, Option<String>, String, String, String)>(
+        "SELECT id, geraet_id, foerderung_id, foerderung_name, art, text, status, erstellt_am, geaendert_am
+         FROM meldung WHERE konto_id = ? ORDER BY geaendert_am DESC",
+    )
+    .bind(konto_id)
+    .fetch_all(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let liste = rows
+        .into_iter()
+        .map(|(id, geraet_id, foerderung_id, foerderung_name, art, text, status, erstellt_am, geaendert_am)| {
+            MeldungZeile { id, geraet_id, foerderung_id, foerderung_name, art, text, status, erstellt_am, geaendert_am }
+        })
+        .collect();
+    Ok(Json(liste))
+}
+
+/// Alle geteilten Förderer des Kontos (GET /api/admin/foerderer) – für die
+/// Kuratierung. Nutzt dieselbe Form wie /api/foerderer, aber Admin-geschützt.
+async fn admin_foerderer(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<GeteilteFoerderung>>, StatusCode> {
+    let (konto_id, _) = admin_pruefen(&st, &headers).await?;
+    let rows = sqlx::query_as::<_, (String, i64, String, String)>(
+        "SELECT id, geraet_id, inhalt_json, geaendert_am
+         FROM geteilte_foerderung WHERE konto_id = ? ORDER BY geaendert_am DESC",
+    )
+    .bind(konto_id)
+    .fetch_all(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let liste = rows
+        .into_iter()
+        .map(|(id, geraet_id, json, geaendert_am)| GeteilteFoerderung {
+            id,
+            geraet_id,
+            inhalt: serde_json::from_str(&json).unwrap_or(serde_json::Value::Null),
+            geaendert_am,
+        })
+        .collect();
+    Ok(Json(liste))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Erzeugt einen Hash wie der `hash`-Hilfsmodus und prüft, dass
+    /// passwort_ok das richtige Passwort akzeptiert und falsche ablehnt.
+    #[test]
+    fn admin_passwort_roundtrip() {
+        let salt = SaltString::generate(&mut OsRng);
+        let hash = Argon2::default()
+            .hash_password(b"GeheimesAdminPasswort", &salt)
+            .unwrap()
+            .to_string();
+        std::env::set_var("ADMIN_PASSWORT_HASH", &hash);
+
+        assert!(passwort_ok("GeheimesAdminPasswort"));
+        assert!(!passwort_ok("falsch"));
+        assert!(!passwort_ok(""));
+
+        // Ohne gesetzten Hash ist der Admin-Zugang deaktiviert.
+        std::env::remove_var("ADMIN_PASSWORT_HASH");
+        assert!(!passwort_ok("GeheimesAdminPasswort"));
+    }
 }

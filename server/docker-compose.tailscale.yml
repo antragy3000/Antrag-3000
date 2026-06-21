@@ -53,6 +53,11 @@ services:
       - DB_PFAD=/data/antrag3000.sqlite
       - LAUSCH=0.0.0.0:8080
       - KATALOG_PFAD=/srv/foerderungen.json
+      # Admin-Zugang (Etappe 4): argon2-Hash des Admin-Passworts. Erzeugen mit
+      #   docker compose -f docker-compose.tailscale.yml run --rm api hash "DeinPasswort"
+      # und das Ergebnis in server/.env als ADMIN_PASSWORT_HASH eintragen.
+      # Leer = Admin-Zugang deaktiviert.
+      - ADMIN_PASSWORT_HASH=${ADMIN_PASSWORT_HASH:-}
     volumes:
       - api_data:/data
       - ./katalog:/srv:ro

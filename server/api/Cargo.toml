@@ -20,6 +20,9 @@ sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio",
 sha2 = "0.10"
 base64 = "0.22"
 hex = "0.4"
+# argon2: zum Pruefen des Admin-Passworts (Zwei-Faktor: Admin-Geraet +
+# Passwort). Etablierte Krypto-Bibliothek, dieselbe wie in der Haupt-App.
+argon2 = { version = "0.5", features = ["std"] }
 
 [profile.release]
 opt-level = "z"
