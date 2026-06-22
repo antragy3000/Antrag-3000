@@ -775,6 +775,30 @@
   let syncTimer = null;              // Handle des nächsten Takts (kein $state)
   let tickAktiv = false;            // verhindert überlappende Takte
 
+  // --- Statusanzeige im Header (kleiner farbiger Punkt) ---
+  // rot: offline · blau: online, aber nicht mit dem Team verbunden ·
+  // grün: online und mit dem Team verbunden.
+  let online = $state(typeof navigator !== "undefined" ? navigator.onLine : true);
+  $effect(() => {
+    if (typeof window === "undefined") return;
+    const auf = () => (online = true);
+    const ab = () => (online = false);
+    window.addEventListener("online", auf);
+    window.addEventListener("offline", ab);
+    return () => {
+      window.removeEventListener("online", auf);
+      window.removeEventListener("offline", ab);
+    };
+  });
+
+  let verbindungsStatus = $derived(
+    !online
+      ? { klasse: "rot", text: "Offline – keine Netzwerkverbindung" }
+      : daten?.sync && syncVerbunden
+        ? { klasse: "gruen", text: "Online und mit dem Team verbunden" }
+        : { klasse: "blau", text: "Online, nicht mit einem Team verbunden" }
+  );
+
   // Einmaliger Verbindungstest; aktualisiert syncVerbunden und gibt das
   // {ok, fehler}-Ergebnis zurück (von "Verbindung testen" genutzt).
   async function verbindungPruefen() {
@@ -1580,6 +1604,12 @@
       <div class="rechts">
         <button class="leise" onclick={() => (sicherungOffen = true)}>🛡 Sicherung</button>
         <button class="leise" onclick={sperren}>Sperren</button>
+        <span
+          class="status-punkt {verbindungsStatus.klasse}"
+          title={verbindungsStatus.text}
+          role="img"
+          aria-label={verbindungsStatus.text}
+        ></span>
       </div>
     </header>
     <main>
@@ -1930,6 +1960,18 @@
     align-items: center;
     gap: 4px;
   }
+  .status-punkt {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    margin-left: 6px;
+    flex: 0 0 auto;
+    cursor: default;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.04);
+  }
+  .status-punkt.rot { background: #ca3521; }
+  .status-punkt.blau { background: #4f6df5; }
+  .status-punkt.gruen { background: #22a06b; }
 
   nav {
     display: flex;
