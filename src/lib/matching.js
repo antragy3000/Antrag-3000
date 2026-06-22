@@ -8,6 +8,7 @@
 // ============================================================
 
 import { LAENDER, TRAEGERSCHAFT } from "./begriffe";
+import { regionName } from "./daten/orte.js";
 
 // Budget-Auswahl des Fragebogens -> Zahlenbereich [von, bis]
 const BUDGET_BEREICHE = {
@@ -25,17 +26,54 @@ function harteGruende(f, a) {
   const h = f.harte_kriterien;
   const gruende = [];
 
-  if (h.wohnsitz.length && !h.wohnsitz.includes(a.wohnsitz)) {
+  // Wohnsitz – Land. Stimmt das Land, werden (falls vorhanden UND von der
+  // Nutzer:in angegeben) Bundesland/Kanton und Stadt zusätzlich geprüft.
+  const wohnsitzLandOk = !h.wohnsitz.length || h.wohnsitz.includes(a.wohnsitz);
+  if (!wohnsitzLandOk) {
     gruende.push(
       "Wohnsitz in " + h.wohnsitz.map((l) => LAENDER[l] ?? l).join(" oder ") + " erforderlich"
     );
+  } else {
+    if (h.wohnsitz_regionen?.length && a.wohnsitzRegion && !h.wohnsitz_regionen.includes(a.wohnsitzRegion)) {
+      gruende.push(
+        "Wohnsitz in " +
+          h.wohnsitz_regionen.map((c) => regionName(a.wohnsitz, c)).join(" oder ") +
+          " erforderlich"
+      );
+    }
+    if (h.wohnsitz_staedte?.length && a.wohnsitzStadt && !h.wohnsitz_staedte.includes(a.wohnsitzStadt)) {
+      gruende.push("Wohnsitz in " + h.wohnsitz_staedte.join(" oder ") + " erforderlich");
+    }
   }
-  if (h.durchfuehrungsort.length && !h.durchfuehrungsort.includes(a.durchfuehrungsort)) {
+
+  // Durchführungsort – analog.
+  const durchfuehrungLandOk =
+    !h.durchfuehrungsort.length || h.durchfuehrungsort.includes(a.durchfuehrungsort);
+  if (!durchfuehrungLandOk) {
     gruende.push(
       "Projekt muss in " +
         h.durchfuehrungsort.map((l) => LAENDER[l] ?? l).join(" oder ") +
         " stattfinden"
     );
+  } else {
+    if (
+      h.durchfuehrungsort_regionen?.length &&
+      a.durchfuehrungRegion &&
+      !h.durchfuehrungsort_regionen.includes(a.durchfuehrungRegion)
+    ) {
+      gruende.push(
+        "Projekt muss in " +
+          h.durchfuehrungsort_regionen.map((c) => regionName(a.durchfuehrungsort, c)).join(" oder ") +
+          " stattfinden"
+      );
+    }
+    if (
+      h.durchfuehrungsort_staedte?.length &&
+      a.durchfuehrungStadt &&
+      !h.durchfuehrungsort_staedte.includes(a.durchfuehrungStadt)
+    ) {
+      gruende.push("Projekt muss in " + h.durchfuehrungsort_staedte.join(" oder ") + " stattfinden");
+    }
   }
   if (!h.traegerschaft.includes(a.traegerschaft)) {
     gruende.push(

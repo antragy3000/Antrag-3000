@@ -2,6 +2,7 @@
   // Detailansicht einer Förderung als Überlagerung.
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { LAENDER, SPARTEN, PROJEKTARTEN, TRAEGERSCHAFT, fristText } from "$lib/begriffe";
+  import { regionName } from "$lib/daten/orte.js";
   import AntragBlock from "./AntragBlock.svelte";
 
   let {
@@ -65,14 +66,18 @@
       <dd>
         {f.harte_kriterien.wohnsitz.length
           ? f.harte_kriterien.wohnsitz.map((l) => LAENDER[l] ?? l).join(", ")
-          : "keine Anforderung"}{#if neu("harte_kriterien.wohnsitz")}<span class="neu-feld">NEU</span>{/if}
+          : "keine Anforderung"}{#if f.harte_kriterien.wohnsitz_regionen?.length}
+          · {f.harte_kriterien.wohnsitz_regionen.map((c) => regionName(f.harte_kriterien.wohnsitz[0] ?? f.land, c)).join(", ")}{/if}{#if f.harte_kriterien.wohnsitz_staedte?.length}
+          · {f.harte_kriterien.wohnsitz_staedte.join(", ")}{/if}{#if neu("harte_kriterien.wohnsitz")}<span class="neu-feld">NEU</span>{/if}
       </dd>
 
       <dt>Durchführungsort</dt>
       <dd>
         {f.harte_kriterien.durchfuehrungsort.length
           ? f.harte_kriterien.durchfuehrungsort.map((l) => LAENDER[l] ?? l).join(", ")
-          : "frei"}{#if neu("harte_kriterien.durchfuehrungsort")}<span class="neu-feld">NEU</span>{/if}
+          : "frei"}{#if f.harte_kriterien.durchfuehrungsort_regionen?.length}
+          · {f.harte_kriterien.durchfuehrungsort_regionen.map((c) => regionName(f.harte_kriterien.durchfuehrungsort[0] ?? f.land, c)).join(", ")}{/if}{#if f.harte_kriterien.durchfuehrungsort_staedte?.length}
+          · {f.harte_kriterien.durchfuehrungsort_staedte.join(", ")}{/if}{#if neu("harte_kriterien.durchfuehrungsort")}<span class="neu-feld">NEU</span>{/if}
       </dd>
 
       <dt>Wer kann beantragen?</dt>
