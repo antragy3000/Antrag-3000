@@ -1,0 +1,1210 @@
+{
+  "schema_version": 1,
+  "stand": "2026-06-22",
+  "hinweis": "Importierter Anfangsbestand – Angaben unvollständig, bitte prüfen.",
+  "foerderungen": [
+    {
+      "id": "import-hessisches-ministerium-fuer-wissenschaft-und-kun",
+      "name": "Hessisches Ministerium für Wissenschaft und Kunst",
+      "foerdergeber": "Hessisches Ministerium für Wissenschaft und Kunst",
+      "land": "DE",
+      "beschreibung": "Hessische Projektförderung für die freie Theaterszene – Projektzuschüsse und Förderung von Gastspielen.",
+      "webseite": "https://wissenschaft.hessen.de/projektfoerderung-theater",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "DE"
+        ],
+        "durchfuehrungsort": [
+          "DE"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true,
+        "durchfuehrungsort_regionen": [
+          "HE"
+        ],
+        "wohnsitz_regionen": [
+          "HE"
+        ]
+      },
+      "weiche_kriterien": {
+        "sparten": [
+          "theater"
+        ],
+        "projektarten": [
+          "produktion",
+          "gastspiel_tournee"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Projektbeschreibung",
+        "KFP"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "import-flausen-stipendium",
+      "name": "Flausen+ Stipendium",
+      "foerdergeber": "Flausen+ Stipendium",
+      "land": "DE",
+      "beschreibung": "Vierwöchiges Forschungsstipendium der darstellenden Künste – frei von Aufführungs-/Ergebniszwang. Geboten: Bühne, Wohnung, Mentoring, Forschungsbudget und Unterhaltsgeld.",
+      "webseite": "https://flausen.plus/modelle/kuenstlerinnen/stipendien/",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "DE"
+        ],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [
+          "theater",
+          "tanz",
+          "performance",
+          "interdisziplinaer"
+        ],
+        "projektarten": [
+          "recherche_entwicklung",
+          "residenz"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "Stipendium: Bühne, Wohnung, Mentoring, Forschungsbudget + Unterhaltsgeld",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Antragsformular"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "import-laks-hessen",
+      "name": "LAKS Hessen",
+      "foerdergeber": "LAKS Hessen",
+      "land": "DE",
+      "beschreibung": "Landesarbeitsgemeinschaft der Kulturinitiativen und soziokulturellen Zentren in Hessen; fördert offene, spartenübergreifende soziokulturelle Arbeit mit Bürgerbeteiligung.",
+      "webseite": "https://www.laks.de/service/foerderung",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "DE"
+        ],
+        "durchfuehrungsort": [
+          "DE"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true,
+        "durchfuehrungsort_regionen": [
+          "HE"
+        ],
+        "wohnsitz_regionen": [
+          "HE"
+        ]
+      },
+      "weiche_kriterien": {
+        "sparten": [
+          "interdisziplinaer"
+        ],
+        "projektarten": [
+          "produktion",
+          "vermittlung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [
+        "2025-11-15"
+      ],
+      "foerderhoehe_text": "Landeszuschuss i. d. R. max. 50 % der Gesamtkosten",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Formular",
+        "Projektbeschreibung"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "import-landkreis-giessen",
+      "name": "Landkreis Gießen",
+      "foerdergeber": "Landkreis Gießen",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen. Förderebene/Ort: Gießen (Hessen). Frist/Saison laut Liste: 15.01 zum vorherigen Jahr.",
+      "webseite": "https://www.lkgi.de/",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": []
+    },
+    {
+      "id": "import-landkulturperlen",
+      "name": "LandKulturPerlen",
+      "foerdergeber": "LandKulturPerlen",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen.",
+      "webseite": "",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [
+        "2023-05-02"
+      ],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Grobe gedankliche Projektskizze anhand der Förderkriterien"
+      ]
+    },
+    {
+      "id": "import-fonds-darstellender-kuenste-konzeptionsfoerderun",
+      "name": "Fonds Darstellender Künste (Konzeptionsförderung)",
+      "foerdergeber": "Fonds Darstellender Künste (Konzeptionsförderung)",
+      "land": "DE",
+      "beschreibung": "Mehrjährige Konzeptionsförderung (3 Jahre) für etablierte Freie Gruppen der darstellenden Künste – Neuproduktionen und organisatorische Weiterentwicklung.",
+      "webseite": "https://www.fonds-daku.de/foerderung/foerderprogramme/konzeptionsfoerderung/",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "DE"
+        ],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [
+          "theater",
+          "tanz",
+          "performance",
+          "musik",
+          "medienkunst",
+          "interdisziplinaer"
+        ],
+        "projektarten": [
+          "produktion",
+          "recherche_entwicklung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [
+        "2026-02-02"
+      ],
+      "foerderhoehe_text": "150.000–240.000 € über 3 Jahre (50.000–80.000 €/Jahr)",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Onlineportal"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "import-kulturkoffer-hessen",
+      "name": "Kulturkoffer Hessen",
+      "foerdergeber": "Kulturkoffer Hessen",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen. Förderebene/Ort: Hessen.",
+      "webseite": "https://kulturkoffer.hessen.de/",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [
+        "2023-05-01"
+      ],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Formulare ausfüllen"
+      ]
+    },
+    {
+      "id": "import-kultur-mach-stark-zirkus-macht-stark",
+      "name": "Kultur mach stark / Zirkus macht stark",
+      "foerdergeber": "Kultur mach stark / Zirkus macht stark",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen.",
+      "webseite": "https://www.zirkus-macht-stark.de/wp-content/uploads/2022/11/Foerderbedingungen_ZMS-III_neu.pdf",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [
+        "2023-11-15"
+      ],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Eigenerklärung/ Vollmacht/ Qualifaktion",
+        "Muster Kooperationsvereinbaerung"
+      ]
+    },
+    {
+      "id": "import-stiftung-citoyen-rhein-main-gebiet",
+      "name": "Stiftung Citoyen: Rhein-Main Gebiet",
+      "foerdergeber": "Stiftung Citoyen: Rhein-Main Gebiet",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen. Förderebene/Ort: Hessen.",
+      "webseite": "",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "43"
+      ]
+    },
+    {
+      "id": "import-maeccenia-frauen-in-wissenschaft-und-kultur-rhei",
+      "name": "maeccenia Frauen in WIssenschaft und Kultur, Rhein Main Gebie",
+      "foerdergeber": "maeccenia Frauen in WIssenschaft und Kultur, Rhein Main Gebie",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen. Förderebene/Ort: private Stiftung.",
+      "webseite": "http://www.maecenia-frankfurt.de/de/förderantrag-stellen",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "45"
+      ]
+    },
+    {
+      "id": "import-kompetenzzentrum-kreativwirtschaft-der-stadt-fra",
+      "name": "Kompetenzzentrum Kreativwirtschaft der Stadt Frankfurt/Main",
+      "foerdergeber": "Kompetenzzentrum Kreativwirtschaft der Stadt Frankfurt/Main",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen.",
+      "webseite": "",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "50"
+      ]
+    },
+    {
+      "id": "import-bundesstiftung-aufarbeitung",
+      "name": "Bundesstiftung Aufarbeitung",
+      "foerdergeber": "Bundesstiftung Aufarbeitung",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen.",
+      "webseite": "",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": []
+    },
+    {
+      "id": "import-kulturfonds-frankfurt-rheinmain-site-sight-signs",
+      "name": "Kulturfonds Frankfurt RheinMain - Site Sight Signs",
+      "foerdergeber": "Kulturfonds Frankfurt RheinMain - Site Sight Signs",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen.",
+      "webseite": "",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "53"
+      ]
+    },
+    {
+      "id": "import-kulturfonds-frankfurt-rheinmain-projektfoerderun",
+      "name": "Kulturfonds Frankfurt RheinMain - Projektförderung",
+      "foerdergeber": "Kulturfonds Frankfurt RheinMain - Projektförderung",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen.",
+      "webseite": "",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": []
+    },
+    {
+      "id": "import-internationales-kuenstler-innengremium",
+      "name": "Internationales Künstler:innengremium",
+      "foerdergeber": "Internationales Künstler:innengremium",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen.",
+      "webseite": "",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": []
+    },
+    {
+      "id": "import-deutscher-kuenstlerverbund",
+      "name": "Deutscher Künstlerverbund",
+      "foerdergeber": "Deutscher Künstlerverbund",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen.",
+      "webseite": "",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "19"
+      ]
+    },
+    {
+      "id": "import-einzelproduktionsfoerderung-kulturamt-frankfurt-",
+      "name": "Einzelproduktionsförderung Kulturamt Frankfurt am Main",
+      "foerdergeber": "Einzelproduktionsförderung Kulturamt Frankfurt am Main",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen. Frist/Saison laut Liste: 01.02. und 01.07.",
+      "webseite": "https://kultur-frankfurt.de/portal/de/Buehne/Theaterfoerderung/38/2497/0/0/4.aspx?druck=1",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Antragsformular",
+        "Kosten- und Finanzierungsplan",
+        "Projektbeschreibung",
+        "Einladungsschreiben Theaterstätte"
+      ]
+    },
+    {
+      "id": "import-frankfurter-stiftung-maecenia-fuer-frauen-in-wis",
+      "name": "Frankfurter Stiftung maecenia für Frauen in Wissenschaft und Kunst",
+      "foerdergeber": "Frankfurter Stiftung maecenia für Frauen in Wissenschaft und Kunst",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen.",
+      "webseite": "http://www.maecenia-frankfurt.de/de/2022",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [
+        "2023-01-31"
+      ],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Exposé max. 5 Seiten",
+        "Zeit- und Finanzierungsplan",
+        "Dokument \"Überblicksinformation\" und Antragsformular auf Webseite"
+      ]
+    },
+    {
+      "id": "import-deutsche-stiftung-frauen-und-geschlechterforschu",
+      "name": "Deutsche Stiftung Frauen- und Geschlechterforschung",
+      "foerdergeber": "Deutsche Stiftung Frauen- und Geschlechterforschung",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen. Frist/Saison laut Liste: Jederzeit, Antwort innerhalb von 14 Tagen.",
+      "webseite": "http://www.stiftung-frauenforschung.de/index.php/antrag-zur-foerderung",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Simples Onlineformular auf Webseite: Inhalt",
+        "Sinn/Ziel",
+        "Aufbau",
+        "Was soll gezahlt werden? Was Wird schon gezahlt"
+      ]
+    },
+    {
+      "id": "import-fonds-soziokultur-allgemeine-projektfoerderung",
+      "name": "Fonds Soziokultur (Allgemeine Projektförderung)",
+      "foerdergeber": "Fonds Soziokultur (Allgemeine Projektförderung)",
+      "land": "DE",
+      "beschreibung": "Bundesweite Förderung zeitlich befristeter soziokultureller Projekte mit partizipativem Ansatz – Menschen vor Ort werden aktiv in Konzeption und Durchführung einbezogen.",
+      "webseite": "https://www.fonds-soziokultur.de/foerderung/foerderprogramme/allgemeine-projektfoerderung.html",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "DE"
+        ],
+        "durchfuehrungsort": [
+          "DE"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [
+          "interdisziplinaer"
+        ],
+        "projektarten": [
+          "produktion",
+          "vermittlung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Antragsvordruck/ KFP"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "import-allgemeine-projekt-und-gastspielfoerderung-des-l",
+      "name": "Allgemeine Projekt- und Gastspielförderung des Landes Hessen",
+      "foerdergeber": "Allgemeine Projekt- und Gastspielförderung des Landes Hessen",
+      "land": "DE",
+      "beschreibung": "Hessische Landesförderung für zeitlich begrenzte Theaterprojekte freier Träger – künstlerisch hochwertige Produktionen, experimentelle Ansätze und Gastspiele. Fristen: 31.10. (Vorjahr) und 31.03.",
+      "webseite": "https://kulturberatung-hessen.de/foerderprogramme/land-hessen-allgemein",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "DE"
+        ],
+        "durchfuehrungsort": [
+          "DE"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true,
+        "durchfuehrungsort_regionen": [
+          "HE"
+        ],
+        "wohnsitz_regionen": [
+          "HE"
+        ]
+      },
+      "weiche_kriterien": {
+        "sparten": [
+          "theater"
+        ],
+        "projektarten": [
+          "produktion",
+          "gastspiel_tournee",
+          "vermittlung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [
+        "2026-03-31"
+      ],
+      "foerderhoehe_text": "Teilfinanzierung des Fehlbedarfs, max. 50 % der zuwendungsfähigen Ausgaben (bis 10.000 € vereinfacht)",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "sofern sie unmittelbar als Künstler am Projekt beteiligt sind. Vereine",
+        "kulturelle Verbände",
+        "Landesarbeitsgemeinschaften",
+        "Gebietskörperschaften."
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "import-foerderung-theater-hinter-gittern",
+      "name": "Förderung \"theater hinter gittern\"",
+      "foerdergeber": "Förderung \"theater hinter gittern\"",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen.",
+      "webseite": "",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "114"
+      ]
+    },
+    {
+      "id": "import-die-werft",
+      "name": "DIe Werft",
+      "foerdergeber": "DIe Werft",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen. Frist/Saison laut Liste: 83.",
+      "webseite": "",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Ein existierendes Projekt",
+        "keine externe Förderung"
+      ]
+    },
+    {
+      "id": "import-projektfoerderung-stadt-wiesbaden",
+      "name": "Projektförderung Stadt Wiesbaden",
+      "foerdergeber": "Projektförderung Stadt Wiesbaden",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen. Frist/Saison laut Liste: 86.",
+      "webseite": "",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "schriftlicher Antrag + KFP"
+      ]
+    },
+    {
+      "id": "import-kulturfoerderung-stadt-erfurt",
+      "name": "Kulturförderung Stadt Erfurt",
+      "foerdergeber": "Kulturförderung Stadt Erfurt",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen. Frist/Saison laut Liste: < 500: 31.08 / spätestens 6 Wochen vor Projektbeginn. > 500: 30.11 Vorjahr.",
+      "webseite": "https://www.erfurt.de/ef/de/rathaus/bservice/leistungen/leistung-2125.htmc#pk_campaign=Redirector-Webcode&pk_kwd=ef13414",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Online Antrag + KFP"
+      ]
+    },
+    {
+      "id": "import-kulturstiftung-thueringen",
+      "name": "Kulturstiftung Thüringen",
+      "foerdergeber": "Kulturstiftung Thüringen",
+      "land": "DE",
+      "beschreibung": "Projektförderung der Kulturstiftung des Freistaats Thüringen für zeitgenössische, innovative Kunstprojekte aller Sparten mit landesweiter oder überregionaler Wirksamkeit (jährliche Vergabe).",
+      "webseite": "https://www.kulturstiftung-thueringen.de/foerderung/projektfoerderung/projektfoerderung-der-kulturstiftung-des-freistaats-thueringen",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "DE"
+        ],
+        "durchfuehrungsort": [
+          "DE"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true,
+        "durchfuehrungsort_regionen": [
+          "TH"
+        ]
+      },
+      "weiche_kriterien": {
+        "sparten": [
+          "bildende_kunst",
+          "literatur",
+          "medienkunst",
+          "film",
+          "musik",
+          "theater",
+          "tanz",
+          "performance",
+          "interdisziplinaer"
+        ],
+        "projektarten": [
+          "produktion",
+          "recherche_entwicklung",
+          "residenz",
+          "gastspiel_tournee",
+          "festival",
+          "veroeffentlichung",
+          "vermittlung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Online Antrag + KFP"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "import-jupiter-kulturstiftung-des-bundes-darstellende-k",
+      "name": "Jupiter, Kulturstiftung des Bundes: Darstellende Künste für junges Publikum",
+      "foerdergeber": "Jupiter, Kulturstiftung des Bundes: Darstellende Künste für junges Publikum",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen.",
+      "webseite": "",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": []
+    },
+    {
+      "id": "import-sparkasse-giessen-kulturstiftung-regional",
+      "name": "Sparkasse Gießen Kulturstiftung, regional",
+      "foerdergeber": "Sparkasse Gießen Kulturstiftung, regional",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen.",
+      "webseite": "",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "96"
+      ]
+    },
+    {
+      "id": "import-giessen-kulturamt-kulturfoerderung-stadt-giessen",
+      "name": "Gießen: Kulturamt Kulturförderung Stadt Gießen",
+      "foerdergeber": "Gießen: Kulturamt Kulturförderung Stadt Gießen",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen.",
+      "webseite": "",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "98"
+      ]
+    },
+    {
+      "id": "import-buergerstiftung-mittelhessen-soziale-projekte",
+      "name": "Bürgerstiftung Mittelhessen: Soziale Projekte",
+      "foerdergeber": "Bürgerstiftung Mittelhessen: Soziale Projekte",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen.",
+      "webseite": "",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "100"
+      ]
+    },
+    {
+      "id": "import-hessen-freie-szene-projektfoerderung-theater-min",
+      "name": "Hessen: Freie Szene, Projektförderung Theater, Ministerium Wissenschaft Kunst Hessen",
+      "foerdergeber": "Hessen: Freie Szene, Projektförderung Theater, Ministerium Wissenschaft Kunst Hessen",
+      "land": "DE",
+      "beschreibung": "Hessische Projektförderung für die freie Theaterszene – Projektzuschüsse und Förderung von Gastspielen (Hess. Ministerium für Wissenschaft und Kunst).",
+      "webseite": "https://wissenschaft.hessen.de/projektfoerderung-theater",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "DE"
+        ],
+        "durchfuehrungsort": [
+          "DE"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true,
+        "durchfuehrungsort_regionen": [
+          "HE"
+        ],
+        "wohnsitz_regionen": [
+          "HE"
+        ]
+      },
+      "weiche_kriterien": {
+        "sparten": [
+          "theater"
+        ],
+        "projektarten": [
+          "produktion",
+          "gastspiel_tournee"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "10"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "import-gls-bank-foerderung-gemeinnuetzige-projekte-gest",
+      "name": "GLS Bank Förderung: gemeinnützige Projekte, Gestaltung der Gesellschaft",
+      "foerdergeber": "GLS Bank Förderung: gemeinnützige Projekte, Gestaltung der Gesellschaft",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen.",
+      "webseite": "",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "103"
+      ]
+    },
+    {
+      "id": "import-kulturkoffer",
+      "name": "Kulturkoffer",
+      "foerdergeber": "Kulturkoffer",
+      "land": "DE",
+      "beschreibung": "Aus importierter Liste – Angaben bitte prüfen/ergänzen. Frist/Saison laut Liste: Aktuell: 01.05.2024.",
+      "webseite": "https://kulturkoffer.hessen.de/antrag-kulturkoffer-foerderung-2023/",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "—",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Benötigt 2 Partner*innen",
+        "Projektbeschreibung",
+        "formale Angaben",
+        "Ausgaben- und Finanzierungsplan"
+      ]
+    }
+  ]
+}

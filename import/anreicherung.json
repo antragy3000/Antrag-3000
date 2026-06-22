@@ -1,0 +1,91 @@
+{
+  "import-fonds-darstellender-kuenste-konzeptionsfoerderun": {
+    "recherchiert": true,
+    "beschreibung": "Mehrjährige Konzeptionsförderung (3 Jahre) für etablierte Freie Gruppen der darstellenden Künste – Neuproduktionen und organisatorische Weiterentwicklung.",
+    "webseite": "https://www.fonds-daku.de/foerderung/foerderprogramme/konzeptionsfoerderung/",
+    "foerderhoehe_text": "150.000–240.000 € über 3 Jahre (50.000–80.000 €/Jahr)",
+    "fristen": ["2026-02-02"],
+    "zeitpunkt": "fristen",
+    "sparten": ["theater", "tanz", "performance", "musik", "medienkunst", "interdisziplinaer"],
+    "projektarten": ["produktion", "recherche_entwicklung"],
+    "wohnsitz": ["DE"]
+  },
+  "import-laks-hessen": {
+    "recherchiert": true,
+    "beschreibung": "Landesarbeitsgemeinschaft der Kulturinitiativen und soziokulturellen Zentren in Hessen; fördert offene, spartenübergreifende soziokulturelle Arbeit mit Bürgerbeteiligung.",
+    "foerderhoehe_text": "Landeszuschuss i. d. R. max. 50 % der Gesamtkosten",
+    "fristen": ["2025-11-15"],
+    "zeitpunkt": "fristen",
+    "sparten": ["interdisziplinaer"],
+    "projektarten": ["produktion", "vermittlung"],
+    "wohnsitz": ["DE"],
+    "wohnsitz_regionen": ["HE"],
+    "durchfuehrungsort": ["DE"],
+    "durchfuehrungsort_regionen": ["HE"]
+  },
+  "import-flausen-stipendium": {
+    "recherchiert": true,
+    "beschreibung": "Vierwöchiges Forschungsstipendium der darstellenden Künste – frei von Aufführungs-/Ergebniszwang. Geboten: Bühne, Wohnung, Mentoring, Forschungsbudget und Unterhaltsgeld.",
+    "webseite": "https://flausen.plus/modelle/kuenstlerinnen/stipendien/",
+    "foerderhoehe_text": "Stipendium: Bühne, Wohnung, Mentoring, Forschungsbudget + Unterhaltsgeld",
+    "zeitpunkt": "fristen",
+    "sparten": ["theater", "tanz", "performance", "interdisziplinaer"],
+    "projektarten": ["recherche_entwicklung", "residenz"],
+    "wohnsitz": ["DE"]
+  },
+  "import-fonds-soziokultur-allgemeine-projektfoerderung": {
+    "recherchiert": true,
+    "beschreibung": "Bundesweite Förderung zeitlich befristeter soziokultureller Projekte mit partizipativem Ansatz – Menschen vor Ort werden aktiv in Konzeption und Durchführung einbezogen.",
+    "webseite": "https://www.fonds-soziokultur.de/foerderung/foerderprogramme/allgemeine-projektfoerderung.html",
+    "zeitpunkt": "fristen",
+    "sparten": ["interdisziplinaer"],
+    "projektarten": ["produktion", "vermittlung"],
+    "wohnsitz": ["DE"],
+    "durchfuehrungsort": ["DE"]
+  },
+  "import-allgemeine-projekt-und-gastspielfoerderung-des-l": {
+    "recherchiert": true,
+    "beschreibung": "Hessische Landesförderung für zeitlich begrenzte Theaterprojekte freier Träger – künstlerisch hochwertige Produktionen, experimentelle Ansätze und Gastspiele. Fristen: 31.10. (Vorjahr) und 31.03.",
+    "foerderhoehe_text": "Teilfinanzierung des Fehlbedarfs, max. 50 % der zuwendungsfähigen Ausgaben (bis 10.000 € vereinfacht)",
+    "fristen": ["2026-03-31"],
+    "zeitpunkt": "fristen",
+    "sparten": ["theater"],
+    "projektarten": ["produktion", "gastspiel_tournee", "vermittlung"],
+    "wohnsitz": ["DE"],
+    "wohnsitz_regionen": ["HE"],
+    "durchfuehrungsort": ["DE"],
+    "durchfuehrungsort_regionen": ["HE"]
+  },
+  "import-hessisches-ministerium-fuer-wissenschaft-und-kun": {
+    "recherchiert": true,
+    "beschreibung": "Hessische Projektförderung für die freie Theaterszene – Projektzuschüsse und Förderung von Gastspielen.",
+    "sparten": ["theater"],
+    "projektarten": ["produktion", "gastspiel_tournee"],
+    "wohnsitz": ["DE"],
+    "wohnsitz_regionen": ["HE"],
+    "durchfuehrungsort": ["DE"],
+    "durchfuehrungsort_regionen": ["HE"]
+  },
+  "import-hessen-freie-szene-projektfoerderung-theater-min": {
+    "recherchiert": true,
+    "beschreibung": "Hessische Projektförderung für die freie Theaterszene – Projektzuschüsse und Förderung von Gastspielen (Hess. Ministerium für Wissenschaft und Kunst).",
+    "webseite": "https://wissenschaft.hessen.de/projektfoerderung-theater",
+    "sparten": ["theater"],
+    "projektarten": ["produktion", "gastspiel_tournee"],
+    "wohnsitz": ["DE"],
+    "wohnsitz_regionen": ["HE"],
+    "durchfuehrungsort": ["DE"],
+    "durchfuehrungsort_regionen": ["HE"]
+  },
+  "import-kulturstiftung-thueringen": {
+    "recherchiert": true,
+    "beschreibung": "Projektförderung der Kulturstiftung des Freistaats Thüringen für zeitgenössische, innovative Kunstprojekte aller Sparten mit landesweiter oder überregionaler Wirksamkeit (jährliche Vergabe).",
+    "webseite": "https://www.kulturstiftung-thueringen.de/foerderung/projektfoerderung/projektfoerderung-der-kulturstiftung-des-freistaats-thueringen",
+    "zeitpunkt": "fristen",
+    "sparten": ["bildende_kunst", "literatur", "medienkunst", "film", "musik", "theater", "tanz", "performance", "interdisziplinaer"],
+    "projektarten": ["produktion", "recherche_entwicklung", "residenz", "gastspiel_tournee", "festival", "veroeffentlichung", "vermittlung"],
+    "wohnsitz": ["DE"],
+    "durchfuehrungsort": ["DE"],
+    "durchfuehrungsort_regionen": ["TH"]
+  }
+}
