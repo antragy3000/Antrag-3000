@@ -37,7 +37,7 @@
   <div class="feldzeile">
     <input
       type="text"
-      {placeholder}
+      placeholder={platzhalter}
       bind:value={eingabe}
       disabled={deaktiviert}
       onfocus={() => (offen = true)}
