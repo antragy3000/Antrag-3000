@@ -432,13 +432,23 @@ npm install</div>
   <p class="lead">Der Sammler vergleicht eine Rohquelle mit dem aktuellen Katalog
   und legt daraus die Vorschläge an, die du in Kapitel 6 freigibst.</p>
 
+  <h3>Die Rohquelle: woher die Kandidaten kommen</h3>
+  <p>Die <strong>Rohquelle</strong> ist der Feed der recherchierten Förderer. Sie
+  entsteht aus dem gepflegten Katalog im Projekt und wird mit einem Befehl erzeugt:</p>
+  <div class="cmd">node import/rohquelle-bauen.mjs</div>
+  <p>Das schreibt <span class="pfad">server/katalog/rohquelle.json</span> (mit
+  Prüfung aller Regions-/Stadt-Codes). Diese Datei legst du auf der NAS in den
+  gleichen <span class="pfad">katalog/</span>-Ordner wie
+  <span class="pfad">foerderungen.json</span> – im Container ist sie dann unter
+  <span class="pfad">/srv/rohquelle.json</span> erreichbar.</p>
+
   <h3>Einen Sammler-Lauf starten</h3>
-  <p>Die Quelldatei (eine Liste von Förderungs-Kandidaten) liegt im Ordner
-  <span class="pfad">server/katalog/</span> – auf dem Server unter
-  <span class="pfad">/srv</span> erreichbar. Dann:</p>
+  <p>Auf der NAS im <span class="pfad">server/</span>-Ordner:</p>
   <div class="cmd">docker compose -f docker-compose.tailscale.yml run --rm api sammeln /srv/rohquelle.json</div>
   <p>Der Sammler meldet z. B. <em>„2 neu, 1 geändert"</em>. Diese Vorschläge
-  erscheinen anschließend im Tab <strong>Vorschläge</strong>.</p>
+  erscheinen anschließend im Tab <strong>Vorschläge</strong>. Der Lauf nutzt einen
+  Wegwerf-Container und stört den laufenden Server nicht (gemeinsame Datenbank dank
+  WAL-Modus).</p>
 
   <h3>Wie verglichen wird</h3>
   <ul>
@@ -450,13 +460,18 @@ npm install</div>
   Kandidaten erzeugen keinen neuen Vorschlag; ein einmal verworfener kommt erst
   wieder, wenn sich sein Inhalt tatsächlich ändert.</p>
 
-  <div class="tipp"><strong>Wöchentlich automatisch.</strong> Den
-  <code>sammeln</code>-Befehl kannst du im Synology-Aufgabenplaner (oder per Cron)
-  zeitgesteuert ausführen lassen. Verteilt wird trotzdem nichts ohne deine
-  Freigabe – der Sammler legt nur Vorschläge an.</div>
+  <div class="tipp"><strong>Wöchentlich automatisch.</strong> Statt den Befehl von
+  Hand zu tippen, gibt es das fertige Skript
+  <span class="pfad">server/sammler-cron.sh</span>. Trag es im
+  <em>Synology-Aufgabenplaner</em> als wöchentliche Aufgabe ein
+  (Systemsteuerung &rarr; Aufgabenplaner &rarr; Erstellen &rarr; Geplante
+  Aufgabe &rarr; Benutzerdefiniertes Skript), Befehl
+  <code>sh /pfad/zu/server/sammler-cron.sh</code>. Verteilt wird trotzdem nichts
+  ohne deine Freigabe – der Sammler legt nur Vorschläge an.</div>
 
-  <p>Eine Beispiel-Rohquelle liegt unter
-  <span class="pfad">server/katalog/rohquelle-beispiel.json</span>.</p>
+  <p>Eine Beispiel-Rohquelle zum Ausprobieren liegt unter
+  <span class="pfad">server/katalog/rohquelle-beispiel.json</span>; die echte
+  erzeugst du wie oben mit <code>node import/rohquelle-bauen.mjs</code>.</p>
 </section>
 
 <!-- ===== 11 ===== -->

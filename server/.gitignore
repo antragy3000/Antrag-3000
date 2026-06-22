@@ -12,3 +12,5 @@ geraete/
 api/target/
 # Verteilter Foerder-Katalog (Daten, kein Quellcode):
 katalog/foerderungen.json
+# Sammler-Rohquelle: aus dem Katalog erzeugt (import/rohquelle-bauen.mjs):
+katalog/rohquelle.json

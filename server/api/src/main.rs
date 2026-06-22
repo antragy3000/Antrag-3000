@@ -39,7 +39,7 @@ use base64::Engine;
 use totp_rs::{Algorithm, Secret, TOTP};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
+use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePool, SqlitePoolOptions};
 
 #[derive(Clone)]
 struct AppState {
@@ -198,9 +198,16 @@ async fn main() {
     let db_pfad = env::var("DB_PFAD").unwrap_or_else(|_| "antrag3000.sqlite".into());
     let lausch = env::var("LAUSCH").unwrap_or_else(|_| "0.0.0.0:8080".into());
 
+    // WAL + busy_timeout: erlaubt, dass der wöchentliche Sammler-Lauf
+    // (eigener Prozess) gleichzeitig mit dem laufenden Server auf dieselbe
+    // SQLite-Datei zugreift, ohne sofort an "database is locked" zu
+    // scheitern. WAL = parallele Leser + ein Schreiber; busy_timeout lässt
+    // einen kurzen Schreib-Stau warten statt abzubrechen.
     let opts = SqliteConnectOptions::new()
         .filename(&db_pfad)
-        .create_if_missing(true);
+        .create_if_missing(true)
+        .journal_mode(SqliteJournalMode::Wal)
+        .busy_timeout(Duration::from_secs(5));
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
         .connect_with(opts)
@@ -1165,7 +1172,13 @@ async fn admin_katalog_hochladen(
 /// aufgerufen (z. B. wöchentlich per Cron).
 async fn sammeln_lauf(quelle_pfad: &str) -> Result<(usize, usize), String> {
     let db_pfad = env::var("DB_PFAD").unwrap_or_else(|_| "antrag3000.sqlite".into());
-    let opts = SqliteConnectOptions::new().filename(&db_pfad).create_if_missing(true);
+    // Gleiche WAL-/busy_timeout-Einstellung wie der Server, damit der
+    // Sammler-Lauf den laufenden Server nicht aussperrt (siehe main()).
+    let opts = SqliteConnectOptions::new()
+        .filename(&db_pfad)
+        .create_if_missing(true)
+        .journal_mode(SqliteJournalMode::Wal)
+        .busy_timeout(Duration::from_secs(5));
     let pool = SqlitePoolOptions::new()
         .max_connections(2)
         .connect_with(opts)

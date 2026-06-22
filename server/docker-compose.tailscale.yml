@@ -10,9 +10,17 @@
 #   ./server.crt       (NAS-Server-Zertifikat aus der App)
 #   ./server.key       (zugehoeriger Schluessel aus der App)
 #   ./katalog/foerderungen.json
+#   ./katalog/rohquelle.json   (optional, fuer den woechentlichen Sammler;
+#                               erzeugt mit: node import/rohquelle-bauen.mjs)
 #
 # Start (im server/-Ordner):
 #   docker compose -f docker-compose.tailscale.yml up -d --build
+#
+# Woechentlicher Sammler-Lauf (legt Freigabe-Vorschlaege an, nichts wird
+# automatisch veroeffentlicht) – einmalig von Hand oder per Aufgabenplaner:
+#   sh sammler-cron.sh
+#   bzw. direkt:
+#   docker compose -f docker-compose.tailscale.yml run --rm api sammeln /srv/rohquelle.json
 
 services:
   caddy:
