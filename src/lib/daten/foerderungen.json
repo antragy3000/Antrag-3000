@@ -2636,6 +2636,350 @@
         "Arbeitsproben / Vita"
       ],
       "recherchiert": true
+    },
+    {
+      "id": "muenchen-kulturreferat-projektfoerderung",
+      "name": "München – Projektförderung Kulturreferat",
+      "foerdergeber": "Landeshauptstadt München – Kulturreferat",
+      "land": "DE",
+      "beschreibung": "Projektförderung des Kulturreferats der Landeshauptstadt München für innovative, stadtgesellschaftlich relevante Kulturprojekte aller Sparten (Einzelpersonen, Gruppen, Initiativen, Vereine).",
+      "webseite": "https://stadt.muenchen.de/infos/projektfoerderung-kultur.html",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "DE"
+        ],
+        "wohnsitz_regionen": [
+          "BY"
+        ],
+        "wohnsitz_staedte": [
+          "München"
+        ],
+        "durchfuehrungsort": [
+          "DE"
+        ],
+        "durchfuehrungsort_regionen": [
+          "BY"
+        ],
+        "durchfuehrungsort_staedte": [
+          "München"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "festival",
+          "vermittlung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "bis 25.000 € (8 Wochen vorab, spätestens 15.09.); über 25.000 € zum 01.03. des Vorjahres",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Projektbeschreibung",
+        "Kosten- und Finanzierungsplan",
+        "künstlerische Vita"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "koeln-kulturamt-projektfoerderung",
+      "name": "Köln – Projektförderung Kulturamt",
+      "foerdergeber": "Stadt Köln – Kulturamt",
+      "land": "DE",
+      "beschreibung": "Projektförderung des Kulturamts der Stadt Köln für öffentlich zugängliche Vorhaben in Köln (Einzelaktionen, Reihen, Ausstellungsräume, Residenzen, Festivals) professioneller Künstler:innen und Initiativen.",
+      "webseite": "https://www.stadt-koeln.de/artikel/68329/index.html",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "DE"
+        ],
+        "wohnsitz_regionen": [
+          "NW"
+        ],
+        "wohnsitz_staedte": [
+          "Köln"
+        ],
+        "durchfuehrungsort": [
+          "DE"
+        ],
+        "durchfuehrungsort_regionen": [
+          "NW"
+        ],
+        "durchfuehrungsort_staedte": [
+          "Köln"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "festival",
+          "recherche_entwicklung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [
+        "2026-09-30"
+      ],
+      "foerderhoehe_text": "projektabhängig",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Projektbeschreibung",
+        "Kosten- und Finanzierungsplan",
+        "künstlerische Vita"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "stuttgart-kulturamt-projektfoerderung",
+      "name": "Stuttgart – Projektförderung Kulturamt",
+      "foerdergeber": "Landeshauptstadt Stuttgart – Kulturamt",
+      "land": "DE",
+      "beschreibung": "Allgemeine Projektförderung der Landeshauptstadt Stuttgart für die freie Szene aller Sparten. Anträge 15.04. und 15.10. (mind. 8 Wochen vor Projektbeginn); eine Jury entscheidet.",
+      "webseite": "https://www.stuttgart.de/kultur/kulturfoerderung/foerdermoeglichkeiten",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "DE"
+        ],
+        "wohnsitz_regionen": [
+          "BW"
+        ],
+        "wohnsitz_staedte": [
+          "Stuttgart"
+        ],
+        "durchfuehrungsort": [
+          "DE"
+        ],
+        "durchfuehrungsort_regionen": [
+          "BW"
+        ],
+        "durchfuehrungsort_staedte": [
+          "Stuttgart"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "festival",
+          "recherche_entwicklung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [
+        "2026-10-15"
+      ],
+      "foerderhoehe_text": "projektabhängig",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Projektbeschreibung",
+        "Kosten- und Finanzierungsplan",
+        "künstlerische Vita"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "leipzig-kulturamt-projektfoerderung",
+      "name": "Leipzig – Projektförderung Kulturamt",
+      "foerdergeber": "Stadt Leipzig – Kulturamt",
+      "land": "DE",
+      "beschreibung": "Projektförderung des Kulturamts der Stadt Leipzig für die freie Kunst- und Kulturszene (über 12 Mio €/Jahr). Pflicht-Beratungsgespräch vor dem Antrag; ein Antragstermin (30.09.).",
+      "webseite": "https://www.leipzig.de/freizeit-kultur-und-tourismus/kunst-und-kultur/kulturfoerderung",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "DE"
+        ],
+        "wohnsitz_regionen": [
+          "SN"
+        ],
+        "wohnsitz_staedte": [
+          "Leipzig"
+        ],
+        "durchfuehrungsort": [
+          "DE"
+        ],
+        "durchfuehrungsort_regionen": [
+          "SN"
+        ],
+        "durchfuehrungsort_staedte": [
+          "Leipzig"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "festival",
+          "vermittlung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [
+        "2026-09-30"
+      ],
+      "foerderhoehe_text": "projektabhängig (Beratungsgespräch vorab erforderlich)",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Projektbeschreibung",
+        "Kosten- und Finanzierungsplan",
+        "künstlerische Vita"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "dresden-kommunale-kulturfoerderung",
+      "name": "Dresden – Kommunale Kulturförderung",
+      "foerdergeber": "Landeshauptstadt Dresden – Amt für Kultur und Denkmalschutz",
+      "land": "DE",
+      "beschreibung": "Kommunale Kulturförderung der Landeshauptstadt Dresden: Projekt- und institutionelle Förderung; Kleinprojekte bis 2.500 € (vier Termine/Jahr), größere nach Fachförderrichtlinie.",
+      "webseite": "https://www.dresden.de/de/kultur/kulturfoerderung/kulturfoerderung.php",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "DE"
+        ],
+        "wohnsitz_regionen": [
+          "SN"
+        ],
+        "wohnsitz_staedte": [
+          "Dresden"
+        ],
+        "durchfuehrungsort": [
+          "DE"
+        ],
+        "durchfuehrungsort_regionen": [
+          "SN"
+        ],
+        "durchfuehrungsort_staedte": [
+          "Dresden"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "festival",
+          "vermittlung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "Kleinprojekte bis 2.500 €; größere Projektförderung nach Fachförderrichtlinie",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Projektbeschreibung",
+        "Kosten- und Finanzierungsplan",
+        "künstlerische Vita"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "duesseldorf-kulturamt-projektfoerderung",
+      "name": "Düsseldorf – Projektförderung Kulturamt",
+      "foerdergeber": "Landeshauptstadt Düsseldorf – Kulturamt",
+      "land": "DE",
+      "beschreibung": "Projektförderung des Kulturamts der Landeshauptstadt Düsseldorf für die freie Szene (bildende Kunst, darstellende Kunst inkl. Konzeptförderung, Musik) mit Tätigkeitsort Düsseldorf.",
+      "webseite": "https://www.duesseldorf.de/kulturamt/foerderung",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "DE"
+        ],
+        "wohnsitz_regionen": [
+          "NW"
+        ],
+        "wohnsitz_staedte": [
+          "Düsseldorf"
+        ],
+        "durchfuehrungsort": [
+          "DE"
+        ],
+        "durchfuehrungsort_regionen": [
+          "NW"
+        ],
+        "durchfuehrungsort_staedte": [
+          "Düsseldorf"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [
+          "bildende_kunst",
+          "theater",
+          "tanz",
+          "performance",
+          "musik",
+          "medienkunst",
+          "interdisziplinaer"
+        ],
+        "projektarten": [
+          "produktion",
+          "festival",
+          "recherche_entwicklung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "projektabhängig (Projekt-, Konzeptförderung, Bandförderung)",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Projektbeschreibung",
+        "Kosten- und Finanzierungsplan",
+        "künstlerische Vita"
+      ],
+      "recherchiert": true
     }
   ]
 }
