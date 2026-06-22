@@ -3939,6 +3939,912 @@
         "Projektbeschreibung mit Zeitplan (max. 10 S.)"
       ],
       "recherchiert": true
+    },
+    {
+      "id": "at-bmkoes-projektfoerderung",
+      "name": "BMKÖS – Projektförderung Kunst und Kultur",
+      "foerdergeber": "Bundesministerium für Kunst, Kultur, öffentlichen Dienst und Sport (Österreich)",
+      "land": "AT",
+      "beschreibung": "Bundesweite österreichische Projekt- und Einzelförderung über alle Sparten (Musik, darstellende Kunst, bildende Kunst, Literatur, Film/Medien u. a.). Antragstellung mind. 3 Monate vor Projektbeginn.",
+      "webseite": "https://www.bmkoes.gv.at/kunst-und-kultur.html",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "AT"
+        ],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "recherche_entwicklung",
+          "festival",
+          "veroeffentlichung",
+          "vermittlung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [
+        "2026-08-31",
+        "2026-11-30"
+      ],
+      "foerderhoehe_text": "Teilfinanzierung je nach Sparte; quartalsweise Einreichfristen (28.02./31.05./31.08./30.11.)",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Online-Antragsformular",
+        "Projektbeschreibung",
+        "Kosten- und Finanzierungsplan",
+        "künstlerischer Lebenslauf"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "at-wien-ma7-projektfoerderung",
+      "name": "Stadt Wien – Kulturabteilung (MA 7)",
+      "foerdergeber": "Stadt Wien, Kulturabteilung (MA 7)",
+      "land": "AT",
+      "beschreibung": "Projektförderung der Stadt Wien für freie Kunst- und Kulturschaffende in allen Sparten. Projekt mit Wien-Bezug bzw. Durchführung in Wien.",
+      "webseite": "https://www.wien.gv.at/kultur/abteilung/foerderungen/",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [
+          "AT"
+        ],
+        "durchfuehrungsort_regionen": [
+          "WIEN"
+        ],
+        "durchfuehrungsort_staedte": [
+          "Wien"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "festival",
+          "vermittlung",
+          "recherche_entwicklung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "Teilfinanzierung; laufende Einreichung, abhängig von Sparte/Schiene",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Antrag über Kultur-Förderportal",
+        "Projektbeschreibung",
+        "Kosten- und Finanzierungsplan"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "at-noe-kultur",
+      "name": "Land Niederösterreich – Kulturförderung",
+      "foerdergeber": "Amt der NÖ Landesregierung, Abteilung Kunst und Kultur",
+      "land": "AT",
+      "beschreibung": "Kulturförderung des Landes Niederösterreich für Projekte mit Bezug zum Bundesland: Produktion, Vermittlung, regionale Kulturinitiativen.",
+      "webseite": "https://www.noe.gv.at/noe/Kunst-Kultur/Foerderungen.html",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [
+          "AT"
+        ],
+        "durchfuehrungsort_regionen": [
+          "NOE"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "vermittlung",
+          "festival",
+          "recherche_entwicklung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "Teilfinanzierung; laufende Einreichung",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Antragsformular",
+        "Projektbeschreibung",
+        "Kosten- und Finanzierungsplan"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "at-salzburg-land-kultur",
+      "name": "Land Salzburg – Kulturförderung",
+      "foerdergeber": "Land Salzburg, Abteilung Kultur, Bildung und Wissen",
+      "land": "AT",
+      "beschreibung": "Kulturförderung des Landes Salzburg für Kunst- und Kulturprojekte im Bundesland Salzburg, spartenoffen.",
+      "webseite": "https://www.salzburg.gv.at/kultur",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [
+          "AT"
+        ],
+        "durchfuehrungsort_regionen": [
+          "SBG"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "vermittlung",
+          "festival"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "Teilfinanzierung; laufende Einreichung",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Antragsformular",
+        "Projektbeschreibung",
+        "Kosten- und Finanzierungsplan"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "at-tirol-kultur",
+      "name": "Land Tirol – Kulturförderung",
+      "foerdergeber": "Land Tirol, Abteilung Kultur",
+      "land": "AT",
+      "beschreibung": "Kulturförderung des Landes Tirol für künstlerische Projekte und Kulturinitiativen mit Tirol-Bezug.",
+      "webseite": "https://www.tirol.gv.at/kunst-kultur/kulturfoerderung/",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [
+          "AT"
+        ],
+        "durchfuehrungsort_regionen": [
+          "TIR"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "vermittlung",
+          "festival"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "Teilfinanzierung; laufende Einreichung",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Antragsformular",
+        "Projektbeschreibung",
+        "Kosten- und Finanzierungsplan"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "at-steiermark-kultur",
+      "name": "Land Steiermark – Kulturförderung",
+      "foerdergeber": "Amt der Steiermärkischen Landesregierung, A9 Kultur, Europa, Sport",
+      "land": "AT",
+      "beschreibung": "Kulturförderung des Landes Steiermark für zeitgenössische Kunstprojekte und Kulturinitiativen im Bundesland.",
+      "webseite": "https://www.kultur.steiermark.at/",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [
+          "AT"
+        ],
+        "durchfuehrungsort_regionen": [
+          "STMK"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "vermittlung",
+          "festival",
+          "recherche_entwicklung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "Teilfinanzierung; laufende Einreichung",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Antragsformular",
+        "Projektbeschreibung",
+        "Kosten- und Finanzierungsplan"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "at-ske-fonds",
+      "name": "SKE Fonds (austro mechana)",
+      "foerdergeber": "Soziale und Kulturelle Einrichtungen der austro mechana (SKE)",
+      "land": "AT",
+      "beschreibung": "Österreichischer Fonds zur Förderung von Musikprojekten (Komposition, Aufnahme, Konzerte, Tonträger, Festivals) aus Verwertungserlösen. Schwerpunkt zeitgenössische Musik aller Genres.",
+      "webseite": "https://ske-fonds.at/",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "AT"
+        ],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [
+          "musik"
+        ],
+        "projektarten": [
+          "produktion",
+          "veroeffentlichung",
+          "festival",
+          "gastspiel_tournee"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "Teilfinanzierung von Musikprojekten; laufende Einreichung",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Antragsformular",
+        "Projekt-/Produktionsbeschreibung",
+        "Kosten- und Finanzierungsplan"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "at-linz-kultur",
+      "name": "Stadt Linz – Kulturförderung",
+      "foerdergeber": "Stadt Linz, Geschäftsbereich Kultur und Bildung",
+      "land": "AT",
+      "beschreibung": "Projektförderung der Stadt Linz für freie Kunst- und Kulturschaffende mit Durchführung in Linz, spartenoffen.",
+      "webseite": "https://www.linz.at/kultur.php",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [
+          "AT"
+        ],
+        "durchfuehrungsort_regionen": [
+          "OOE"
+        ],
+        "durchfuehrungsort_staedte": [
+          "Linz"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "vermittlung",
+          "festival"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "Teilfinanzierung; laufende Einreichung",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Antragsformular",
+        "Projektbeschreibung",
+        "Kosten- und Finanzierungsplan"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "at-graz-kultur",
+      "name": "Stadt Graz – Kulturförderung",
+      "foerdergeber": "Stadt Graz, Kulturamt",
+      "land": "AT",
+      "beschreibung": "Projektförderung der Stadt Graz für zeitgenössische Kunst- und Kulturprojekte mit Durchführung in Graz, spartenoffen.",
+      "webseite": "https://www.graz.at/cms/ziel/8081933/DE/",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [
+          "AT"
+        ],
+        "durchfuehrungsort_regionen": [
+          "STMK"
+        ],
+        "durchfuehrungsort_staedte": [
+          "Graz"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "vermittlung",
+          "festival"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "Teilfinanzierung; laufende Einreichung",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Antragsformular",
+        "Projektbeschreibung",
+        "Kosten- und Finanzierungsplan"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "ch-pro-helvetia-produktion",
+      "name": "Pro Helvetia – Produktionsbeitrag",
+      "foerdergeber": "Schweizer Kulturstiftung Pro Helvetia",
+      "land": "CH",
+      "beschreibung": "Nationale Schweizer Kulturstiftung. Produktionsbeiträge für künstlerische Vorhaben in fünf Disziplinen (Visuelle Kunst, Musik, Literatur, Theater/Tanz, Design/interaktive Medien). Eingabe einmal jährlich 1.7.–1.9.",
+      "webseite": "https://prohelvetia.ch/de/foerderung-finden/",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "CH"
+        ],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": false
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "recherche_entwicklung",
+          "veroeffentlichung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "CHF",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [
+        "2026-09-01"
+      ],
+      "foerderhoehe_text": "Teilfinanzierung; Eingabefenster 1. Juli – 1. September",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Online-Gesuch (myprohelvetia)",
+        "Projektbeschreibung",
+        "Budget",
+        "Arbeitsproben / Dossier"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "ch-migros-kulturprozent",
+      "name": "Migros-Kulturprozent – Förderbeiträge",
+      "foerdergeber": "Migros-Genossenschafts-Bund (Migros-Kulturprozent)",
+      "land": "CH",
+      "beschreibung": "Privates Förderengagement für Kulturprojekte mit überregionaler Ausstrahlung in der Schweiz. Sparten u. a. Bildende Kunst, Film, Jazz, Klassik, Kleinkunst, Literatur, Pop, Tanz, Theater sowie spartenübergreifend.",
+      "webseite": "https://www.migros-kulturprozent.ch/de/foerderung/foerderbeitraege",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [
+          "CH"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [
+          "bildende_kunst",
+          "film",
+          "musik",
+          "tanz",
+          "theater",
+          "literatur",
+          "interdisziplinaer"
+        ],
+        "projektarten": [
+          "produktion",
+          "festival",
+          "gastspiel_tournee",
+          "vermittlung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "CHF",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "Teilbeitrag an die Gesamtfinanzierung; laufende Eingabe über Gesuchsportal",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Gesuch über Förderportal",
+        "Projektbeschreibung",
+        "Budget / Finanzierungsplan"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "ch-zuerich-stadt-kultur",
+      "name": "Stadt Zürich – Kulturförderung",
+      "foerdergeber": "Stadt Zürich, Kultur",
+      "land": "CH",
+      "beschreibung": "Projektförderung und Beiträge der Stadt Zürich für freie Kunst- und Kulturschaffende mit Bezug zu Zürich, spartenoffen.",
+      "webseite": "https://www.stadt-zuerich.ch/kultur/de/index/foerderung.html",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [
+          "CH"
+        ],
+        "durchfuehrungsort_regionen": [
+          "ZH"
+        ],
+        "durchfuehrungsort_staedte": [
+          "Zürich"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "vermittlung",
+          "festival"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "CHF",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "Teilfinanzierung; laufende Eingabe",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Gesuchsformular",
+        "Projektbeschreibung",
+        "Budget / Finanzierungsplan"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "ch-kanton-zuerich-fachstelle-kultur",
+      "name": "Kanton Zürich – Fachstelle Kultur",
+      "foerdergeber": "Kanton Zürich, Fachstelle Kultur",
+      "land": "CH",
+      "beschreibung": "Kantonale Kulturförderung Zürich: Werkbeiträge, Projektbeiträge und Stipendien für professionelle Kunstschaffende mit Bezug zum Kanton Zürich.",
+      "webseite": "https://www.zh.ch/de/direktion-der-justiz-und-des-innern/fachstelle-kultur.html",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [
+          "CH"
+        ],
+        "durchfuehrungsort_regionen": [
+          "ZH"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": false
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "recherche_entwicklung",
+          "veroeffentlichung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "CHF",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "Werk-/Projektbeiträge; Eingabefristen je Sparte",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Online-Gesuch",
+        "Projektbeschreibung",
+        "Budget",
+        "Dossier / Arbeitsproben"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "ch-basel-stadt-kultur",
+      "name": "Kanton Basel-Stadt – Abteilung Kultur",
+      "foerdergeber": "Präsidialdepartement Basel-Stadt, Abteilung Kultur",
+      "land": "CH",
+      "beschreibung": "Kulturförderung des Kantons Basel-Stadt: Projektbeiträge, Werkbeiträge und Stipendien für professionelle Kunstschaffende der Region Basel, spartenoffen.",
+      "webseite": "https://www.kultur.bs.ch/foerderung.html",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [
+          "CH"
+        ],
+        "durchfuehrungsort_regionen": [
+          "BS"
+        ],
+        "durchfuehrungsort_staedte": [
+          "Basel"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": false
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "recherche_entwicklung",
+          "festival"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "CHF",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "Projekt-/Werkbeiträge; Eingabefristen je Sparte",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Gesuchsformular",
+        "Projektbeschreibung",
+        "Budget",
+        "Dossier"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "ch-bern-kultur",
+      "name": "Kanton Bern – Kulturförderung",
+      "foerdergeber": "Amt für Kultur des Kantons Bern",
+      "land": "CH",
+      "beschreibung": "Kantonale Kulturförderung Bern: Projektbeiträge und Werkbeiträge für professionelle Kunstschaffende mit Bezug zum Kanton Bern, spartenoffen.",
+      "webseite": "https://www.weku.dij.be.ch/de/start/themen/kultur.html",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [
+          "CH"
+        ],
+        "durchfuehrungsort_regionen": [
+          "BE"
+        ],
+        "durchfuehrungsort_staedte": [
+          "Bern"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": false
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "recherche_entwicklung",
+          "festival"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "CHF",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "Projekt-/Werkbeiträge; Eingabefristen je Sparte",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Gesuchsformular",
+        "Projektbeschreibung",
+        "Budget",
+        "Dossier"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "ch-ernst-goehner-stiftung",
+      "name": "Ernst Göhner Stiftung",
+      "foerdergeber": "Ernst Göhner Stiftung",
+      "land": "CH",
+      "beschreibung": "Grosse private Schweizer Förderstiftung. Unterstützt u. a. Kulturprojekte mit gesamtschweizerischer Ausstrahlung; Teilfinanzierung, breites Spartenspektrum.",
+      "webseite": "https://www.ernst-goehner-stiftung.ch/",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [
+          "CH"
+        ],
+        "traegerschaft": [
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "festival",
+          "vermittlung",
+          "veroeffentlichung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "CHF",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "Teilfinanzierung; laufende Eingabe",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Gesuch",
+        "Projektbeschreibung",
+        "Budget / Finanzierungsplan"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "ch-stanley-thomas-johnson-stiftung",
+      "name": "Stanley Thomas Johnson Stiftung",
+      "foerdergeber": "Stanley Thomas Johnson Stiftung",
+      "land": "CH",
+      "beschreibung": "Berner Förderstiftung mit Förderbereich Kunst (u. a. darstellende Kunst, Musik, bildende Kunst). Unterstützt professionelle künstlerische Projekte in der Schweiz.",
+      "webseite": "https://www.stjohnson.ch/",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [
+          "CH"
+        ],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": false
+      },
+      "weiche_kriterien": {
+        "sparten": [
+          "theater",
+          "tanz",
+          "musik",
+          "bildende_kunst"
+        ],
+        "projektarten": [
+          "produktion",
+          "recherche_entwicklung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "CHF",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "Projektbeiträge im Förderbereich Kunst; Eingabefristen beachten",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Gesuch",
+        "Projektbeschreibung",
+        "Budget",
+        "Dossier"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "ch-suisa-stiftung-musik",
+      "name": "FONDATION SUISA / Stiftung für Musik",
+      "foerdergeber": "FONDATION SUISA",
+      "land": "CH",
+      "beschreibung": "Schweizer Stiftung zur Förderung des einheimischen Musikschaffens: Beiträge an Konzerte, Tonträger, Tourneen, Kompositionsaufträge und Musikprojekte.",
+      "webseite": "https://www.fondation-suisa.ch/de/",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "CH"
+        ],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [
+          "musik"
+        ],
+        "projektarten": [
+          "produktion",
+          "veroeffentlichung",
+          "gastspiel_tournee",
+          "festival"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "CHF",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "Teilfinanzierung von Musikprojekten; laufende Eingabe",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Gesuchsformular",
+        "Projekt-/Produktionsbeschreibung",
+        "Budget"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "eu-creative-europe-cooperation",
+      "name": "Creative Europe – European Cooperation Projects",
+      "foerdergeber": "Europäische Union / EACEA (Creative Europe, Sub-Programm Kultur)",
+      "land": "INT",
+      "beschreibung": "EU-Förderung für grenzüberschreitende Kooperationsprojekte im Kultur- und Kreativsektor (alle Sparten ausser rein audiovisuell). Erfordert ein internationales Partnerkonsortium.",
+      "webseite": "https://culture.ec.europa.eu/funding/calls",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "festival",
+          "vermittlung",
+          "recherche_entwicklung",
+          "gastspiel_tournee"
+        ],
+        "budget_min": null,
+        "budget_max": 1000000,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [
+        "2026-05-05"
+      ],
+      "foerderhoehe_text": "Small-scale bis 200.000 € / Medium-scale bis 1.000.000 € (Kofinanzierung); internationales Konsortium nötig",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Antrag über EU-Funding-&-Tenders-Portal",
+        "Partnerkonsortium (Länder)",
+        "Projektkonzept",
+        "Detailbudget"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "int-goethe-institut-projektfoerderung",
+      "name": "Goethe-Institut – internationale Projektförderung",
+      "foerdergeber": "Goethe-Institut e. V.",
+      "land": "INT",
+      "beschreibung": "Förderung internationaler Koproduktionen, Gastspiele und Kulturaustausch-Projekte über das weltweite Netz der Goethe-Institute (u. a. Reisekostenzuschüsse, Koproduktionsfonds).",
+      "webseite": "https://www.goethe.de/de/uun/foe.html",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "gastspiel_tournee",
+          "produktion",
+          "vermittlung",
+          "residenz"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "laufend"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "je nach Programm/Institut; oft Reise-/Koproduktionszuschüsse",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Anfrage beim zuständigen Goethe-Institut",
+        "Projektbeschreibung",
+        "Kosten- und Finanzierungsplan"
+      ],
+      "recherchiert": true
     }
   ]
 }
