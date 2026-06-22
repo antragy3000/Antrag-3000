@@ -431,6 +431,9 @@
       if (normalisieren(daten)) await tresorSpeichern();
       passwort = "";
       ansicht = "offen";
+      // Server-Erreichbarkeit einmal prüfen, damit der Status-Punkt stimmt
+      // (ohne zu blockieren; bei Misserfolg bleibt er orange).
+      if (daten?.sync && online) verbindungPruefen().catch(() => {});
     } catch (e) {
       fehler =
         String(e) === "falsches_passwort" ? "Falsches Passwort." : String(e);
@@ -776,13 +779,21 @@
   let tickAktiv = false;            // verhindert überlappende Takte
 
   // --- Statusanzeige im Header (kleiner farbiger Punkt) ---
-  // rot: offline · blau: online, aber nicht mit dem Team verbunden ·
+  // rot: offline · blau: online, aber kein Team eingerichtet ·
+  // orange: online, Team eingerichtet, Server zurzeit nicht erreichbar ·
   // grün: online und mit dem Team verbunden.
   let online = $state(typeof navigator !== "undefined" ? navigator.onLine : true);
   $effect(() => {
     if (typeof window === "undefined") return;
-    const auf = () => (online = true);
-    const ab = () => (online = false);
+    const auf = () => {
+      online = true;
+      // Wieder im Netz: Server-Erreichbarkeit erneut prüfen (für den Punkt).
+      if (daten?.sync && !syncLaeuft) verbindungPruefen().catch(() => {});
+    };
+    const ab = () => {
+      online = false;
+      syncVerbunden = false;
+    };
     window.addEventListener("online", auf);
     window.addEventListener("offline", ab);
     return () => {
@@ -794,9 +805,11 @@
   let verbindungsStatus = $derived(
     !online
       ? { klasse: "rot", text: "Offline – keine Netzwerkverbindung" }
-      : daten?.sync && syncVerbunden
-        ? { klasse: "gruen", text: "Online und mit dem Team verbunden" }
-        : { klasse: "blau", text: "Online, nicht mit einem Team verbunden" }
+      : !daten?.sync
+        ? { klasse: "blau", text: "Online, nicht mit einem Team verbunden" }
+        : syncVerbunden
+          ? { klasse: "gruen", text: "Online und mit dem Team verbunden" }
+          : { klasse: "orange", text: "Online, Server zurzeit nicht erreichbar" }
   );
 
   // Einmaliger Verbindungstest; aktualisiert syncVerbunden und gibt das
@@ -1971,6 +1984,7 @@
   }
   .status-punkt.rot { background: #ca3521; }
   .status-punkt.blau { background: #4f6df5; }
+  .status-punkt.orange { background: #f08c00; }
   .status-punkt.gruen { background: #22a06b; }
 
   nav {
