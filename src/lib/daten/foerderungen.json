@@ -1518,6 +1518,363 @@
         "Ausgaben- und Finanzierungsplan"
       ],
       "recherchiert": true
+    },
+    {
+      "id": "de-musikfonds",
+      "name": "Musikfonds e. V.",
+      "foerdergeber": "Musikfonds e. V.",
+      "land": "DE",
+      "beschreibung": "Bundesweite Projektförderung für avantgardistische/zeitgenössische Musik aller Sparten (Neue Musik, Jazz/Improvisation, Echtzeit- und elektronische Musik, experimenteller Pop, Klangkunst). Große und kleine Projektförderung.",
+      "webseite": "https://www.musikfonds.de/foerderung",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "DE"
+        ],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [
+          "musik",
+          "medienkunst",
+          "interdisziplinaer"
+        ],
+        "projektarten": [
+          "produktion",
+          "recherche_entwicklung",
+          "festival",
+          "veroeffentlichung"
+        ],
+        "budget_min": null,
+        "budget_max": 50000,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [
+        "2026-01-31",
+        "2026-05-31",
+        "2026-09-30"
+      ],
+      "foerderhoehe_text": "große Projektförderung bis 50.000 €/Jahr; kleine Projektförderung 3.000 €",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Projektbeschreibung",
+        "Kosten- und Finanzierungsplan",
+        "künstlerischer Lebenslauf / Arbeitsproben"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "de-literaturfonds",
+      "name": "Deutscher Literaturfonds e. V.",
+      "foerdergeber": "Deutscher Literaturfonds e. V.",
+      "land": "DE",
+      "beschreibung": "Förderung deutschsprachiger Gegenwartsliteratur: Arbeitsstipendien (3.000 €/Monat, bis 1 Jahr), Initiativstipendium (6.000 €) sowie allgemeine Projektförderung (bis 100.000 €/Jahr).",
+      "webseite": "https://deutscher-literaturfonds.de/foerderprogramme/",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [
+          "literatur"
+        ],
+        "projektarten": [
+          "recherche_entwicklung",
+          "veroeffentlichung",
+          "produktion"
+        ],
+        "budget_min": null,
+        "budget_max": 100000,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [
+        "2026-04-30",
+        "2026-10-31"
+      ],
+      "foerderhoehe_text": "Arbeitsstipendium 3.000 €/Monat (bis 1 Jahr); Projektförderung bis 100.000 €/Jahr",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Exposé / Arbeitsprobe",
+        "Lebenslauf / Bibliografie",
+        "Projektbeschreibung"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "de-kunstfonds",
+      "name": "Stiftung Kunstfonds",
+      "foerdergeber": "Stiftung Kunstfonds",
+      "land": "DE",
+      "beschreibung": "Bundesweite Förderung für professionelle freischaffende bildende Künstler:innen: Stipendien, Soloprojekte, Plattformen und Publikationen.",
+      "webseite": "https://www.kunstfonds.de/foerderung/",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "DE"
+        ],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": false
+      },
+      "weiche_kriterien": {
+        "sparten": [
+          "bildende_kunst",
+          "medienkunst"
+        ],
+        "projektarten": [
+          "recherche_entwicklung",
+          "produktion",
+          "veroeffentlichung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [
+        "2026-01-15",
+        "2026-08-31"
+      ],
+      "foerderhoehe_text": "Stipendien (6 Monate, monatliche Raten); Projekt-/Plattformförderung",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "künstlerisches Portfolio / Arbeitsproben",
+        "Lebenslauf",
+        "Projektbeschreibung"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "de-kulturstiftung-bund-projektfoerderung",
+      "name": "Kulturstiftung des Bundes – Allgemeine Projektförderung",
+      "foerdergeber": "Kulturstiftung des Bundes",
+      "land": "DE",
+      "beschreibung": "Allgemeine Projektförderung der Kulturstiftung des Bundes für innovative, international ausgerichtete Kulturprojekte. Nur Kultureinrichtungen/gefestigte Organisationen, keine Einzelkünstler:innen.",
+      "webseite": "https://www.kulturstiftung-des-bundes.de/de/themen_foerderschwerpunkte/allgemeine_projektfoerderung.html",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "DE"
+        ],
+        "durchfuehrungsort": [
+          "DE"
+        ],
+        "traegerschaft": [
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [],
+        "projektarten": [
+          "produktion",
+          "festival",
+          "vermittlung",
+          "recherche_entwicklung"
+        ],
+        "budget_min": 50000,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [
+        "2026-01-31",
+        "2026-07-31"
+      ],
+      "foerderhoehe_text": "Antragssumme ab 50.000 €; mind. 20 % Eigen-/Drittmittel",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Projektkonzept",
+        "Kosten- und Finanzierungsplan",
+        "Nachweis Eigen-/Drittmittel (mind. 20 %)"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "de-initiative-musik",
+      "name": "Initiative Musik gGmbH",
+      "foerdergeber": "Initiative Musik gGmbH",
+      "land": "DE",
+      "beschreibung": "Bundesweite Förderinstitution für Popularmusik und Jazz: Künstler:innenförderung (Produktion, Promotion, Touring) und Infrastrukturförderung.",
+      "webseite": "https://www.initiative-musik.de/",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "DE"
+        ],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [
+          "musik"
+        ],
+        "projektarten": [
+          "produktion",
+          "veroeffentlichung",
+          "gastspiel_tournee"
+        ],
+        "budget_min": null,
+        "budget_max": 80000,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "Künstlerförderung (4 Runden/Jahr); Infrastruktur bis 50.000–80.000 €/Jahr (max. 75 %)",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Projekt-/Produktionsplan",
+        "Kosten- und Finanzierungsplan",
+        "Künstler-Infos / bisherige Releases"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "de-uebersetzerfonds",
+      "name": "Deutscher Übersetzerfonds",
+      "foerdergeber": "Deutscher Übersetzerfonds e. V.",
+      "land": "DE",
+      "beschreibung": "Förderung der literarischen Übersetzung (ins und aus dem Deutschen): Arbeits-, Initiativ-, Reise- und Aufenthaltsstipendien sowie Exzellenzstipendien.",
+      "webseite": "https://www.uebersetzerfonds.de/",
+      "harte_kriterien": {
+        "wohnsitz": [],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [
+          "literatur"
+        ],
+        "projektarten": [
+          "recherche_entwicklung",
+          "veroeffentlichung",
+          "residenz"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [
+        "2026-01-15",
+        "2026-05-15",
+        "2026-09-15"
+      ],
+      "foerderhoehe_text": "Arbeitsstipendien 1.000–10.000 €; Initiativstipendium 2.000 €; Reisestipendien 500–4.000 €",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Übersetzungsprobe",
+        "Vertrag / Projektnachweis",
+        "Lebenslauf"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "de-kuratorium-junger-film",
+      "name": "Kuratorium junger deutscher Film",
+      "foerdergeber": "Kuratorium junger deutscher Film",
+      "land": "DE",
+      "beschreibung": "Bundesweite Talentförderung Film: erster/zweiter Spiel- oder Kurzfilm bzw. Drehbuch von Nachwuchs-Filmschaffenden (fiktional und dokumentarisch, Produktionskosten unter 1,5 Mio €).",
+      "webseite": "https://www.kuratorium-junger-film.de/talentfilm",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "DE"
+        ],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe",
+          "organisation"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [
+          "film"
+        ],
+        "projektarten": [
+          "recherche_entwicklung",
+          "produktion"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "Drehbuchförderung bis 15.000 €; Projektentwicklung bis 50.000 € (bedingt rückzahlbares Darlehen)",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Drehbuch / Exposé",
+        "Projekt- und Finanzierungsplan",
+        "Nachweis erster/zweiter Film"
+      ],
+      "recherchiert": true
+    },
+    {
+      "id": "de-deutscher-musikrat",
+      "name": "Deutscher Musikrat – Förderprojekte",
+      "foerdergeber": "Deutscher Musikrat",
+      "land": "DE",
+      "beschreibung": "Förderprogramme des Deutschen Musikrats für hochtalentierte Nachwuchs-Musiker:innen, Dirigent:innen, Komponist:innen und Bands (u. a. Deutscher Musikwettbewerb, FORUM DIRIGIEREN, Podium Gegenwart, PopCamp).",
+      "webseite": "https://www.musikrat.de/",
+      "harte_kriterien": {
+        "wohnsitz": [
+          "DE"
+        ],
+        "durchfuehrungsort": [],
+        "traegerschaft": [
+          "einzelperson",
+          "gruppe"
+        ],
+        "studentisch_erlaubt": true
+      },
+      "weiche_kriterien": {
+        "sparten": [
+          "musik"
+        ],
+        "projektarten": [
+          "produktion",
+          "gastspiel_tournee",
+          "recherche_entwicklung"
+        ],
+        "budget_min": null,
+        "budget_max": null,
+        "waehrung": "EUR",
+        "zeitpunkt": "fristen"
+      },
+      "fristen": [],
+      "foerderhoehe_text": "programmabhängig (Wettbewerbe, Konzert-/Ensembleförderung, Mentoring)",
+      "unvertraeglich_mit": [],
+      "checkliste_vorschlag": [
+        "Bewerbung / Programm",
+        "Lebenslauf / Vita",
+        "Hörproben / Aufnahmen"
+      ],
+      "recherchiert": true
     }
   ]
 }
