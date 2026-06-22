@@ -18,12 +18,27 @@
 use std::collections::BTreeMap;
 use std::fs;
 
+use base64::Engine;
 use genpdf::{elements, fonts, style, Alignment, Document, Element, SimplePageDecorator};
 use image::{DynamicImage, GenericImageView};
 use lopdf::{Dictionary, Document as LoDocument, Object, ObjectId};
 use serde::Deserialize;
 
 use crate::ordner;
+
+/// Dekodiert ein als Data-URL oder reines base64 übergebenes Logo zu
+/// Bytes. None, wenn leer oder unlesbar.
+pub fn logo_bytes(daten: &str) -> Option<Vec<u8>> {
+    let s = daten.trim();
+    if s.is_empty() {
+        return None;
+    }
+    let b64 = s.split_once(";base64,").map(|(_, b)| b).unwrap_or(s);
+    base64::engine::general_purpose::STANDARD
+        .decode(b64.trim())
+        .ok()
+        .filter(|v| !v.is_empty())
+}
 
 const FONT_REGULAR: &[u8] = include_bytes!("../fonts/OpenSans-Regular.ttf");
 const FONT_BOLD: &[u8] = include_bytes!("../fonts/OpenSans-Bold.ttf");
@@ -95,7 +110,29 @@ fn tabelle_einfuegen(doc: &mut Document, zeilen: &[Vec<String>]) {
     doc.push(tabelle);
 }
 
-fn vorblatt_fuellen(doc: &mut Document, titel: &str, abschnitte: &[PdfAbschnitt]) {
+/// Fügt das Logo als Briefkopf oben ein (links ausgerichtet, ca. 55 mm
+/// breit / 28 mm hoch maximal). Fehler werden still übergangen – ein
+/// kaputtes Logo darf das PDF nicht verhindern.
+fn briefkopf_einfuegen(doc: &mut Document, logo: Option<&str>) {
+    let Some(daten) = logo.and_then(logo_bytes) else { return };
+    let Ok(img) = image::load_from_memory(&daten) else { return };
+    let (w, h) = img.dimensions();
+    if w == 0 || h == 0 {
+        return;
+    }
+    // DPI so wählen, dass das Bild in eine Briefkopf-Fläche passt
+    // (max. 55 mm breit, 28 mm hoch). Größeres DPI = kleineres Bild.
+    let breite_in = 55.0 / 25.4;
+    let hoehe_in = 28.0 / 25.4;
+    let dpi = (w as f64 / breite_in).max(h as f64 / hoehe_in).max(1.0);
+    if let Ok(bild) = elements::Image::from_dynamic_image(flach_auf_weiss(&img)) {
+        doc.push(bild.with_alignment(Alignment::Left).with_dpi(dpi));
+        doc.push(elements::Break::new(0.6));
+    }
+}
+
+fn vorblatt_fuellen(doc: &mut Document, titel: &str, abschnitte: &[PdfAbschnitt], logo: Option<&str>) {
+    briefkopf_einfuegen(doc, logo);
     doc.push(
         elements::Paragraph::new(titel).styled(style::Style::new().bold().with_font_size(16)),
     );
@@ -250,6 +287,7 @@ fn zusammenfuegen(bloecke: Vec<Vec<u8>>) -> Result<Vec<u8>, String> {
 
 // --- gemeinsamer Aufbau -------------------------------------------------
 
+#[allow(clippy::too_many_arguments)]
 fn baue_antrags_pdf(
     app: &tauri::AppHandle,
     projekt: &str,
@@ -257,9 +295,10 @@ fn baue_antrags_pdf(
     titel: &str,
     abschnitte: &[PdfAbschnitt],
     anhaenge: &[String],
+    logo: Option<&str>,
 ) -> Result<Vec<u8>, String> {
     let mut doc = neues_dokument()?;
-    vorblatt_fuellen(&mut doc, titel, abschnitte);
+    vorblatt_fuellen(&mut doc, titel, abschnitte, logo);
     let mut vorblatt = Vec::new();
     doc.render(&mut vorblatt)
         .map_err(|e| format!("PDF-Inhalt nicht erzeugbar: {e}"))?;
@@ -304,8 +343,9 @@ pub fn antrags_pdf_vorschau(
     titel: String,
     abschnitte: Vec<PdfAbschnitt>,
     anhaenge: Vec<String>,
+    logo: Option<String>,
 ) -> Result<String, String> {
-    let bytes = baue_antrags_pdf(&app, &projekt, &foerderung, &titel, &abschnitte, &anhaenge)?;
+    let bytes = baue_antrags_pdf(&app, &projekt, &foerderung, &titel, &abschnitte, &anhaenge, logo.as_deref())?;
     // Eindeutiger Name, damit ein erneutes Erzeugen nicht an einer noch im
     // PDF-Programm geoeffneten (gesperrten) Vorschaudatei scheitert.
     let nonce = std::time::SystemTime::now()
@@ -331,8 +371,9 @@ pub fn antrags_pdf_speichern(
     titel: String,
     abschnitte: Vec<PdfAbschnitt>,
     anhaenge: Vec<String>,
+    logo: Option<String>,
 ) -> Result<String, String> {
-    let bytes = baue_antrags_pdf(&app, &projekt, &foerderung, &titel, &abschnitte, &anhaenge)?;
+    let bytes = baue_antrags_pdf(&app, &projekt, &foerderung, &titel, &abschnitte, &anhaenge, logo.as_deref())?;
     let ordner_pfad = ordner::wurzel(&app)?
         .join(ordner::bereinigen(&projekt)?)
         .join(ordner::bereinigen(&foerderung)?);
@@ -372,13 +413,13 @@ mod tests {
         ];
 
         let mut doc = neues_dokument().unwrap();
-        vorblatt_fuellen(&mut doc, "Förderantrag ÄÖÜ", &abschnitte);
+        vorblatt_fuellen(&mut doc, "Förderantrag ÄÖÜ", &abschnitte, None);
         let mut a = Vec::new();
         doc.render(&mut a).unwrap();
         assert!(a.starts_with(b"%PDF"), "Vorblatt ist kein PDF");
 
         let mut doc2 = neues_dokument().unwrap();
-        vorblatt_fuellen(&mut doc2, "Anhang", &[]);
+        vorblatt_fuellen(&mut doc2, "Anhang", &[], None);
         let mut b = Vec::new();
         doc2.render(&mut b).unwrap();
 

@@ -88,6 +88,36 @@
       beschaeftigt = false;
     }
   }
+
+  // --- Logo / Briefkopf ---
+  // Das Logo wird als Data-URL in den Stammdaten gehalten (Tresor) und in
+  // PDF/Word als Briefkopf eingefügt. Limit, damit der Tresor schlank bleibt.
+  const MAX_LOGO = 1_500_000; // ~1,5 MB
+  let logoFehler = $state("");
+
+  function logoGewaehlt(e) {
+    logoFehler = "";
+    const f = e.target.files?.[0];
+    e.target.value = ""; // erlaubt erneutes Wählen derselben Datei
+    if (!f) return;
+    if (!/^image\/(png|jpeg)$/.test(f.type)) {
+      logoFehler = "Bitte ein PNG- oder JPG-Bild wählen.";
+      return;
+    }
+    if (f.size > MAX_LOGO) {
+      logoFehler = "Das Bild ist zu groß (max. 1,5 MB). Bitte kleiner speichern.";
+      return;
+    }
+    const leser = new FileReader();
+    leser.onload = () => { kopie.logo = leser.result; };
+    leser.onerror = () => { logoFehler = "Das Bild konnte nicht gelesen werden."; };
+    leser.readAsDataURL(f);
+  }
+
+  function logoEntfernen() {
+    kopie.logo = "";
+    logoFehler = "";
+  }
 </script>
 
 <div class="bereich">
@@ -108,6 +138,32 @@
       </button>
     </div>
   </div>
+
+  <section class="karte logo-karte">
+    <h3>Briefkopf / Logo</h3>
+    <p class="logo-hinweis">
+      Wird oben in die erzeugten Dokumente eingefügt (Antrags-PDF und
+      Word-Projektbeschrieb) – <strong>nicht</strong> in Excel-Listen.
+    </p>
+    <div class="logo-zeile">
+      {#if kopie.logo}
+        <img class="logo-vorschau" src={kopie.logo} alt="Logo-Vorschau" />
+      {:else}
+        <div class="logo-platzhalter">kein Logo</div>
+      {/if}
+      <div class="logo-knoepfe">
+        <label class="datei-knopf">
+          {kopie.logo ? "Logo ersetzen …" : "Logo wählen …"}
+          <input type="file" accept="image/png,image/jpeg" onchange={logoGewaehlt} hidden />
+        </label>
+        {#if kopie.logo}
+          <button type="button" class="entfernen" onclick={logoEntfernen}>Entfernen</button>
+        {/if}
+        <span class="logo-tipp">PNG oder JPG, max. 1,5 MB. Nicht vergessen: „Speichern".</span>
+      </div>
+    </div>
+    {#if logoFehler}<p class="warnung">{logoFehler}</p>{/if}
+  </section>
 
   <div class="raster">
     {#each GRUPPEN as gruppe (gruppe.key)}
@@ -237,4 +293,28 @@
     color: #ae2e24;
     font-size: 0.82rem;
   }
+
+  .logo-karte { margin-bottom: 16px; }
+  .logo-hinweis { margin: 0 0 14px; color: #5e6c84; font-size: 0.88rem; line-height: 1.5; }
+  .logo-zeile { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+  .logo-vorschau {
+    max-width: 220px; max-height: 90px; object-fit: contain;
+    border: 1px solid #dfe1e6; border-radius: 8px; padding: 8px; background: #fff;
+  }
+  .logo-platzhalter {
+    width: 220px; height: 90px; display: grid; place-items: center;
+    border: 2px dashed #dfe1e6; border-radius: 8px; color: #8590a2; font-size: 0.85rem; background: #fafbfc;
+  }
+  .logo-knoepfe { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+  .datei-knopf {
+    display: inline-block; padding: 9px 16px; font-size: 0.9rem; font-weight: 600;
+    color: #172b4d; background: #fff; border: 2px solid #dfe1e6; border-radius: 8px; cursor: pointer;
+  }
+  .datei-knopf:hover { border-color: #4f6df5; }
+  .entfernen {
+    padding: 7px 14px; font-size: 0.85rem; background: #fff; color: #ae2e24;
+    border: 2px solid #f1c7c2; border-radius: 8px;
+  }
+  .entfernen:hover:not(:disabled) { background: #ffeceb; }
+  .logo-tipp { color: #8590a2; font-size: 0.8rem; }
 </style>

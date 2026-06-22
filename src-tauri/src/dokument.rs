@@ -15,10 +15,35 @@
 
 use std::fs;
 
-use docx_rs::{AlignmentType, Docx, Paragraph, Run, Table, TableCell, TableRow};
+use docx_rs::{AlignmentType, Docx, Paragraph, Pic, Run, Table, TableCell, TableRow};
 use serde::Deserialize;
 
 use crate::ordner;
+use crate::pdf::logo_bytes;
+
+/// Baut aus dem Stammdaten-Logo einen Briefkopf-Absatz (Bild oben links),
+/// auf höchstens 5 cm Breite / 2,5 cm Höhe skaliert (Seitenverhältnis
+/// bleibt). None, wenn kein/unlesbares Logo. EMU = English Metric Units,
+/// 360000 pro cm.
+fn briefkopf_absatz(logo: Option<&str>) -> Option<Paragraph> {
+    let daten = logo.and_then(logo_bytes)?;
+    let img = image::load_from_memory(&daten).ok()?;
+    let (w_px, h_px) = image::GenericImageView::dimensions(&img);
+    if w_px == 0 || h_px == 0 {
+        return None;
+    }
+    let max_w = 1_800_000u64; // 5 cm
+    let max_h = 900_000u64; // 2,5 cm
+    let aspect = w_px as f64 / h_px as f64;
+    let mut w = max_w;
+    let mut h = (max_w as f64 / aspect) as u64;
+    if h > max_h {
+        h = max_h;
+        w = (max_h as f64 * aspect) as u64;
+    }
+    let pic = Pic::new(&daten).size(w as u32, h as u32);
+    Some(Paragraph::new().add_run(Run::new().add_image(pic)))
+}
 
 #[derive(Deserialize)]
 pub struct DocAbschnitt {
@@ -55,12 +80,18 @@ pub fn formular_word_erzeugen(
     titel: String,
     warnhinweis: String,
     abschnitte: Vec<DocAbschnitt>,
+    logo: Option<String>,
 ) -> Result<String, String> {
     let ordner_pfad = ordner::wurzel(&app)?.join(ordner::bereinigen(&projekt)?);
     fs::create_dir_all(&ordner_pfad).map_err(|e| format!("Ordner nicht anlegbar: {e}"))?;
 
     // Menschenlesbare Word-Datei.
     let mut docx = Docx::new();
+
+    // Briefkopf (Logo) ganz oben, falls vorhanden.
+    if let Some(absatz) = briefkopf_absatz(logo.as_deref()) {
+        docx = docx.add_paragraph(absatz);
+    }
 
     // Warnhinweis ganz oben, deutlich abgesetzt (rot, fett).
     for zeile in warnhinweis.lines() {

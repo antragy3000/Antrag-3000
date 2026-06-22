@@ -136,6 +136,9 @@
       kontakt: { strasse: "", plz: "", ort: "", land: "", email: "", telefon: "", webseite: "" },
       bank: { kontoinhaber: "", iban: "", bic: "", bank: "" },
       steuer: { steuernummer: "", ustid: "", finanzamt: "" },
+      // Logo als Data-URL (z. B. "data:image/png;base64,…"); erscheint als
+      // Briefkopf in PDF und Word. Bleibt verschlüsselt im Tresor.
+      logo: "",
     };
   }
 
@@ -178,6 +181,15 @@
       veraendert = true;
     } else {
       for (const [gruppe, felder] of Object.entries(vorlage)) {
+        // Skalare Felder (z. B. logo) separat behandeln – nur ergänzen,
+        // niemals einen vorhandenen Wert überschreiben.
+        if (typeof felder !== "object" || felder === null) {
+          if (typeof d.stammdaten[gruppe] !== "string") {
+            d.stammdaten[gruppe] = felder;
+            veraendert = true;
+          }
+          continue;
+        }
         if (!d.stammdaten[gruppe] || typeof d.stammdaten[gruppe] !== "object") {
           d.stammdaten[gruppe] = felder;
           veraendert = true;
@@ -521,6 +533,7 @@
       titel,
       warnhinweis,
       abschnitte,
+      logo: daten.stammdaten?.logo || null,
     });
   }
 
@@ -558,7 +571,7 @@
       $state.snapshot(foerderung),
       $state.snapshot(antrag?.checkliste ?? [])
     );
-    return { projekt: aktivesProjekt.name, foerderung: foerderung.name, titel, abschnitte, anhaenge };
+    return { projekt: aktivesProjekt.name, foerderung: foerderung.name, titel, abschnitte, anhaenge, logo: daten.stammdaten?.logo || null };
   }
 
   // Vorschau erzeugen und im PDF-Programm öffnen.
