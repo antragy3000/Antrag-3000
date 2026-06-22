@@ -3,13 +3,22 @@
   // Liefert am Ende die Antworten an den Aufrufer (fertig-Callback);
   // gespeichert wird dort - im Tresor, denn die Budgetangabe ist sensibel.
   import { SPARTEN, PROJEKTARTEN } from "$lib/begriffe";
+  import { sucheRegionen, sucheStaedte, regionName } from "$lib/daten/orte.js";
+  import SuchAuswahl from "./SuchAuswahl.svelte";
 
   let { start = null, fertig, abbrechen = null } = $props();
+
+  // Länder mit engerer Auswahl (Bundesland/Kanton + Stadt).
+  const DACH = ["DE", "AT", "CH"];
+  const istDach = (land) => DACH.includes(land);
 
   const FRAGEN = [
     {
       key: "wohnsitz",
       frage: "Wo hast du deinen Wohnsitz?",
+      ort: true,
+      regionKey: "wohnsitzRegion",
+      stadtKey: "wohnsitzStadt",
       mehrfach: false,
       optionen: [
         { wert: "DE", label: "Deutschland" },
@@ -21,6 +30,9 @@
     {
       key: "durchfuehrungsort",
       frage: "Wo findet dein Projekt überwiegend statt?",
+      ort: true,
+      regionKey: "durchfuehrungRegion",
+      stadtKey: "durchfuehrungStadt",
       mehrfach: false,
       optionen: [
         { wert: "DE", label: "Deutschland" },
@@ -109,6 +121,21 @@
     weiter();
   }
 
+  // Orts-Frage: Land wählen, aber NICHT automatisch weiter (es folgen
+  // optional Region/Stadt). Beim Landwechsel die engere Auswahl leeren.
+  function landWaehlen(wert) {
+    antworten[frage.key] = wert;
+    antworten[frage.regionKey] = null;
+    antworten[frage.stadtKey] = null;
+  }
+  function regionGewaehlt(o) {
+    antworten[frage.regionKey] = o ? o.wert : null;
+    antworten[frage.stadtKey] = null; // Stadt hängt an der Region
+  }
+  function stadtGewaehlt(o) {
+    antworten[frage.stadtKey] = o ? o.wert : null;
+  }
+
   function mehrfachUmschalten(wert) {
     const liste = antworten[frage.key];
     antworten[frage.key] = liste.includes(wert)
@@ -123,32 +150,74 @@
     <h2>{frage.frage}</h2>
     {#if frage.hinweis}<p class="hinweis">{frage.hinweis}</p>{/if}
 
-    <div class="optionen" class:kompakt={frage.optionen.length > 5}>
-      {#each frage.optionen as o (String(o.wert))}
-        {#if frage.mehrfach}
-          <button
-            class="option"
-            class:gewaehlt={antworten[frage.key].includes(o.wert)}
-            onclick={() => mehrfachUmschalten(o.wert)}
-          >
-            {o.label}
-          </button>
-        {:else}
+    {#if frage.ort}
+      <div class="optionen kompakt">
+        {#each frage.optionen as o (String(o.wert))}
           <button
             class="option"
             class:gewaehlt={antworten[frage.key] === o.wert}
-            onclick={() => einfachWaehlen(o.wert)}
+            onclick={() => landWaehlen(o.wert)}
           >
             {o.label}
           </button>
-        {/if}
-      {/each}
-    </div>
+        {/each}
+      </div>
 
-    {#if frage.mehrfach}
-      <button class="primaer" disabled={antworten[frage.key].length === 0} onclick={weiter}>
+      {#if istDach(antworten[frage.key])}
+        <div class="ort-felder">
+          <label for="ort-region">Bundesland / Kanton <span class="opt">(optional)</span></label>
+          <SuchAuswahl
+            platzhalter="z. B. Bayern, Zürich, Tirol …"
+            label={regionName(antworten[frage.key], antworten[frage.regionKey])}
+            suche={(t) =>
+              sucheRegionen(antworten[frage.key], t).map((r) => ({ wert: r.code, label: r.name }))}
+            onwaehlen={regionGewaehlt}
+          />
+          <label for="ort-stadt">Stadt <span class="opt">(optional)</span></label>
+          <SuchAuswahl
+            platzhalter="Stadt suchen …"
+            label={antworten[frage.stadtKey] ?? ""}
+            suche={(t) =>
+              sucheStaedte(antworten[frage.key], antworten[frage.regionKey], t).map((s) => ({
+                wert: s.name,
+                label: s.name,
+              }))}
+            onwaehlen={stadtGewaehlt}
+          />
+        </div>
+      {/if}
+
+      <button class="primaer" disabled={!antworten[frage.key]} onclick={weiter}>
         {letzte ? "Ergebnis anzeigen" : "Weiter"}
       </button>
+    {:else}
+      <div class="optionen" class:kompakt={frage.optionen.length > 5}>
+        {#each frage.optionen as o (String(o.wert))}
+          {#if frage.mehrfach}
+            <button
+              class="option"
+              class:gewaehlt={antworten[frage.key].includes(o.wert)}
+              onclick={() => mehrfachUmschalten(o.wert)}
+            >
+              {o.label}
+            </button>
+          {:else}
+            <button
+              class="option"
+              class:gewaehlt={antworten[frage.key] === o.wert}
+              onclick={() => einfachWaehlen(o.wert)}
+            >
+              {o.label}
+            </button>
+          {/if}
+        {/each}
+      </div>
+
+      {#if frage.mehrfach}
+        <button class="primaer" disabled={antworten[frage.key].length === 0} onclick={weiter}>
+          {letzte ? "Ergebnis anzeigen" : "Weiter"}
+        </button>
+      {/if}
     {/if}
 
     <div class="fusszeile">
@@ -228,6 +297,20 @@
     border-color: #4f6df5;
     background: #eef1ff;
   }
+
+  .ort-felder {
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .ort-felder label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #5e6c84;
+    margin: 10px 0 2px;
+  }
+  .ort-felder .opt { color: #8590a2; font-weight: 400; }
 
   .primaer {
     width: 100%;
