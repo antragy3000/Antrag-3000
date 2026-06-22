@@ -33,6 +33,8 @@ for (const [id, p] of Object.entries(patches)) {
   if (Array.isArray(p.durchfuehrungsort)) f.harte_kriterien.durchfuehrungsort = p.durchfuehrungsort;
   if (Array.isArray(p.durchfuehrungsort_regionen)) f.harte_kriterien.durchfuehrungsort_regionen = p.durchfuehrungsort_regionen;
   if (Array.isArray(p.wohnsitz_regionen)) f.harte_kriterien.wohnsitz_regionen = p.wohnsitz_regionen;
+  if (Array.isArray(p.durchfuehrungsort_staedte)) f.harte_kriterien.durchfuehrungsort_staedte = p.durchfuehrungsort_staedte;
+  if (Array.isArray(p.wohnsitz_staedte)) f.harte_kriterien.wohnsitz_staedte = p.wohnsitz_staedte;
   if (Array.isArray(p.checkliste_vorschlag)) f.checkliste_vorschlag = p.checkliste_vorschlag;
   if (p.recherchiert) f.recherchiert = true;
   geaendert++;

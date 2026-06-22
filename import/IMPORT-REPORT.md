@@ -1,39 +1,39 @@
 # Import-Report (2026-06-22)
 
-33 Förderungen übernommen (aus 1088 Excel-Zeilen).
+33 Förderer im Datensatz, davon 30 per Internetrecherche angereichert.
 
-Fehlende Pflicht-/Matching-Angaben je Eintrag:
+Noch offene/zu prüfende Angaben je Förderer:
 
-- Hessisches Ministerium für Wissenschaft und Kunst: Sparten, Projektart, Förderhöhe
-- Flausen+ Stipendium: Webseite, Sparten, Projektart, Förderhöhe
-- LAKS Hessen: Sparten, Projektart, Förderhöhe
-- Landkreis Gießen: Sparten, Projektart, Förderhöhe
-- LandKulturPerlen: Webseite, Sparten, Projektart, Förderhöhe
-- Fonds Darstellender Künste (Konzeptionsförderung): Sparten, Projektart, Förderhöhe
-- Kulturkoffer Hessen: Sparten, Projektart, Förderhöhe
-- Kultur mach stark / Zirkus macht stark: Sparten, Projektart, Förderhöhe
-- Stiftung Citoyen: Rhein-Main Gebiet: Webseite, Frist, Sparten, Projektart, Förderhöhe
-- maeccenia Frauen in WIssenschaft und Kultur, Rhein Main Gebie: Frist, Sparten, Projektart, Förderhöhe
-- Kompetenzzentrum Kreativwirtschaft der Stadt Frankfurt/Main: Webseite, Frist, Sparten, Projektart, Förderhöhe
-- Bundesstiftung Aufarbeitung: Webseite, Frist, Sparten, Projektart, Förderhöhe
-- Kulturfonds Frankfurt RheinMain - Site Sight Signs: Webseite, Frist, Sparten, Projektart, Förderhöhe
-- Kulturfonds Frankfurt RheinMain - Projektförderung: Webseite, Frist, Sparten, Projektart, Förderhöhe
-- Internationales Künstler:innengremium: Webseite, Frist, Sparten, Projektart, Förderhöhe
-- Deutscher Künstlerverbund: Webseite, Frist, Sparten, Projektart, Förderhöhe
-- Einzelproduktionsförderung Kulturamt Frankfurt am Main: Sparten, Projektart, Förderhöhe
-- Frankfurter Stiftung maecenia für Frauen in Wissenschaft und Kunst: Sparten, Projektart, Förderhöhe
-- Deutsche Stiftung Frauen- und Geschlechterforschung: Sparten, Projektart, Förderhöhe
-- Fonds Soziokultur (Allgemeine Projektförderung): Sparten, Projektart, Förderhöhe
-- Allgemeine Projekt- und Gastspielförderung des Landes Hessen: Sparten, Projektart, Förderhöhe
-- Förderung "theater hinter gittern": Webseite, Frist, Sparten, Projektart, Förderhöhe
-- DIe Werft: Webseite, Sparten, Projektart, Förderhöhe
-- Projektförderung Stadt Wiesbaden: Webseite, Sparten, Projektart, Förderhöhe
-- Kulturförderung Stadt Erfurt: Sparten, Projektart, Förderhöhe
-- Kulturstiftung Thüringen: Sparten, Projektart, Förderhöhe
-- Jupiter, Kulturstiftung des Bundes: Darstellende Künste für junges Publikum: Webseite, Frist, Sparten, Projektart, Förderhöhe
-- Sparkasse Gießen Kulturstiftung, regional: Webseite, Frist, Sparten, Projektart, Förderhöhe
-- Gießen: Kulturamt Kulturförderung Stadt Gießen: Webseite, Frist, Sparten, Projektart, Förderhöhe
-- Bürgerstiftung Mittelhessen: Soziale Projekte: Webseite, Frist, Sparten, Projektart, Förderhöhe
-- Hessen: Freie Szene, Projektförderung Theater, Ministerium Wissenschaft Kunst Hessen: Webseite, Frist, Sparten, Projektart, Förderhöhe
-- GLS Bank Förderung: gemeinnützige Projekte, Gestaltung der Gesellschaft: Webseite, Frist, Sparten, Projektart, Förderhöhe
-- Kulturkoffer: Sparten, Projektart, Förderhöhe
+- Hessisches Ministerium für Wissenschaft und Kunst: konkrete Frist, Förderhöhe
+- Flausen+ Stipendium: konkrete Frist
+- LAKS Hessen: vollständig genug
+- Landkreis Gießen: konkrete Frist, Sparten (spartenoffen angenommen), Förderhöhe
+- LandKulturPerlen: vollständig genug
+- Fonds Darstellender Künste (Konzeptionsförderung): vollständig genug
+- Kulturkoffer Hessen: vollständig genug
+- Kultur mach stark / Zirkus macht stark: vollständig genug
+- Stiftung Citoyen: Rhein-Main Gebiet: Förderhöhe
+- maeccenia Frauen in WIssenschaft und Kultur, Rhein Main Gebie: vollständig genug
+- Kompetenzzentrum Kreativwirtschaft der Stadt Frankfurt/Main: Webseite, Förderhöhe
+- Bundesstiftung Aufarbeitung: vollständig genug
+- Kulturfonds Frankfurt RheinMain - Site Sight Signs: Förderhöhe
+- Kulturfonds Frankfurt RheinMain - Projektförderung: konkrete Frist
+- Internationales Künstler:innengremium  [NICHT recherchiert]: Webseite, Sparten (spartenoffen angenommen), Projektart, Förderhöhe
+- Deutscher Künstlerverbund: vollständig genug
+- Einzelproduktionsförderung Kulturamt Frankfurt am Main: konkrete Frist, Förderhöhe
+- Frankfurter Stiftung maecenia für Frauen in Wissenschaft und Kunst: vollständig genug
+- Deutsche Stiftung Frauen- und Geschlechterforschung: konkrete Frist, Sparten (spartenoffen angenommen), Förderhöhe
+- Fonds Soziokultur (Allgemeine Projektförderung): konkrete Frist, Förderhöhe
+- Allgemeine Projekt- und Gastspielförderung des Landes Hessen: vollständig genug
+- Förderung "theater hinter gittern"  [NICHT recherchiert]: Webseite, Sparten (spartenoffen angenommen), Projektart, Förderhöhe
+- DIe Werft  [NICHT recherchiert]: Webseite, konkrete Frist, Sparten (spartenoffen angenommen), Projektart, Förderhöhe
+- Projektförderung Stadt Wiesbaden: konkrete Frist, Sparten (spartenoffen angenommen), Förderhöhe
+- Kulturförderung Stadt Erfurt: konkrete Frist, Sparten (spartenoffen angenommen)
+- Kulturstiftung Thüringen: konkrete Frist, Förderhöhe
+- Jupiter, Kulturstiftung des Bundes: Darstellende Künste für junges Publikum: konkrete Frist
+- Sparkasse Gießen Kulturstiftung, regional: Sparten (spartenoffen angenommen)
+- Gießen: Kulturamt Kulturförderung Stadt Gießen: Sparten (spartenoffen angenommen), Förderhöhe
+- Bürgerstiftung Mittelhessen: Soziale Projekte: Förderhöhe
+- Hessen: Freie Szene, Projektförderung Theater, Ministerium Wissenschaft Kunst Hessen: Förderhöhe
+- GLS Bank Förderung: gemeinnützige Projekte, Gestaltung der Gesellschaft: Sparten (spartenoffen angenommen), Förderhöhe
+- Kulturkoffer: konkrete Frist
