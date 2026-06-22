@@ -22,8 +22,16 @@ import path from "node:path";
 import os from "node:os";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const HTML = path.join(__dirname, "handbuch.html");
-const PDF = path.join(__dirname, "Benutzerhandbuch Antrag 3000.pdf");
+// Optionale Aufruf-Argumente: node handbuch-bauen.mjs [html] [pdf]
+// Ohne Argumente wird das Benutzerhandbuch gebaut. Mit Argumenten lassen
+// sich andere Handbücher (z. B. das Admin-Handbuch) mit demselben
+// Seitenzahl-/Inhaltsverzeichnis-Mechanismus erzeugen.
+const HTML = process.argv[2]
+  ? path.resolve(process.argv[2])
+  : path.join(__dirname, "handbuch.html");
+const PDF = process.argv[3]
+  ? path.resolve(process.argv[3])
+  : path.join(__dirname, "Benutzerhandbuch Antrag 3000.pdf");
 const GS = "C:\\Program Files\\PDF24\\gs\\bin\\gswin64c.exe";
 
 function findeEdge() {

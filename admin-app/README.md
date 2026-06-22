@@ -1,5 +1,9 @@
 # Antrag 3000 – Admin-App
 
+> 📖 Ausführliche Anleitung: **`docs/Admin-Handbuch Antrag 3000.pdf`**
+> (Quelle: `docs/admin-handbuch.html`, neu bauen mit
+> `node ../docs/handbuch-bauen.mjs "docs/admin-handbuch.html" "docs/Admin-Handbuch Antrag 3000.pdf"`).
+
 Schlankes, **eigenes** Werkzeug (getrennt von der Nutzer-App) zum zentralen
 Pflegen der Förder-Datenbank:
 

@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Antrag 3000 – Admin-Handbuch</title>
+<style>
+  @page { size: A4; margin: 17mm 15mm; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    color: #172b4d;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    background: #fff;
+  }
+  p { margin: 0 0 9px; }
+  ul, ol { margin: 4px 0 10px; padding-left: 20px; }
+  li { margin: 3px 0; }
+  strong { color: #172b4d; }
+  code { background: #f1f2f4; border-radius: 4px; padding: 1px 5px; font-size: 9.5pt; }
+  a { color: #3d5bf0; text-decoration: none; }
+
+  /* ---------- Deckblatt ---------- */
+  .cover {
+    height: 263mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    break-after: page;
+    padding: 0 6mm;
+  }
+  .cover .marke {
+    font-size: 13pt; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: #4f6df5;
+  }
+  .cover h1 { font-size: 40pt; line-height: 1.05; margin: 10px 0 6px; letter-spacing: -0.02em; }
+  .cover .sub { font-size: 15pt; color: #5e6c84; margin: 0 0 30px; font-weight: 400; }
+  .cover .meta { color: #8590a2; font-size: 10pt; }
+  .cover .balken {
+    height: 8px; width: 120px; border-radius: 99px;
+    background: linear-gradient(90deg,#4f6df5,#8270db); margin: 0 0 26px;
+  }
+  .cover .hinweisbox {
+    margin-top: 34px; max-width: 135mm;
+    background: #fff7d6; color: #533f04;
+    border-radius: 10px; padding: 14px 18px; font-size: 10pt;
+  }
+
+  /* ---------- Inhaltsverzeichnis ---------- */
+  .toc { break-after: page; }
+  .toc h2 { font-size: 19pt; margin: 0 0 16px; }
+  .toc ol { list-style: none; padding: 0; margin: 0; columns: 1; }
+  .toc li {
+    display: flex; gap: 10px; align-items: baseline;
+    padding: 5px 0; border-bottom: 1px solid #f1f2f4; font-size: 10.5pt;
+  }
+  .toc .nr { color: #4f6df5; font-weight: 700; width: 22px; flex: 0 0 22px; }
+  .toc .t { flex: 1; }
+  .toc .pg { color: #5e6c84; font-weight: 600; font-variant-numeric: tabular-nums; padding-left: 8px; }
+
+  /* ---------- Kapitel ---------- */
+  .chapter { break-before: page; }
+  .chapter > h2 {
+    font-size: 17pt; margin: 0 0 4px; letter-spacing: -0.01em;
+    padding-bottom: 8px; border-bottom: 3px solid #eef1ff;
+  }
+  .chapter > h2 .kn { color: #4f6df5; margin-right: 8px; }
+  h3 { font-size: 12pt; margin: 18px 0 6px; }
+  .lead { color: #44546f; font-size: 11pt; margin-bottom: 12px; }
+
+  .merke { background: #eef1ff; border-left: 4px solid #4f6df5; border-radius: 8px; padding: 10px 14px; margin: 12px 0; font-size: 10pt; }
+  .warn { background: #ffeceb; border-left: 4px solid #ca3521; border-radius: 8px; padding: 10px 14px; margin: 12px 0; font-size: 10pt; color: #5d1f1a; }
+  .tipp { background: #dcfff1; border-left: 4px solid #22a06b; border-radius: 8px; padding: 10px 14px; margin: 12px 0; font-size: 10pt; color: #143d2b; }
+
+  /* ---------- Abbildungen ---------- */
+  figure { margin: 14px 0 16px; break-inside: avoid; }
+  figcaption { font-size: 9pt; color: #8590a2; margin-top: 7px; padding-left: 2px; }
+  figcaption b { color: #5e6c84; }
+  .screen { background: #f4f5f7; border: 1px solid #e4e7ec; border-radius: 12px; padding: 12px; overflow: hidden; }
+
+  .appbar {
+    background: #fff; border-radius: 9px; box-shadow: 0 1px 2px rgba(9,30,66,.08);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px; gap: 10px; margin-bottom: 10px; font-size: 8.5pt;
+  }
+  .appbar .logo { font-weight: 700; font-size: 9.5pt; }
+  .navm { display: flex; gap: 3px; }
+  .navm span { padding: 5px 9px; border-radius: 7px; color: #44546f; }
+  .navm span.akt { background: #eef1ff; color: #3d5bf0; font-weight: 600; }
+
+  .btn { display: inline-block; border-radius: 7px; padding: 7px 13px; font-size: 9pt; font-weight: 600; }
+  .btn.pri { background: #4f6df5; color: #fff; }
+  .btn.grn { background: #216e4e; color: #fff; }
+  .btn.sec { background: #fff; color: #172b4d; border: 2px solid #dfe1e6; }
+  .btn.gefahr { background: #ca3521; color: #fff; }
+
+  .karte { background: #fff; border-radius: 10px; box-shadow: 0 1px 3px rgba(9,30,66,.12); padding: 14px 16px; font-size: 9pt; }
+  .feld { background: #fafbfc; border: 2px solid #dfe1e6; border-radius: 7px; padding: 6px 9px; font-size: 9pt; color: #5e6c84; }
+  .label { font-size: 8pt; font-weight: 700; color: #5e6c84; margin: 8px 0 3px; }
+
+  table.tab { border-collapse: collapse; width: 100%; font-size: 8.5pt; }
+  table.tab th, table.tab td { border: 1px solid #e4e7ec; padding: 4px 8px; text-align: left; }
+  table.tab th { background: #f1f2f4; }
+  .pill { font-size: 7.5pt; background: #eef1ff; color: #3b4fb0; padding: 2px 8px; border-radius: 99px; font-weight: 600; }
+
+  .struktur { counter-reset: st; }
+  .struktur .stp {
+    display: flex; gap: 10px; align-items: flex-start; padding: 7px 10px;
+    background: #fff; border: 1px solid #e4e7ec; border-radius: 8px; margin: 6px 0; font-size: 9.5pt;
+  }
+  .struktur .num {
+    flex: 0 0 22px; width: 22px; height: 22px; border-radius: 50%;
+    background: #4f6df5; color: #fff; font-weight: 700; font-size: 9pt;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .cmd { font-family: "Consolas","Courier New",monospace; font-size: 8.7pt; background: #0b1020; color: #d7e0ff; border-radius: 8px; padding: 11px 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; margin: 10px 0; }
+  .pfad { font-family: "Consolas","Courier New",monospace; font-size: 8.5pt; background:#f1f2f4; padding:1px 5px; border-radius:4px; word-break: break-all; }
+  .faq dt { font-weight: 700; margin-top: 12px; }
+  .faq dd { margin: 2px 0 0; color: #44546f; }
+  .ende { text-align:center; color:#8590a2; font-size:9pt; margin-top:26px; }
+</style>
+</head>
+<body>
+
+<!-- ================= DECKBLATT ================= -->
+<section class="cover">
+  <div class="marke">Admin-Handbuch</div>
+  <h1>Antrag 3000</h1>
+  <div class="sub">Die Förder-Datenbank zentral pflegen – Admin-Werkzeug</div>
+  <div class="balken"></div>
+  <div class="meta">
+    Version 0.1.0 &nbsp;·&nbsp; Stand Juni 2026 &nbsp;·&nbsp; Eigenständige Admin-App (Desktop)
+  </div>
+  <div class="hinweisbox">
+    <strong>Nur für die verwaltende Person.</strong> Dieses Handbuch beschreibt
+    die <strong>Admin-App</strong> – getrennt von der Nutzer-App. Sie pflegt die
+    <strong>unkritische</strong> Förder-Datenbank (Katalog, Meldungen,
+    geteilte Förderer). Sensible Tresor-Daten der Nutzer:innen sieht sie nie.
+  </div>
+</section>
+
+<!-- ================= INHALT ================= -->
+<section class="toc">
+  <h2>Inhalt</h2>
+  <ol>
+    <li><span class="nr">1</span><span class="t">Was die Admin-App ist</span><span class="pg" data-ch="1">3</span></li>
+    <li><span class="nr">2</span><span class="t">Sicherheit: Zwei Faktoren</span><span class="pg" data-ch="2">4</span></li>
+    <li><span class="nr">3</span><span class="t">Server vorbereiten (TOTP einrichten)</span><span class="pg" data-ch="3">5</span></li>
+    <li><span class="nr">4</span><span class="t">Admin-App installieren &amp; starten</span><span class="pg" data-ch="4">6</span></li>
+    <li><span class="nr">5</span><span class="t">Anmelden</span><span class="pg" data-ch="5">7</span></li>
+    <li><span class="nr">6</span><span class="t">Vorschläge kuratieren</span><span class="pg" data-ch="6">8</span></li>
+    <li><span class="nr">7</span><span class="t">Meldungen bearbeiten</span><span class="pg" data-ch="7">9</span></li>
+    <li><span class="nr">8</span><span class="t">Geteilte Förderer</span><span class="pg" data-ch="8">10</span></li>
+    <li><span class="nr">9</span><span class="t">Katalog hochladen</span><span class="pg" data-ch="9">11</span></li>
+    <li><span class="nr">10</span><span class="t">Der Sammler (Hybrid-Update)</span><span class="pg" data-ch="10">12</span></li>
+    <li><span class="nr">11</span><span class="t">Tipps &amp; häufige Fragen</span><span class="pg" data-ch="11">13</span></li>
+  </ol>
+</section>
+
+<!-- ===== 1 ===== -->
+<section class="chapter">
+  <h2><span class="kn">1</span>Was die Admin-App ist</h2>
+  <p class="lead">Ein schlankes, <strong>eigenes</strong> Werkzeug, mit dem die
+  verwaltende Person die Förder-Datenbank des Teams zentral pflegt.</p>
+
+  <p>Die Admin-App ist <strong>von der Nutzer-App getrennt</strong> und hat einen
+  eigenen Zweck: Sie verteilt und kuratiert die <strong>unkritische</strong>
+  Förder-Ebene. Sie speichert selbst <strong>keine</strong> sensiblen Daten.</p>
+
+  <h3>Was du damit tust</h3>
+  <ul>
+    <li><strong>Vorschläge</strong> des Sammlers freigeben oder verwerfen,</li>
+    <li><strong>Meldungen</strong> der Nutzer:innen (falsche/veraltete Förderungen) bearbeiten,</li>
+    <li>vom Team <strong>geteilte Förderer</strong> sichten und unpassende entfernen,</li>
+    <li>den <strong>Förder-Katalog hochladen</strong> – er wird danach an alle Geräte verteilt.</li>
+  </ul>
+
+  <div class="merke"><strong>Zwei Datenebenen.</strong> Wie die ganze App trennt
+  auch die Admin-Seite strikt: Der Server (und damit die Admin-App) kennt nur die
+  <strong>öffentliche</strong> Förder-Ebene. Name, IBAN, Budget, Projektbeschriebe
+  der Nutzer:innen bleiben verschlüsselt auf deren Geräten.</div>
+
+  <figure>
+    <div class="screen">
+      <div class="appbar">
+        <span class="logo">Antrag 3000 – Admin</span>
+        <span style="color:#5e6c84">angemeldet · Admin-Laptop</span>
+      </div>
+      <div class="navm">
+        <span class="akt">Vorschläge</span><span>Meldungen</span>
+        <span>Geteilte Förderer</span><span>Katalog hochladen</span>
+      </div>
+    </div>
+    <figcaption><b>Abb. 1.1</b> – Nach dem Anmelden: vier Bereiche für die Pflege.</figcaption>
+  </figure>
+</section>
+
+<!-- ===== 2 ===== -->
+<section class="chapter">
+  <h2><span class="kn">2</span>Sicherheit: Zwei Faktoren</h2>
+  <p class="lead">Ein Admin kann zentral viel bewegen – darum ist der Zugang
+  <strong>zwei-faktorig</strong> abgesichert.</p>
+
+  <figure>
+    <div class="screen">
+      <div style="display:flex; gap:10px; flex-wrap:wrap">
+        <div class="karte" style="flex:1; border-top:4px solid #4f6df5">
+          <div style="font-weight:700; margin-bottom:5px">① Besitz · Team-Gerät</div>
+          <div style="color:#5e6c84">Ein gültiges Team-Zertifikat (aus dem
+          Zugangs-Paket). Caddy lässt nur solche Geräte überhaupt durch (mTLS).</div>
+        </div>
+        <div class="karte" style="flex:1; border-top:4px solid #22a06b">
+          <div style="font-weight:700; margin-bottom:5px">② Wissen/Besitz · TOTP</div>
+          <div style="color:#5e6c84">Ein 6-stelliger Code aus deiner
+          Authenticator-App, der alle 30&nbsp;s wechselt.</div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 2.1</b> – Beide Faktoren müssen stimmen, sonst kein Admin-Zugang.</figcaption>
+  </figure>
+
+  <p>Beim Anmelden prüft der Server den TOTP-Code und gibt eine
+  <strong>Sitzung</strong> (30 Minuten) zurück. Die App schickt danach ein
+  Sitzungs-Token mit – du musst den Code also nicht ständig neu eingeben.
+  Läuft die Sitzung ab, meldest du dich einfach erneut an.</p>
+
+  <div class="warn"><strong>Ohne TOTP-Geheimnis kein Admin.</strong> Ist auf dem
+  Server kein <code>ADMIN_TOTP_SECRET</code> gesetzt, ist der Admin-Zugang
+  vollständig deaktiviert – niemand kommt rein.</div>
+
+  <div class="merke">Das Zugangs-Paket (<span class="pfad">.a3kpaket</span>) ist
+  dasselbe wie in der Nutzer-App. Du kannst dein vorhandenes verwenden oder in
+  der Nutzer-App unter „Team verwalten" ein eigenes erzeugen (z. B.
+  <em>Admin-Laptop</em>).</div>
+</section>
+
+<!-- ===== 3 ===== -->
+<section class="chapter">
+  <h2><span class="kn">3</span>Server vorbereiten (TOTP einrichten)</h2>
+  <p class="lead">Einmalig richtest du das Admin-Geheimnis auf dem Server (NAS) ein.</p>
+
+  <div class="struktur">
+    <div class="stp"><span class="num">1</span><div><b>Geheimnis erzeugen.</b> Im <span class="pfad">server/</span>-Ordner auf der NAS:</div></div>
+  </div>
+  <div class="cmd">docker compose -f docker-compose.tailscale.yml run --rm api totp</div>
+  <p>Der Befehl gibt das Geheimnis, die <code>otpauth://</code>-URL und einen
+  <strong>QR-Code direkt im Terminal</strong> aus:</p>
+  <div class="cmd">ADMIN_TOTP_SECRET=***REMOVED***
+
+otpauth://totp/Antrag%203000:Admin?secret=...&amp;issuer=Antrag%203000
+
+(QR-Code zum Scannen)</div>
+
+  <div class="struktur">
+    <div class="stp"><span class="num">2</span><div><b>Authenticator-App einrichten.</b> Den <strong>QR-Code scannen</strong> – oder den base32-Schlüssel manuell eintragen (Typ: zeitbasiert/TOTP).</div></div>
+    <div class="stp"><span class="num">3</span><div><b>Geheimnis hinterlegen.</b> Die Zeile <code>ADMIN_TOTP_SECRET=…</code> in die Datei <span class="pfad">server/.env</span> schreiben.</div></div>
+    <div class="stp"><span class="num">4</span><div><b>Server neu bauen.</b> <span class="pfad">docker compose -f docker-compose.tailscale.yml up -d --build</span></div></div>
+  </div>
+
+  <div class="warn"><strong>Geheimnis nicht verstreuen.</strong> Die
+  <code>otpauth://</code>-URL enthält das Geheimnis. Gib sie <strong>nicht</strong>
+  in einen Online-QR-Dienst – nutze den Terminal-QR-Code oder die manuelle
+  Eingabe.</div>
+
+  <div class="tipp"><strong>Uhrzeit.</strong> TOTP braucht eine korrekte Uhr.
+  Die Synology ist per NTP synchron; falls Codes nie akzeptiert werden, prüfe
+  die Server-Uhrzeit.</div>
+</section>
+
+<!-- ===== 4 ===== -->
+<section class="chapter">
+  <h2><span class="kn">4</span>Admin-App installieren &amp; starten</h2>
+  <p class="lead">Die Admin-App liegt im Projekt unter <span class="pfad">admin-app/</span>.
+  Voraussetzung ist dieselbe Toolchain wie bei der Nutzer-App (Rust + Node).</p>
+
+  <div class="struktur">
+    <div class="stp"><span class="num">1</span><div><b>Abhängigkeiten holen</b> (einmalig):</div></div>
+  </div>
+  <div class="cmd">cd admin-app
+npm install</div>
+  <div class="struktur">
+    <div class="stp"><span class="num">2</span><div><b>Starten</b> – zum Arbeiten/Testen:</div></div>
+  </div>
+  <div class="cmd">npm run tauri dev</div>
+  <div class="struktur">
+    <div class="stp"><span class="num">3</span><div><b>Fertige App bauen</b> (optional, erzeugt eine Installations-Datei):</div></div>
+  </div>
+  <div class="cmd">npm run tauri build</div>
+
+  <div class="merke">Die Admin-App ist bewusst schlank: eine statische
+  Oberfläche und ein kleines Rust-Backend, das denselben gesicherten
+  mTLS-Client wie die Nutzer-App nutzt.</div>
+</section>
+
+<!-- ===== 5 ===== -->
+<section class="chapter">
+  <h2><span class="kn">5</span>Anmelden</h2>
+  <p class="lead">Zugangs-Paket wählen, Code eingeben – fertig.</p>
+
+  <figure>
+    <div class="screen">
+      <div class="karte">
+        <div style="font-weight:700; margin-bottom:8px">Anmelden</div>
+        <span class="btn sec">Zugangs-Paket wählen …</span>
+        <div style="color:#5e6c84; margin:8px 0">Gerät „Admin-Laptop" · nas-…​.ts.net</div>
+        <div class="label">Authenticator-Code</div>
+        <div class="feld" style="letter-spacing:.2em">1 2 3 4 5 6</div>
+        <div style="margin-top:10px"><span class="btn pri">Anmelden</span></div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 5.1</b> – Paket wählen, 6-stelligen Code eingeben, anmelden.</figcaption>
+  </figure>
+
+  <div class="struktur">
+    <div class="stp"><span class="num">1</span><div><b>Zugangs-Paket wählen</b> (<span class="pfad">.a3kpaket</span>). Die App liest daraus Gerätename und Team-Adresse.</div></div>
+    <div class="stp"><span class="num">2</span><div><b>Code eingeben</b> – die aktuellen 6 Ziffern aus der Authenticator-App.</div></div>
+    <div class="stp"><span class="num">3</span><div><b>Anmelden.</b> Der Server prüft den Code und öffnet eine 30-Minuten-Sitzung. Danach erscheinen die vier Bereiche.</div></div>
+  </div>
+
+  <div class="warn"><strong>„Code falsch oder abgelaufen"?</strong> Meist ist der
+  Code schon gewechselt (neu eingeben) – oder das Geheimnis steht nicht in der
+  <span class="pfad">server/.env</span> bzw. die Server-Uhr weicht ab.</div>
+</section>
+
+<!-- ===== 6 ===== -->
+<section class="chapter">
+  <h2><span class="kn">6</span>Vorschläge kuratieren</h2>
+  <p class="lead">Der Sammler schlägt neue oder geänderte Förderungen vor –
+  verteilt wird erst, was du <strong>freigibst</strong>.</p>
+
+  <figure>
+    <div class="screen">
+      <table class="tab">
+        <thead><tr><th>Förderung</th><th>Art</th><th>Quelle · Stand</th><th>Aktion</th></tr></thead>
+        <tbody>
+          <tr><td>Beispiel-Kulturstiftung</td><td><span class="pill" style="background:#e3fcef;color:#216e4e">neu</span></td><td>rohquelle.json · 22.06.2026</td><td><span class="btn pri">freigeben</span> <span class="btn gefahr">verwerfen</span></td></tr>
+          <tr><td>Musikfonds e. V.</td><td><span class="pill" style="background:#fff7d6;color:#7a5c00">geändert</span></td><td>rohquelle.json · 22.06.2026</td><td><span class="btn pri">freigeben</span> <span class="btn gefahr">verwerfen</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <figcaption><b>Abb. 6.1</b> – Tab „Vorschläge": je Eintrag freigeben oder verwerfen.</figcaption>
+  </figure>
+
+  <ul>
+    <li><strong>freigeben</strong> übernimmt die Förderung sofort in den
+    verteilten Katalog (neuer Eintrag oder Ersetzen des gleichen) und setzt das
+    Katalog-Datum auf heute.</li>
+    <li><strong>verwerfen</strong> lehnt den Vorschlag ab. Findet der Sammler
+    denselben Eintrag später <em>unverändert</em>, schlägt er ihn nicht erneut vor.</li>
+  </ul>
+
+  <div class="merke">So funktioniert das <strong>Hybrid-Prinzip</strong>: Der
+  Sammler arbeitet automatisch, aber <strong>ein Mensch entscheidet</strong>, was
+  beim Team ankommt. Wie der Sammler Vorschläge erzeugt, steht in Kapitel 10.</div>
+</section>
+
+<!-- ===== 7 ===== -->
+<section class="chapter">
+  <h2><span class="kn">7</span>Meldungen bearbeiten</h2>
+  <p class="lead">Nutzer:innen melden falsche oder veraltete Förderungen – hier
+  arbeitest du sie ab.</p>
+
+  <figure>
+    <div class="screen">
+      <table class="tab">
+        <thead><tr><th>Förderung</th><th>Art</th><th>Anmerkung</th><th>Status</th><th>Aktion</th></tr></thead>
+        <tbody>
+          <tr><td>Musikfonds e. V.</td><td><span class="pill">veraltete Angaben</span></td><td>„Frist ist abgelaufen"</td><td>offen</td><td><span class="btn grn">erledigt</span> <span class="btn sec">verwerfen</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <figcaption><b>Abb. 7.1</b> – Tab „Meldungen": Status auf erledigt/verworfen setzen.</figcaption>
+  </figure>
+
+  <ul>
+    <li><strong>erledigt</strong> – die Meldung ist bearbeitet (z. B. der Katalog
+    wurde korrigiert).</li>
+    <li><strong>verwerfen</strong> – die Meldung trifft nicht zu.</li>
+    <li><strong>öffnen</strong> – eine erledigte/verworfene wieder auf „offen" setzen.</li>
+  </ul>
+
+  <div class="merke">Eine Meldung enthält nur Förderungs-Name, Art und die
+  optionale Anmerkung der meldenden Person – keine sensiblen Daten.</div>
+</section>
+
+<!-- ===== 8 ===== -->
+<section class="chapter">
+  <h2><span class="kn">8</span>Geteilte Förderer</h2>
+  <p class="lead">Selbst recherchierte Förderer, die Team-Mitglieder geteilt haben
+  – mit ihren <strong>öffentlichen</strong> Feldern.</p>
+
+  <p>Im Tab <strong>Geteilte Förderer</strong> siehst du Name, Geber, Land sowie
+  Gerät und Stand. Passt ein Eintrag nicht (Dublette, unpassend, fehlerhaft),
+  entfernst du ihn mit <span class="btn gefahr">entfernen</span>.</p>
+
+  <div class="merke">Die <strong>freie Beschreibung</strong> eines geteilten
+  Förderers bleibt beim Ersteller lokal – sie wird gar nicht erst übertragen.
+  Du siehst also nur die öffentlichen Programm-Infos.</div>
+
+  <div class="tipp">Einen guten geteilten Förderer kannst du dauerhaft in den
+  Katalog übernehmen, indem du ihn in die hochzuladende
+  <span class="pfad">foerderungen.json</span> aufnimmst (Kapitel 9).</div>
+</section>
+
+<!-- ===== 9 ===== -->
+<section class="chapter">
+  <h2><span class="kn">9</span>Katalog hochladen</h2>
+  <p class="lead">Der zentrale Förder-Katalog wird auf den Server geladen und von
+  dort an alle Team-Geräte verteilt.</p>
+
+  <div class="struktur">
+    <div class="stp"><span class="num">1</span><div><b>Katalog-Datei wählen.</b> Im Tab „Katalog hochladen" auf <em>„Katalog-Datei wählen …"</em> klicken und die geprüfte <span class="pfad">foerderungen.json</span> aussuchen.</div></div>
+    <div class="stp"><span class="num">2</span><div><b>Vorschau prüfen.</b> Die App zeigt Anzahl der Förderungen und den Stand.</div></div>
+    <div class="stp"><span class="num">3</span><div><b>Hochladen.</b> Der Server prüft das JSON (Schema-Version, jede Förderung mit id und Name) und verteilt die neue Fassung.</div></div>
+  </div>
+
+  <div class="merke">Der Katalog liegt nach dem Upload in der Server-Datenbank.
+  Beim Abruf liefert der Server diese Fassung; ohne Upload greift die
+  mitgelieferte Datei. Die Nutzer-App übernimmt Updates automatisch und zeigt,
+  was sich geändert hat.</div>
+
+  <div class="warn"><strong>Abgelehnt?</strong> „Der Katalog ist ungültig" heißt:
+  Schema-Version fehlt/passt nicht, oder eine Förderung hat keine id/keinen
+  Namen. „Zu groß" greift erst bei sehr großen Dateien (über 2&nbsp;MB).</div>
+</section>
+
+<!-- ===== 10 ===== -->
+<section class="chapter">
+  <h2><span class="kn">10</span>Der Sammler (Hybrid-Update)</h2>
+  <p class="lead">Der Sammler vergleicht eine Rohquelle mit dem aktuellen Katalog
+  und legt daraus die Vorschläge an, die du in Kapitel 6 freigibst.</p>
+
+  <h3>Einen Sammler-Lauf starten</h3>
+  <p>Die Quelldatei (eine Liste von Förderungs-Kandidaten) liegt im Ordner
+  <span class="pfad">server/katalog/</span> – auf dem Server unter
+  <span class="pfad">/srv</span> erreichbar. Dann:</p>
+  <div class="cmd">docker compose -f docker-compose.tailscale.yml run --rm api sammeln /srv/rohquelle.json</div>
+  <p>Der Sammler meldet z. B. <em>„2 neu, 1 geändert"</em>. Diese Vorschläge
+  erscheinen anschließend im Tab <strong>Vorschläge</strong>.</p>
+
+  <h3>Wie verglichen wird</h3>
+  <ul>
+    <li><strong>neu</strong> – die id kommt im Katalog noch nicht vor.</li>
+    <li><strong>geändert</strong> – die id gibt es, aber der Inhalt unterscheidet sich.</li>
+    <li><strong>unverändert</strong> – wird übersprungen (kein Vorschlag).</li>
+  </ul>
+  <p>Der Lauf ist <strong>wiederholbar</strong>: Gleiche, bereits gesehene
+  Kandidaten erzeugen keinen neuen Vorschlag; ein einmal verworfener kommt erst
+  wieder, wenn sich sein Inhalt tatsächlich ändert.</p>
+
+  <div class="tipp"><strong>Wöchentlich automatisch.</strong> Den
+  <code>sammeln</code>-Befehl kannst du im Synology-Aufgabenplaner (oder per Cron)
+  zeitgesteuert ausführen lassen. Verteilt wird trotzdem nichts ohne deine
+  Freigabe – der Sammler legt nur Vorschläge an.</div>
+
+  <p>Eine Beispiel-Rohquelle liegt unter
+  <span class="pfad">server/katalog/rohquelle-beispiel.json</span>.</p>
+</section>
+
+<!-- ===== 11 ===== -->
+<section class="chapter">
+  <h2><span class="kn">11</span>Tipps &amp; häufige Fragen</h2>
+  <dl class="faq">
+    <dt>Brauche ich ein besonderes Admin-Zertifikat?</dt>
+    <dd>Nein. Es genügt ein gültiges Team-Zugangs-Paket; der zweite Faktor ist
+    der TOTP-Code. Du kannst für die Admin-Arbeit aber ein eigenes Paket
+    (z. B. <em>Admin-Laptop</em>) in der Nutzer-App erzeugen.</dd>
+
+    <dt>Ich habe mein Authenticator-Gerät verloren.</dt>
+    <dd>Erzeuge auf dem Server mit <code>server totp</code> ein neues Geheimnis,
+    trage es in <span class="pfad">server/.env</span> ein und baue den Server neu.
+    Das alte Geheimnis ist damit ungültig.</dd>
+
+    <dt>„Sitzung abgelaufen – bitte neu anmelden."</dt>
+    <dd>Die 30-Minuten-Sitzung ist abgelaufen. Einfach erneut mit aktuellem Code
+    anmelden.</dd>
+
+    <dt>Verändert die Admin-App sensible Nutzerdaten?</dt>
+    <dd>Nein. Sie arbeitet ausschließlich auf der öffentlichen Förder-Ebene
+    (Katalog, Meldungen, geteilte Förderer). Tresor-Daten erreicht sie nie.</dd>
+
+    <dt>Wie kommen meine Freigaben bei den Nutzer:innen an?</dt>
+    <dd>Freigegebene Vorschläge und hochgeladene Kataloge liefert der Server beim
+    nächsten Abruf aus. Die Nutzer-App übernimmt Updates automatisch und zeigt
+    die Änderungen an.</dd>
+  </dl>
+
+  <div class="ende">— Ende des Admin-Handbuchs · Antrag 3000, Version 0.1.0 —</div>
+</section>
+
+</body>
+</html>
