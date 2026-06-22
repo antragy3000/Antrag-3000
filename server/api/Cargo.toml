@@ -24,6 +24,9 @@ hex = "0.4"
 # Etablierte Bibliothek, keine Eigenbau-Krypto. "gen_secret" erzeugt das
 # Geheimnis, "otpauth" liefert die otpauth://-URL zum Einscannen.
 totp-rs = { version = "5", features = ["gen_secret", "otpauth"] }
+# qrcode: zeigt die otpauth-URL als QR-Code direkt im Terminal an
+# (offline), damit man sie mit der Authenticator-App scannen kann.
+qrcode = "0.14"
 
 [profile.release]
 opt-level = "z"

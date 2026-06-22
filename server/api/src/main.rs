@@ -147,8 +147,27 @@ async fn main() {
         };
         let totp = totp_bauen(secret.to_bytes().expect("Secret-Bytes"))
             .expect("TOTP-Aufbau fehlgeschlagen");
+        let url = totp.get_url();
         println!("ADMIN_TOTP_SECRET={b32}");
-        println!("{}", totp.get_url());
+        println!();
+        println!("{url}");
+        println!();
+        // QR-Code zum Scannen direkt im Terminal (offline). Falls die
+        // Erzeugung scheitert, bleibt die manuelle Eingabe des Geheimnisses.
+        match qrcode::QrCode::new(url.as_bytes()) {
+            Ok(code) => {
+                let bild = code
+                    .render::<qrcode::render::unicode::Dense1x2>()
+                    .quiet_zone(true)
+                    .build();
+                println!("Mit der Authenticator-App scannen:");
+                println!("{bild}");
+            }
+            Err(_) => {
+                println!("(QR-Code nicht erzeugbar – Geheimnis oben manuell eintragen.)");
+            }
+        }
+        println!("Hinweis: ADMIN_TOTP_SECRET in server/.env eintragen und den Server neu bauen.");
         return;
     }
 

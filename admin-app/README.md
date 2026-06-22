@@ -18,9 +18,12 @@ ein **TOTP-Code** aus einer Authenticator-App.
    ```
    docker compose -f docker-compose.tailscale.yml run --rm api totp
    ```
-2. Das ausgegebene `ADMIN_TOTP_SECRET=…` in `server/.env` eintragen und die
-   `otpauth://…`-URL **einmal** mit einer Authenticator-App scannen
-   (Google Authenticator, Aegis, 1Password …).
+2. Das ausgegebene `ADMIN_TOTP_SECRET=…` in `server/.env` eintragen. Der
+   Befehl zeigt außerdem einen **QR-Code direkt im Terminal** – einmal mit
+   der Authenticator-App scannen (Google Authenticator, Aegis, 1Password …).
+   Alternativ den base32-Schlüssel manuell in der App eintragen (Typ:
+   zeitbasiert/TOTP). Die `otpauth://`-URL enthält das Geheimnis – nicht in
+   einen Online-QR-Dienst geben.
 3. Server neu bauen:
    ```
    docker compose -f docker-compose.tailscale.yml up -d --build
