@@ -2120,6 +2120,8 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    width: auto;
+    margin: 0;
     padding: 7px 12px;
     font-size: 0.95rem;
     font-weight: 600;
@@ -2170,6 +2172,8 @@
   }
   .projekt-name {
     flex: 1 1 auto;
+    width: auto;
+    margin: 0;
     text-align: left;
     padding: 8px 10px;
     font-size: 0.92rem;
@@ -2185,6 +2189,8 @@
   }
   .zeile-icon {
     flex: 0 0 auto;
+    width: auto;
+    margin: 0;
     padding: 6px 8px;
     font-size: 0.9rem;
     background: none;
@@ -2226,6 +2232,8 @@
     border-radius: 9px;
   }
   .unter-reiter button {
+    width: auto;
+    margin: 0;
     padding: 7px 16px;
     font-size: 0.9rem;
     font-weight: 600;
