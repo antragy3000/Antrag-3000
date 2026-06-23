@@ -2165,7 +2165,7 @@
     border-radius: 7px;
   }
   .projekt-zeile.aktiv {
-    background: #deebff;
+    background: #b3d4ff;
   }
   .projekt-zeile:hover {
     background: #f1f4ff;
@@ -2193,6 +2193,9 @@
     margin: 0;
     padding: 6px 8px;
     font-size: 0.9rem;
+    /* Explizite Farbe, damit einfarbig gezeichnete Emoji (z. B. 🗑) nicht
+       die geerbte weiße Button-Textfarbe bekommen und unsichtbar werden. */
+    color: #44546f;
     background: none;
     border: none;
     border-radius: 6px;
