@@ -37,4 +37,10 @@
 		root * /srv/updates
 		file_server
 	}
+	# Einzelplatz-Modus: oeffentlicher Katalog-Abruf (ohne mTLS). Leitet auf
+	# den api-Endpunkt /api/katalog-oeffentlich um. Nur Lesen, unkritisch.
+	handle /katalog {
+		rewrite * /api/katalog-oeffentlich
+		reverse_proxy api:8080
+	}
 }

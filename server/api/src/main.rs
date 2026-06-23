@@ -224,6 +224,10 @@ async fn main() {
         .route("/api/board/:projekt_id", put(board_schreiben).delete(board_loeschen))
         .route("/api/katalog", get(katalog_lesen))
         .route("/api/katalog/version", get(katalog_version))
+        // Einzelplatz-Modus (ohne mTLS): oeffentlicher Katalog-Abruf. Wird
+        // ueber den offenen :8445-Kanal (Caddy) ausgeliefert. Der Katalog
+        // ist unkritisch (oeffentliche Foerder-Daten), daher ohne Zertifikat.
+        .route("/api/katalog-oeffentlich", get(katalog_oeffentlich))
         .route("/api/meldung/:meldung_id", put(meldung_schreiben))
         .route("/api/foerderer", get(foerderer_lesen))
         .route("/api/foerderer/:foerderer_id", put(foerderer_schreiben).delete(foerderer_loeschen))
@@ -604,6 +608,21 @@ async fn katalog_lesen(
     let text = katalog_text(&st.pool, konto_id)
         .await
         .ok_or(StatusCode::NOT_FOUND)?;
+    Ok((
+        StatusCode::OK,
+        [(axum::http::header::CONTENT_TYPE, "application/json")],
+        text,
+    ))
+}
+
+/// Oeffentlicher Katalog-Abruf (Einzelplatz-Modus, ohne Geraete-Zertifikat).
+/// Liefert den kuratierten Katalog des Teams (Konto 1) als rohes JSON. Wird
+/// nur ueber den offenen :8445-Kanal (Caddy) freigegeben; der Katalog ist
+/// unkritisch (oeffentliche Foerder-Daten).
+async fn katalog_oeffentlich(
+    State(st): State<AppState>,
+) -> Result<(StatusCode, [(axum::http::HeaderName, &'static str); 1], String), StatusCode> {
+    let text = katalog_text(&st.pool, 1).await.ok_or(StatusCode::NOT_FOUND)?;
     Ok((
         StatusCode::OK,
         [(axum::http::header::CONTENT_TYPE, "application/json")],
