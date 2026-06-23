@@ -252,6 +252,34 @@ pub async fn sync_katalog_holen(adresse: String, ausweis_pem: String, ca_pem: St
     r.text().await.map_err(|e| format!("Antwort nicht lesbar: {e}"))
 }
 
+/// Einzelplatz-Modus: Katalog OHNE Zertifikat ueber den offenen Kanal holen
+/// (GET <basis>/katalog, in der Regel http://<nas>:8445/katalog). Reine
+/// HTTP-Anfrage, kein Geraete-Ausweis. Der Katalog ist unkritisch.
+#[tauri::command]
+pub async fn katalog_oeffentlich_holen(adresse: String) -> Result<String, String> {
+    let a = adresse.trim().trim_end_matches('/');
+    let basis = if a.starts_with("http://") || a.starts_with("https://") {
+        a.to_string()
+    } else {
+        // Der Einzelplatz-Kanal laeuft ueber http (im Tailscale verschluesselt).
+        format!("http://{a}")
+    };
+    let url = format!("{basis}/katalog");
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| format!("Client-Fehler: {e}"))?;
+    let r = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Abruf fehlgeschlagen: {e}"))?;
+    if !r.status().is_success() {
+        return Err(format!("Server antwortete mit {}", r.status()));
+    }
+    r.text().await.map_err(|e| format!("Antwort nicht lesbar: {e}"))
+}
+
 /// Sendet EINE Katalog-Meldung an den Team-Server (mTLS PUT
 /// /api/meldung/{id}). Der Server macht Upsert per id; der Body
 /// (foerderungId/Name/Art/Text) wird vom Frontend gebaut. Bei einer

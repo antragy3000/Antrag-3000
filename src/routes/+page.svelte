@@ -157,6 +157,8 @@
       stammdaten: leereStammdaten(),
       projekte: [],
       aktivesProjektId: null,
+      modus: "einzel", // "einzel" (ohne Team) oder "team"
+      einzelServer: "100.75.66.27:8445", // Update-/Katalog-Server (Einzelplatz)
       sync: null,
       teamCa: null,
       katalogMeldungen: [],
@@ -360,6 +362,16 @@
     }
     if (d.teamCa === undefined) {
       d.teamCa = null;
+      veraendert = true;
+    }
+    // Betriebsmodus: bestehende Tresore mit Team-Paket bleiben im Team-
+    // Modus, alle anderen starten als Einzelplatz.
+    if (d.modus !== "team" && d.modus !== "einzel") {
+      d.modus = d.sync ? "team" : "einzel";
+      veraendert = true;
+    }
+    if (typeof d.einzelServer !== "string") {
+      d.einzelServer = "100.75.66.27:8445";
       veraendert = true;
     }
     if (!Array.isArray(d.katalogMeldungen)) {
@@ -875,11 +887,13 @@
   let verbindungsStatus = $derived(
     !online
       ? { klasse: "rot", text: "Offline – keine Netzwerkverbindung" }
-      : !daten?.sync
-        ? { klasse: "blau", text: "Online, nicht mit einem Team verbunden" }
-        : syncVerbunden
-          ? { klasse: "gruen", text: "Online und mit dem Team verbunden" }
-          : { klasse: "orange", text: "Online, Server zurzeit nicht erreichbar" }
+      : daten?.modus === "einzel"
+        ? { klasse: "blau", text: "Einzelplatz – online (Updates verfügbar)" }
+        : !daten?.sync
+          ? { klasse: "blau", text: "Online, nicht mit einem Team verbunden" }
+          : syncVerbunden
+            ? { klasse: "gruen", text: "Online und mit dem Team verbunden" }
+            : { klasse: "orange", text: "Online, Server zurzeit nicht erreichbar" }
   );
 
   // Einmaliger Verbindungstest; aktualisiert syncVerbunden und gibt das
@@ -1254,21 +1268,56 @@
   // Update vom Team-Server holen (mTLS) – Etappe 3. Braucht ein
   // eingerichtetes Gerät (Zugangs-Paket geladen).
   async function katalogUpdateVomServer() {
-    if (!daten.sync) {
-      return { ok: false, fehler: "Kein Zugangs-Paket geladen (Team-Sync)." };
+    let roh;
+    try {
+      if (daten.modus === "team" && daten.sync) {
+        // Team: über die mTLS-Verbindung (Zugangs-Paket).
+        roh = await invoke("sync_katalog_holen", {
+          adresse: daten.sync.adresse,
+          ausweisPem: daten.sync.ausweisPem,
+          caPem: daten.sync.caPem ?? "",
+        });
+      } else if (daten.einzelServer) {
+        // Einzelplatz: über den offenen Kanal, ohne Zertifikat.
+        roh = await invoke("katalog_oeffentlich_holen", { adresse: daten.einzelServer });
+      } else {
+        return { ok: false, fehler: "Kein Server eingerichtet." };
+      }
+    } catch (e) {
+      return { ok: false, fehler: "Vom Server nicht ladbar: " + e };
     }
     let obj;
     try {
-      const roh = await invoke("sync_katalog_holen", {
-        adresse: daten.sync.adresse,
-        ausweisPem: daten.sync.ausweisPem,
-        caPem: daten.sync.caPem ?? "",
-      });
       obj = JSON.parse(roh);
-    } catch (e) {
-      return { ok: false, fehler: "Vom Team-Server nicht ladbar: " + e };
+    } catch {
+      return { ok: false, fehler: "Server-Antwort ist kein gültiger Katalog." };
     }
     return katalogUpdateAnwenden(obj, "server");
+  }
+
+  // Ist ein Server für den Katalog-Abruf bereit (je nach Modus)?
+  let katalogServerBereit = $derived(
+    (daten?.modus === "team" && !!daten?.sync) ||
+      (daten?.modus === "einzel" && !!daten?.einzelServer),
+  );
+
+  // Einzelplatz: Modus wechseln bzw. Katalog manuell holen.
+  let einzelMeldung = $state("");
+  async function modusWechseln(m) {
+    daten.modus = m;
+    if (m === "einzel") autoSyncStoppen();
+    einzelMeldung = "";
+    await tresorSpeichern();
+  }
+  async function einzelKatalogHolen() {
+    einzelMeldung = "Wird geprüft …";
+    const r = await katalogUpdateVomServer();
+    if (r?.ok) {
+      const n = (r.diff?.neu?.length ?? 0) + (r.diff?.geaendert?.length ?? 0);
+      einzelMeldung = n > 0 ? `✓ Katalog aktualisiert (${n} Änderungen).` : "✓ Katalog ist aktuell.";
+    } else {
+      einzelMeldung = "⚠ " + (r?.fehler ?? "Konnte nicht laden.");
+    }
   }
 
   // „Zuletzt aktualisiert"-Datum für eine Förderung (formatiert) oder null.
@@ -1746,6 +1795,47 @@
             <Stammdaten stammdaten={daten.stammdaten} speichern={stammdatenSpeichern} />
           </div>
           <div class="konto-spalte konto-rechts">
+            <div class="modus-wahl">
+              <span class="modus-titel">Betriebsart</span>
+              <div class="modus-knoepfe">
+                <button class:aktiv={daten.modus === "einzel"} onclick={() => modusWechseln("einzel")}>
+                  Einzelplatz
+                </button>
+                <button class:aktiv={daten.modus === "team"} onclick={() => modusWechseln("team")}>
+                  Team
+                </button>
+              </div>
+            </div>
+
+            {#if daten.modus === "einzel"}
+              <div class="einzel-panel">
+                <h2>Einzelplatz</h2>
+                <p class="dezent">
+                  Du nutzt Antrag 3000 allein. <strong>App-Updates</strong> und die
+                  <strong>Förder-Datenbank</strong> erhältst du vom Server – ganz ohne
+                  Zugangs-Paket. Status, Fristen und eigene Förderer bleiben rein lokal
+                  (keine Synchronisation).
+                </p>
+                <label for="einzel-server">Update-Server (Adresse)</label>
+                <input
+                  id="einzel-server"
+                  type="text"
+                  bind:value={daten.einzelServer}
+                  onchange={tresorSpeichern}
+                  placeholder="100.75.66.27:8445"
+                />
+                <div class="einzel-knoepfe">
+                  <button class="primaer" onclick={einzelKatalogHolen}>
+                    Förder-Datenbank aktualisieren
+                  </button>
+                </div>
+                {#if einzelMeldung}<p class="einzel-meldung">{einzelMeldung}</p>{/if}
+                <p class="dezent klein">
+                  App-Updates findest du oben rechts unter „⬆ Update" (wird beim Start
+                  automatisch geprüft).
+                </p>
+              </div>
+            {:else}
             <TeamSync
               sync={daten.sync}
               teamCa={daten.teamCa}
@@ -1772,6 +1862,7 @@
               {meineProjektIds}
               foerderungLabel={boardFoerderungLabel}
             />
+            {/if}
           </div>
         </div>
       {:else if !aktivesProjekt}
@@ -1874,7 +1965,7 @@
         schliessen={() => (katalogOffen = false)}
         updateAusDatei={katalogUpdateAusDatei}
         updateVomServer={katalogUpdateVomServer}
-        syncEingerichtet={!!daten.sync}
+        syncEingerichtet={katalogServerBereit}
         zuruecksetzen={katalogZuruecksetzen}
         meldungen={daten.katalogMeldungen ?? []}
         {meldungAnlegen}
@@ -1978,6 +2069,100 @@
   .warntext {
     color: #ae2e24;
   }
+  /* Betriebsart-Wähler (Einzelplatz / Team) */
+  .modus-wahl {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .modus-titel {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #5e6c84;
+  }
+  .modus-knoepfe {
+    display: inline-flex;
+    border: 2px solid #dfe1e6;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .modus-knoepfe button {
+    border: none;
+    background: #fff;
+    padding: 7px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #5e6c84;
+    cursor: pointer;
+  }
+  .modus-knoepfe button.aktiv {
+    background: #4f6df5;
+    color: #fff;
+  }
+  .einzel-panel {
+    background: #fff;
+    border: 1px solid #dfe1e6;
+    border-radius: 12px;
+    padding: 20px 22px;
+  }
+  .einzel-panel h2 {
+    margin: 0 0 10px;
+    font-size: 1.1rem;
+  }
+  .einzel-panel label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #5e6c84;
+    margin: 14px 0 4px;
+  }
+  .einzel-panel input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 11px;
+    font-size: 0.95rem;
+    border: 2px solid #dfe1e6;
+    border-radius: 8px;
+    background: #fafbfc;
+  }
+  .einzel-knoepfe {
+    margin-top: 14px;
+  }
+  .einzel-panel .primaer {
+    width: auto;
+    margin: 0;
+    padding: 9px 16px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #fff;
+    background: #4f6df5;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .einzel-panel .primaer:hover {
+    background: #3d5bf0;
+  }
+  .einzel-meldung {
+    margin-top: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #172b4d;
+  }
+  .dezent {
+    color: #5e6c84;
+    font-size: 0.92rem;
+    line-height: 1.55;
+  }
+  .dezent.klein {
+    font-size: 0.82rem;
+  }
+
   /* Häkchen "Auf diesem Gerät merken" auf dem Entsperr-Bildschirm */
   .merken {
     display: flex;

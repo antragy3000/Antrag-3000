@@ -124,7 +124,7 @@
       <div class="knoepfe">
         {#if updateVomServer}
           <button class="primaer" disabled={beschaeftigt || !syncEingerichtet} onclick={updateServer}>
-            {beschaeftigt ? "Wird geprüft …" : "🔄 Vom Team-Server holen"}
+            {beschaeftigt ? "Wird geprüft …" : "🔄 Vom Server holen"}
           </button>
         {/if}
         <button class="zweit" disabled={beschaeftigt} onclick={updateLaden}>
@@ -135,7 +135,7 @@
         </button>
       </div>
       {#if updateVomServer && !syncEingerichtet}
-        <p class="dezent klein">Für den Abruf vom Team-Server zuerst im Reiter „Stammdaten &amp; Team" ein Zugangs-Paket laden.</p>
+        <p class="dezent klein">Für den Abruf zuerst im Reiter „Stammdaten &amp; Team" den Modus einrichten (Einzelplatz-Server oder Team-Paket).</p>
       {/if}
 
       {#if resetFrage}

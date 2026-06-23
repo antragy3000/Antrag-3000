@@ -44,6 +44,7 @@ pub fn run() {
             sync::sync_delete_board,
             sync::sync_trockenlauf,
             sync::sync_katalog_holen,
+            sync::katalog_oeffentlich_holen,
             sync::sync_meldung_senden,
             sync::sync_foerderer_holen,
             sync::sync_foerderer_senden,
