@@ -14,3 +14,8 @@ api/target/
 katalog/foerderungen.json
 # Sammler-Rohquelle: aus dem Katalog erzeugt (import/rohquelle-bauen.mjs):
 katalog/rohquelle.json
+# Update-Artefakte (signierte Installer + Manifest) – nicht versionieren,
+# nur die README und die Beispiel-Vorlage bleiben im Git:
+updates/*
+!updates/README.md
+!updates/latest.json.beispiel

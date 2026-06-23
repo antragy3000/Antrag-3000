@@ -25,3 +25,16 @@
 		header_up X-Client-Cert-Subject {http.request.tls.client.subject}
 	}
 }
+
+# Update-Auslieferung (Phase 3 / Etappe 5): signierte App-Pakete.
+# Nur im privaten Tailnet erreichbar (kein offener Router-Port). Bewusst
+# OHNE mTLS, weil der Tauri-Updater kein Client-Zertifikat vorzeigt – die
+# Echtheit garantiert die digitale Signatur des Pakets, die Vertraulichkeit
+# die Tailscale-WireGuard-Verschluesselung. Reines Ausliefern statischer
+# Dateien aus dem Ordner ./updates (im Container /srv/updates).
+:8445 {
+	handle_path /updates/* {
+		root * /srv/updates
+		file_server
+	}
+}

@@ -30,11 +30,15 @@ services:
     # Port 443. Die App spricht die NAS daher unter ...:8443 an.
     ports:
       - "8443:443"
+      # Etappe 5: Update-Auslieferung (Tailscale-intern, ohne mTLS).
+      - "8445:8445"
     volumes:
       - ./Caddyfile.tailscale:/etc/caddy/Caddyfile:ro
       - ./ca/team-ca.crt:/etc/caddy/ca/team-ca.crt:ro
       - ./server.crt:/etc/caddy/server.crt:ro
       - ./server.key:/etc/caddy/server.key:ro
+      # Signierte App-Pakete + latest.json (read-only ausgeliefert).
+      - ./updates:/srv/updates:ro
       - caddy_data:/data
       - caddy_config:/config
     networks:
