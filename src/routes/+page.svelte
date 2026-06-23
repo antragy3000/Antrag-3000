@@ -13,6 +13,8 @@
   import TeamSync from "$lib/komponenten/TeamSync.svelte";
   import { katalog, setzeKatalog, setzeStandardKatalog, standardKatalog, pruefeKatalog, vergleicheKataloge, geaenderteFelder, setzeGeteilteFoerderer } from "$lib/katalog.svelte.js";
   import KatalogUpdate from "$lib/komponenten/KatalogUpdate.svelte";
+  import UpdatePruefung from "$lib/komponenten/UpdatePruefung.svelte";
+  import { check as appUpdateCheck } from "@tauri-apps/plugin-updater";
   import { leeresFormular, formularWordBauen } from "$lib/antrag";
   import { antragsPdfBauen } from "$lib/antragsPdf";
   import { leererKfp, kfpExport } from "$lib/kfp";
@@ -47,6 +49,8 @@
   let umbenennenName = $state("");
   let sicherungOffen = $state(false);
   let katalogOffen = $state(false);
+  let updateOffen = $state(false);
+  let updateGeprueft = false; // Auto-Prüfung nur einmal pro Sitzung.
 
   // Datenbank-Förderungen, die vom Team geteilten eigenen Förderer und
   // die eigenen Förderungen des aktiven Projekts – diese Liste löst
@@ -434,6 +438,10 @@
       // Server-Erreichbarkeit einmal prüfen, damit der Status-Punkt stimmt
       // (ohne zu blockieren; bei Misserfolg bleibt er orange).
       if (daten?.sync && online) verbindungPruefen().catch(() => {});
+      // Etappe 5: einmal still nach einer neuen App-Version schauen. Findet
+      // sich eine, öffnet sich der Update-Dialog von selbst; sonst passiert
+      // nichts (kein Stören, keine Fehlermeldung).
+      updateStillPruefen();
     } catch (e) {
       fehler =
         String(e) === "falsches_passwort" ? "Falsches Passwort." : String(e);
@@ -822,6 +830,23 @@
     const r = await syncVerbindungTesten();
     syncVerbunden = !!r.ok;
     return r;
+  }
+
+  // Etappe 5: stille Update-Prüfung beim Start. Bei einer gefundenen,
+  // gültig signierten neuen Version öffnet sich der Update-Dialog; jeder
+  // Fehler (z. B. Server nicht erreichbar) wird bewusst verschluckt.
+  async function updateStillPruefen() {
+    if (updateGeprueft) return;
+    updateGeprueft = true;
+    try {
+      const u = await appUpdateCheck();
+      if (u) {
+        try { await u.close(); } catch { /* Handle freigeben */ }
+        updateOffen = true; // Dialog prüft selbst erneut und zeigt Details.
+      }
+    } catch {
+      /* still: kein Update-Server erreichbar o. Ä. */
+    }
   }
 
   // Sync-Protokoll (nur im Speicher, max. 50 Einträge): zeigt transparent,
@@ -1616,6 +1641,7 @@
       </nav>
       <div class="rechts">
         <button class="leise" onclick={() => (sicherungOffen = true)}>🛡 Sicherung</button>
+        <button class="leise" onclick={() => (updateOffen = true)} title="Nach App-Updates suchen">⬆ Update</button>
         <button class="leise" onclick={sperren}>Sperren</button>
         <span
           class="status-punkt {verbindungsStatus.klasse}"
@@ -1757,6 +1783,10 @@
 
     {#if sicherungOffen}
       <Sicherung schliessen={() => (sicherungOffen = false)} {nachWiederherstellung} />
+    {/if}
+
+    {#if updateOffen}
+      <UpdatePruefung schliessen={() => (updateOffen = false)} />
     {/if}
 
     {#if katalogOffen}
