@@ -39,7 +39,9 @@
   let daten = $state(null);
 
   // Welcher Bereich ist nach dem Entsperren aktiv?
-  let bereich = $state("alle"); // alle | passend
+  let bereich = $state("foerderungen"); // foerderungen | merkliste | fristen | formular | kostenplan | stammdaten
+  let foerderAnsicht = $state("alle"); // innerhalb "Förderungen": alle | passend
+  let projektMenuOffen = $state(false); // Projekt-Auswahlmenü (mit Umbenennen/Löschen)
 
   // Projekt-Verwaltung
   let aktivesProjekt = $derived(
@@ -533,7 +535,7 @@
     await invoke("tresor_sperren");
     daten = null;
     fehler = "";
-    bereich = "alle";
+    bereich = "foerderungen";
     ansicht = "entsperren";
   }
 
@@ -1552,6 +1554,24 @@
     umbenennenOffen = true;
   }
 
+  // --- Projekt-Auswahlmenü (Wechseln + Umbenennen/Löschen je Projekt) ---
+  async function projektWaehlen(id) {
+    daten.aktivesProjektId = id;
+    projektMenuOffen = false;
+    await tresorSpeichern();
+  }
+  function umbenennenOeffnenFuer(p) {
+    daten.aktivesProjektId = p.id;
+    umbenennenName = p.name;
+    umbenennenOffen = true;
+    projektMenuOffen = false;
+  }
+  function loeschenOeffnenFuer(p) {
+    daten.aktivesProjektId = p.id;
+    loeschDialogOffen = true;
+    projektMenuOffen = false;
+  }
+
   async function projektUmbenennen(event) {
     event.preventDefault();
     const name = umbenennenName.trim();
@@ -1716,39 +1736,40 @@
               + Erstes Projekt erstellen
             </button>
           {:else}
-            <select bind:value={daten.aktivesProjektId} onchange={tresorSpeichern}>
-              {#each daten.projekte as p (p.id)}
-                <option value={p.id}>{p.name}</option>
-              {/each}
-            </select>
-            <button class="leise" onclick={() => (neuesProjektOffen = true)}>
-              + Projekt
-            </button>
-            <button
-              class="leise"
-              title="Aktives Projekt umbenennen"
-              aria-label="Aktives Projekt umbenennen"
-              onclick={umbenennenOeffnen}
-            >
-              ✏️
-            </button>
-            <button
-              class="leise"
-              title="Aktives Projekt löschen"
-              aria-label="Aktives Projekt löschen"
-              onclick={() => (loeschDialogOffen = true)}
-            >
-              🗑
-            </button>
+            <div class="projekt-menu">
+              <button
+                class="projekt-knopf"
+                onclick={() => (projektMenuOffen = !projektMenuOffen)}
+                aria-haspopup="true"
+                aria-expanded={projektMenuOffen}
+                title="Projekt wechseln, umbenennen oder löschen"
+              >
+                {aktivesProjekt?.name ?? "Projekt wählen"}<span class="pfeil">▾</span>
+              </button>
+              {#if projektMenuOffen}
+                <div class="menu-backdrop" onclick={() => (projektMenuOffen = false)} role="presentation"></div>
+                <div class="projekt-liste" role="menu">
+                  {#each daten.projekte as p (p.id)}
+                    <div class="projekt-zeile" class:aktiv={p.id === daten.aktivesProjektId}>
+                      <button class="projekt-name" onclick={() => projektWaehlen(p.id)}>
+                        {p.name}
+                      </button>
+                      <button class="zeile-icon" title="Umbenennen" aria-label={`Projekt „${p.name}" umbenennen`} onclick={() => umbenennenOeffnenFuer(p)}>✏️</button>
+                      <button class="zeile-icon" title="Löschen" aria-label={`Projekt „${p.name}" löschen`} onclick={() => loeschenOeffnenFuer(p)}>🗑</button>
+                    </div>
+                  {/each}
+                  <button class="projekt-neu" onclick={() => { projektMenuOffen = false; neuesProjektOffen = true; }}>
+                    + Neues Projekt
+                  </button>
+                </div>
+              {/if}
+            </div>
           {/if}
         </div>
       </div>
       <nav>
-        <button class:aktiv={bereich === "alle"} onclick={() => (bereich = "alle")}>
-          Alle Förderungen
-        </button>
-        <button class:aktiv={bereich === "passend"} onclick={() => (bereich = "passend")}>
-          Passende für mich
+        <button class:aktiv={bereich === "foerderungen"} onclick={() => (bereich = "foerderungen")}>
+          Förderungen
         </button>
         <span class="nav-trenner" aria-hidden="true"></span>
         <button class:aktiv={bereich === "merkliste"} onclick={() => (bereich = "merkliste")}>
@@ -1781,14 +1802,47 @@
       </div>
     </header>
     <main>
-      {#if bereich === "alle"}
-        <Foerderungen
-          merkliste={aktivesProjekt?.merkliste ?? null}
-          umschalten={merklisteUmschalten}
-          oeffneKatalog={() => (katalogOffen = true)}
-          standFuer={katalogStandFuer}
-          neuFelderFuer={katalogNeuFelder}
-        />
+      {#if bereich === "foerderungen"}
+        <div class="unter-reiter">
+          <button class:aktiv={foerderAnsicht === "alle"} onclick={() => (foerderAnsicht = "alle")}>
+            Alle Förderungen
+          </button>
+          <button class:aktiv={foerderAnsicht === "passend"} onclick={() => (foerderAnsicht = "passend")}>
+            Passende für mich
+          </button>
+        </div>
+        {#if foerderAnsicht === "alle"}
+          <Foerderungen
+            merkliste={aktivesProjekt?.merkliste ?? null}
+            umschalten={merklisteUmschalten}
+            oeffneKatalog={() => (katalogOffen = true)}
+            standFuer={katalogStandFuer}
+            neuFelderFuer={katalogNeuFelder}
+          />
+        {:else if !aktivesProjekt}
+          <div class="leer-projekt">
+            <div class="karte">
+              <h1>Noch kein Projekt</h1>
+              <p class="untertitel">
+                „Passende für mich" gehört zu einem Projekt – mit eigenem Fragebogen.
+                Erstelle zuerst ein Projekt.
+              </p>
+              <button onclick={() => (neuesProjektOffen = true)}>Projekt erstellen</button>
+            </div>
+          </div>
+        {:else}
+          {#key daten.aktivesProjektId}
+            <Matching
+              antworten={aktivesProjekt?.fragebogen ?? null}
+              speichern={fragebogenSpeichern}
+              merkliste={aktivesProjekt.merkliste}
+              umschalten={merklisteUmschalten}
+              oeffneKatalog={() => (katalogOffen = true)}
+              standFuer={katalogStandFuer}
+              neuFelderFuer={katalogNeuFelder}
+            />
+          {/key}
+        {/if}
       {:else if bereich === "stammdaten"}
         <div class="konto-seite">
           <div class="konto-spalte konto-links">
@@ -1879,18 +1933,6 @@
             </button>
           </div>
         </div>
-      {:else if bereich === "passend"}
-        {#key daten.aktivesProjektId}
-          <Matching
-            antworten={aktivesProjekt?.fragebogen ?? null}
-            speichern={fragebogenSpeichern}
-            merkliste={aktivesProjekt.merkliste}
-            umschalten={merklisteUmschalten}
-            oeffneKatalog={() => (katalogOffen = true)}
-            standFuer={katalogStandFuer}
-            neuFelderFuer={katalogNeuFelder}
-          />
-        {/key}
       {:else if bereich === "formular"}
         {#key daten.aktivesProjektId}
           <SammelFormular
@@ -2069,6 +2111,137 @@
   .warntext {
     color: #ae2e24;
   }
+  /* Projekt-Auswahlmenü (mit Umbenennen/Löschen je Projekt) */
+  .projekt-menu {
+    position: relative;
+    display: inline-block;
+  }
+  .projekt-knopf {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #172b4d;
+    background: #fff;
+    border: 2px solid #dfe1e6;
+    border-radius: 8px;
+    cursor: pointer;
+    max-width: 280px;
+  }
+  .projekt-knopf:hover {
+    border-color: #4f6df5;
+  }
+  .projekt-knopf .pfeil {
+    color: #5e6c84;
+    font-size: 0.8rem;
+  }
+  .menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+  }
+  .projekt-liste {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 31;
+    min-width: 240px;
+    max-width: 340px;
+    background: #fff;
+    border: 1px solid #dfe1e6;
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(9, 30, 66, 0.18);
+    padding: 6px;
+  }
+  .projekt-zeile {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    border-radius: 7px;
+  }
+  .projekt-zeile.aktiv {
+    background: #deebff;
+  }
+  .projekt-zeile:hover {
+    background: #f1f4ff;
+  }
+  .projekt-name {
+    flex: 1 1 auto;
+    text-align: left;
+    padding: 8px 10px;
+    font-size: 0.92rem;
+    font-family: inherit;
+    color: #172b4d;
+    background: none;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .zeile-icon {
+    flex: 0 0 auto;
+    padding: 6px 8px;
+    font-size: 0.9rem;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    opacity: 0.7;
+  }
+  .zeile-icon:hover {
+    opacity: 1;
+    background: #fff;
+  }
+  .projekt-neu {
+    width: 100%;
+    text-align: left;
+    margin-top: 4px;
+    padding: 8px 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #4f6df5;
+    background: none;
+    border: none;
+    border-top: 1px solid #f1f2f4;
+    border-radius: 0 0 7px 7px;
+    cursor: pointer;
+  }
+  .projekt-neu:hover {
+    background: #f1f4ff;
+  }
+
+  /* Unter-Umschalter im Reiter „Förderungen" (Alle / Passende) */
+  .unter-reiter {
+    display: inline-flex;
+    gap: 4px;
+    margin-bottom: 18px;
+    padding: 4px;
+    background: #ebecf0;
+    border-radius: 9px;
+  }
+  .unter-reiter button {
+    padding: 7px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #5e6c84;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .unter-reiter button.aktiv {
+    background: #fff;
+    color: #172b4d;
+    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.15);
+  }
+
   /* Betriebsart-Wähler (Einzelplatz / Team) */
   .modus-wahl {
     display: flex;
