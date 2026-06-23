@@ -155,7 +155,8 @@
     <li><span class="nr">8</span><span class="t">Geteilte Förderer</span><span class="pg" data-ch="8">10</span></li>
     <li><span class="nr">9</span><span class="t">Katalog hochladen</span><span class="pg" data-ch="9">11</span></li>
     <li><span class="nr">10</span><span class="t">Der Sammler (Hybrid-Update)</span><span class="pg" data-ch="10">12</span></li>
-    <li><span class="nr">11</span><span class="t">Tipps &amp; häufige Fragen</span><span class="pg" data-ch="11">13</span></li>
+    <li><span class="nr">11</span><span class="t">App-Updates veröffentlichen</span><span class="pg" data-ch="11">13</span></li>
+    <li><span class="nr">12</span><span class="t">Tipps &amp; häufige Fragen</span><span class="pg" data-ch="12">14</span></li>
   </ol>
 </section>
 
@@ -476,7 +477,51 @@ npm install</div>
 
 <!-- ===== 11 ===== -->
 <section class="chapter">
-  <h2><span class="kn">11</span>Tipps &amp; häufige Fragen</h2>
+  <h2><span class="kn">11</span>App-Updates veröffentlichen</h2>
+  <p class="lead">Die App aktualisiert sich selbst – aber nur mit Paketen, die mit
+  <strong>deinem privaten Signatur-Schlüssel</strong> unterschrieben sind. Der
+  öffentliche Gegenpart steckt fest in der App; eine kompromittierte NAS kann so
+  keinen Schadcode verteilen.</p>
+
+  <h3>Einmalig: Signatur-Schlüssel</h3>
+  <ul>
+    <li>Schlüsselpaar erzeugen:
+      <div class="cmd">npm run tauri signer generate -- -w "$HOME\.tauri\antrag3000.key"</div></li>
+    <li><strong>Privaten</strong> Schlüssel (<span class="pfad">antrag3000.key</span>)
+    und Passwort sicher verwahren – nie ins Git, nie auf die NAS.</li>
+    <li>Den <strong>öffentlichen</strong> Schlüssel (<span class="pfad">….key.pub</span>)
+    in <span class="pfad">src-tauri/tauri.conf.json</span> unter
+    <code>plugins.updater.pubkey</code> eintragen.</li>
+  </ul>
+
+  <h3>Pro Release</h3>
+  <ol>
+    <li>Versionsnummer erhöhen (gleich in <span class="pfad">tauri.conf.json</span>,
+    <span class="pfad">Cargo.toml</span>, <span class="pfad">package.json</span>).</li>
+    <li>Signiert bauen (PowerShell):
+      <div class="cmd">$env:TAURI_SIGNING_PRIVATE_KEY = Get-Content "$HOME\.tauri\antrag3000.key" -Raw<br>
+      $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = "DEIN-PASSWORT"<br>
+      npm run tauri build</div></li>
+    <li>Manifest erzeugen:
+      <div class="cmd">node release/latest-json-bauen.mjs "Was ist neu"</div></li>
+    <li>Auf die NAS in den Ordner <span class="pfad">updates/</span> hochladen:
+    den <span class="pfad">…-setup.exe</span>-Installer <strong>und</strong>
+    <span class="pfad">latest.json</span> (die <span class="pfad">.sig</span> nicht –
+    ihr Inhalt steht im Manifest). Wirklich überschreiben.</li>
+  </ol>
+  <p>Beim nächsten Start (oder per Knopf „⬆ Update") sehen alle Nutzer:innen die
+  neue Version, bestätigen, und die App aktualisiert sich und startet neu.</p>
+
+  <div class="tipp"><strong>Schlüssel verloren?</strong> Dann kannst du keine
+  Updates mehr signieren. Du müsstest ein neues Paar erzeugen, den neuen
+  öffentlichen Schlüssel einbauen und diese eine neue Version <strong>einmalig von
+  Hand</strong> verteilen. Bewahre privaten Schlüssel und Passwort darum sicher auf.
+  Ausführlich: <span class="pfad">docs/release-bauen.md</span>.</div>
+</section>
+
+<!-- ===== 12 ===== -->
+<section class="chapter">
+  <h2><span class="kn">12</span>Tipps &amp; häufige Fragen</h2>
   <dl class="faq">
     <dt>Brauche ich ein besonderes Admin-Zertifikat?</dt>
     <dd>Nein. Es genügt ein gültiges Team-Zugangs-Paket; der zweite Faktor ist
