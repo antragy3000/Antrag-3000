@@ -16,6 +16,9 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        // Etappe 5: signiertes Selbstupdate + Neustart nach dem Update.
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(tresor::TresorZustand::default())
         .invoke_handler(tauri::generate_handler![
             tresor::tresor_status,
