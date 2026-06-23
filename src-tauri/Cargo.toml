@@ -1,6 +1,6 @@
 [package]
 name = "antrag-3000"
-version = "0.1.0"
+version = "0.2.0"
 description = "Recherche, Verwaltung und Vorbereitung von Fördermittel-Anträgen für Kunst- und Kulturprojekte"
 authors = ["Antrag 3000 Team"]
 edition = "2021"
