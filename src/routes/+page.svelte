@@ -25,6 +25,9 @@
   // laden -> einrichten (kein Tresor) ODER entsperren (Tresor da)
   // -> offen (entsperrt) | neu-aufsetzen (Passwort vergessen)
   let ansicht = $state("laden");
+  // "Auf diesem Gerät merken" (passwortloses Entsperren per Windows DPAPI).
+  let merkenAktiv = $state(false); // auf diesem Gerät bereits hinterlegt?
+  let merkenWunsch = $state(false); // Häkchen auf dem Entsperr-Bildschirm
 
   let passwort = $state("");
   let passwortWdh = $state("");
@@ -393,8 +396,68 @@
     }
 
     const status = await invoke("tresor_status");
-    ansicht = status === "fehlt" ? "einrichten" : "entsperren";
+    if (status === "fehlt") {
+      ansicht = "einrichten";
+      return;
+    }
+    // Tresor vorhanden: Gibt es ein gemerktes, passwortloses Entsperren?
+    try {
+      merkenAktiv = await invoke("merken_status");
+    } catch {
+      merkenAktiv = false;
+    }
+    merkenWunsch = merkenAktiv;
+    if (merkenAktiv) {
+      try {
+        const json = await invoke("merken_entsperren");
+        await nachEntsperren(json);
+        return;
+      } catch {
+        // Gemerkter Zugang ungültig/entfernt → normales Entsperren.
+        merkenAktiv = false;
+        merkenWunsch = false;
+      }
+    }
+    ansicht = "entsperren";
   });
+
+  // Gemeinsamer Abschluss nach erfolgreichem Entsperren (egal ob per
+  // Passwort oder per gemerktem Zugang).
+  async function nachEntsperren(json) {
+    daten = JSON.parse(json);
+    // Ältere Datenstände (z. B. aus Schritt 3) sanft überführen.
+    if (normalisieren(daten)) await tresorSpeichern();
+    passwort = "";
+    ansicht = "offen";
+    // Server-Erreichbarkeit einmal prüfen, damit der Status-Punkt stimmt.
+    if (daten?.sync && online) verbindungPruefen().catch(() => {});
+    // Einmal still nach einer neuen App-Version schauen (Etappe 5).
+    updateStillPruefen();
+  }
+
+  // Ein-Klick-Entsperren über den gemerkten Zugang (auf dem Sperr-Bildschirm).
+  async function merkenEntsperrenJetzt() {
+    fehler = "";
+    beschaeftigt = true;
+    try {
+      const json = await invoke("merken_entsperren");
+      await nachEntsperren(json);
+    } catch {
+      merkenAktiv = false;
+      fehler = "Automatisches Entsperren nicht möglich – bitte Passwort eingeben.";
+    } finally {
+      beschaeftigt = false;
+    }
+  }
+
+  // Den gemerkten Zugang dieses Geräts wieder entfernen.
+  async function merkenVergessen() {
+    try {
+      await invoke("merken_vergessen");
+    } catch { /* nicht fatal */ }
+    merkenAktiv = false;
+    merkenWunsch = false;
+  }
 
   async function einrichten(event) {
     event.preventDefault();
@@ -430,18 +493,17 @@
     beschaeftigt = true;
     try {
       const json = await invoke("tresor_entsperren", { passwort });
-      daten = JSON.parse(json);
-      // Ältere Datenstände (z. B. aus Schritt 3) sanft überführen.
-      if (normalisieren(daten)) await tresorSpeichern();
-      passwort = "";
-      ansicht = "offen";
-      // Server-Erreichbarkeit einmal prüfen, damit der Status-Punkt stimmt
-      // (ohne zu blockieren; bei Misserfolg bleibt er orange).
-      if (daten?.sync && online) verbindungPruefen().catch(() => {});
-      // Etappe 5: einmal still nach einer neuen App-Version schauen. Findet
-      // sich eine, öffnet sich der Update-Dialog von selbst; sonst passiert
-      // nichts (kein Stören, keine Fehlermeldung).
-      updateStillPruefen();
+      // Merken-Wunsch umsetzen (Tresor ist jetzt offen → Schlüssel vorhanden).
+      try {
+        if (merkenWunsch) {
+          await invoke("merken_anlegen");
+          merkenAktiv = true;
+        } else if (merkenAktiv) {
+          await invoke("merken_vergessen");
+          merkenAktiv = false;
+        }
+      } catch { /* Merken ist Komfort, kein harter Fehler */ }
+      await nachEntsperren(json);
     } catch (e) {
       fehler =
         String(e) === "falsches_passwort" ? "Falsches Passwort." : String(e);
@@ -1533,17 +1595,35 @@
       <h1>Antrag 3000</h1>
       <p class="untertitel">Tresor entsperren</p>
 
+      {#if merkenAktiv}
+        <button type="button" disabled={beschaeftigt} onclick={merkenEntsperrenJetzt}>
+          🔓 Mit Windows-Konto entsperren
+        </button>
+        {#if fehler}<p class="fehler">{fehler}</p>{/if}
+        <p class="untertitel" style="margin-top:14px">oder mit Passwort:</p>
+      {/if}
+
       <form onsubmit={entsperren}>
         <label for="pw">Passwort</label>
         <input id="pw" type="password" bind:value={passwort} autocomplete="current-password" />
 
-        {#if fehler}<p class="fehler">{fehler}</p>{/if}
+        <label class="merken">
+          <input type="checkbox" bind:checked={merkenWunsch} />
+          Auf diesem Gerät merken (künftig ohne Passwort starten)
+        </label>
+
+        {#if fehler && !merkenAktiv}<p class="fehler">{fehler}</p>{/if}
 
         <button type="submit" disabled={beschaeftigt || passwort.length === 0}>
           {beschaeftigt ? "Wird geprüft …" : "Entsperren"}
         </button>
       </form>
 
+      {#if merkenAktiv}
+        <button class="leise" onclick={merkenVergessen}>
+          Gerät vergessen (künftig wieder Passwort verlangen)
+        </button>
+      {/if}
       <button class="leise" onclick={() => { fehler = ""; bestaetigung = ""; ansicht = "neu-aufsetzen"; }}>
         Passwort vergessen? Neu aufsetzen …
       </button>
@@ -1897,6 +1977,22 @@
   }
   .warntext {
     color: #ae2e24;
+  }
+  /* Häkchen "Auf diesem Gerät merken" auf dem Entsperr-Bildschirm */
+  .merken {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 14px 0 4px;
+    font-size: 0.88rem;
+    color: #5e6c84;
+    line-height: 1.4;
+    cursor: pointer;
+  }
+  .merken input {
+    width: auto;
+    margin: 2px 0 0;
+    cursor: pointer;
   }
 
   label {

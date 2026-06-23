@@ -111,6 +111,7 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-process",
  "tauri-plugin-updater",
+ "windows-sys 0.59.0",
  "x509-parser",
 ]
 

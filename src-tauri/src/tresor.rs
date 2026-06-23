@@ -251,6 +251,187 @@ pub fn tresor_neu_aufsetzen(
         let _ = fs::rename(&bak, &ziel_bak);
     }
 
+    // Ein gespeichertes "Auf diesem Geraet merken" passt nicht mehr zum
+    // neuen Tresor -> entfernen, sonst schluege das Auto-Entsperren fehl.
+    let _ = fs::remove_file(merken_pfad(&app)?);
+
     *state.geheim.lock().unwrap() = None;
     Ok(())
+}
+
+// ============================================================
+// "Auf diesem Geraet merken" (Windows DPAPI)
+// ============================================================
+//
+// Idee: Der Tresor bleibt unveraendert mit dem aus dem Passwort
+// abgeleiteten Schluessel AES-verschluesselt. Zusaetzlich legen wir den
+// 32-Byte-SCHLUESSEL in einer Datei merken.bin ab -- aber NICHT im
+// Klartext, sondern mit Windows DPAPI an das angemeldete Windows-Konto
+// gebunden (CryptProtectData). Nur derselbe Windows-Benutzer auf demselben
+// Geraet kann ihn wieder entschluesseln. So startet die App ohne Passwort;
+// das Passwort bleibt der Rueckfall, und "Geraet vergessen" loescht die
+// Datei wieder.
+//
+// Sicherheits-Abwaegung (vom Nutzer fuer die Pilotphase so gewaehlt): Wer
+// am entsperrten Windows-Konto sitzt, kann die App oeffnen. Die Tresor-
+// Datei selbst bleibt fuer fremde Konten/Geraete unbrauchbar.
+
+fn merken_pfad(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let ordner = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Datenordner nicht ermittelbar: {e}"))?;
+    fs::create_dir_all(&ordner).map_err(|e| format!("Datenordner nicht anlegbar: {e}"))?;
+    Ok(ordner.join("merken.bin"))
+}
+
+/// Ist auf diesem Geraet ein passwortloses Entsperren hinterlegt?
+#[tauri::command]
+pub fn merken_status(app: tauri::AppHandle) -> Result<bool, String> {
+    Ok(merken_pfad(&app)?.exists())
+}
+
+/// Den aktuell offenen Tresor-Schluessel fuer dieses Geraet merken.
+/// Der Tresor muss dafuer entsperrt sein.
+#[tauri::command]
+pub fn merken_anlegen(
+    app: tauri::AppHandle,
+    state: tauri::State<TresorZustand>,
+) -> Result<(), String> {
+    let geheim = state.geheim.lock().unwrap();
+    let geheim = geheim
+        .as_ref()
+        .ok_or("Der Tresor ist nicht entsperrt.".to_string())?;
+    let geschuetzt = dpapi_schuetzen(&geheim.schluessel)?;
+    fs::write(merken_pfad(&app)?, geschuetzt)
+        .map_err(|e| format!("Konnte das Merken nicht speichern: {e}"))?;
+    Ok(())
+}
+
+/// Ohne Passwort entsperren: gemerkten Schluessel per DPAPI holen und den
+/// Tresor damit oeffnen. Liefert die Daten (JSON) wie tresor_entsperren.
+#[tauri::command]
+pub fn merken_entsperren(
+    app: tauri::AppHandle,
+    state: tauri::State<TresorZustand>,
+) -> Result<String, String> {
+    let m_pfad = merken_pfad(&app)?;
+    let geschuetzt = fs::read(&m_pfad).map_err(|e| format!("Kein gemerkter Zugang: {e}"))?;
+    let schluessel_vec = dpapi_entschuetzen(&geschuetzt).map_err(|e| {
+        // Nicht entschluesselbar (anderes Konto/Geraet) -> verwerfen.
+        let _ = fs::remove_file(&m_pfad);
+        e
+    })?;
+    if schluessel_vec.len() != 32 {
+        let _ = fs::remove_file(&m_pfad);
+        return Err("merken_ungueltig".into());
+    }
+    let mut schluessel = [0u8; 32];
+    schluessel.copy_from_slice(&schluessel_vec);
+
+    let pfad = tresor_pfad(&app)?;
+    let inhalt = fs::read(&pfad).map_err(|e| format!("Tresor nicht lesbar: {e}"))?;
+    if inhalt.len() < KOPF_LAENGE || &inhalt[..8] != MAGIC || inhalt[8] != VERSION {
+        return Err("Die Tresor-Datei ist beschaedigt oder kein Antrag-3000-Tresor.".into());
+    }
+    let mut salt = [0u8; SALT_LAENGE];
+    salt.copy_from_slice(&inhalt[9..9 + SALT_LAENGE]);
+    let nonce = &inhalt[9 + SALT_LAENGE..KOPF_LAENGE];
+    let verschluesselt = &inhalt[KOPF_LAENGE..];
+
+    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&schluessel));
+    let klartext = cipher
+        .decrypt(Nonce::from_slice(nonce), verschluesselt)
+        .map_err(|_| {
+            // Schluessel passt nicht mehr zum Tresor (z. B. neu aufgesetzt).
+            let _ = fs::remove_file(&m_pfad);
+            "merken_ungueltig".to_string()
+        })?;
+    let daten = String::from_utf8(klartext)
+        .map_err(|_| "Tresor-Inhalt ist kein gueltiger Text.".to_string())?;
+
+    *state.geheim.lock().unwrap() = Some(Geheimnis { schluessel, salt });
+    Ok(daten)
+}
+
+/// Den gemerkten Zugang dieses Geraets entfernen (kuenftig wieder Passwort).
+#[tauri::command]
+pub fn merken_vergessen(app: tauri::AppHandle) -> Result<(), String> {
+    let pfad = merken_pfad(&app)?;
+    if pfad.exists() {
+        fs::remove_file(&pfad).map_err(|e| format!("Konnte nicht entfernen: {e}"))?;
+    }
+    Ok(())
+}
+
+/// Daten mit DPAPI an das Windows-Konto binden (CryptProtectData).
+#[cfg(target_os = "windows")]
+fn dpapi_schuetzen(daten: &[u8]) -> Result<Vec<u8>, String> {
+    use windows_sys::Win32::Security::Cryptography::{
+        CryptProtectData, CRYPTPROTECT_UI_FORBIDDEN, CRYPT_INTEGER_BLOB,
+    };
+    use windows_sys::Win32::Foundation::LocalFree;
+    unsafe {
+        let input = CRYPT_INTEGER_BLOB {
+            cbData: daten.len() as u32,
+            pbData: daten.as_ptr() as *mut u8,
+        };
+        let mut out = CRYPT_INTEGER_BLOB { cbData: 0, pbData: std::ptr::null_mut() };
+        let ok = CryptProtectData(
+            &input,
+            std::ptr::null(),
+            std::ptr::null(),
+            std::ptr::null(),
+            std::ptr::null(),
+            CRYPTPROTECT_UI_FORBIDDEN,
+            &mut out,
+        );
+        if ok == 0 {
+            return Err("Windows-Schutz (DPAPI) fehlgeschlagen.".into());
+        }
+        let bytes = std::slice::from_raw_parts(out.pbData, out.cbData as usize).to_vec();
+        LocalFree(out.pbData as _);
+        Ok(bytes)
+    }
+}
+
+/// Mit DPAPI gebundene Daten wieder entschluesseln (CryptUnprotectData).
+#[cfg(target_os = "windows")]
+fn dpapi_entschuetzen(daten: &[u8]) -> Result<Vec<u8>, String> {
+    use windows_sys::Win32::Security::Cryptography::{
+        CryptUnprotectData, CRYPTPROTECT_UI_FORBIDDEN, CRYPT_INTEGER_BLOB,
+    };
+    use windows_sys::Win32::Foundation::LocalFree;
+    unsafe {
+        let input = CRYPT_INTEGER_BLOB {
+            cbData: daten.len() as u32,
+            pbData: daten.as_ptr() as *mut u8,
+        };
+        let mut out = CRYPT_INTEGER_BLOB { cbData: 0, pbData: std::ptr::null_mut() };
+        let ok = CryptUnprotectData(
+            &input,
+            std::ptr::null_mut(),
+            std::ptr::null(),
+            std::ptr::null(),
+            std::ptr::null(),
+            CRYPTPROTECT_UI_FORBIDDEN,
+            &mut out,
+        );
+        if ok == 0 {
+            return Err("Gemerkter Zugang nicht entschluesselbar.".into());
+        }
+        let bytes = std::slice::from_raw_parts(out.pbData, out.cbData as usize).to_vec();
+        LocalFree(out.pbData as _);
+        Ok(bytes)
+    }
+}
+
+// Auf Nicht-Windows-Systemen ist das Merken (noch) nicht verfuegbar.
+#[cfg(not(target_os = "windows"))]
+fn dpapi_schuetzen(_daten: &[u8]) -> Result<Vec<u8>, String> {
+    Err("\"Auf diesem Geraet merken\" ist derzeit nur unter Windows verfuegbar.".into())
+}
+#[cfg(not(target_os = "windows"))]
+fn dpapi_entschuetzen(_daten: &[u8]) -> Result<Vec<u8>, String> {
+    Err("\"Auf diesem Geraet merken\" ist derzeit nur unter Windows verfuegbar.".into())
 }

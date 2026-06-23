@@ -74,3 +74,9 @@ rcgen = { version = "0.13", features = ["x509-parser"] }
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 
+# Windows-Anmeldedatenschutz (DPAPI) fuer "Auf diesem Geraet merken":
+# bindet den Tresor-Schluessel an das Windows-Konto, ohne ihn im Klartext
+# abzulegen. windows-sys = schlanke offizielle FFI-Bindungen (nur Windows).
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_Security_Cryptography", "Win32_Foundation", "Win32_System_Memory"] }
+
