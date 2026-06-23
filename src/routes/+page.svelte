@@ -1989,10 +1989,25 @@
     line-height: 1.4;
     cursor: pointer;
   }
-  .merken input {
-    width: auto;
-    margin: 2px 0 0;
+  /* Natives kleines Kontrollkästchen – nicht das große Eingabefeld-Styling
+     (kein 2px-Rahmen, kein Polster, kein Übergangs-„Aufblinken" beim Anwählen). */
+  .merken input[type="checkbox"] {
+    appearance: auto;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    margin: 1px 0 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: none;
+    transition: none;
+    accent-color: #4f6df5;
     cursor: pointer;
+  }
+  .merken input[type="checkbox"]:focus-visible {
+    outline: 2px solid #4f6df5;
+    outline-offset: 2px;
   }
 
   label {
