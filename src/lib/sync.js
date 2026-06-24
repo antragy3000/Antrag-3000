@@ -119,6 +119,8 @@ function eigeneFoerderungOeffentlich(f) {
     land: f.land ?? "ANDERES",
     webseite: (f.webseite ?? "").trim(),
     foerderhoehe_text: (f.foerderhoehe_text ?? "").trim(),
+    einreichung_online: !!f.einreichung_online,
+    einreich_url: (f.einreich_url ?? "").trim(),
     fristen: Array.isArray(f.fristen) ? f.fristen.filter(Boolean) : [],
     unvertraeglich_mit: Array.isArray(f.unvertraeglich_mit) ? f.unvertraeglich_mit : [],
     checkliste_vorschlag: Array.isArray(f.checkliste_vorschlag) ? f.checkliste_vorschlag : [],

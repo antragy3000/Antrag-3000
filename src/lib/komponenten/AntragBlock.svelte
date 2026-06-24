@@ -12,7 +12,16 @@
     hochladen = null,
     pdfVorschau = null,
     pdfSpeichern = null,
+    // Manche Förderer nehmen Anträge NUR über ihr eigenes Online-Formular
+    // entgegen. Dann gibt es statt „per Mail senden" einen Verweis dorthin.
+    einreichOnline = false,
+    einreichUrl = "",
   } = $props();
+
+  let onlineUrl = $derived((einreichUrl ?? "").trim());
+  function onlineFormularOeffnen() {
+    if (onlineUrl) openUrl(onlineUrl);
+  }
 
   let neuerPunkt = $state("");
   let neueFrist = $state("");
@@ -314,6 +323,23 @@
     <button type="submit" disabled={!neuerPunkt.trim()}>+ Hinzufügen</button>
   </form>
 
+  {#if einreichOnline}
+    <div class="online-bereich">
+      <p class="online-hinweis">
+        ℹ Dieser Förderer nimmt Anträge <strong>nur über sein eigenes
+        Online-Formular</strong> entgegen – nicht per Mail. Bereite die
+        Unterlagen als PDF vor und lade sie dort hoch.
+      </p>
+      {#if onlineUrl}
+        <button class="online-knopf" onclick={onlineFormularOeffnen}>
+          🌐 Zum Online-Formular
+        </button>
+      {:else}
+        <p class="online-fehlt">Die Adresse des Online-Formulars ist noch nicht hinterlegt – siehe Webseite des Förderers.</p>
+      {/if}
+    </div>
+  {/if}
+
   {#if pdfVorschau}
     <div class="pdf-bereich">
       <button
@@ -343,22 +369,39 @@
         <button class="primaer" disabled={pdfBeschaeftigt} onclick={pdfSpeichernKlick}>
           {pdfBeschaeftigt ? "Speichert …" : "✓ Speichern"}
         </button>
-        <button
-          class="zweit"
-          disabled={pdfBeschaeftigt || !kontaktEmail}
-          title={mailHinweis}
-          onclick={pdfMailKlick}
-        >
-          ✉ und per Mail senden
-        </button>
+        {#if einreichOnline}
+          <button
+            class="zweit"
+            disabled={pdfBeschaeftigt || !onlineUrl}
+            title={onlineUrl ? "Speichert das PDF und öffnet das Online-Formular des Förderers" : "Keine Online-Formular-Adresse hinterlegt"}
+            onclick={async () => { await pdfSpeichernKlick(); onlineFormularOeffnen(); }}
+          >
+            🌐 und zum Online-Formular
+          </button>
+        {:else}
+          <button
+            class="zweit"
+            disabled={pdfBeschaeftigt || !kontaktEmail}
+            title={mailHinweis}
+            onclick={pdfMailKlick}
+          >
+            ✉ und per Mail senden
+          </button>
+        {/if}
         <button class="leise" disabled={pdfBeschaeftigt} onclick={() => (pdfModalOffen = false)}>
           Abbrechen
         </button>
       </div>
       <p class="pdf-mail-hinweis">
-        „Per Mail senden" öffnet eine vorbereitete E-Mail an die Kontaktperson
-        und den Ordner mit dem PDF – die Datei ziehst du noch selbst als Anhang
-        hinein (das ist bei jedem Mailprogramm so).
+        {#if einreichOnline}
+          „Zum Online-Formular" speichert das PDF in den Förderer-Ordner und
+          öffnet das Online-Formular – die gespeicherten Dateien lädst du dort
+          hoch.
+        {:else}
+          „Per Mail senden" öffnet eine vorbereitete E-Mail an die Kontaktperson
+          und den Ordner mit dem PDF – die Datei ziehst du noch selbst als Anhang
+          hinein (das ist bei jedem Mailprogramm so).
+        {/if}
       </p>
     </div>
   </div>
@@ -689,6 +732,41 @@
   .hinzufuegen button:disabled {
     background: #c1c7d0;
     cursor: default;
+  }
+
+  /* Einreichung nur über Online-Formular */
+  .online-bereich {
+    margin-top: 22px;
+    padding: 14px 16px;
+    border: 1px solid #94c0ff;
+    background: #e6f0ff;
+    border-radius: 8px;
+  }
+  .online-hinweis {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: #0c4a8f;
+  }
+  .online-knopf {
+    margin-top: 12px;
+    padding: 11px 16px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #fff;
+    background: #1f6feb;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .online-knopf:hover {
+    background: #195fc9;
+  }
+  .online-fehlt {
+    margin: 10px 0 0;
+    font-size: 0.82rem;
+    color: #5e6c84;
   }
 
   /* Antrags-PDF erstellen */

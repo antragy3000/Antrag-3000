@@ -688,8 +688,8 @@
 
     // Bekannte Felder, die eigene Bedienelemente haben (Rest wird bewahrt).
     const TOP_BEKANNT = ["id", "name", "foerdergeber", "land", "beschreibung", "webseite",
-      "foerderhoehe_text", "recherchiert", "harte_kriterien", "weiche_kriterien",
-      "fristen", "unvertraeglich_mit", "checkliste_vorschlag"];
+      "foerderhoehe_text", "einreichung_online", "einreich_url", "recherchiert",
+      "harte_kriterien", "weiche_kriterien", "fristen", "unvertraeglich_mit", "checkliste_vorschlag"];
     const HK_BEKANNT = ["wohnsitz", "durchfuehrungsort", "traegerschaft", "studentisch_erlaubt",
       "wohnsitz_regionen", "durchfuehrungsort_regionen", "wohnsitz_staedte", "durchfuehrungsort_staedte"];
     const WK_BEKANNT = ["sparten", "projektarten", "budget_min", "budget_max", "waehrung", "zeitpunkt"];
@@ -711,6 +711,8 @@
         select("Land", "f_land", LAENDER, e.land) +
         txt("Webseite", "f_webseite", e.webseite) +
         txt("Förderhöhe (Text)", "f_foerderhoehe", e.foerderhoehe_text) +
+        bool("Einreichung nur über Online-Formular", "f_online", e.einreichung_online) +
+        txt("Online-Formular-URL", "f_einreich_url", e.einreich_url) +
         `<div class="form-feld"><label>Beschreibung</label><textarea id="f_beschreibung">${escape(e.beschreibung ?? "")}</textarea></div>` +
         bool("recherchiert (geprüft)", "f_recherchiert", e.recherchiert);
 
@@ -766,6 +768,8 @@
       setze("webseite", $("f_webseite").value.trim());
       setze("foerderhoehe_text", $("f_foerderhoehe").value.trim());
       setze("beschreibung", $("f_beschreibung").value.trim());
+      e.einreichung_online = $("f_online").checked;
+      setze("einreich_url", $("f_einreich_url").value.trim());
       e.recherchiert = $("f_recherchiert").checked;
 
       e.harte_kriterien = {

@@ -13,6 +13,9 @@
   // · "laufend" = jederzeit einreichbar.
   let zeitpunkt = $state("fristen");
   let frist = $state("");
+  // Einreichung nur über das Online-Formular des Förderers?
+  let einreichOnline = $state(false);
+  let einreichUrl = $state("");
   let dokumente = $state([]);
   let neuesDok = $state("");
   let beschaeftigt = $state(false);
@@ -43,6 +46,8 @@
         beschreibung,
         zeitpunkt,
         frist: zeitpunkt === "laufend" ? "" : frist,
+        einreichOnline,
+        einreichUrl: einreichOnline ? einreichUrl : "",
         dokumente: [...dokumente],
       });
       if (r && r.ok === false) {
@@ -89,6 +94,15 @@
 
     <label for="ef-web">Webseite</label>
     <input id="ef-web" type="text" placeholder="https://…" bind:value={webseite} />
+
+    <label class="check">
+      <input type="checkbox" bind:checked={einreichOnline} />
+      Einreichung nur über das Online-Formular des Förderers
+    </label>
+    {#if einreichOnline}
+      <label for="ef-onlineurl">Adresse des Online-Formulars</label>
+      <input id="ef-onlineurl" type="text" placeholder="https://…" bind:value={einreichUrl} />
+    {/if}
 
     <label for="ef-zeitpunkt">Einreichung</label>
     <select id="ef-zeitpunkt" bind:value={zeitpunkt}>

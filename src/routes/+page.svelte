@@ -1484,6 +1484,8 @@
       beschreibung: eingabe.beschreibung.trim(),
       webseite: eingabe.webseite.trim(),
       foerderhoehe_text: eingabe.foerderhoehe.trim() || "—",
+      einreichung_online: !!eingabe.einreichOnline,
+      einreich_url: (eingabe.einreichUrl ?? "").trim(),
       fristen: eingabe.frist ? [eingabe.frist] : [],
       unvertraeglich_mit: [],
       checkliste_vorschlag: (eingabe.dokumente ?? [])

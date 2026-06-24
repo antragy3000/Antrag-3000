@@ -116,7 +116,8 @@
     </dl>
 
     {#if antrag}
-      <AntragBlock {antrag} aendern={antragAendern} {hochladen} {pdfVorschau} {pdfSpeichern} />
+      <AntragBlock {antrag} aendern={antragAendern} {hochladen} {pdfVorschau} {pdfSpeichern}
+        einreichOnline={f.einreichung_online} einreichUrl={f.einreich_url} />
     {/if}
 
     <p class="datenstand">{hinweis}</p>
