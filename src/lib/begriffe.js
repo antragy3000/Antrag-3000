@@ -39,6 +39,19 @@ export const TRAEGERSCHAFT = {
   organisation: "Verein / Organisation",
 };
 
+/**
+ * Anzeige-Text zum maximalen Anteil am Gesamtbudget, z. B.
+ * "max. 50 % des Gesamtbudgets (höherer Anteil mit Begründung möglich)".
+ * Leerer String, wenn kein Anteil hinterlegt ist.
+ */
+export function anteilText(f) {
+  const p = f?.max_anteil_prozent;
+  if (p === null || p === undefined || p === "") return "";
+  let s = `max. ${p} % des Gesamtbudgets`;
+  if (f.anteil_ausnahme) s += " (höherer Anteil mit Begründung möglich)";
+  return s;
+}
+
 // ============================================================
 // Fristen. Ein Frist-Eintrag ist entweder ein einfacher String (alt) oder
 // ein Objekt { datum, hinweis }. Das Datum ist entweder ein konkretes

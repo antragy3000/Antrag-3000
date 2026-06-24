@@ -122,6 +122,8 @@ function eigeneFoerderungOeffentlich(f) {
     land: f.land ?? "ANDERES",
     webseite: (f.webseite ?? "").trim(),
     foerderhoehe_text: (f.foerderhoehe_text ?? "").trim(),
+    max_anteil_prozent: f.max_anteil_prozent ?? null,
+    anteil_ausnahme: !!f.anteil_ausnahme,
     einreichung_online: !!f.einreichung_online,
     einreich_url: (f.einreich_url ?? "").trim(),
     frist_hinweis: (f.frist_hinweis ?? "").trim(),

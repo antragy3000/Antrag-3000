@@ -8,6 +8,9 @@
   let land = $state("ANDERES");
   let webseite = $state("");
   let foerderhoehe = $state("");
+  // Max. Anteil am Gesamtbudget (Prozent) + Ausnahme mit Begründung möglich.
+  let maxAnteil = $state("");
+  let anteilAusnahme = $state(false);
   let beschreibung = $state("");
   // "fristen" = feste Frist · "periodisch" = wiederkehrend (z. B. halbjährlich)
   // · "laufend" = jederzeit einreichbar.
@@ -46,6 +49,8 @@
         webseite,
         foerderhoehe,
         beschreibung,
+        maxAnteil,
+        anteilAusnahme,
         zeitpunkt,
         frist: zeitpunkt === "laufend" ? "" : frist,
         einreichOnline,
@@ -97,6 +102,13 @@
 
     <label for="ef-web">Webseite</label>
     <input id="ef-web" type="text" placeholder="https://…" bind:value={webseite} />
+
+    <label for="ef-anteil">Max. Anteil am Gesamtbudget (%)</label>
+    <input id="ef-anteil" type="number" min="0" max="100" placeholder="z. B. 50" bind:value={maxAnteil} />
+    <label class="check">
+      <input type="checkbox" bind:checked={anteilAusnahme} />
+      Höherer Anteil mit Begründung möglich
+    </label>
 
     <label class="check">
       <input type="checkbox" bind:checked={einreichOnline} />

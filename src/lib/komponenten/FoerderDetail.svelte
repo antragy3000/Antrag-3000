@@ -1,7 +1,7 @@
 <script>
   // Detailansicht einer Förderung als Überlagerung.
   import { openUrl } from "@tauri-apps/plugin-opener";
-  import { LAENDER, SPARTEN, PROJEKTARTEN, TRAEGERSCHAFT, fristText } from "$lib/begriffe";
+  import { LAENDER, SPARTEN, PROJEKTARTEN, TRAEGERSCHAFT, fristText, anteilText } from "$lib/begriffe";
   import { regionName } from "$lib/daten/orte.js";
   import AntragBlock from "./AntragBlock.svelte";
 
@@ -58,6 +58,11 @@
     <dl>
       <dt>Förderhöhe</dt>
       <dd>{f.foerderhoehe_text}{#if neu("foerderhoehe_text")}<span class="neu-feld">NEU</span>{/if}</dd>
+
+      {#if anteilText(f)}
+        <dt>Max. Anteil</dt>
+        <dd>{anteilText(f)}{#if neu("max_anteil_prozent", "anteil_ausnahme")}<span class="neu-feld">NEU</span>{/if}</dd>
+      {/if}
 
       <dt>Einreichung</dt>
       <dd>{fristText(f)}{#if neu("fristen", "weiche_kriterien.zeitpunkt")}<span class="neu-feld">NEU</span>{/if}</dd>

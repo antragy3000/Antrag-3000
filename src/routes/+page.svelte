@@ -1500,6 +1500,11 @@
       beschreibung: eingabe.beschreibung.trim(),
       webseite: eingabe.webseite.trim(),
       foerderhoehe_text: eingabe.foerderhoehe.trim() || "—",
+      max_anteil_prozent:
+        eingabe.maxAnteil === "" || eingabe.maxAnteil == null
+          ? null
+          : Number(eingabe.maxAnteil),
+      anteil_ausnahme: !!eingabe.anteilAusnahme,
       einreichung_online: !!eingabe.einreichOnline,
       einreich_url: (eingabe.einreichUrl ?? "").trim(),
       frist_hinweis: (eingabe.fristHinweis ?? "").trim(),

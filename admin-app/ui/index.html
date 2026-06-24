@@ -711,8 +711,9 @@
 
     // Bekannte Felder, die eigene Bedienelemente haben (Rest wird bewahrt).
     const TOP_BEKANNT = ["id", "name", "foerdergeber", "land", "beschreibung", "webseite",
-      "foerderhoehe_text", "einreichung_online", "einreich_url", "frist_hinweis", "recherchiert",
-      "geprueft_am", "harte_kriterien", "weiche_kriterien", "fristen", "unvertraeglich_mit", "checkliste_vorschlag"];
+      "foerderhoehe_text", "max_anteil_prozent", "anteil_ausnahme", "einreichung_online", "einreich_url",
+      "frist_hinweis", "recherchiert", "geprueft_am", "harte_kriterien", "weiche_kriterien",
+      "fristen", "unvertraeglich_mit", "checkliste_vorschlag"];
     const HK_BEKANNT = ["wohnsitz", "durchfuehrungsort", "traegerschaft", "studentisch_erlaubt",
       "wohnsitz_regionen", "durchfuehrungsort_regionen", "wohnsitz_staedte", "durchfuehrungsort_staedte"];
     const WK_BEKANNT = ["sparten", "projektarten", "budget_min", "budget_max", "waehrung", "zeitpunkt"];
@@ -782,6 +783,8 @@
         select("Land", "f_land", LAENDER, e.land) +
         txt("Webseite", "f_webseite", e.webseite) +
         txt("Förderhöhe (Text)", "f_foerderhoehe", e.foerderhoehe_text) +
+        txt("Max. Anteil am Gesamtbudget (%)", "f_max_anteil", e.max_anteil_prozent ?? "") +
+        bool("höherer Anteil mit Begründung möglich", "f_anteil_ausnahme", e.anteil_ausnahme) +
         bool("Einreichung nur über Online-Formular", "f_online", e.einreichung_online) +
         txt("Online-Formular-URL", "f_einreich_url", e.einreich_url) +
         `<div class="form-feld"><label>Beschreibung</label><textarea id="f_beschreibung">${escape(e.beschreibung ?? "")}</textarea></div>` +
@@ -846,6 +849,8 @@
       setze("land", $("f_land").value);
       setze("webseite", $("f_webseite").value.trim());
       setze("foerderhoehe_text", $("f_foerderhoehe").value.trim());
+      e.max_anteil_prozent = leseZahl("f_max_anteil");
+      e.anteil_ausnahme = $("f_anteil_ausnahme").checked;
       setze("beschreibung", $("f_beschreibung").value.trim());
       e.einreichung_online = $("f_online").checked;
       setze("einreich_url", $("f_einreich_url").value.trim());
