@@ -124,6 +124,12 @@
     .feld-paar { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .frist-zeile { display: grid; grid-template-columns: 130px 1fr auto; gap: 8px; align-items: center; margin-bottom: 6px; }
     .frist-zeile input { padding: 7px 10px; font-size: 0.9rem; border: 2px solid var(--rand); border-radius: 8px; background: #fafbfc; font-family: inherit; }
+    /* Prüf-Status */
+    .pstatus { display: inline-block; padding: 1px 9px; border-radius: 99px; font-size: 0.74rem; font-weight: 700; white-space: nowrap; }
+    .pstatus.ueberfaellig { background: #ffeceb; color: #ae2e24; }
+    .pstatus.bald { background: #fff7d6; color: #7a5c00; }
+    .pstatus.ok { background: #e3fcef; color: #216e4e; }
+    .pruef-summe { display: flex; gap: 16px; flex-wrap: wrap; margin: 4px 0 4px; font-size: 0.9rem; }
   </style>
 </head>
 <body>
@@ -161,6 +167,7 @@
       <nav>
         <button data-tab="vorschlaege" class="aktiv">Vorschläge</button>
         <button data-tab="foerderungen">Förderungen</button>
+        <button data-tab="pruefung">Prüfung</button>
         <button data-tab="meldungen">Meldungen</button>
         <button data-tab="foerderer">Geteilte Förderer</button>
         <button data-tab="katalog">Katalog hochladen</button>
@@ -183,6 +190,17 @@
         <label for="foerderungenSuche">Suchen</label>
         <input type="search" id="foerderungenSuche" placeholder="Name, Geber oder Land …" />
         <div id="foerderungenInhalt"></div>
+      </div>
+
+      <div id="tab-pruefung" class="karte tab verborgen">
+        <h2>Regelmäßige Prüfung</h2>
+        <p class="dezent">Jede Förderung soll <strong>alle 3 Monate</strong> einmal von Hand geprüft werden (stimmen Angaben, Fristen, Webseite noch?). Überfällige stehen oben. <strong>✓ geprüft</strong> setzt das Prüfdatum auf heute – das löst <em>kein</em> Update bei den Nutzer:innen aus.</p>
+        <div class="knoepfe">
+          <button id="pruefungBtn" class="zweit">Aktualisieren</button>
+          <label class="check" style="margin-left:4px"><input type="checkbox" id="pruefNurFaellig" /> nur fällige zeigen</label>
+        </div>
+        <div class="pruef-summe" id="pruefSumme"></div>
+        <div id="pruefungInhalt"></div>
       </div>
 
       <div id="tab-meldungen" class="karte tab verborgen">
@@ -340,8 +358,10 @@
 
     // Speichert den (im Client geänderten) Gesamt-Katalog zurück auf den
     // Server. Setzt den Stand auf heute, damit Team-Geräte das Update sehen.
-    async function katalogSpeichern() {
-      katalog.stand = new Date().toISOString().slice(0, 10);
+    async function katalogSpeichern({ standAktualisieren = true } = {}) {
+      // Beim Markieren als „geprüft" wird der Stand NICHT angefasst, damit die
+      // Nutzer-Apps kein Katalog-Update anzeigen (reine Admin-Metadaten).
+      if (standAktualisieren) katalog.stand = new Date().toISOString().slice(0, 10);
       if (!katalog.schema_version) katalog.schema_version = 1;
       const roh = await invoke("admin_katalog_hochladen", {
         ...basisArgs(), katalogJson: JSON.stringify(katalog),
@@ -418,6 +438,7 @@
         document.querySelectorAll(".tab").forEach((t) => t.classList.add("verborgen"));
         $("tab-" + b.dataset.tab).classList.remove("verborgen");
         if (b.dataset.tab === "foerderungen") zeigeFoerderungen();
+        if (b.dataset.tab === "pruefung") zeigePruefung();
       };
     });
 
@@ -691,7 +712,7 @@
     // Bekannte Felder, die eigene Bedienelemente haben (Rest wird bewahrt).
     const TOP_BEKANNT = ["id", "name", "foerdergeber", "land", "beschreibung", "webseite",
       "foerderhoehe_text", "einreichung_online", "einreich_url", "frist_hinweis", "recherchiert",
-      "harte_kriterien", "weiche_kriterien", "fristen", "unvertraeglich_mit", "checkliste_vorschlag"];
+      "geprueft_am", "harte_kriterien", "weiche_kriterien", "fristen", "unvertraeglich_mit", "checkliste_vorschlag"];
     const HK_BEKANNT = ["wohnsitz", "durchfuehrungsort", "traegerschaft", "studentisch_erlaubt",
       "wohnsitz_regionen", "durchfuehrungsort_regionen", "wohnsitz_staedte", "durchfuehrungsort_staedte"];
     const WK_BEKANNT = ["sparten", "projektarten", "budget_min", "budget_max", "waehrung", "zeitpunkt"];
@@ -830,6 +851,7 @@
       setze("einreich_url", $("f_einreich_url").value.trim());
       setze("frist_hinweis", $("f_frist_hinweis").value.trim());
       e.recherchiert = $("f_recherchiert").checked;
+      e.geprueft_am = heuteISO();   // Bearbeiten gilt als Prüfung
 
       e.harte_kriterien = {
         ...formErhalten.harte,
@@ -864,6 +886,7 @@
         await katalogSpeichern();
         ovSchliessen();
         zeigeFoerderungen();
+        zeigePruefung();
       } catch (err) {
         meldung("formMeldung", "fehler", "⚠ " + err);
         $("formSpeichern").disabled = false;
@@ -880,6 +903,83 @@
       while (vorhanden.has(id)) id = `${basis}-${n++}`;
       return id;
     }
+
+    // ============================================================
+    // Regelmäßige Prüfung: jede Förderung alle 3 Monate manuell prüfen.
+    // `geprueft_am` (ISO-Datum) je Eintrag; Markieren ändert NUR diese
+    // Admin-Metadaten (kein Stand-Bump → keine Nutzer-Updates).
+    // ============================================================
+    function heuteISO() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+    const PRUEF_MONATE = 3;
+    function pruefStatus(g) {
+      if (!g || isNaN(new Date(g))) return { stufe: "ueberfaellig", text: "nie geprüft", tage: -1e9 };
+      const faellig = new Date(g); faellig.setMonth(faellig.getMonth() + PRUEF_MONATE);
+      const heuteNur = new Date(); heuteNur.setHours(0, 0, 0, 0);
+      const tage = Math.round((faellig - heuteNur) / 86400000);
+      const faelligText = faellig.toLocaleDateString("de-CH", { day: "2-digit", month: "2-digit", year: "numeric" });
+      if (tage <= 0) return { stufe: "ueberfaellig", text: `überfällig (${-tage} T)`, tage };
+      if (tage <= 14) return { stufe: "bald", text: `fällig in ${tage} T`, tage };
+      return { stufe: "ok", text: `nächste Prüfung ${faelligText}`, tage };
+    }
+
+    $("pruefungBtn").onclick = async () => {
+      $("pruefungInhalt").innerHTML = '<p class="leer">Lade …</p>';
+      await ladeKatalog();
+      zeigePruefung();
+    };
+    $("pruefNurFaellig").addEventListener("change", zeigePruefung);
+
+    function zeigePruefung() {
+      const liste = (katalog && katalog.foerderungen) || [];
+      const mitStatus = liste.map((f) => ({ f, s: pruefStatus(f.geprueft_am) }))
+        .sort((a, b) => a.s.tage - b.s.tage); // überfällig zuerst
+      const z = (st) => mitStatus.filter((x) => x.s.stufe === st).length;
+      $("pruefSumme").innerHTML =
+        `<span class="pstatus ueberfaellig">${z("ueberfaellig")} überfällig</span>
+         <span class="pstatus bald">${z("bald")} bald fällig</span>
+         <span class="pstatus ok">${z("ok")} aktuell</span>`;
+      const zeige = $("pruefNurFaellig").checked ? mitStatus.filter((x) => x.s.stufe !== "ok") : mitStatus;
+      if (!zeige.length) {
+        $("pruefungInhalt").innerHTML = `<p class="leer">${liste.length ? "Nichts fällig – alles aktuell." : "Katalog ist leer."}</p>`;
+        return;
+      }
+      const web = (u) => (u && /^https?:\/\//i.test(String(u))) ? `<button class="mini zweit" data-web="${escape(u)}" title="Website öffnen">🌐</button>` : "";
+      const zeilen = zeige.map(({ f, s }) => `<tr>
+          <td>${escape(f.name || "—")}<div class="dezent">${escape(f.foerdergeber || "")}</div></td>
+          <td><span class="pstatus ${s.stufe}">${escape(s.text)}</span></td>
+          <td class="dezent">${f.geprueft_am ? escape(fristDatumZuText(f.geprueft_am)) : "—"}</td>
+          <td>
+            ${web(f.webseite)}
+            <button class="mini zweit" data-pedit="${escape(f.id)}">bearbeiten</button>
+            <button class="mini" data-pok="${escape(f.id)}">✓ geprüft</button>
+          </td>
+        </tr>`).join("");
+      $("pruefungInhalt").innerHTML =
+        `<table><thead><tr><th>Förderung</th><th>Status</th><th>zuletzt geprüft</th><th>Aktion</th></tr></thead><tbody>${zeilen}</tbody></table>`;
+    }
+
+    async function markiereGeprueft(id, btn) {
+      const f = katalogIndex[id];
+      if (!f) return;
+      if (btn) btn.disabled = true;
+      f.geprueft_am = heuteISO();
+      try {
+        await katalogSpeichern({ standAktualisieren: false }); // kein Nutzer-Update
+        zeigePruefung();
+      } catch (e) { alert("⚠ " + e); if (btn) btn.disabled = false; }
+    }
+
+    $("pruefungInhalt").onclick = (e) => {
+      const w = e.target.closest("button[data-web]");
+      if (w) { oeffneWebseite(w.dataset.web); return; }
+      const ed = e.target.closest("button[data-pedit]");
+      if (ed) { const f = katalogIndex[ed.dataset.pedit]; if (f) oeffneBearbeiten(f, false); return; }
+      const ok = e.target.closest("button[data-pok]");
+      if (ok) markiereGeprueft(ok.dataset.pok, ok);
+    };
 
     // Gemeinsamer Aufruf für die Admin-Lese-Endpunkte.
     function gemeinsam(cmd) {
