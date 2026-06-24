@@ -47,6 +47,9 @@
         {:else if f.geteilt}
           <span class="herkunft geteilt">👥 vom Team geteilt</span>
         {/if}
+        {#if f.aktiv === false}
+          <span class="herkunft weg">⏸ derzeit nicht aktiv</span>
+        {/if}
         <p class="geber">{f.foerdergeber}{#if neu("foerdergeber")}<span class="neu-feld">NEU</span>{/if}</p>
         {#if stand}<p class="stand">zuletzt aktualisiert: {stand}</p>{/if}
       </div>

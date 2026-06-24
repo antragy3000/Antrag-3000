@@ -15,7 +15,9 @@
   let ausgewaehlt = $state(null);
 
   let ergebnis = $derived(
-    antworten && !bearbeiten ? matchen(katalog.daten.foerderungen, antworten) : null
+    antworten && !bearbeiten
+      ? matchen(katalog.daten.foerderungen.filter((f) => f.aktiv !== false), antworten)
+      : null
   );
 
   async function fragebogenFertig(neue) {

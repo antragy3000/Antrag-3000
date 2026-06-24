@@ -7,7 +7,8 @@
   import FoerderKarte from "./FoerderKarte.svelte";
   import FoerderDetail from "./FoerderDetail.svelte";
 
-  let foerderungen = $derived(katalog.daten.foerderungen);
+  // Deaktivierte Förderungen (aktiv === false) blendet die Browse-Liste aus.
+  let foerderungen = $derived(katalog.daten.foerderungen.filter((f) => f.aktiv !== false));
 
   // merkliste = null bedeutet: kein aktives Projekt, Sterne ausblenden.
   let { merkliste = null, umschalten = null, oeffneKatalog = null, standFuer = null, neuFelderFuer = null } = $props();

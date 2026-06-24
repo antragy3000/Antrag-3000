@@ -652,22 +652,52 @@
         $("foerderungenInhalt").innerHTML = `<p class="leer">${liste.length ? "Nichts gefunden." : "Katalog ist leer."}</p>`;
         return;
       }
-      const zeilen = gefiltert.map((f) => `<tr>
-          <td>${escape(f.name || "—")}<div class="dezent">${escape(f.id)}</div></td>
+      const zeilen = gefiltert.map((f) => {
+        const deakt = f.aktiv === false;
+        const marke = deakt ? ' <span class="pstatus ueberfaellig">deaktiviert</span>' : "";
+        return `<tr${deakt ? ' style="opacity:.6"' : ""}>
+          <td>${escape(f.name || "—")}${marke}<div class="dezent">${escape(f.id)}</div></td>
           <td>${escape(f.foerdergeber || "—")}</td>
           <td>${escape(f.land || "—")}</td>
           <td>${escape(f.foerderhoehe_text || "—")}</td>
-          <td><button class="mini" data-edit="${escape(f.id)}">bearbeiten</button></td>
-        </tr>`).join("");
+          <td>
+            <button class="mini zweit" data-edit="${escape(f.id)}">bearbeiten</button>
+            <button class="mini zweit" data-toggle="${escape(f.id)}">${deakt ? "aktivieren" : "deaktivieren"}</button>
+            <button class="mini gefahr" data-delf="${escape(f.id)}">entfernen</button>
+          </td>
+        </tr>`;
+      }).join("");
       $("foerderungenInhalt").innerHTML =
         `<table><thead><tr><th>Name</th><th>Geber</th><th>Land</th><th>Förderhöhe</th><th>Aktion</th></tr></thead><tbody>${zeilen}</tbody></table>`;
     }
 
+    // Aktiv/deaktiviert umschalten: deaktivierte Förderungen blendet die
+    // Nutzer-App aus Liste und Matching aus (bleiben aber im Katalog).
+    async function toggleAktiv(id) {
+      const f = katalogIndex[id];
+      if (!f) return;
+      f.aktiv = (f.aktiv === false); // war deaktiviert -> aktiv; sonst -> deaktiviert
+      try { await katalogSpeichern(); zeigeFoerderungen(); }
+      catch (e) { alert("⚠ " + e); }
+    }
+    async function entferneFoerderung(id) {
+      const f = katalogIndex[id];
+      if (!f) return;
+      if (!confirm(`„${f.name || id}" wirklich endgültig aus dem Katalog entfernen?\n(Zum vorübergehenden Ausblenden lieber „deaktivieren".)`)) return;
+      const i = katalog.foerderungen.findIndex((x) => x.id === id);
+      if (i < 0) return;
+      katalog.foerderungen.splice(i, 1);
+      try { await katalogSpeichern(); zeigeFoerderungen(); }
+      catch (e) { alert("⚠ " + e); }
+    }
+
     $("foerderungenInhalt").onclick = (e) => {
-      const b = e.target.closest("button[data-edit]");
-      if (!b) return;
-      const eintrag = katalogIndex[b.dataset.edit];
-      if (eintrag) oeffneBearbeiten(eintrag, false);
+      const ed = e.target.closest("button[data-edit]");
+      if (ed) { const f = katalogIndex[ed.dataset.edit]; if (f) oeffneBearbeiten(f, false); return; }
+      const tg = e.target.closest("button[data-toggle]");
+      if (tg) { toggleAktiv(tg.dataset.toggle); return; }
+      const dl = e.target.closest("button[data-delf]");
+      if (dl) { entferneFoerderung(dl.dataset.delf); return; }
     };
 
     // Beim Öffnen gemerkte Felder, die das Formular nicht als eigenes
@@ -712,7 +742,7 @@
     // Bekannte Felder, die eigene Bedienelemente haben (Rest wird bewahrt).
     const TOP_BEKANNT = ["id", "name", "foerdergeber", "land", "beschreibung", "webseite",
       "foerderhoehe_text", "max_anteil_prozent", "anteil_ausnahme", "einreichung_online", "einreich_url",
-      "frist_hinweis", "recherchiert", "geprueft_am", "harte_kriterien", "weiche_kriterien",
+      "frist_hinweis", "recherchiert", "geprueft_am", "aktiv", "harte_kriterien", "weiche_kriterien",
       "fristen", "unvertraeglich_mit", "checkliste_vorschlag"];
     const HK_BEKANNT = ["wohnsitz", "durchfuehrungsort", "traegerschaft", "studentisch_erlaubt",
       "wohnsitz_regionen", "durchfuehrungsort_regionen", "wohnsitz_staedte", "durchfuehrungsort_staedte"];
