@@ -463,6 +463,8 @@
     if (daten?.sync && online) verbindungPruefen().catch(() => {});
     // Einmal still nach einer neuen App-Version schauen (Etappe 5).
     updateStillPruefen();
+    // Und die Förder-Datenbank automatisch auf Aktualisierungen prüfen.
+    katalogStillPruefen();
   }
 
   // Ein-Klick-Entsperren über den gemerkten Zugang (auf dem Sperr-Bildschirm).
@@ -940,6 +942,21 @@
       }
     } catch {
       /* still: kein Update-Server erreichbar o. Ä. */
+    }
+  }
+
+  // Beim Start die Förder-Datenbank im Hintergrund auf Aktualisierungen
+  // prüfen (nur wenn ein Server eingerichtet ist). Änderungen werden über die
+  // „NEU"-Markierungen und den Merklisten-Hinweis sichtbar. Offline-first:
+  // ist der Server nicht erreichbar, bleibt der lokale Katalog unangetastet.
+  let katalogGeprueft = false;
+  async function katalogStillPruefen() {
+    if (katalogGeprueft || !katalogServerBereit) return;
+    katalogGeprueft = true;
+    try {
+      await katalogUpdateVomServer();
+    } catch {
+      /* still: Server nicht erreichbar */
     }
   }
 
