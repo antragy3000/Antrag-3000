@@ -31,8 +31,13 @@ if (!fs.existsSync(nsisDir)) {
   process.exit(1);
 }
 const dateien = fs.readdirSync(nsisDir);
-const setup = dateien.find((d) => d.endsWith("-setup.exe"));
-const sig = dateien.find((d) => d.endsWith("-setup.exe.sig"));
+// WICHTIG: die Datei zur AKTUELLEN Version waehlen. Liegen im Bundle-Ordner
+// noch aeltere "...-setup.exe" (von frueheren Builds), wuerde ein blindes
+// find() evtl. die falsche Version ins Manifest schreiben.
+const setup =
+  dateien.find((d) => d.includes(version) && d.endsWith("-setup.exe")) ??
+  dateien.find((d) => d.endsWith("-setup.exe"));
+const sig = setup && dateien.includes(setup + ".sig") ? setup + ".sig" : undefined;
 if (!setup || !sig) {
   console.error("FEHLER: Setup-.exe oder .sig nicht gefunden in:");
   console.error(`  ${nsisDir}`);
