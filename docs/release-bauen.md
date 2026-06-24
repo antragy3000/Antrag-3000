@@ -37,7 +37,36 @@ keinen Schadcode verteilen.
 
 ---
 
-## Pro Release: bauen, signieren, hochladen
+## Schnellweg: ein Befehl für alles (empfohlen)
+
+Nach dem Erhöhen der Versionsnummer (siehe unten, Schritt 1) erledigt **ein**
+Skript Bauen + Manifest + Upload + Prüfen:
+
+```powershell
+.\release\veroeffentlichen.ps1 "Was ist neu in dieser Version"
+```
+
+Das Skript
+
+1. räumt alte `…-setup.exe` aus dem Bundle-Ordner (verhindert, dass die
+   falsche Version ins Manifest kommt),
+2. baut signiert (fragt **einmal** nach deinem Schlüssel-Passwort),
+3. erzeugt `latest.json`,
+4. lädt Installer **und** `latest.json` per `scp` auf die NAS
+   (`admin@100.75.66.27:/volume1/docker/antrag3000/updates/`) – ohne
+   eingerichteten SSH-Schlüssel fragt es einmal nach dem NAS-Passwort,
+5. prüft am Server, dass Version und URL zusammenpassen.
+
+> **Noch bequemer (einmalig):** einen SSH-Schlüssel auf der NAS hinterlegen,
+> dann entfällt das NAS-Passwort beim Upload ganz. Frag mich, wenn du das
+> einrichten willst.
+
+Die einzelnen Schritte von Hand stehen unten – falls du sie einmal getrennt
+brauchst.
+
+---
+
+## Pro Release von Hand: bauen, signieren, hochladen
 
 ### 1. Versionsnummer erhöhen (an drei Stellen gleich)
 - `src-tauri/tauri.conf.json` → `"version"`
