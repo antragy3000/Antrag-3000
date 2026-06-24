@@ -19,6 +19,7 @@
 
 use serde::{Deserialize, Serialize};
 use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_opener::OpenerExt;
 
 // --- Zugangs-Paket (.a3kpaket) lesen -----------------------------------
 
@@ -229,6 +230,20 @@ async fn admin_vorschlaege(adresse: String, ausweis_pem: String, ca_pem: String,
     admin_get(&adresse, &ausweis_pem, &ca_pem, &token, "/api/admin/vorschlaege").await
 }
 
+/// Öffnet eine Web-Adresse im Standard-Browser (zum Prüfen einer Förderung
+/// aus einer Meldung/einem Vorschlag heraus). Nur http/https werden geöffnet,
+/// damit keine anderen Protokolle (z. B. file:) untergeschoben werden können.
+#[tauri::command]
+fn webseite_oeffnen(app: tauri::AppHandle, url: String) -> Result<(), String> {
+    let u = url.trim();
+    if !(u.starts_with("http://") || u.starts_with("https://")) {
+        return Err("Nur Web-Adressen (http/https) werden geöffnet.".into());
+    }
+    app.opener()
+        .open_url(u, None::<&str>)
+        .map_err(|e| format!("Konnte die Webseite nicht öffnen: {e}"))
+}
+
 /// Holt den aktuell verteilten Gesamt-Katalog (GET /api/katalog). Braucht
 /// nur das Geräte-Zertifikat (mTLS), kein Admin-Token – wir schicken es
 /// trotzdem mit, schadet nicht. Wird gebraucht, um Vorschläge gegen den
@@ -354,6 +369,7 @@ async fn admin_katalog_hochladen(
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             paket_waehlen,
             katalog_waehlen,
@@ -362,6 +378,7 @@ fn main() {
             admin_foerderer,
             admin_vorschlaege,
             admin_katalog_holen,
+            webseite_oeffnen,
             admin_meldung_status,
             admin_foerderer_loeschen,
             admin_vorschlag_freigeben,

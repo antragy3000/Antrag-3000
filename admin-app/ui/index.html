@@ -87,6 +87,12 @@
     .vorher { color: #ae2e24; text-decoration: line-through; display: block; }
     .nachher { color: #216e4e; display: block; }
     .wert { white-space: pre-wrap; word-break: break-word; }
+    .ov-h3 { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--grau); margin: 18px 0 6px; }
+
+    /* „Gemeldet"-Markierung in der Meldungs-Detailansicht */
+    .meld-box { background: #fff7e6; border: 1px solid #f5cd47; border-radius: 8px; padding: 12px 14px; }
+    .meld-box .meld-art { font-weight: 700; color: #7a4d00; margin-bottom: 4px; }
+    .meld-box .meld-text { font-size: 0.95rem; margin-bottom: 6px; }
 
     /* Bearbeiten-Formular */
     .form-feld { margin-bottom: 12px; }
@@ -245,6 +251,32 @@
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && !$("overlay").classList.contains("verborgen")) ovSchliessen();
     });
+
+    // Website-Knopf für Detailansichten (nur bei gültiger http(s)-Adresse).
+    function webseiteKnopf(url) {
+      if (!url || !/^https?:\/\//i.test(String(url))) return "";
+      return `<button class="zweit" data-web="${escape(url)}">🌐 Website öffnen</button>`;
+    }
+    async function oeffneWebseite(url) {
+      try { await invoke("webseite_oeffnen", { url }); }
+      catch (e) { alert("⚠ " + e); }
+    }
+    // Website-Klicks im Dialog (Knopf kann in Inhalt oder Fußzeile stehen).
+    $("overlay").addEventListener("click", (e) => {
+      const w = e.target.closest("button[data-web]");
+      if (w) oeffneWebseite(w.dataset.web);
+    });
+
+    // Alle Felder eines Eintrags als (schreibgeschützte) Liste darstellen.
+    function felderListe(obj) {
+      const o = obj || {};
+      const keys = Object.keys(o);
+      const sortiert = ["id", ...FREUNDLICH_IDS, ...keys.filter((k) => k !== "id" && !FREUNDLICH_IDS.includes(k))]
+        .filter((k, i, a) => keys.includes(k) && a.indexOf(k) === i);
+      return sortiert.map((k) =>
+        `<div class="feldzeile"><div class="fname">${escape(feldName(k))}</div><div class="wert">${escape(wertText(o[k]))}</div></div>`
+      ).join("");
+    }
 
     // Den aktuellen Katalog vom Server holen (für Diff/Bearbeiten/Übernehmen).
     async function ladeKatalog() {
@@ -420,6 +452,7 @@
         ? `<p class="dezent">Geänderter Vorschlag – <strong style="color:#7a5c00">gelb</strong> markierte Felder unterscheiden sich vom aktuellen Katalog (<span class="vorher">alt</span> → <span class="nachher">neu</span>).</p>`
         : `<p class="dezent">Neuer Eintrag – noch nicht im Katalog.</p>`;
       const fuss = `
+        ${webseiteKnopf(neu.webseite)}
         <button class="zweit" data-vakt="verwerfen" data-id="${escape(vid)}">verwerfen</button>
         <button data-vakt="freigeben" data-id="${escape(vid)}">freigeben</button>`;
       ovOeffnen(neu.name || v.foerderung_id, kopfText + zeilen, fuss);
@@ -427,16 +460,18 @@
 
     // --- Meldungen ---
     const ART = { veraltet: "veraltete Angaben", falsch: "falsche Angaben", weg: "gibt es nicht mehr", sonstiges: "Sonstiges" };
+    let meldungenListe = [];   // zuletzt geladene Meldungen (für den Detail-Dialog)
     $("meldungenBtn").onclick = ladeMeldungen;
     async function ladeMeldungen() {
       $("meldungenInhalt").innerHTML = '<p class="leer">Lade …</p>';
       try {
         const roh = await gemeinsam("admin_meldungen");
-        const liste = JSON.parse(roh);
-        if (!liste.length) { $("meldungenInhalt").innerHTML = '<p class="leer">Keine Meldungen.</p>'; return; }
-        const zeilen = liste.map((m) => {
+        meldungenListe = JSON.parse(roh);
+        if (!meldungenListe.length) { $("meldungenInhalt").innerHTML = '<p class="leer">Keine Meldungen.</p>'; return; }
+        const zeilen = meldungenListe.map((m) => {
           const id = escape(m.id);
           const aktionen = [
+            `<button class="mini zweit" data-mdet="${id}">ansehen</button>`,
             m.status !== "erledigt" ? `<button class="mini" data-akt="status" data-id="${id}" data-status="erledigt">erledigt</button>` : "",
             m.status !== "verworfen" ? `<button class="mini zweit" data-akt="status" data-id="${id}" data-status="verworfen">verwerfen</button>` : "",
             m.status !== "offen" ? `<button class="mini zweit" data-akt="status" data-id="${id}" data-status="offen">öffnen</button>` : "",
@@ -590,7 +625,7 @@
           <input type="text" class="idfeld" id="formId" value="${escape(e.id || "")}" readonly /></div>`;
       const erweitert = `<details class="erweitert"><summary>Erweitert: Förder-Kriterien, Fristen &amp; Listen (JSON)</summary>
           <textarea id="formRest">${escape(JSON.stringify(rest, null, 2))}</textarea></details>`;
-      const fuss = `<button class="zweit" id="formAbbrechen">Abbrechen</button><button id="formSpeichern">Speichern</button>`;
+      const fuss = `${webseiteKnopf(e.webseite)}<button class="zweit" id="formAbbrechen">Abbrechen</button><button id="formSpeichern">Speichern</button>`;
       ovOeffnen(istNeu ? "Neue Förderung" : "Förderung bearbeiten",
         idZeile + felder + erweitert + `<div id="formMeldung"></div>`, fuss);
       $("formAbbrechen").onclick = ovSchliessen;
@@ -657,16 +692,45 @@
       return { adresse: zugang.adresse, ausweisPem: zugang.ausweis_pem, caPem: zugang.ca_pem, token };
     }
 
-    // Meldung-Status setzen (delegiert auf die Tabelle).
-    $("meldungenInhalt").onclick = async (e) => {
-      const b = e.target.closest("button[data-akt='status']");
-      if (!b) return;
-      b.disabled = true;
+    // Meldung-Status setzen (gemeinsam für Liste und Detail-Dialog).
+    async function meldungAktion(status, id, btn) {
+      if (btn) btn.disabled = true;
       try {
-        await invoke("admin_meldung_status", { ...basisArgs(), meldungId: b.dataset.id, status: b.dataset.status });
+        await invoke("admin_meldung_status", { ...basisArgs(), meldungId: id, status });
+        ovSchliessen();
         ladeMeldungen();
-      } catch (err) { alert("⚠ " + err); b.disabled = false; }
+      } catch (err) { alert("⚠ " + err); if (btn) btn.disabled = false; }
+    }
+
+    // Liste: „ansehen" öffnet den Detail-Dialog, Status-Knöpfe direkt.
+    $("meldungenInhalt").onclick = (e) => {
+      const det = e.target.closest("button[data-mdet]");
+      if (det) { zeigeMeldungDetail(det.dataset.mdet); return; }
+      const b = e.target.closest("button[data-akt='status']");
+      if (b) meldungAktion(b.dataset.status, b.dataset.id, b);
     };
+
+    // Detail-Dialog einer Meldung: markiert oben, WAS gemeldet wurde, und
+    // zeigt darunter den aktuellen Katalog-Eintrag zum Abgleichen.
+    function zeigeMeldungDetail(mid) {
+      const m = meldungenListe.find((x) => x.id === mid);
+      if (!m) return;
+      const f = katalogIndex[m.foerderung_id] || null;
+      const meldBox = `<div class="meld-box">
+          <div class="meld-art">⚑ Gemeldet: ${escape(ART[m.art] || m.art)}</div>
+          ${m.text ? `<div class="meld-text">„${escape(m.text)}"</div>` : `<div class="dezent">(keine weitere Anmerkung)</div>`}
+          <div class="dezent">von Gerät #${escape(m.geraet_id)} · ${escape(zeit(m.geaendert_am))} · Status: ${escape(m.status)}</div>
+        </div>`;
+      const inhalt = f
+        ? meldBox + `<h3 class="ov-h3">Aktueller Katalog-Eintrag</h3>` + felderListe(f)
+        : meldBox + `<p class="leer">Diese Förderung ist nicht (mehr) im Katalog (ID ${escape(m.foerderung_id)}).</p>`;
+      const fuss = `
+        ${webseiteKnopf(f && f.webseite)}
+        ${f ? `<button class="zweit" data-medit="${escape(m.foerderung_id)}">Förderung bearbeiten</button>` : ""}
+        ${m.status !== "verworfen" ? `<button class="zweit" data-makt="verworfen" data-id="${escape(m.id)}">verwerfen</button>` : ""}
+        ${m.status !== "erledigt" ? `<button data-makt="erledigt" data-id="${escape(m.id)}">erledigt</button>` : ""}`;
+      ovOeffnen(m.foerderung_name || m.foerderung_id, inhalt, fuss);
+    }
 
     // Vorschlag freigeben/verwerfen (gemeinsam für Liste und Dialog).
     async function vorschlagAktion(vakt, id, btn) {
@@ -686,10 +750,15 @@
       const b = e.target.closest("button[data-vakt]");
       if (b) vorschlagAktion(b.dataset.vakt, b.dataset.id, b);
     };
-    // Dialog-Fußzeile: freigeben/verwerfen.
+    // Dialog-Fußzeile: Vorschlag freigeben/verwerfen, Meldung-Status setzen,
+    // oder aus einer Meldung heraus die Förderung bearbeiten.
     $("ovFuss").addEventListener("click", (e) => {
-      const b = e.target.closest("button[data-vakt]");
-      if (b) vorschlagAktion(b.dataset.vakt, b.dataset.id, b);
+      const v = e.target.closest("button[data-vakt]");
+      if (v) { vorschlagAktion(v.dataset.vakt, v.dataset.id, v); return; }
+      const ma = e.target.closest("button[data-makt]");
+      if (ma) { meldungAktion(ma.dataset.makt, ma.dataset.id, ma); return; }
+      const me = e.target.closest("button[data-medit]");
+      if (me) { const eintrag = katalogIndex[me.dataset.medit]; if (eintrag) oeffneBearbeiten(eintrag, false); return; }
     });
 
     // Geteilten Förderer übernehmen oder entfernen (delegiert auf die Tabelle).

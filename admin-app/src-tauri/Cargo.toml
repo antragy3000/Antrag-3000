@@ -12,6 +12,10 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 # Datei-Auswahl (Zugangs-Paket, Katalog-Datei).
 tauri-plugin-dialog = "2"
+# Öffnet die Förder-Webseite im Standard-Browser (zum schnellen Prüfen einer
+# Meldung/eines Vorschlags). Offizielles Tauri-Plugin wie in der Nutzer-App,
+# keine eigene Krypto/Prozess-Logik.
+tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # mTLS-HTTP-Client (wie in der Nutzer-App): reqwest mit rustls.
