@@ -1503,11 +1503,20 @@
     Windows pauschal – das heißt nicht, dass die Datei schädlich ist.
     <strong>Prüfe vorher die Echtheit:</strong> Verwende nur den Installer aus der
     <strong>offiziellen Bezugsquelle</strong>, die dir deine Team-Verwalter:in bzw.
-    der Anbieter genannt hat. Diese:r kann dir zur Datei eine <strong>Prüfsumme</strong>
-    (SHA-256) nennen; stimmt sie mit der heruntergeladenen Datei überein, ist die Datei
-    unverändert. Erst dann über „Weitere Informationen" → „Trotzdem ausführen"
-    fortfahren. <em>Hinweis: Spätere App-Updates sind digital signiert (Kap. 24) und
-    werden automatisch geprüft – diese Warnung betrifft nur die erste Installation.</em></dd>
+    der Anbieter genannt hat. Zu jedem Installer liegt eine kleine
+    <strong>Prüfsummen-Datei</strong> (gleicher Name, Endung <code>.sha256</code>).
+    So prüfst du, ob deine heruntergeladene Datei unverändert ist:
+    <ol>
+      <li>In Windows die <strong>PowerShell</strong> öffnen (Startmenü → „PowerShell").</li>
+      <li>Diesen Befehl eingeben (Pfad zur heruntergeladenen Datei anpassen):
+        <br><code>Get-FileHash "Antrag 3000_…_x64-setup.exe" -Algorithm SHA256</code></li>
+      <li>Den angezeigten Wert mit dem aus der <code>.sha256</code>-Datei (bzw. dem,
+        den dir die Verwalter:in genannt hat) vergleichen.</li>
+    </ol>
+    Stimmen die Werte überein, ist die Datei echt – erst dann über
+    „Weitere Informationen" → „Trotzdem ausführen" fortfahren.
+    <em>Hinweis: Spätere App-Updates sind digital signiert (Kap. 24) und werden
+    automatisch geprüft – diese Warnung betrifft nur die erste Installation.</em></dd>
 
     <dt>Wo liegen meine Dateien?</dt>
     <dd>Unter <span class="pfad">Dokumente\Antrag 3000\[Projekt]\…</span>
