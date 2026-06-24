@@ -49,8 +49,32 @@ npm run tauri build    # erzeugt die fertige Admin-App
 1. **Zugangs-Paket wählen** (`.a3kpaket`).
 2. **Authenticator-Code** (6-stellig) eingeben → **Anmelden**.
    Der Server prüft den Code und gibt eine 30-Minuten-Sitzung zurück.
-3. Tabs nutzen: **Vorschläge**, **Meldungen**, **Geteilte Förderer**,
-   **Katalog hochladen**.
+3. Tabs nutzen: **Vorschläge**, **Förderungen**, **Meldungen**,
+   **Geteilte Förderer**, **Katalog hochladen**.
+
+### Vorschläge ansehen (Diff)
+
+Im Tab **Vorschläge** zeigt **ansehen** alle Felder eines Vorschlags. Bei
+einem **geänderten** Vorschlag werden die Felder, die sich vom aktuellen
+Katalog unterscheiden, gelb hervorgehoben (alt → neu) – so gibst du nicht
+„blind" frei. **freigeben**/**verwerfen** geht direkt aus der Liste oder aus
+dem Detail-Fenster.
+
+### Förderungen direkt bearbeiten
+
+Im Tab **Förderungen** stehen alle Katalog-Einträge (mit Suchfeld).
+**bearbeiten** öffnet ein Formular: die gängigen Felder (Name, Geber, Land,
+Webseite, Förderhöhe, Beschreibung) als Eingabefelder, die Förder-Kriterien
+und Fristen im ausklappbaren **Erweitert**-Feld (JSON, wird beim Speichern
+geprüft). **Speichern** verteilt den geänderten Katalog sofort an alle
+Team-Geräte (der Stand wird auf heute gesetzt).
+
+### Geteilten Förderer in den Katalog übernehmen
+
+Im Tab **Geteilte Förderer** übernimmt **→ in Katalog** einen vom Team
+recherchierten Förderer als neuen Katalog-Eintrag: Es öffnet sich dasselbe
+Bearbeiten-Formular (vorausgefüllt, mit automatisch erzeugter ID), das du
+vor dem Speichern vervollständigen kannst.
 
 ## Sammler (Hybrid-Update)
 

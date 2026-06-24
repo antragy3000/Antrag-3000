@@ -229,6 +229,16 @@ async fn admin_vorschlaege(adresse: String, ausweis_pem: String, ca_pem: String,
     admin_get(&adresse, &ausweis_pem, &ca_pem, &token, "/api/admin/vorschlaege").await
 }
 
+/// Holt den aktuell verteilten Gesamt-Katalog (GET /api/katalog). Braucht
+/// nur das Geräte-Zertifikat (mTLS), kein Admin-Token – wir schicken es
+/// trotzdem mit, schadet nicht. Wird gebraucht, um Vorschläge gegen den
+/// Ist-Stand zu vergleichen (Diff) und um beim Bearbeiten/Übernehmen den
+/// Katalog im Client zu ändern und als Ganzes wieder hochzuladen.
+#[tauri::command]
+async fn admin_katalog_holen(adresse: String, ausweis_pem: String, ca_pem: String, token: String) -> Result<String, String> {
+    admin_get(&adresse, &ausweis_pem, &ca_pem, &token, "/api/katalog").await
+}
+
 /// Gemeinsamer POST ohne Body für die Vorschlags-Aktionen.
 async fn admin_post(adresse: &str, ausweis_pem: &str, ca_pem: &str, token: &str, pfad: &str) -> Result<(), String> {
     let client = client_mit_ausweis(ausweis_pem, ca_pem)?;
@@ -351,6 +361,7 @@ fn main() {
             admin_meldungen,
             admin_foerderer,
             admin_vorschlaege,
+            admin_katalog_holen,
             admin_meldung_status,
             admin_foerderer_loeschen,
             admin_vorschlag_freigeben,

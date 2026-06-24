@@ -53,6 +53,52 @@
     .leer { color: var(--grau); padding: 16px 0; }
     .verborgen { display: none; }
     code { background: #f1f2f4; padding: 1px 5px; border-radius: 4px; }
+
+    /* Such-/Filterfeld (Katalog) */
+    input[type=search] {
+      width: 100%; padding: 8px 12px; font-size: 0.95rem; letter-spacing: normal;
+      border: 2px solid var(--rand); border-radius: 8px; background: #fafbfc; font-family: inherit;
+    }
+
+    /* Dialog-Fenster (Overlay) für Detail/Diff und Bearbeiten */
+    #overlay {
+      position: fixed; inset: 0; background: rgba(9,30,66,0.48);
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 32px 16px; overflow-y: auto; z-index: 50;
+    }
+    #overlayBox {
+      background: #fff; border-radius: 12px; width: 100%; max-width: 640px;
+      box-shadow: 0 12px 40px rgba(9,30,66,0.3); margin: auto;
+    }
+    .ov-kopf { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--rand); }
+    .ov-kopf h2 { margin: 0; }
+    .ov-kopf .x { margin-left: auto; background: #fff; color: var(--grau); border: 2px solid var(--rand); padding: 4px 10px; }
+    .ov-inhalt { padding: 20px; }
+    .ov-fuss { padding: 14px 20px; border-top: 1px solid var(--rand); display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+
+    /* Detail-/Diff-Felderliste */
+    .feldzeile { display: grid; grid-template-columns: 180px 1fr; gap: 10px; padding: 7px 0; border-bottom: 1px solid #f1f2f4; font-size: 0.88rem; }
+    .feldzeile .fname { color: var(--grau); font-weight: 600; }
+    .feldzeile.geaendert { background: #fff7e6; border-radius: 6px; padding: 7px 8px; }
+    .vorher { color: #ae2e24; text-decoration: line-through; display: block; }
+    .nachher { color: #216e4e; display: block; }
+    .wert { white-space: pre-wrap; word-break: break-word; }
+
+    /* Bearbeiten-Formular */
+    .form-feld { margin-bottom: 12px; }
+    .form-feld label { margin: 0 0 4px; }
+    .form-feld input[type=text], .form-feld textarea {
+      width: 100%; padding: 8px 12px; font-size: 0.95rem; letter-spacing: normal;
+      border: 2px solid var(--rand); border-radius: 8px; background: #fafbfc; font-family: inherit;
+    }
+    .form-feld textarea { min-height: 70px; resize: vertical; }
+    .form-feld .idfeld { font-family: ui-monospace, Consolas, monospace; color: var(--grau); background: #f1f2f4; }
+    details.erweitert { margin-top: 8px; border: 1px solid var(--rand); border-radius: 8px; padding: 8px 12px; }
+    details.erweitert summary { cursor: pointer; font-weight: 600; color: var(--dunkel); }
+    details.erweitert textarea {
+      width: 100%; min-height: 200px; margin-top: 10px; font-family: ui-monospace, Consolas, monospace;
+      font-size: 0.82rem; border: 2px solid var(--rand); border-radius: 8px; padding: 10px; resize: vertical;
+    }
   </style>
 </head>
 <body>
@@ -89,6 +135,7 @@
     <section id="app" class="verborgen">
       <nav>
         <button data-tab="vorschlaege" class="aktiv">Vorschläge</button>
+        <button data-tab="foerderungen">Förderungen</button>
         <button data-tab="meldungen">Meldungen</button>
         <button data-tab="foerderer">Geteilte Förderer</button>
         <button data-tab="katalog">Katalog hochladen</button>
@@ -99,6 +146,18 @@
         <p class="dezent">Vom Sammler vorgeschlagene neue oder geänderte Förderungen. <strong>Freigeben</strong> übernimmt sie in den verteilten Katalog, <strong>verwerfen</strong> lehnt sie ab.</p>
         <div class="knoepfe"><button id="vorschlaegeBtn" class="zweit">Aktualisieren</button></div>
         <div id="vorschlaegeInhalt"></div>
+      </div>
+
+      <div id="tab-foerderungen" class="karte tab verborgen">
+        <h2>Förder-Katalog bearbeiten</h2>
+        <p class="dezent">Alle Förderungen im verteilten Katalog. <strong>Bearbeiten</strong> ändert einen Eintrag direkt; gespeicherte Änderungen werden sofort an alle Team-Geräte verteilt (Stand wird auf heute gesetzt).</p>
+        <div class="knoepfe">
+          <button id="foerderungenBtn" class="zweit">Aktualisieren</button>
+          <span id="foerderungenAnzahl" class="dezent"></span>
+        </div>
+        <label for="foerderungenSuche">Suchen</label>
+        <input type="search" id="foerderungenSuche" placeholder="Name, Geber oder Land …" />
+        <div id="foerderungenInhalt"></div>
       </div>
 
       <div id="tab-meldungen" class="karte tab verborgen">
@@ -129,15 +188,86 @@
         <div id="katalogMeldung"></div>
       </div>
     </section>
+
+    <!-- Dialog-Fenster (Detail/Diff & Bearbeiten) -->
+    <div id="overlay" class="verborgen">
+      <div id="overlayBox">
+        <div class="ov-kopf">
+          <h2 id="ovTitel"></h2>
+          <button class="x" id="ovSchliessen">Schließen</button>
+        </div>
+        <div class="ov-inhalt" id="ovInhalt"></div>
+        <div class="ov-fuss" id="ovFuss"></div>
+      </div>
+    </div>
   </main>
 
   <script>
     const invoke = window.__TAURI__.core.invoke;
     let zugang = null;       // { adresse, geraet_name, ausweis_pem, ca_pem }
     let token = null;        // Sitzungs-Token nach Anmeldung
-    let katalogText = null;  // Inhalt der gewählten Katalog-Datei
+    let katalogText = null;  // Inhalt der gewählten Katalog-Datei (Tab „hochladen")
+
+    // Der aktuell verteilte Katalog (vom Server geholt) – Grundlage für
+    // Diff (Vorschläge), Bearbeiten und Übernehmen. katalogIndex: id→Eintrag.
+    let katalog = null;
+    let katalogIndex = {};
 
     const $ = (id) => document.getElementById(id);
+
+    // „Freundliche" Felder, die im Bearbeiten-Formular als einzelne Eingabe
+    // erscheinen; alle übrigen (Kriterien, Fristen, Listen) kommen ins
+    // ausklappbare JSON-Feld. Reihenfolge = Anzeige-Reihenfolge.
+    const FREUNDLICH = [
+      ["name", "Name"],
+      ["foerdergeber", "Fördergeber"],
+      ["land", "Land (DE/AT/CH/INT)"],
+      ["webseite", "Webseite"],
+      ["foerderhoehe_text", "Förderhöhe (Text)"],
+      ["beschreibung", "Beschreibung"],
+    ];
+    const FREUNDLICH_IDS = FREUNDLICH.map(([k]) => k);
+
+    // --- Dialog-Fenster (Overlay) ---
+    function ovOeffnen(titel, inhaltHtml, fussHtml) {
+      $("ovTitel").textContent = titel;
+      $("ovInhalt").innerHTML = inhaltHtml;
+      $("ovFuss").innerHTML = fussHtml || "";
+      $("overlay").classList.remove("verborgen");
+    }
+    function ovSchliessen() { $("overlay").classList.add("verborgen"); }
+    $("ovSchliessen").onclick = ovSchliessen;
+    $("overlay").addEventListener("click", (e) => { if (e.target.id === "overlay") ovSchliessen(); });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !$("overlay").classList.contains("verborgen")) ovSchliessen();
+    });
+
+    // Den aktuellen Katalog vom Server holen (für Diff/Bearbeiten/Übernehmen).
+    async function ladeKatalog() {
+      try {
+        const roh = await invoke("admin_katalog_holen", basisArgs());
+        katalog = JSON.parse(roh);
+        if (!Array.isArray(katalog.foerderungen)) katalog.foerderungen = [];
+      } catch {
+        katalog = { schema_version: 1, foerderungen: [] };
+      }
+      katalogIndex = {};
+      for (const f of katalog.foerderungen) {
+        if (f && f.id) katalogIndex[f.id] = f;
+      }
+    }
+
+    // Speichert den (im Client geänderten) Gesamt-Katalog zurück auf den
+    // Server. Setzt den Stand auf heute, damit Team-Geräte das Update sehen.
+    async function katalogSpeichern() {
+      katalog.stand = new Date().toISOString().slice(0, 10);
+      if (!katalog.schema_version) katalog.schema_version = 1;
+      const roh = await invoke("admin_katalog_hochladen", {
+        ...basisArgs(), katalogJson: JSON.stringify(katalog),
+      });
+      await ladeKatalog(); // frisch holen, damit Index/Stand stimmen
+      return roh;
+    }
 
     function meldung(ziel, art, text) {
       const el = $(ziel);
@@ -191,6 +321,7 @@
         $("geraetLabel").textContent = `angemeldet · ${zugang.geraet_name}`;
         $("verbinden").classList.add("verborgen");
         $("app").classList.remove("verborgen");
+        await ladeKatalog();   // für Diff/Bearbeiten/Übernehmen
         ladeVorschlaege();
       } catch (e) {
         meldung("verbindenMeldung", "fehler", "⚠ " + e);
@@ -205,18 +336,20 @@
         b.classList.add("aktiv");
         document.querySelectorAll(".tab").forEach((t) => t.classList.add("verborgen"));
         $("tab-" + b.dataset.tab).classList.remove("verborgen");
+        if (b.dataset.tab === "foerderungen") zeigeFoerderungen();
       };
     });
 
     // --- Vorschläge ---
+    let vorschlaegeListe = [];   // zuletzt geladene Vorschläge (für den Detail-Dialog)
     $("vorschlaegeBtn").onclick = ladeVorschlaege;
     async function ladeVorschlaege() {
       $("vorschlaegeInhalt").innerHTML = '<p class="leer">Lade …</p>';
       try {
         const roh = await gemeinsam("admin_vorschlaege");
-        const liste = JSON.parse(roh);
-        if (!liste.length) { $("vorschlaegeInhalt").innerHTML = '<p class="leer">Keine offenen Vorschläge.</p>'; return; }
-        const zeilen = liste.map((v) => {
+        vorschlaegeListe = JSON.parse(roh);
+        if (!vorschlaegeListe.length) { $("vorschlaegeInhalt").innerHTML = '<p class="leer">Keine offenen Vorschläge.</p>'; return; }
+        const zeilen = vorschlaegeListe.map((v) => {
           const i = v.inhalt || {};
           const id = escape(v.id);
           const farbe = v.art === "neu" ? "background:#e3fcef;color:#216e4e" : "background:#fff7d6;color:#7a5c00";
@@ -226,6 +359,7 @@
             <td>${escape(i.foerderhoehe_text || "—")}</td>
             <td class="dezent">${escape(v.quelle || "—")} · ${escape(zeit(v.erstellt_am))}</td>
             <td>
+              <button class="mini zweit" data-vdet="${id}">ansehen</button>
               <button class="mini" data-vakt="freigeben" data-id="${id}">freigeben</button>
               <button class="mini gefahr" data-vakt="verwerfen" data-id="${id}">verwerfen</button>
             </td>
@@ -236,6 +370,55 @@
       } catch (e) {
         $("vorschlaegeInhalt").innerHTML = `<div class="meld fehler">⚠ ${escape(e)}</div>`;
       }
+    }
+
+    // Einen Wert lesbar machen (Objekte/Listen als kompaktes JSON).
+    function wertText(w) {
+      if (w === null || w === undefined || w === "") return "—";
+      if (typeof w === "object") return JSON.stringify(w);
+      return String(w);
+    }
+    // Menschlich lesbare Feldnamen (Rest wird vom Schlüssel abgeleitet).
+    const FELD_NAME = {
+      name: "Name", foerdergeber: "Fördergeber", land: "Land", beschreibung: "Beschreibung",
+      webseite: "Webseite", foerderhoehe_text: "Förderhöhe", harte_kriterien: "Harte Kriterien",
+      weiche_kriterien: "Weiche Kriterien", fristen: "Fristen", unvertraeglich_mit: "Unverträglich mit",
+      checkliste_vorschlag: "Checkliste-Vorschlag", recherchiert: "Recherchiert", id: "ID",
+    };
+    const feldName = (k) => FELD_NAME[k] || k;
+
+    // Detail-/Diff-Dialog für einen Vorschlag öffnen.
+    function zeigeVorschlagDetail(vid) {
+      const v = vorschlaegeListe.find((x) => x.id === vid);
+      if (!v) return;
+      const neu = v.inhalt || {};
+      const alt = v.art === "neu" ? null : (katalogIndex[v.foerderung_id] || null);
+
+      // Alle vorkommenden Felder (alt + neu), id zuerst, dann freundliche, dann Rest.
+      const keys = new Set([...Object.keys(alt || {}), ...Object.keys(neu)]);
+      const sortiert = ["id", ...FREUNDLICH_IDS, ...[...keys].filter((k) => k !== "id" && !FREUNDLICH_IDS.includes(k))]
+        .filter((k, i, a) => keys.has(k) && a.indexOf(k) === i);
+
+      const zeilen = sortiert.map((k) => {
+        const nv = wertText(neu[k]);
+        if (!alt) {
+          return `<div class="feldzeile"><div class="fname">${escape(feldName(k))}</div><div class="wert">${escape(nv)}</div></div>`;
+        }
+        const av = wertText(alt[k]);
+        if (av === nv) {
+          return `<div class="feldzeile"><div class="fname">${escape(feldName(k))}</div><div class="wert">${escape(nv)}</div></div>`;
+        }
+        return `<div class="feldzeile geaendert"><div class="fname">${escape(feldName(k))}</div><div class="wert">
+            <span class="vorher">${escape(av)}</span><span class="nachher">${escape(nv)}</span></div></div>`;
+      }).join("");
+
+      const kopfText = alt
+        ? `<p class="dezent">Geänderter Vorschlag – <strong style="color:#7a5c00">gelb</strong> markierte Felder unterscheiden sich vom aktuellen Katalog (<span class="vorher">alt</span> → <span class="nachher">neu</span>).</p>`
+        : `<p class="dezent">Neuer Eintrag – noch nicht im Katalog.</p>`;
+      const fuss = `
+        <button class="zweit" data-vakt="verwerfen" data-id="${escape(vid)}">verwerfen</button>
+        <button data-vakt="freigeben" data-id="${escape(vid)}">freigeben</button>`;
+      ovOeffnen(neu.name || v.foerderung_id, kopfText + zeilen, fuss);
     }
 
     // --- Meldungen ---
@@ -271,21 +454,25 @@
     }
 
     // --- Förderer ---
+    let foerdererListe = [];   // zuletzt geladene geteilte Förderer (für „übernehmen")
     $("foerdererBtn").onclick = ladeFoerderer;
     async function ladeFoerderer() {
       $("foerdererInhalt").innerHTML = '<p class="leer">Lade …</p>';
       try {
         const roh = await gemeinsam("admin_foerderer");
-        const liste = JSON.parse(roh);
-        if (!liste.length) { $("foerdererInhalt").innerHTML = '<p class="leer">Noch keine geteilten Förderer.</p>'; return; }
-        const zeilen = liste.map((f) => {
+        foerdererListe = JSON.parse(roh);
+        if (!foerdererListe.length) { $("foerdererInhalt").innerHTML = '<p class="leer">Noch keine geteilten Förderer.</p>'; return; }
+        const zeilen = foerdererListe.map((f) => {
           const i = f.inhalt || {};
           return `<tr>
             <td>${escape(i.name)}</td>
             <td>${escape(i.foerdergeber || "—")}</td>
             <td>${escape(i.land || "—")}</td>
             <td class="dezent">#${escape(f.geraet_id)} · ${escape(zeit(f.geaendert_am))}</td>
-            <td><button class="mini gefahr" data-del="${escape(f.id)}">entfernen</button></td>
+            <td>
+              <button class="mini" data-uebernehmen="${escape(f.id)}">→ in Katalog</button>
+              <button class="mini gefahr" data-del="${escape(f.id)}">entfernen</button>
+            </td>
           </tr>`;
         }).join("");
         $("foerdererInhalt").innerHTML =
@@ -333,6 +520,129 @@
       }
     };
 
+    // ============================================================
+    // Förder-Katalog bearbeiten (Feature 3) & geteilten Förderer übernehmen
+    // (Feature 2). Beide ändern den im Speicher gehaltenen Katalog und laden
+    // ihn als Ganzes wieder hoch (admin_katalog_hochladen).
+    // ============================================================
+
+    $("foerderungenBtn").onclick = async () => {
+      $("foerderungenInhalt").innerHTML = '<p class="leer">Lade …</p>';
+      await ladeKatalog();
+      zeigeFoerderungen();
+    };
+    $("foerderungenSuche").addEventListener("input", zeigeFoerderungen);
+
+    // Den (im Speicher gehaltenen) Katalog als Tabelle zeigen, gefiltert
+    // nach dem Suchfeld.
+    function zeigeFoerderungen() {
+      const liste = (katalog && katalog.foerderungen) || [];
+      $("foerderungenAnzahl").textContent =
+        liste.length ? `${liste.length} Förderungen · Stand ${katalog.stand || "?"}` : "";
+      const q = $("foerderungenSuche").value.trim().toLowerCase();
+      const gefiltert = q
+        ? liste.filter((f) => `${f.name || ""} ${f.foerdergeber || ""} ${f.land || ""}`.toLowerCase().includes(q))
+        : liste;
+      if (!gefiltert.length) {
+        $("foerderungenInhalt").innerHTML = `<p class="leer">${liste.length ? "Nichts gefunden." : "Katalog ist leer."}</p>`;
+        return;
+      }
+      const zeilen = gefiltert.map((f) => `<tr>
+          <td>${escape(f.name || "—")}<div class="dezent">${escape(f.id)}</div></td>
+          <td>${escape(f.foerdergeber || "—")}</td>
+          <td>${escape(f.land || "—")}</td>
+          <td>${escape(f.foerderhoehe_text || "—")}</td>
+          <td><button class="mini" data-edit="${escape(f.id)}">bearbeiten</button></td>
+        </tr>`).join("");
+      $("foerderungenInhalt").innerHTML =
+        `<table><thead><tr><th>Name</th><th>Geber</th><th>Land</th><th>Förderhöhe</th><th>Aktion</th></tr></thead><tbody>${zeilen}</tbody></table>`;
+    }
+
+    $("foerderungenInhalt").onclick = (e) => {
+      const b = e.target.closest("button[data-edit]");
+      if (!b) return;
+      const eintrag = katalogIndex[b.dataset.edit];
+      if (eintrag) oeffneBearbeiten(eintrag, false);
+    };
+
+    // Einen Eintrag in „freundliche Felder" + ein „Erweitert"-JSON-Feld
+    // aufteilen und das Formular im Dialog öffnen. istNeu = noch nicht im
+    // Katalog (Übernehmen / neu).
+    function oeffneBearbeiten(eintrag, istNeu) {
+      const e = eintrag || {};
+      const rest = {};
+      for (const k of Object.keys(e)) {
+        if (k === "id" || FREUNDLICH_IDS.includes(k)) continue;
+        rest[k] = e[k];
+      }
+      const felder = FREUNDLICH.map(([k, label]) => {
+        const v = escape(e[k] ?? "");
+        if (k === "beschreibung") {
+          return `<div class="form-feld"><label>${label}</label><textarea data-fk="${k}">${v}</textarea></div>`;
+        }
+        return `<div class="form-feld"><label>${label}</label><input type="text" data-fk="${k}" value="${v}" /></div>`;
+      }).join("");
+      const idZeile = `<div class="form-feld"><label>ID ${istNeu ? "(wird automatisch erzeugt)" : "(nicht änderbar)"}</label>
+          <input type="text" class="idfeld" id="formId" value="${escape(e.id || "")}" readonly /></div>`;
+      const erweitert = `<details class="erweitert"><summary>Erweitert: Förder-Kriterien, Fristen &amp; Listen (JSON)</summary>
+          <textarea id="formRest">${escape(JSON.stringify(rest, null, 2))}</textarea></details>`;
+      const fuss = `<button class="zweit" id="formAbbrechen">Abbrechen</button><button id="formSpeichern">Speichern</button>`;
+      ovOeffnen(istNeu ? "Neue Förderung" : "Förderung bearbeiten",
+        idZeile + felder + erweitert + `<div id="formMeldung"></div>`, fuss);
+      $("formAbbrechen").onclick = ovSchliessen;
+      $("formSpeichern").onclick = () => speichereBearbeiten();
+    }
+
+    async function speichereBearbeiten() {
+      // 1. „Erweitert"-JSON prüfen.
+      let rest;
+      try {
+        const t = $("formRest").value.trim();
+        rest = t ? JSON.parse(t) : {};
+        if (typeof rest !== "object" || Array.isArray(rest)) throw 0;
+      } catch {
+        meldung("formMeldung", "fehler", "⚠ Das „Erweitert\"-Feld ist kein gültiges JSON-Objekt.");
+        return;
+      }
+      // 2. Freundliche Felder einsammeln (leere weglassen).
+      const e = { ...rest };
+      for (const inp of document.querySelectorAll("[data-fk]")) {
+        const val = inp.value.trim();
+        if (val !== "") e[inp.dataset.fk] = val; else delete e[inp.dataset.fk];
+      }
+      if (!e.name) { meldung("formMeldung", "fehler", "⚠ Der Name darf nicht leer sein."); return; }
+
+      // 3. ID: bestehende behalten, sonst aus dem Namen erzeugen.
+      let id = $("formId").value.trim();
+      if (!id) id = eindeutigeId(e.name);
+      e.id = id;
+
+      $("formSpeichern").disabled = true;
+      meldung("formMeldung", "info", "Speichere und verteile …");
+      try {
+        const pos = katalog.foerderungen.findIndex((f) => f.id === id);
+        if (pos >= 0) katalog.foerderungen[pos] = e;
+        else katalog.foerderungen.push(e);
+        await katalogSpeichern();
+        ovSchliessen();
+        zeigeFoerderungen();
+      } catch (err) {
+        meldung("formMeldung", "fehler", "⚠ " + err);
+        $("formSpeichern").disabled = false;
+      }
+    }
+
+    // Aus einem Namen eine eindeutige, lesbare ID bilden.
+    function eindeutigeId(name) {
+      const basis = ("eigen-" + String(name).toLowerCase()
+        .replace(/ä/g, "ae").replace(/ö/g, "oe").replace(/ü/g, "ue").replace(/ß/g, "ss")
+        .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")).slice(0, 50) || "eigen-foerderung";
+      const vorhanden = new Set(katalog.foerderungen.map((f) => f.id));
+      let id = basis, n = 2;
+      while (vorhanden.has(id)) id = `${basis}-${n++}`;
+      return id;
+    }
+
     // Gemeinsamer Aufruf für die Admin-Lese-Endpunkte.
     function gemeinsam(cmd) {
       return invoke(cmd, {
@@ -354,19 +664,38 @@
       } catch (err) { alert("⚠ " + err); b.disabled = false; }
     };
 
-    // Vorschlag freigeben/verwerfen (delegiert auf die Tabelle).
-    $("vorschlaegeInhalt").onclick = async (e) => {
-      const b = e.target.closest("button[data-vakt]");
-      if (!b) return;
-      b.disabled = true;
+    // Vorschlag freigeben/verwerfen (gemeinsam für Liste und Dialog).
+    async function vorschlagAktion(vakt, id, btn) {
+      if (btn) btn.disabled = true;
       try {
-        await invoke("admin_vorschlag_" + b.dataset.vakt, { ...basisArgs(), vorschlagId: b.dataset.id });
+        await invoke("admin_vorschlag_" + vakt, { ...basisArgs(), vorschlagId: id });
+        ovSchliessen();
+        if (vakt === "freigeben") await ladeKatalog(); // Katalog hat sich geändert → Diff aktuell halten
         ladeVorschlaege();
-      } catch (err) { alert("⚠ " + err); b.disabled = false; }
-    };
+      } catch (err) { alert("⚠ " + err); if (btn) btn.disabled = false; }
+    }
 
-    // Geteilten Förderer entfernen (delegiert auf die Tabelle).
+    // Liste: „ansehen" öffnet den Detail-Dialog, freigeben/verwerfen direkt.
+    $("vorschlaegeInhalt").onclick = (e) => {
+      const det = e.target.closest("button[data-vdet]");
+      if (det) { zeigeVorschlagDetail(det.dataset.vdet); return; }
+      const b = e.target.closest("button[data-vakt]");
+      if (b) vorschlagAktion(b.dataset.vakt, b.dataset.id, b);
+    };
+    // Dialog-Fußzeile: freigeben/verwerfen.
+    $("ovFuss").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-vakt]");
+      if (b) vorschlagAktion(b.dataset.vakt, b.dataset.id, b);
+    });
+
+    // Geteilten Förderer übernehmen oder entfernen (delegiert auf die Tabelle).
     $("foerdererInhalt").onclick = async (e) => {
+      const u = e.target.closest("button[data-uebernehmen]");
+      if (u) {
+        const f = foerdererListe.find((x) => x.id === u.dataset.uebernehmen);
+        if (f) { const kopie = { ...(f.inhalt || {}) }; delete kopie.id; oeffneBearbeiten(kopie, true); }
+        return;
+      }
       const b = e.target.closest("button[data-del]");
       if (!b) return;
       if (!confirm("Diesen geteilten Förderer wirklich entfernen?")) return;
