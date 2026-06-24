@@ -39,9 +39,30 @@ export const TRAEGERSCHAFT = {
   organisation: "Verein / Organisation",
 };
 
-/** "Frist: 15.09.2026" | "laufend einreichbar" | Hinweis */
+/**
+ * "Frist: 15.09.2026" | "laufend einreichbar" |
+ * "wiederkehrend – nächste Frist: …" | Hinweis.
+ *
+ * Drei Zeitpunkt-Arten:
+ *  - "laufend": jederzeit einreichbar.
+ *  - "periodisch": regelmässig wiederkehrende Fristen (z. B. halbjährlich).
+ *    Es gibt immer eine nächste Runde; wir zeigen die nächste hinterlegte
+ *    Frist, sonst einen Hinweis auf die Webseite.
+ *  - sonst (Standard "fristen"): feste Einreichfristen.
+ */
 export function fristText(f) {
-  if (f.weiche_kriterien.zeitpunkt === "laufend") return "laufend einreichbar";
+  const z = f.weiche_kriterien.zeitpunkt;
+  if (z === "laufend") return "laufend einreichbar";
+  if (z === "periodisch") {
+    const heute = new Date();
+    const naechste = (f.fristen ?? [])
+      .map((d) => new Date(d))
+      .filter((d) => !isNaN(d) && d >= heute)
+      .sort((a, b) => a - b)[0];
+    return naechste
+      ? "wiederkehrend – nächste Frist: " + naechste.toLocaleDateString("de-DE")
+      : "wiederkehrende Fristen (siehe Webseite)";
+  }
   return f.fristen.length
     ? "Frist: " +
         f.fristen.map((d) => new Date(d).toLocaleDateString("de-DE")).join(", ")

@@ -9,7 +9,9 @@
   let webseite = $state("");
   let foerderhoehe = $state("");
   let beschreibung = $state("");
-  let laufend = $state(false);
+  // "fristen" = feste Frist · "periodisch" = wiederkehrend (z. B. halbjährlich)
+  // · "laufend" = jederzeit einreichbar.
+  let zeitpunkt = $state("fristen");
   let frist = $state("");
   let dokumente = $state([]);
   let neuesDok = $state("");
@@ -39,8 +41,8 @@
         webseite,
         foerderhoehe,
         beschreibung,
-        laufend,
-        frist: laufend ? "" : frist,
+        zeitpunkt,
+        frist: zeitpunkt === "laufend" ? "" : frist,
         dokumente: [...dokumente],
       });
       if (r && r.ok === false) {
@@ -88,12 +90,14 @@
     <label for="ef-web">Webseite</label>
     <input id="ef-web" type="text" placeholder="https://…" bind:value={webseite} />
 
-    <label class="check">
-      <input type="checkbox" bind:checked={laufend} />
-      Laufend einreichbar (keine feste Frist)
-    </label>
-    {#if !laufend}
-      <label for="ef-frist">Einreichfrist</label>
+    <label for="ef-zeitpunkt">Einreichung</label>
+    <select id="ef-zeitpunkt" bind:value={zeitpunkt}>
+      <option value="fristen">feste Frist</option>
+      <option value="periodisch">wiederkehrend (z. B. halbjährlich)</option>
+      <option value="laufend">laufend einreichbar (keine feste Frist)</option>
+    </select>
+    {#if zeitpunkt !== "laufend"}
+      <label for="ef-frist">{zeitpunkt === "periodisch" ? "Nächste Frist" : "Einreichfrist"}</label>
       <input id="ef-frist" type="date" bind:value={frist} />
     {/if}
 

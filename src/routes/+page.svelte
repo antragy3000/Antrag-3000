@@ -1501,7 +1501,7 @@
         budget_min: null,
         budget_max: null,
         waehrung: "EUR",
-        zeitpunkt: eingabe.laufend ? "laufend" : "fristen",
+        zeitpunkt: eingabe.zeitpunkt ?? "fristen",
       },
     };
     aktivesProjekt.eigeneFoerderungen.push(f);

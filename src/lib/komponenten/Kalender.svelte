@@ -3,7 +3,7 @@
   // nach Datum sortiert, mit Countdown ("noch X Tage") und Antrag-
   // Status. Klick auf eine Zeile öffnet die Detailansicht.
   import FoerderDetail from "./FoerderDetail.svelte";
-  import { LAENDER } from "$lib/begriffe";
+  import { LAENDER, fristText } from "$lib/begriffe";
   import {
     ANTRAG_STATUS,
     ANTRAG_STANDARD,
@@ -80,12 +80,16 @@
 
   // Pro Förderung: nächste zukünftige bzw. letzte vergangene Frist.
   function fristInfo(f) {
-    const laufend = f.weiche_kriterien.zeitpunkt === "laufend";
+    // laufend ODER periodisch (wiederkehrend) = es gibt immer eine nächste
+    // Möglichkeit; ohne konkretes zukünftiges Datum landen beide im
+    // „immer offen"-Topf statt unter „vergangen".
+    const z = f.weiche_kriterien.zeitpunkt;
+    const immerOffen = z === "laufend" || z === "periodisch";
     const mitTagen = fristenVon(f).map((d) => ({ d, t: tageBis(d) }));
     const zukunft = mitTagen.filter((x) => x.t >= 0).sort((a, b) => a.t - b.t);
     const verg = mitTagen.filter((x) => x.t < 0).sort((a, b) => b.t - a.t);
     if (zukunft.length) return { typ: "anstehend", frist: zukunft[0].d, tage: zukunft[0].t };
-    if (laufend) return { typ: "laufend" };
+    if (immerOffen) return { typ: "laufend" };
     if (verg.length) return { typ: "vergangen", frist: verg[0].d, tage: verg[0].t };
     return { typ: "offen" }; // keine feste Frist hinterlegt
   }
@@ -236,7 +240,7 @@
               <span class="land land-{f.land}">{LAENDER[f.land] ?? f.land}</span>
               <h3>{f.name}</h3>
             </div>
-            <p class="meta">{f.foerdergeber} · laufend einreichbar</p>
+            <p class="meta">{f.foerdergeber} · {fristText(f)}</p>
           </div>
         </div>
       {/each}

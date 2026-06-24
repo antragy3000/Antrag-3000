@@ -134,11 +134,15 @@ function weichBewerten(f, a) {
     notizen.push("Budgetrahmen weicht ab");
   }
 
-  // Zeitpunkt: laufende Einreichung passt immer; sonst zählt die
-  // nächste kommende Frist im Vergleich zum gewünschten Zeitraum.
+  // Zeitpunkt: laufende und wiederkehrende (periodische) Einreichung passen
+  // immer (es gibt stets eine nächste Runde); sonst zählt die nächste
+  // kommende Frist im Vergleich zum gewünschten Zeitraum.
   if (w.zeitpunkt === "laufend") {
     punkte += GEWICHTE.zeitpunkt;
     treffer.push("laufend einreichbar");
+  } else if (w.zeitpunkt === "periodisch") {
+    punkte += GEWICHTE.zeitpunkt;
+    treffer.push("wiederkehrende Fristen");
   } else {
     const frist = naechsteFrist(f);
     if (!frist) {
