@@ -84,13 +84,25 @@ if (-not $setup) { throw "Setup-Datei zur Version $version nicht gefunden in $ns
 $latest = "server\updates\latest.json"
 if (-not (Test-Path $latest)) { throw "latest.json nicht gefunden: $latest" }
 
+# SHA-256-Pruefsumme erzeugen: damit Pilot-Nutzer:innen die Echtheit der
+# .exe auch OHNE Code-Signing-Zertifikat selbst pruefen koennen
+# (Get-FileHash <datei> -Algorithm SHA256 und vergleichen).
+$hash     = (Get-FileHash $setup.FullName -Algorithm SHA256).Hash.ToLower()
+$sumDatei = Join-Path $setup.DirectoryName ($setup.Name + ".sha256")
+"$hash  $($setup.Name)" | Set-Content -Path $sumDatei -Encoding ascii
+Write-Host "SHA-256: $hash" -ForegroundColor Green
+
 # --- 4. Hochladen (scp ueber Tailscale) ---------------------------------
 Schritt "4/5  Hochladen auf die NAS ($SshUser@$NasHost)"
 Write-Host "  -> $($setup.Name)"
+Write-Host "  -> $($setup.Name).sha256"
 Write-Host "  -> latest.json"
 # scp ueberschreibt vorhandene Dateien. Beide Quellen in EINEM Aufruf, damit
 # nur EINE Verbindung (= ein Passwort) noetig ist.
-& scp $setup.FullName $latest "${SshUser}@${NasHost}:${UpdatesPfad}/"
+# -O erzwingt das klassische SCP-Protokoll: Synology-SSH hat das von neueren
+# scp-Versionen genutzte SFTP-Subsystem oft NICHT aktiviert ("subsystem
+# request failed"). Mit -O laeuft der Upload trotzdem.
+& scp -O $setup.FullName $sumDatei $latest "${SshUser}@${NasHost}:${UpdatesPfad}/"
 if ($LASTEXITCODE -ne 0) {
   Write-Host "`nUpload fehlgeschlagen." -ForegroundColor Red
   Write-Host "Falls 'Permission denied': der SSH-Benutzer darf nicht direkt in" -ForegroundColor Yellow
