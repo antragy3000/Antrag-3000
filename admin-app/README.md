@@ -63,11 +63,20 @@ dem Detail-Fenster.
 ### Förderungen direkt bearbeiten
 
 Im Tab **Förderungen** stehen alle Katalog-Einträge (mit Suchfeld).
-**bearbeiten** öffnet ein Formular: die gängigen Felder (Name, Geber, Land,
-Webseite, Förderhöhe, Beschreibung) als Eingabefelder, die Förder-Kriterien
-und Fristen im ausklappbaren **Erweitert**-Feld (JSON, wird beim Speichern
-geprüft). **Speichern** verteilt den geänderten Katalog sofort an alle
-Team-Geräte (der Stand wird auf heute gesetzt).
+**bearbeiten** öffnet ein Formular, in dem **alle Angaben** als Bedienelement
+vorliegen – kein rohes JSON mehr:
+
+- Textfelder für Name, Geber, Webseite, Förderhöhe, Beschreibung,
+- **Auswahllisten** (Dropdown) für Land, Währung, Zeitpunkt,
+- **Mehrfachauswahl** (Häkchen) für Trägerschaft, Sparten, Projektarten,
+  erlaubte Länder und – ausklappbar – Regionen (Bundesländer/Kantone),
+- Zeilen-Listen (eine pro Zeile) für Fristen, Städte, Checklisten-Punkte und
+  „unverträglich mit".
+
+Harte/weiche Kriterien und Fristen/Listen sind in **ausklappbare** Abschnitte
+gruppiert. **Speichern** verteilt den geänderten Katalog sofort an alle
+Team-Geräte (der Stand wird auf heute gesetzt). Felder, die das Formular nicht
+kennt, bleiben beim Speichern erhalten.
 
 ### Geteilten Förderer in den Katalog übernehmen
 

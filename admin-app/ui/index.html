@@ -106,9 +106,22 @@
     details.erweitert { margin-top: 8px; border: 1px solid var(--rand); border-radius: 8px; padding: 8px 12px; }
     details.erweitert summary { cursor: pointer; font-weight: 600; color: var(--dunkel); }
     details.erweitert textarea {
-      width: 100%; min-height: 200px; margin-top: 10px; font-family: ui-monospace, Consolas, monospace;
+      width: 100%; min-height: 110px; margin-top: 10px; font-family: ui-monospace, Consolas, monospace;
       font-size: 0.82rem; border: 2px solid var(--rand); border-radius: 8px; padding: 10px; resize: vertical;
     }
+    .form-feld select {
+      width: 100%; padding: 8px 12px; font-size: 0.95rem; border: 2px solid var(--rand);
+      border-radius: 8px; background: #fafbfc; font-family: inherit;
+    }
+    /* Mehrfachauswahl (Checkbox-Gruppen) */
+    .check-gruppe { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 4px 0; }
+    .check-gruppe.regionen { display: block; }
+    label.check { display: inline-flex; align-items: center; gap: 6px; font-weight: 400; color: var(--dunkel); margin: 0; font-size: 0.9rem; }
+    label.check input { width: auto; }
+    .region-land { margin: 8px 0; }
+    .region-titel { font-weight: 600; color: var(--grau); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 2px; }
+    .region-land label.check { margin-right: 14px; }
+    .feld-paar { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   </style>
 </head>
 <body>
@@ -237,6 +250,36 @@
       ["beschreibung", "Beschreibung"],
     ];
     const FREUNDLICH_IDS = FREUNDLICH.map(([k]) => k);
+
+    // Feste Auswahllisten (gespiegelt aus src/lib/begriffe.js + orte.js der
+    // Nutzer-App). Wichtig: dieselben Codes wie im Katalog/Matching.
+    const LAENDER = { DE: "Deutschland", AT: "Österreich", CH: "Schweiz", INT: "International", ANDERES: "anderes Land" };
+    const SPARTEN = {
+      musik: "Musik", theater: "Theater", tanz: "Tanz", performance: "Performance",
+      bildende_kunst: "Bildende Kunst", medienkunst: "Medienkunst", literatur: "Literatur",
+      film: "Film", interdisziplinaer: "Interdisziplinär",
+    };
+    const PROJEKTARTEN = {
+      produktion: "Produktion", recherche_entwicklung: "Recherche & Entwicklung", residenz: "Residenz",
+      gastspiel_tournee: "Gastspiel / Tournee", festival: "Festival", veroeffentlichung: "Veröffentlichung",
+      vermittlung: "Vermittlung", barrierefreiheit: "Förderung für Barrierefreiheit",
+    };
+    const TRAEGERSCHAFT = { einzelperson: "Einzelperson", gruppe: "Gruppe / GbR", organisation: "Verein / Organisation" };
+    const WAEHRUNG = { EUR: "Euro (€)", CHF: "Franken (CHF)" };
+    const ZEITPUNKT = { fristen: "feste Fristen", laufend: "laufend einreichbar" };
+    const REGIONEN = {
+      DE: [["BW","Baden-Württemberg"],["BY","Bayern"],["BE","Berlin"],["BB","Brandenburg"],["HB","Bremen"],
+        ["HH","Hamburg"],["HE","Hessen"],["MV","Mecklenburg-Vorpommern"],["NI","Niedersachsen"],
+        ["NW","Nordrhein-Westfalen"],["RP","Rheinland-Pfalz"],["SL","Saarland"],["SN","Sachsen"],
+        ["ST","Sachsen-Anhalt"],["SH","Schleswig-Holstein"],["TH","Thüringen"]],
+      AT: [["BGL","Burgenland"],["KTN","Kärnten"],["NOE","Niederösterreich"],["OOE","Oberösterreich"],
+        ["SBG","Salzburg"],["STMK","Steiermark"],["TIR","Tirol"],["VBG","Vorarlberg"],["WIEN","Wien"]],
+      CH: [["AG","Aargau"],["AI","Appenzell Innerrhoden"],["AR","Appenzell Ausserrhoden"],["BE","Bern"],
+        ["BL","Basel-Landschaft"],["BS","Basel-Stadt"],["FR","Freiburg"],["GE","Genf"],["GL","Glarus"],
+        ["GR","Graubünden"],["JU","Jura"],["LU","Luzern"],["NE","Neuenburg"],["NW","Nidwalden"],
+        ["OW","Obwalden"],["SG","St. Gallen"],["SH","Schaffhausen"],["SO","Solothurn"],["SZ","Schwyz"],
+        ["TG","Thurgau"],["TI","Tessin"],["UR","Uri"],["VD","Waadt"],["VS","Wallis"],["ZG","Zug"],["ZH","Zürich"]],
+    };
 
     // --- Dialog-Fenster (Overlay) ---
     function ovOeffnen(titel, inhaltHtml, fussHtml) {
@@ -604,57 +647,150 @@
       if (eintrag) oeffneBearbeiten(eintrag, false);
     };
 
-    // Einen Eintrag in „freundliche Felder" + ein „Erweitert"-JSON-Feld
-    // aufteilen und das Formular im Dialog öffnen. istNeu = noch nicht im
-    // Katalog (Übernehmen / neu).
+    // Beim Öffnen gemerkte Felder, die das Formular nicht als eigenes
+    // Bedienelement zeigt – damit nichts verloren geht (forward-kompatibel):
+    // unbekannte Top-Level-Felder bzw. unbekannte Unterfelder der Kriterien.
+    let formErhalten = { rest: {}, harte: {}, weiche: {} };
+
+    // --- kleine Formular-Bausteine ---
+    function txt(label, id, value) {
+      return `<div class="form-feld"><label>${label}</label><input type="text" id="${id}" value="${escape(value ?? "")}" /></div>`;
+    }
+    function bool(label, id, value) {
+      return `<div class="form-feld"><label class="check"><input type="checkbox" id="${id}"${value ? " checked" : ""}/> ${label}</label></div>`;
+    }
+    function select(label, id, optionen, value) {
+      const opts = `<option value="">—</option>` + Object.entries(optionen)
+        .map(([k, t]) => `<option value="${escape(k)}"${k === value ? " selected" : ""}>${escape(t)}</option>`).join("");
+      return `<div class="form-feld"><label>${label}</label><select id="${id}">${opts}</select></div>`;
+    }
+    function liste(label, id, arr, hinweis) {
+      return `<div class="form-feld"><label>${label}${hinweis ? ` <span class="dezent">(${hinweis})</span>` : ""}</label>
+          <textarea id="${id}" style="min-height:60px">${escape(Array.isArray(arr) ? arr.join("\n") : "")}</textarea></div>`;
+    }
+    function cbGruppe(label, name, optionen, gewaehlt) {
+      const set = new Set(gewaehlt || []);
+      const items = Object.entries(optionen).map(([k, t]) =>
+        `<label class="check"><input type="checkbox" value="${escape(k)}"${set.has(k) ? " checked" : ""}/> ${escape(t)}</label>`).join("");
+      return `<div class="form-feld"><label>${label}</label><div class="check-gruppe" data-cg="${name}">${items}</div></div>`;
+    }
+    function regionGruppe(label, name, gewaehlt) {
+      const set = new Set(gewaehlt || []);
+      const bloecke = Object.entries(REGIONEN).map(([land, lst]) =>
+        `<div class="region-land"><div class="region-titel">${escape(LAENDER[land] || land)}</div>` +
+        lst.map(([code, rn]) => `<label class="check"><input type="checkbox" value="${escape(code)}"${set.has(code) ? " checked" : ""}/> ${escape(rn)}</label>`).join("") +
+        `</div>`).join("");
+      return `<div class="form-feld"><label>${label}</label><div class="check-gruppe regionen" data-cg="${name}">${bloecke}</div></div>`;
+    }
+    const leseCb = (name) => [...new Set([...document.querySelectorAll(`[data-cg="${name}"] input:checked`)].map((i) => i.value))];
+    const leseListe = (id) => $(id).value.split("\n").map((s) => s.trim()).filter(Boolean);
+    const leseZahl = (id) => { const v = $(id).value.trim(); if (v === "") return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
+
+    // Bekannte Felder, die eigene Bedienelemente haben (Rest wird bewahrt).
+    const TOP_BEKANNT = ["id", "name", "foerdergeber", "land", "beschreibung", "webseite",
+      "foerderhoehe_text", "recherchiert", "harte_kriterien", "weiche_kriterien",
+      "fristen", "unvertraeglich_mit", "checkliste_vorschlag"];
+    const HK_BEKANNT = ["wohnsitz", "durchfuehrungsort", "traegerschaft", "studentisch_erlaubt",
+      "wohnsitz_regionen", "durchfuehrungsort_regionen", "wohnsitz_staedte", "durchfuehrungsort_staedte"];
+    const WK_BEKANNT = ["sparten", "projektarten", "budget_min", "budget_max", "waehrung", "zeitpunkt"];
+    const ohne = (obj, keys) => { const r = {}; for (const k of Object.keys(obj || {})) if (!keys.includes(k)) r[k] = obj[k]; return r; };
+
+    // Bearbeiten-Formular im Dialog öffnen. istNeu = noch nicht im Katalog.
     function oeffneBearbeiten(eintrag, istNeu) {
       const e = eintrag || {};
-      const rest = {};
-      for (const k of Object.keys(e)) {
-        if (k === "id" || FREUNDLICH_IDS.includes(k)) continue;
-        rest[k] = e[k];
-      }
-      const felder = FREUNDLICH.map(([k, label]) => {
-        const v = escape(e[k] ?? "");
-        if (k === "beschreibung") {
-          return `<div class="form-feld"><label>${label}</label><textarea data-fk="${k}">${v}</textarea></div>`;
-        }
-        return `<div class="form-feld"><label>${label}</label><input type="text" data-fk="${k}" value="${v}" /></div>`;
-      }).join("");
-      const idZeile = `<div class="form-feld"><label>ID ${istNeu ? "(wird automatisch erzeugt)" : "(nicht änderbar)"}</label>
-          <input type="text" class="idfeld" id="formId" value="${escape(e.id || "")}" readonly /></div>`;
-      const erweitert = `<details class="erweitert"><summary>Erweitert: Förder-Kriterien, Fristen &amp; Listen (JSON)</summary>
-          <textarea id="formRest">${escape(JSON.stringify(rest, null, 2))}</textarea></details>`;
+      const hk = e.harte_kriterien || {};
+      const wk = e.weiche_kriterien || {};
+      // Unbekanntes merken, damit es beim Speichern erhalten bleibt.
+      formErhalten = { rest: ohne(e, TOP_BEKANNT), harte: ohne(hk, HK_BEKANNT), weiche: ohne(wk, WK_BEKANNT) };
+
+      const kopf =
+        `<div class="form-feld"><label>ID ${istNeu ? "(wird automatisch erzeugt)" : "(nicht änderbar)"}</label>
+           <input type="text" class="idfeld" id="formId" value="${escape(e.id || "")}" readonly /></div>` +
+        txt("Name", "f_name", e.name) +
+        txt("Fördergeber", "f_foerdergeber", e.foerdergeber) +
+        select("Land", "f_land", LAENDER, e.land) +
+        txt("Webseite", "f_webseite", e.webseite) +
+        txt("Förderhöhe (Text)", "f_foerderhoehe", e.foerderhoehe_text) +
+        `<div class="form-feld"><label>Beschreibung</label><textarea id="f_beschreibung">${escape(e.beschreibung ?? "")}</textarea></div>` +
+        bool("recherchiert (geprüft)", "f_recherchiert", e.recherchiert);
+
+      const harte = `<details class="erweitert" open><summary>Harte Kriterien (Pflicht-Bedingungen)</summary>
+          ${cbGruppe("Wohnsitz erlaubt in", "h_wohnsitz", LAENDER, hk.wohnsitz)}
+          ${cbGruppe("Durchführungsort erlaubt in", "h_durchfuehrungsort", LAENDER, hk.durchfuehrungsort)}
+          ${cbGruppe("Trägerschaft", "h_traegerschaft", TRAEGERSCHAFT, hk.traegerschaft)}
+          ${bool("studentische Trägerschaft erlaubt", "h_studentisch", hk.studentisch_erlaubt)}
+          <details class="erweitert"><summary>Regionen Wohnsitz (optional)</summary>${regionGruppe("", "h_wohnsitz_regionen", hk.wohnsitz_regionen)}</details>
+          <details class="erweitert"><summary>Regionen Durchführungsort (optional)</summary>${regionGruppe("", "h_durchfuehrungsort_regionen", hk.durchfuehrungsort_regionen)}</details>
+          ${liste("Städte Wohnsitz", "h_wohnsitz_staedte", hk.wohnsitz_staedte, "eine pro Zeile")}
+          ${liste("Städte Durchführungsort", "h_durchfuehrungsort_staedte", hk.durchfuehrungsort_staedte, "eine pro Zeile")}
+        </details>`;
+
+      const weiche = `<details class="erweitert" open><summary>Weiche Kriterien (Rangfolge)</summary>
+          ${cbGruppe("Sparten", "w_sparten", SPARTEN, wk.sparten)}
+          ${cbGruppe("Projektarten", "w_projektarten", PROJEKTARTEN, wk.projektarten)}
+          <div class="feld-paar">
+            ${txt("Budget min", "w_budget_min", wk.budget_min ?? "")}
+            ${txt("Budget max", "w_budget_max", wk.budget_max ?? "")}
+          </div>
+          <div class="feld-paar">
+            ${select("Währung", "w_waehrung", WAEHRUNG, wk.waehrung)}
+            ${select("Zeitpunkt", "w_zeitpunkt", ZEITPUNKT, wk.zeitpunkt)}
+          </div>
+        </details>`;
+
+      const listen = `<details class="erweitert"><summary>Fristen &amp; Listen</summary>
+          ${liste("Fristen", "l_fristen", e.fristen, "JJJJ-MM-TT, eine pro Zeile")}
+          ${liste("Unverträglich mit (IDs)", "l_unvertraeglich", e.unvertraeglich_mit, "eine ID pro Zeile")}
+          ${liste("Checklisten-Vorschlag", "l_checkliste", e.checkliste_vorschlag, "ein Punkt pro Zeile")}
+        </details>`;
+
       const fuss = `${webseiteKnopf(e.webseite)}<button class="zweit" id="formAbbrechen">Abbrechen</button><button id="formSpeichern">Speichern</button>`;
       ovOeffnen(istNeu ? "Neue Förderung" : "Förderung bearbeiten",
-        idZeile + felder + erweitert + `<div id="formMeldung"></div>`, fuss);
+        kopf + harte + weiche + listen + `<div id="formMeldung"></div>`, fuss);
       $("formAbbrechen").onclick = ovSchliessen;
       $("formSpeichern").onclick = () => speichereBearbeiten();
     }
 
     async function speichereBearbeiten() {
-      // 1. „Erweitert"-JSON prüfen.
-      let rest;
-      try {
-        const t = $("formRest").value.trim();
-        rest = t ? JSON.parse(t) : {};
-        if (typeof rest !== "object" || Array.isArray(rest)) throw 0;
-      } catch {
-        meldung("formMeldung", "fehler", "⚠ Das „Erweitert\"-Feld ist kein gültiges JSON-Objekt.");
-        return;
-      }
-      // 2. Freundliche Felder einsammeln (leere weglassen).
-      const e = { ...rest };
-      for (const inp of document.querySelectorAll("[data-fk]")) {
-        const val = inp.value.trim();
-        if (val !== "") e[inp.dataset.fk] = val; else delete e[inp.dataset.fk];
-      }
-      if (!e.name) { meldung("formMeldung", "fehler", "⚠ Der Name darf nicht leer sein."); return; }
+      const name = $("f_name").value.trim();
+      if (!name) { meldung("formMeldung", "fehler", "⚠ Der Name darf nicht leer sein."); return; }
 
-      // 3. ID: bestehende behalten, sonst aus dem Namen erzeugen.
-      let id = $("formId").value.trim();
-      if (!id) id = eindeutigeId(e.name);
+      // Eintrag aus den Bedienelementen zusammensetzen (unbekanntes bewahren).
+      const e = { ...formErhalten.rest };
+      let id = $("formId").value.trim() || eindeutigeId(name);
       e.id = id;
+      e.name = name;
+      const setze = (k, v) => { if (v !== "") e[k] = v; else delete e[k]; };
+      setze("foerdergeber", $("f_foerdergeber").value.trim());
+      setze("land", $("f_land").value);
+      setze("webseite", $("f_webseite").value.trim());
+      setze("foerderhoehe_text", $("f_foerderhoehe").value.trim());
+      setze("beschreibung", $("f_beschreibung").value.trim());
+      e.recherchiert = $("f_recherchiert").checked;
+
+      e.harte_kriterien = {
+        ...formErhalten.harte,
+        wohnsitz: leseCb("h_wohnsitz"),
+        durchfuehrungsort: leseCb("h_durchfuehrungsort"),
+        traegerschaft: leseCb("h_traegerschaft"),
+        studentisch_erlaubt: $("h_studentisch").checked,
+        wohnsitz_regionen: leseCb("h_wohnsitz_regionen"),
+        durchfuehrungsort_regionen: leseCb("h_durchfuehrungsort_regionen"),
+        wohnsitz_staedte: leseListe("h_wohnsitz_staedte"),
+        durchfuehrungsort_staedte: leseListe("h_durchfuehrungsort_staedte"),
+      };
+      e.weiche_kriterien = {
+        ...formErhalten.weiche,
+        sparten: leseCb("w_sparten"),
+        projektarten: leseCb("w_projektarten"),
+        budget_min: leseZahl("w_budget_min"),
+        budget_max: leseZahl("w_budget_max"),
+        waehrung: $("w_waehrung").value || null,
+        zeitpunkt: $("w_zeitpunkt").value || null,
+      };
+      e.fristen = leseListe("l_fristen");
+      e.unvertraeglich_mit = leseListe("l_unvertraeglich");
+      e.checkliste_vorschlag = leseListe("l_checkliste");
 
       $("formSpeichern").disabled = true;
       meldung("formMeldung", "info", "Speichere und verteile …");
