@@ -355,6 +355,16 @@ npm install</div>
   <div class="merke">So funktioniert das <strong>Hybrid-Prinzip</strong>: Der
   Sammler arbeitet automatisch, aber <strong>ein Mensch entscheidet</strong>, was
   beim Team ankommt. Wie der Sammler Vorschläge erzeugt, steht in Kapitel 10.</div>
+
+  <h3>Ansehen, bevor du freigibst (Diff)</h3>
+  <p>Mit <span class="btn sec">ansehen</span> öffnest du alle Felder eines
+  Vorschlags. Bei einem <strong>geänderten</strong> Vorschlag sind die Felder,
+  die sich vom aktuellen Katalog unterscheiden, <strong>gelb</strong>
+  hervorgehoben (alter Wert durchgestrichen → neuer Wert) – so erkennst du auf
+  einen Blick, was sich ändert, und gibst nicht „blind" frei. Freigeben und
+  verwerfen geht auch direkt aus diesem Fenster.</p>
+  <div class="tipp">Hat der Vorschlag eine Webseite, kannst du sie mit
+  <span class="btn sec">🌐 Website öffnen</span> sofort im Browser prüfen.</div>
 </section>
 
 <!-- ===== 7 ===== -->
@@ -384,6 +394,20 @@ npm install</div>
 
   <div class="merke">Eine Meldung enthält nur Förderungs-Name, Art und die
   optionale Anmerkung der meldenden Person – keine sensiblen Daten.</div>
+
+  <h3>Detailansicht einer Meldung</h3>
+  <p>Mit <span class="btn sec">ansehen</span> öffnest du eine Meldung. Oben steht
+  <strong>gelb markiert, was gemeldet wurde</strong> (Art und Anmerkung),
+  darunter der <strong>aktuelle Katalog-Eintrag</strong> der Förderung zum
+  direkten Abgleich. Aus dem Fenster heraus kannst du</p>
+  <ul>
+    <li>mit <span class="btn sec">🌐 Website öffnen</span> die Förder-Webseite
+    prüfen,</li>
+    <li>mit <strong>Förderung bearbeiten</strong> die Angaben gleich korrigieren
+    (siehe Kapitel 9), und</li>
+    <li>die Meldung auf <strong>erledigt</strong> oder <strong>verworfen</strong>
+    setzen.</li>
+  </ul>
 </section>
 
 <!-- ===== 8 ===== -->
@@ -400,9 +424,13 @@ npm install</div>
   Förderers bleibt beim Ersteller lokal – sie wird gar nicht erst übertragen.
   Du siehst also nur die öffentlichen Programm-Infos.</div>
 
-  <div class="tipp">Einen guten geteilten Förderer kannst du dauerhaft in den
-  Katalog übernehmen, indem du ihn in die hochzuladende
-  <span class="pfad">foerderungen.json</span> aufnimmst (Kapitel 9).</div>
+  <h3>In den Katalog übernehmen</h3>
+  <p>Einen guten geteilten Förderer übernimmst du mit
+  <span class="btn pri">→ in Katalog</span> dauerhaft: Es öffnet sich das
+  Bearbeiten-Formular (Kapitel 9), <strong>vorausgefüllt</strong> mit den
+  geteilten Angaben und einer automatisch erzeugten ID. Du ergänzt fehlende
+  Felder und speicherst – der Eintrag landet sofort im verteilten Katalog. Eine
+  Datei von Hand zu bearbeiten ist dafür nicht mehr nötig.</p>
 </section>
 
 <!-- ===== 9 ===== -->
@@ -425,6 +453,30 @@ npm install</div>
   <div class="warn"><strong>Abgelehnt?</strong> „Der Katalog ist ungültig" heißt:
   Schema-Version fehlt/passt nicht, oder eine Förderung hat keine id/keinen
   Namen. „Zu groß" greift erst bei sehr großen Dateien (über 2&nbsp;MB).</div>
+
+  <h3>Einzelne Förderungen bearbeiten (Tab „Förderungen")</h3>
+  <p>Statt jedes Mal die ganze Datei zu tauschen, kannst du im Tab
+  <strong>Förderungen</strong> einen einzelnen Eintrag ändern. Die Liste zeigt
+  alle Förderungen mit Suchfeld; <span class="btn sec">bearbeiten</span> öffnet
+  ein Formular, in dem <strong>alle Angaben Bedienelemente sind</strong> (kein
+  JSON von Hand):</p>
+  <ul>
+    <li>Textfelder für Name, Geber, Webseite, Förderhöhe, Beschreibung;</li>
+    <li>Auswahllisten für Land, Währung und <strong>Zeitpunkt</strong> – inkl.
+    der Möglichkeit <em>„wiederkehrend (z. B. halbjährlich)"</em> für Förderer
+    mit regelmäßig wiederkehrenden Fristen;</li>
+    <li>Mehrfachauswahl per Häkchen für Trägerschaft, Sparten, Projektarten,
+    erlaubte Länder und – ausklappbar – Regionen;</li>
+    <li>Zeilen-Listen für Fristen, Städte, „unverträglich mit" und den
+    Checklisten-Vorschlag;</li>
+    <li>eine Option <strong>„Einreichung nur über Online-Formular"</strong> mit
+    Adressfeld – ist sie gesetzt, zeigt die Nutzer-App statt „per Mail senden"
+    einen Verweis auf dieses Online-Formular.</li>
+  </ul>
+  <p><strong>Speichern</strong> übernimmt die Änderung sofort in den verteilten
+  Katalog und setzt den Stand auf heute. Mit
+  <span class="btn sec">🌐 Website öffnen</span> prüfst du die Förder-Webseite.
+  Felder, die das Formular nicht kennt, bleiben dabei erhalten.</p>
 </section>
 
 <!-- ===== 10 ===== -->
