@@ -3,7 +3,7 @@
   // nach Datum sortiert, mit Countdown ("noch X Tage") und Antrag-
   // Status. Klick auf eine Zeile öffnet die Detailansicht.
   import FoerderDetail from "./FoerderDetail.svelte";
-  import { LAENDER, fristText } from "$lib/begriffe";
+  import { LAENDER, fristText, fristNormalisieren, fristAlsDatum } from "$lib/begriffe";
   import {
     ANTRAG_STATUS,
     ANTRAG_STANDARD,
@@ -67,11 +67,23 @@
       .filter(Boolean)
   );
 
+  // Datum -> "JJJJ-MM-TT" (lokal), damit tag()/monat()/jahr() es parsen können.
+  function isoVon(dt) {
+    const m = String(dt.getMonth() + 1).padStart(2, "0");
+    const t = String(dt.getDate()).padStart(2, "0");
+    return `${dt.getFullYear()}-${m}-${t}`;
+  }
+
   // Alle Frist-Datumswerte einer Förderung: offizielle (editierbare
-  // Übernahme aus der Datenbank) plus eigene benannte Fristen.
+  // Übernahme aus der Datenbank) plus eigene benannte Fristen. Wiederkehrende
+  // Daten ohne Jahr werden auf das nächste konkrete Vorkommen aufgelöst.
   function fristenVon(f) {
     const a = antraege[f.id];
-    const offiziell = (a?.offizielleFristen ?? f.fristen ?? []).filter(Boolean);
+    const roh = a?.offizielleFristen ?? f.fristen ?? [];
+    const offiziell = roh
+      .map((e) => fristAlsDatum(fristNormalisieren(e).datum))
+      .filter(Boolean)
+      .map(isoVon);
     const eigene = (a?.eigeneFristen ?? [])
       .map((e) => (typeof e === "string" ? e : e.datum))
       .filter(Boolean);

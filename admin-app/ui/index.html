@@ -122,6 +122,8 @@
     .region-titel { font-weight: 600; color: var(--grau); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 2px; }
     .region-land label.check { margin-right: 14px; }
     .feld-paar { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .frist-zeile { display: grid; grid-template-columns: 130px 1fr auto; gap: 8px; align-items: center; margin-bottom: 6px; }
+    .frist-zeile input { padding: 7px 10px; font-size: 0.9rem; border: 2px solid var(--rand); border-radius: 8px; background: #fafbfc; font-family: inherit; }
   </style>
 </head>
 <body>
@@ -688,12 +690,60 @@
 
     // Bekannte Felder, die eigene Bedienelemente haben (Rest wird bewahrt).
     const TOP_BEKANNT = ["id", "name", "foerdergeber", "land", "beschreibung", "webseite",
-      "foerderhoehe_text", "einreichung_online", "einreich_url", "recherchiert",
+      "foerderhoehe_text", "einreichung_online", "einreich_url", "frist_hinweis", "recherchiert",
       "harte_kriterien", "weiche_kriterien", "fristen", "unvertraeglich_mit", "checkliste_vorschlag"];
     const HK_BEKANNT = ["wohnsitz", "durchfuehrungsort", "traegerschaft", "studentisch_erlaubt",
       "wohnsitz_regionen", "durchfuehrungsort_regionen", "wohnsitz_staedte", "durchfuehrungsort_staedte"];
     const WK_BEKANNT = ["sparten", "projektarten", "budget_min", "budget_max", "waehrung", "zeitpunkt"];
     const ohne = (obj, keys) => { const r = {}; for (const k of Object.keys(obj || {})) if (!keys.includes(k)) r[k] = obj[k]; return r; };
+
+    // --- Fristen-Editor (Datum + Hinweis je Zeile; Datum auch ohne Jahr) ---
+    // Frist-Eintrag -> { datum, hinweis }.
+    const fristNorm = (e) => (e && typeof e === "object")
+      ? { datum: (e.datum ?? "").trim(), hinweis: (e.hinweis ?? "").trim() }
+      : { datum: String(e ?? "").trim(), hinweis: "" };
+    // Gespeichertes Datum -> Anzeige im Eingabefeld ("15.09.2026" / "15.09.").
+    function fristDatumZuText(d) {
+      d = (d ?? "").trim();
+      let m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (m) return `${m[3]}.${m[2]}.${m[1]}`;
+      m = d.match(/^(\d{2})-(\d{2})$/);   // MM-TT (ohne Jahr)
+      if (m) return `${m[2]}.${m[1]}.`;
+      return d;
+    }
+    // Eingabe -> gespeichertes Datum ("JJJJ-MM-TT" oder Jahr-los "MM-TT").
+    function fristTextZuDatum(t) {
+      t = (t ?? "").trim();
+      if (!t) return "";
+      if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+      if (/^\d{2}-\d{2}$/.test(t)) return t;
+      let m = t.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);   // TT.MM.JJJJ
+      if (m) return `${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+      m = t.match(/^(\d{1,2})\.(\d{1,2})\.?$/);             // TT.MM. (ohne Jahr)
+      if (m) return `${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`;
+      return t; // unverändert lassen (Nutzer sieht es so wieder)
+    }
+    function fristZeileHtml(datumText, hinweis) {
+      return `<div class="frist-zeile" data-frist-zeile>
+          <input type="text" class="frist-datum" value="${escape(datumText)}" placeholder="15.09. oder 15.09.2026" />
+          <input type="text" class="frist-hinweis" value="${escape(hinweis)}" placeholder="Hinweis (z. B. erstes Halbjahr)" />
+          <button type="button" class="mini gefahr" data-frist-weg title="Frist entfernen">✕</button>
+        </div>`;
+    }
+    function fristenEditorHtml(fristen) {
+      const zeilen = (Array.isArray(fristen) ? fristen : []).map(fristNorm)
+        .map((e) => fristZeileHtml(fristDatumZuText(e.datum), e.hinweis)).join("");
+      return `<div class="form-feld"><label>Fristen <span class="dezent">(Datum mit oder ohne Jahr; ohne Jahr = jährlich wiederkehrend)</span></label>
+          <div id="fristenEditor">${zeilen}</div>
+          <button type="button" class="zweit" id="fristAdd" style="margin-top:8px">+ Frist</button></div>`;
+    }
+    function leseFristen() {
+      return [...document.querySelectorAll("#fristenEditor [data-frist-zeile]")].map((z) => {
+        const datum = fristTextZuDatum(z.querySelector(".frist-datum").value);
+        const hinweis = z.querySelector(".frist-hinweis").value.trim();
+        return { datum, hinweis };
+      }).filter((e) => e.datum).map((e) => (e.hinweis ? e : e.datum));
+    }
 
     // Bearbeiten-Formular im Dialog öffnen. istNeu = noch nicht im Katalog.
     function oeffneBearbeiten(eintrag, istNeu) {
@@ -740,8 +790,10 @@
           </div>
         </details>`;
 
-      const listen = `<details class="erweitert"><summary>Fristen &amp; Listen</summary>
-          ${liste("Fristen", "l_fristen", e.fristen, "JJJJ-MM-TT, eine pro Zeile")}
+      const listen = `<details class="erweitert" open><summary>Fristen &amp; Listen</summary>
+          ${fristenEditorHtml(e.fristen)}
+          ${txt("Allgemeiner Frist-Hinweis", "f_frist_hinweis", e.frist_hinweis)}
+          <p class="dezent" style="margin:2px 0 10px">z. B. „für das erste Halbjahr" je Frist oben, oder hier allgemein „mind. 3 Monate vor Projektstart" (auch bei laufender Einreichung sinnvoll).</p>
           ${liste("Unverträglich mit (IDs)", "l_unvertraeglich", e.unvertraeglich_mit, "eine ID pro Zeile")}
           ${liste("Checklisten-Vorschlag", "l_checkliste", e.checkliste_vorschlag, "ein Punkt pro Zeile")}
         </details>`;
@@ -751,6 +803,12 @@
         kopf + harte + weiche + listen + `<div id="formMeldung"></div>`, fuss);
       $("formAbbrechen").onclick = ovSchliessen;
       $("formSpeichern").onclick = () => speichereBearbeiten();
+      // Fristen-Editor: Zeile hinzufügen / entfernen.
+      $("fristAdd").onclick = () => $("fristenEditor").insertAdjacentHTML("beforeend", fristZeileHtml("", ""));
+      $("fristenEditor").onclick = (ev) => {
+        const w = ev.target.closest("[data-frist-weg]");
+        if (w) w.closest("[data-frist-zeile]").remove();
+      };
     }
 
     async function speichereBearbeiten() {
@@ -770,6 +828,7 @@
       setze("beschreibung", $("f_beschreibung").value.trim());
       e.einreichung_online = $("f_online").checked;
       setze("einreich_url", $("f_einreich_url").value.trim());
+      setze("frist_hinweis", $("f_frist_hinweis").value.trim());
       e.recherchiert = $("f_recherchiert").checked;
 
       e.harte_kriterien = {
@@ -792,7 +851,7 @@
         waehrung: $("w_waehrung").value || null,
         zeitpunkt: $("w_zeitpunkt").value || null,
       };
-      e.fristen = leseListe("l_fristen");
+      e.fristen = leseFristen();
       e.unvertraeglich_mit = leseListe("l_unvertraeglich");
       e.checkliste_vorschlag = leseListe("l_checkliste");
 

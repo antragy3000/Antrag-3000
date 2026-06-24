@@ -27,6 +27,8 @@
 //   checkliste[].datei, eigeneFoerderung.beschreibung
 // ============================================================
 
+import { fristNormalisieren } from "./begriffe.js";
+
 export const BOARD_SCHEMA_VERSION = 1;
 
 /// Foerderer-Kontakt fuer das Board: Name/E-Mail/Telefon ja, freie
@@ -51,6 +53,7 @@ function eintragFuerFoerderung(projekt, foerderungId) {
   const eigen = eigeneFinden(projekt, foerderungId);
 
   const offizielleFristen = (a?.offizielleFristen ?? eigen?.fristen ?? [])
+    .map((f) => fristNormalisieren(f).datum)
     .filter(Boolean);
 
   const eigeneFristen = (a?.eigeneFristen ?? []).map((f) =>
@@ -121,7 +124,13 @@ function eigeneFoerderungOeffentlich(f) {
     foerderhoehe_text: (f.foerderhoehe_text ?? "").trim(),
     einreichung_online: !!f.einreichung_online,
     einreich_url: (f.einreich_url ?? "").trim(),
-    fristen: Array.isArray(f.fristen) ? f.fristen.filter(Boolean) : [],
+    frist_hinweis: (f.frist_hinweis ?? "").trim(),
+    fristen: Array.isArray(f.fristen)
+      ? f.fristen
+          .map(fristNormalisieren)
+          .filter((e) => e.datum)
+          .map((e) => (e.hinweis ? { datum: e.datum, hinweis: e.hinweis } : e.datum))
+      : [],
     unvertraeglich_mit: Array.isArray(f.unvertraeglich_mit) ? f.unvertraeglich_mit : [],
     checkliste_vorschlag: Array.isArray(f.checkliste_vorschlag) ? f.checkliste_vorschlag : [],
     harte_kriterien: {

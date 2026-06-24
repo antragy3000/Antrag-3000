@@ -16,6 +16,8 @@
   // Einreichung nur über das Online-Formular des Förderers?
   let einreichOnline = $state(false);
   let einreichUrl = $state("");
+  // Allgemeiner Frist-Hinweis (z. B. „mind. 3 Monate vor Projektstart").
+  let fristHinweis = $state("");
   let dokumente = $state([]);
   let neuesDok = $state("");
   let beschaeftigt = $state(false);
@@ -48,6 +50,7 @@
         frist: zeitpunkt === "laufend" ? "" : frist,
         einreichOnline,
         einreichUrl: einreichOnline ? einreichUrl : "",
+        fristHinweis,
         dokumente: [...dokumente],
       });
       if (r && r.ok === false) {
@@ -114,6 +117,11 @@
       <label for="ef-frist">{zeitpunkt === "periodisch" ? "Nächste Frist" : "Einreichfrist"}</label>
       <input id="ef-frist" type="date" bind:value={frist} />
     {/if}
+
+    <label for="ef-fristhinweis">Frist-Hinweis (optional)</label>
+    <input id="ef-fristhinweis" type="text"
+      placeholder={zeitpunkt === "laufend" ? "z. B. mind. 3 Monate vor Projektstart" : "z. B. für das erste Halbjahr"}
+      bind:value={fristHinweis} />
 
     <label for="ef-besch">Kurzbeschreibung</label>
     <textarea id="ef-besch" rows="3" bind:value={beschreibung}></textarea>

@@ -20,6 +20,22 @@
   import { leererKfp, kfpExport } from "$lib/kfp";
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
   import { boardAusTresor, geteilteFoerdererAusTresor } from "$lib/sync";
+  import { fristNormalisieren, fristAlsDatum } from "$lib/begriffe";
+
+  // Die editierbaren „offiziellen Fristen" im Tresor sind konkrete Datums-
+  // Strings (per Datumsfeld bearbeitbar). Wiederkehrende Daten ohne Jahr aus
+  // der Förder-Datenbank werden dabei auf das nächste konkrete Vorkommen
+  // aufgelöst; Hinweise bleiben am Katalog-Eintrag (Anzeige), nicht hier.
+  function offizielleFristenAus(f) {
+    return (f?.fristen ?? [])
+      .map((e) => fristAlsDatum(fristNormalisieren(e).datum))
+      .filter(Boolean)
+      .map((dt) => {
+        const m = String(dt.getMonth() + 1).padStart(2, "0");
+        const t = String(dt.getDate()).padStart(2, "0");
+        return `${dt.getFullYear()}-${m}-${t}`;
+      });
+  }
 
   // Die App kennt fünf Ansichten:
   // laden -> einrichten (kein Tresor) ODER entsperren (Tresor da)
@@ -331,7 +347,7 @@
         // Offizielle Frist(en) aus der Förderung übernehmen, falls fehlend.
         if (!Array.isArray(a.offizielleFristen)) {
           const f = alleFoerd.find((x) => x.id === id);
-          a.offizielleFristen = [...(f?.fristen ?? [])];
+          a.offizielleFristen = offizielleFristenAus(f);
           veraendert = true;
         }
         if (!a.kontakt || typeof a.kontakt !== "object") {
@@ -1434,7 +1450,7 @@
       a = {
         status: ANTRAG_STANDARD,
         statusFrei: "",
-        offizielleFristen: [...(foerderung.fristen ?? [])],
+        offizielleFristen: offizielleFristenAus(foerderung),
         eigeneFristen: [],
         kontakt: { ansprechpartner: "", email: "", telefon: "", notiz: "" },
         checkliste: (foerderung.checkliste_vorschlag ?? []).map((t) => ({
@@ -1448,7 +1464,7 @@
     }
     // Offizielle Frist(en): aus der Datenbank vorbefüllt, aber editierbar.
     if (!Array.isArray(a.offizielleFristen)) {
-      a.offizielleFristen = [...(foerderung.fristen ?? [])];
+      a.offizielleFristen = offizielleFristenAus(foerderung);
     }
     if (!Array.isArray(a.eigeneFristen)) a.eigeneFristen = [];
     // Eigene Fristen: alte reine Datums-Form -> {datum, titel}.
@@ -1486,6 +1502,7 @@
       foerderhoehe_text: eingabe.foerderhoehe.trim() || "—",
       einreichung_online: !!eingabe.einreichOnline,
       einreich_url: (eingabe.einreichUrl ?? "").trim(),
+      frist_hinweis: (eingabe.fristHinweis ?? "").trim(),
       fristen: eingabe.frist ? [eingabe.frist] : [],
       unvertraeglich_mit: [],
       checkliste_vorschlag: (eingabe.dokumente ?? [])

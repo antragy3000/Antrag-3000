@@ -7,7 +7,7 @@
 //   Sie ergeben die Rangfolge der passenden Förderungen.
 // ============================================================
 
-import { LAENDER, TRAEGERSCHAFT } from "./begriffe";
+import { LAENDER, TRAEGERSCHAFT, fristNormalisieren, fristAlsDatum } from "./begriffe";
 import { regionName } from "./daten/orte.js";
 
 // Budget-Auswahl des Fragebogens -> Zahlenbereich [von, bis]
@@ -87,12 +87,14 @@ function harteGruende(f, a) {
   return gruende;
 }
 
-/** Nächste in der Zukunft liegende Frist (Date) oder null. */
+/** Nächste in der Zukunft liegende Frist (Date) oder null. Versteht
+ * konkrete Daten und wiederkehrende Daten ohne Jahr ("MM-TT"). */
 function naechsteFrist(f) {
   const heute = new Date();
-  const kommende = f.fristen
-    .map((d) => new Date(d))
-    .filter((d) => d >= heute)
+  const kommende = (f.fristen ?? [])
+    .map(fristNormalisieren)
+    .map((e) => fristAlsDatum(e.datum, heute))
+    .filter((d) => d && d >= heute)
     .sort((x, y) => x - y);
   return kommende[0] ?? null;
 }
