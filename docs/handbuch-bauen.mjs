@@ -34,6 +34,28 @@ const PDF = process.argv[3]
   : path.join(__dirname, "Benutzerhandbuch Antrag 3000.pdf");
 const GS = "C:\\Program Files\\PDF24\\gs\\bin\\gswin64c.exe";
 
+// Versionsnummer fuer Titel- und Fusszeile. Entweder als 4. Argument
+// uebergeben, sonst AUTOMATISCH aus der tauri.conf.json NEBEN dem Handbuch
+// gelesen: docs/ -> ../src-tauri, admin-app/docs/ -> ../src-tauri. So traegt
+// jedes Handbuch immer die Version SEINER eigenen App, ohne dass man die
+// Nummer von Hand pflegen muss (das war vorher die Fehlerquelle).
+function liesVersion() {
+  if (process.argv[4]) return process.argv[4];
+  const conf = path.join(path.dirname(HTML), "..", "src-tauri", "tauri.conf.json");
+  try {
+    return JSON.parse(fs.readFileSync(conf, "utf8")).version;
+  } catch {
+    return null;
+  }
+}
+const VERSION = liesVersion();
+
+// "Stand <Monat> <Jahr>" wird ebenfalls automatisch auf den Bau-Zeitpunkt
+// gesetzt, damit das Datum nicht veraltet.
+const MONATE = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli",
+  "August", "September", "Oktober", "November", "Dezember"];
+const STAND = `${MONATE[new Date().getMonth()]} ${new Date().getFullYear()}`;
+
 function findeEdge() {
   const base = "C:\\Program Files (x86)\\Microsoft\\EdgeCore";
   let best = null;
@@ -193,6 +215,18 @@ async function main() {
       `$1${map[num]}$2`
     );
   }
+
+  // Versionsnummer und "Stand"-Datum ueberall im Text aktualisieren.
+  // "Version X.Y.Z" trifft nur die Versionsangaben (Titel- und Fusszeile),
+  // NICHT Fliesstext wie "in dieser Version" (dort folgt keine Zahl).
+  if (VERSION) {
+    html = html.replace(/Version \d+\.\d+\.\d+/g, `Version ${VERSION}`);
+    console.log("  Version gesetzt:", VERSION);
+  } else {
+    console.warn("  ! Keine Version gefunden (tauri.conf.json) – Nummer bleibt unveraendert.");
+  }
+  html = html.replace(/Stand [A-Za-zÄÖÜäöü]+ \d{4}/g, `Stand ${STAND}`);
+
   fs.writeFileSync(HTML, html);
 
   console.log("Pass 2 (endgueltiges PDF) ...");

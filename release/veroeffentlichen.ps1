@@ -29,7 +29,12 @@ param(
   [string]$UpdatesPfad = "/volume1/docker/antrag3000/updates",
   [string]$KeyDatei    = "$HOME\.tauri\antrag3000.key",
   # Endpoint nur zur Schluss-Pruefung (muss zu tauri.conf.json passen).
-  [string]$PruefUrl    = "http://100.75.66.27:8445/updates/latest.json"
+  [string]$PruefUrl    = "http://100.75.66.27:8445/updates/latest.json",
+  # Frisch gebautes Handbuch wird zusaetzlich hierhin kopiert (Desktop).
+  [string]$DesktopKopie = "$HOME\Desktop\Benutzerhandbuch Antrag 3000.pdf",
+  # Setzen, falls das Handbuch-PDF NICHT neu erzeugt werden soll
+  # (z. B. wenn Edge/Ghostscript auf diesem Rechner fehlen).
+  [switch]$HandbuchUeberspringen
 )
 
 $ErrorActionPreference = "Stop"
@@ -59,7 +64,7 @@ try {
 }
 
 # --- 1. Alte Setup-Dateien aufraeumen -----------------------------------
-Schritt "1/5  Alte Setup-Dateien aufraeumen"
+Schritt "1/6  Alte Setup-Dateien aufraeumen"
 $nsis = "src-tauri\target\release\bundle\nsis"
 if (Test-Path $nsis) {
   Get-ChildItem $nsis -Filter "*-setup.exe*" -ErrorAction SilentlyContinue | ForEach-Object {
@@ -68,13 +73,38 @@ if (Test-Path $nsis) {
   }
 }
 
-# --- 2. Signiert bauen ---------------------------------------------------
-Schritt "2/5  Signiert bauen (npm run tauri build)"
+# --- 2. Benutzerhandbuch-PDF mit aktueller Version neu erzeugen ----------
+# WICHTIG: muss VOR dem Build laufen, weil das PDF in den Installer
+# GEBUENDELT wird (resources in tauri.conf.json). Das Bau-Skript traegt die
+# Versionsnummer automatisch aus tauri.conf.json ins Handbuch ein, sodass
+# Titel- und Fusszeile immer zur ausgelieferten Version passen.
+Schritt "2/6  Benutzerhandbuch-PDF neu erzeugen (Version $version)"
+if ($HandbuchUeberspringen) {
+  Write-Host "  uebersprungen (-HandbuchUeberspringen). Achtung: gebuendeltes PDF bleibt alt." -ForegroundColor Yellow
+} else {
+  node "docs\handbuch-bauen.mjs"
+  if ($LASTEXITCODE -ne 0) {
+    throw "Handbuch-Erzeugung fehlgeschlagen (Edge/Ghostscript installiert? Sonst -HandbuchUeberspringen)."
+  }
+  # Frische Kopie auf den Desktop legen (zum Weitergeben an Pilot-Nutzer:innen).
+  $quellPdf = "docs\Benutzerhandbuch Antrag 3000.pdf"
+  if ($DesktopKopie -and (Test-Path $quellPdf)) {
+    try {
+      Copy-Item $quellPdf $DesktopKopie -Force
+      Write-Host "  Desktop-Kopie aktualisiert: $DesktopKopie" -ForegroundColor Green
+    } catch {
+      Write-Host "  (Desktop-Kopie nicht moeglich: $($_.Exception.Message))" -ForegroundColor Yellow
+    }
+  }
+}
+
+# --- 3. Signiert bauen ---------------------------------------------------
+Schritt "3/6  Signiert bauen (npm run tauri build)"
 npm run tauri build
 if ($LASTEXITCODE -ne 0) { throw "Build fehlgeschlagen." }
 
-# --- 3. Manifest erzeugen ------------------------------------------------
-Schritt "3/5  Manifest latest.json erzeugen"
+# --- 4. Manifest erzeugen ------------------------------------------------
+Schritt "4/6  Manifest latest.json erzeugen"
 node release/latest-json-bauen.mjs $Notes
 if ($LASTEXITCODE -ne 0) { throw "Manifest-Erzeugung fehlgeschlagen." }
 
@@ -92,8 +122,8 @@ $sumDatei = Join-Path $setup.DirectoryName ($setup.Name + ".sha256")
 "$hash  $($setup.Name)" | Set-Content -Path $sumDatei -Encoding ascii
 Write-Host "SHA-256: $hash" -ForegroundColor Green
 
-# --- 4. Hochladen (scp ueber Tailscale) ---------------------------------
-Schritt "4/5  Hochladen auf die NAS ($SshUser@$NasHost)"
+# --- 5. Hochladen (scp ueber Tailscale) ---------------------------------
+Schritt "5/6  Hochladen auf die NAS ($SshUser@$NasHost)"
 Write-Host "  -> $($setup.Name)"
 Write-Host "  -> $($setup.Name).sha256"
 Write-Host "  -> latest.json"
@@ -111,8 +141,8 @@ if ($LASTEXITCODE -ne 0) {
   throw "scp-Upload fehlgeschlagen."
 }
 
-# --- 5. Am Server gegenpruefen ------------------------------------------
-Schritt "5/5  Veroeffentlichung pruefen"
+# --- 6. Am Server gegenpruefen ------------------------------------------
+Schritt "6/6  Veroeffentlichung pruefen"
 try {
   $m = Invoke-RestMethod -Uri $PruefUrl -TimeoutSec 15
   $url = $m.platforms.'windows-x86_64'.url
