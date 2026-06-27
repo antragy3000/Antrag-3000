@@ -91,6 +91,66 @@ fn verschluesseln(daten: &str, schluessel: &[u8; 32], salt: &[u8; SALT_LAENGE]) 
     Ok(inhalt)
 }
 
+// ---- Datei-Verschluesselung fuer Belege (Abrechnungs-Modus, Phase A2) ----
+//
+// Beleg-Dateien (Fotos/Scans/PDF) werden mit DEMSELBEN 32-Byte-Schluessel
+// verschluesselt, der nach dem Entsperren im Arbeitsspeicher liegt. Sie
+// landen so verschluesselt im Projektordner; im Tresor steht nur ein
+// Verweis. Eigenes Magic "ANTRAG3F", damit Beleg- und Tresor-Dateien nicht
+// verwechselt werden koennen. Aufbau: [Magic 8][Version 1][Nonce 12][Daten].
+const DATEI_MAGIC: &[u8; 8] = b"ANTRAG3F";
+const DATEI_KOPF: usize = 8 + 1 + NONCE_LAENGE;
+
+/// Beliebige Bytes mit dem offenen Tresor-Schluessel verschluesseln.
+/// Fehler, wenn der Tresor gesperrt ist (dann gibt es keinen Schluessel).
+pub(crate) fn datei_verschluesseln(
+    state: &TresorZustand,
+    klar: &[u8],
+) -> Result<Vec<u8>, String> {
+    let geheim = state.geheim.lock().unwrap();
+    let geheim = geheim
+        .as_ref()
+        .ok_or("Der Tresor ist nicht entsperrt.".to_string())?;
+
+    let mut nonce = [0u8; NONCE_LAENGE];
+    OsRng.fill_bytes(&mut nonce);
+    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&geheim.schluessel));
+    let ct = cipher
+        .encrypt(Nonce::from_slice(&nonce), klar)
+        .map_err(|_| "Verschluesselung fehlgeschlagen".to_string())?;
+
+    let mut out = Vec::with_capacity(DATEI_KOPF + ct.len());
+    out.extend_from_slice(DATEI_MAGIC);
+    out.push(VERSION);
+    out.extend_from_slice(&nonce);
+    out.extend_from_slice(&ct);
+    Ok(out)
+}
+
+/// Mit datei_verschluesseln erzeugte Bytes wieder entschluesseln.
+pub(crate) fn datei_entschluesseln(
+    state: &TresorZustand,
+    roh: &[u8],
+) -> Result<Vec<u8>, String> {
+    let geheim = state.geheim.lock().unwrap();
+    let geheim = geheim
+        .as_ref()
+        .ok_or("Der Tresor ist nicht entsperrt.".to_string())?;
+
+    if roh.len() < DATEI_KOPF || &roh[..8] != DATEI_MAGIC {
+        return Err("Beleg-Datei ist beschaedigt oder keine Antrag-3000-Datei.".into());
+    }
+    if roh[8] != VERSION {
+        return Err("Diese Beleg-Datei-Version wird nicht unterstuetzt.".into());
+    }
+    let nonce = &roh[9..DATEI_KOPF];
+    let ct = &roh[DATEI_KOPF..];
+    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&geheim.schluessel));
+    cipher
+        .decrypt(Nonce::from_slice(nonce), ct)
+        .map_err(|_| "Beleg-Datei nicht entschluesselbar (falscher Tresor?).".to_string())
+}
+
 /// Sicheres Schreiben: erst Temp-Datei, dann Vorversion als .bak
 /// behalten, dann umbenennen. So zerstoert ein Absturz mitten im
 /// Schreiben nie den vorhandenen Tresor.

@@ -111,6 +111,14 @@ export function belegeSumme(belege) {
   return (belege ?? []).reduce((s, b) => s + belegBrutto(b), 0);
 }
 
+/// Dateigröße menschlich lesbar (z. B. "1,2 MB", "340 KB").
+export function groesseText(bytes) {
+  const n = Number(bytes) || 0;
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
+}
+
 /// Menschlich lesbares Datum ("JJJJ-MM-TT" -> "TT.MM.JJJJ").
 export function datumText(iso) {
   const s = String(iso ?? "").trim();

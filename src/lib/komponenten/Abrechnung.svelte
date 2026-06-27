@@ -16,9 +16,20 @@
     belegeSumme,
     betragFormat,
     datumText,
+    groesseText,
   } from "$lib/abrechnung";
 
-  let { belege = [], speichern, projektName = "" } = $props();
+  let {
+    belege = [],
+    speichern,
+    projektName = "",
+    // Beleg-Dateien (Phase A2) – kommen als Callbacks aus +page.svelte,
+    // die das Rust-Backend (Verschlüsseln/Ablegen/Öffnen/Löschen) aufrufen.
+    dateiHinzufuegen,
+    dateiOeffnen,
+    dateiEntfernen,
+    ordnerEntfernen,
+  } = $props();
 
   // Lokale Arbeitskopie; jede Aenderung wird sofort verschluesselt
   // gesichert (wie ein laufendes Kassenbuch). Quelle der Wahrheit bleibt
@@ -31,6 +42,11 @@
   let bearbeiteId = $state(null); // null = neuer Beleg
   let form = $state(null);
   let formFehler = $state("");
+
+  // Welcher Beleg hat gerade sein Datei-Panel offen?
+  let dateienOffenId = $state(null);
+  let dateiBeschaeftigt = $state(false);
+  let dateienBeleg = $derived(liste.find((b) => b.id === dateienOffenId) ?? null);
 
   let summe = $derived(belegeSumme(liste));
 
@@ -87,8 +103,46 @@
 
   async function entfernen(b) {
     if (!confirm(`Beleg Nr. ${b.nr} wirklich löschen?`)) return;
+    // Erst die (verschlüsselten) Dateien des Belegs entfernen, dann den Beleg.
+    if (b.dateien?.length) await ordnerEntfernen(b.id);
+    if (dateienOffenId === b.id) dateienOffenId = null;
     liste = liste.filter((x) => x.id !== b.id);
     await sichern();
+  }
+
+  // --- Beleg-Dateien (Phase A2) ---
+  function dateienUmschalten(b) {
+    dateienOffenId = dateienOffenId === b.id ? null : b.id;
+  }
+
+  async function dateiAnhaengen(b) {
+    if (dateiBeschaeftigt) return;
+    dateiBeschaeftigt = true;
+    try {
+      const d = await dateiHinzufuegen(b.id);
+      if (d) {
+        b.dateien = [...(b.dateien ?? []), d];
+        await sichern();
+      }
+    } finally {
+      dateiBeschaeftigt = false;
+    }
+  }
+
+  async function dateiAnsehen(b, d) {
+    await dateiOeffnen(b.id, d.ref, d.name);
+  }
+
+  async function dateiLoeschen(b, d) {
+    if (!confirm(`Datei „${d.name}" löschen?`)) return;
+    dateiBeschaeftigt = true;
+    try {
+      await dateiEntfernen(b.id, d.ref);
+      b.dateien = (b.dateien ?? []).filter((x) => x.ref !== d.ref);
+      await sichern();
+    } finally {
+      dateiBeschaeftigt = false;
+    }
   }
 
   // Belege nach Datum sortiert (neueste zuletzt), Nummer als Zweitschluessel.
@@ -146,6 +200,9 @@
             <td>{ZAHLUNGSARTEN[b.zahlungsart] || "—"}</td>
             <td><span class="status s-{b.status}">{BELEG_STATUS[b.status] || b.status}</span></td>
             <td class="akt">
+              <button class="leise" class:aktiv={dateienOffenId === b.id} onclick={() => dateienUmschalten(b)} title="Dateien zum Beleg">
+                📎 {b.dateien?.length || 0}
+              </button>
               <button class="leise" onclick={() => bearbeiten(b)}>bearbeiten</button>
               <button class="leise gefahr" onclick={() => entfernen(b)}>löschen</button>
             </td>
@@ -160,6 +217,45 @@
         </tr>
       </tfoot>
     </table>
+  {/if}
+
+  {#if dateienBeleg}
+    <div class="datei-panel" transition:fade={{ duration: 120 }}>
+      <div class="dp-kopf">
+        <h3>
+          📎 Dateien zu Beleg Nr. {dateienBeleg.nr}{#if dateienBeleg.empfaenger}
+            – {dateienBeleg.empfaenger}{/if}
+        </h3>
+        <button class="leise" onclick={() => (dateienOffenId = null)}>schließen</button>
+      </div>
+
+      {#if dateienBeleg.dateien?.length}
+        <ul class="datei-liste">
+          {#each dateienBeleg.dateien as d (d.ref)}
+            <li>
+              <span class="dn" title={d.name}>{d.name}</span>
+              <span class="dg">{groesseText(d.groesse)}</span>
+              <button class="leise" onclick={() => dateiAnsehen(dateienBeleg, d)}>ansehen</button>
+              <button
+                class="leise gefahr"
+                onclick={() => dateiLoeschen(dateienBeleg, d)}
+                disabled={dateiBeschaeftigt}>löschen</button
+              >
+            </li>
+          {/each}
+        </ul>
+      {:else}
+        <p class="dp-leer">Noch keine Dateien. Lade einen Scan oder ein Foto des Belegs hoch.</p>
+      {/if}
+
+      <button class="zweit" onclick={() => dateiAnhaengen(dateienBeleg)} disabled={dateiBeschaeftigt}>
+        {dateiBeschaeftigt ? "Bitte warten …" : "+ Datei hinzufügen"}
+      </button>
+      <p class="dp-hinweis">
+        Dateien werden <strong>verschlüsselt</strong> im Projektordner gespeichert
+        (PDF, JPG oder PNG, max. 30 MB). Sie verlassen dein Gerät nie.
+      </p>
+    </div>
   {/if}
 </div>
 
@@ -475,5 +571,67 @@
     justify-content: flex-end;
     gap: 10px;
     margin-top: 20px;
+  }
+
+  button.leise.aktiv {
+    color: #3d5bf0;
+    font-weight: 700;
+  }
+
+  /* Datei-Panel */
+  .datei-panel {
+    margin-top: 18px;
+    border: 1px solid #dfe1e6;
+    border-radius: 12px;
+    padding: 16px 18px;
+    background: #f7f8fa;
+  }
+  .dp-kopf {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .dp-kopf h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #172b4d;
+  }
+  .datei-liste {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+  }
+  .datei-liste li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid #ebedf0;
+  }
+  .datei-liste .dn {
+    flex: 1;
+    color: #172b4d;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .datei-liste .dg {
+    color: #8590a2;
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .dp-leer {
+    color: #5e6c84;
+    font-size: 0.88rem;
+    margin: 0 0 12px;
+  }
+  .dp-hinweis {
+    margin: 12px 0 0;
+    color: #5e6c84;
+    font-size: 0.8rem;
+    line-height: 1.5;
   }
 </style>

@@ -634,6 +634,61 @@
     await tresorSpeichern();
   }
 
+  // --- Beleg-Dateien (Phase A2): verschlüsselt im Projektordner ---
+  // Datei wählen und verschlüsselt ablegen. Gibt den Verweis
+  // { ref, name, ext, groesse } zurück, den die Komponente am Beleg merkt.
+  async function belegDateiHinzufuegen(belegId) {
+    const pfad = await dateiWaehlen({
+      title: "Beleg auswählen (PDF oder Bild)",
+      multiple: false,
+      filters: [{ name: "PDF oder Bild", extensions: ["pdf", "jpg", "jpeg", "png"] }],
+    });
+    if (!pfad) return null; // abgebrochen
+    try {
+      return await invoke("beleg_datei_hinzufuegen", {
+        projekt: aktivesProjekt.name,
+        belegId,
+        quelle: pfad,
+      });
+    } catch (e) {
+      alert("Die Datei konnte nicht hinzugefügt werden.\n" + e);
+      return null;
+    }
+  }
+
+  async function belegDateiOeffnen(belegId, dateiRef, name) {
+    try {
+      await invoke("beleg_datei_oeffnen", {
+        projekt: aktivesProjekt.name,
+        belegId,
+        dateiRef,
+        name,
+      });
+    } catch (e) {
+      alert("Die Datei konnte nicht geöffnet werden.\n" + e);
+    }
+  }
+
+  async function belegDateiEntfernen(belegId, dateiRef) {
+    await invoke("beleg_datei_entfernen", {
+      projekt: aktivesProjekt.name,
+      belegId,
+      dateiRef,
+    });
+  }
+
+  // Beim Löschen eines Belegs auch seinen Datei-Ordner entfernen.
+  async function belegOrdnerEntfernen(belegId) {
+    try {
+      await invoke("beleg_ordner_entfernen", {
+        projekt: aktivesProjekt.name,
+        belegId,
+      });
+    } catch {
+      // Nicht kritisch: bleibt ein verwaister, verschlüsselter Ordner.
+    }
+  }
+
   // Excel des Kostenfinanzplans NUR auf ausdrücklichen Wunsch erzeugen.
   // Sie liegt danach unverschlüsselt im Projektordner. Gibt den Pfad
   // zurück. (Datensouveränität: bewusste, informierte Entscheidung.)
@@ -2029,6 +2084,10 @@
             belege={aktivesProjekt.abrechnung.belege}
             speichern={belegeSpeichern}
             projektName={aktivesProjekt.name}
+            dateiHinzufuegen={belegDateiHinzufuegen}
+            dateiOeffnen={belegDateiOeffnen}
+            dateiEntfernen={belegDateiEntfernen}
+            ordnerEntfernen={belegOrdnerEntfernen}
           />
         {/key}
       {:else if bereich === "fristen"}

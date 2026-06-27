@@ -3,6 +3,7 @@
 // welcher Zustand im Speicher verwaltet wird (manage).
 
 mod backup;
+mod beleg;
 mod dokument;
 mod excel;
 mod katalog;
@@ -35,6 +36,10 @@ pub fn run() {
             ordner::ordner_umbenennen,
             dokument::formular_word_erzeugen,
             dokument::dokument_hochladen,
+            beleg::beleg_datei_hinzufuegen,
+            beleg::beleg_datei_oeffnen,
+            beleg::beleg_datei_entfernen,
+            beleg::beleg_ordner_entfernen,
             pdf::antrags_pdf_vorschau,
             pdf::antrags_pdf_speichern,
             sync::zugangspaket_pruefen,
