@@ -131,7 +131,7 @@
   <div class="sub">Die Förder-Datenbank zentral pflegen – Admin-Werkzeug</div>
   <div class="balken"></div>
   <div class="meta">
-    Version 0.1.0 &nbsp;·&nbsp; Stand Juni 2026 &nbsp;·&nbsp; Eigenständige Admin-App (Desktop)
+    Version 0.2.0 &nbsp;·&nbsp; Stand Juni 2026 &nbsp;·&nbsp; Eigenständige Admin-App (Desktop)
   </div>
   <div class="hinweisbox">
     <strong>Nur für die verwaltende Person.</strong> Dieses Handbuch beschreibt
@@ -440,10 +440,15 @@ npm install</div>
   dort an alle Team-Geräte verteilt.</p>
 
   <div class="struktur">
-    <div class="stp"><span class="num">1</span><div><b>Katalog-Datei wählen.</b> Im Tab „Katalog hochladen" auf <em>„Katalog-Datei wählen …"</em> klicken und die geprüfte <span class="pfad">foerderungen.json</span> aussuchen.</div></div>
-    <div class="stp"><span class="num">2</span><div><b>Vorschau prüfen.</b> Die App zeigt Anzahl der Förderungen und den Stand.</div></div>
-    <div class="stp"><span class="num">3</span><div><b>Hochladen.</b> Der Server prüft das JSON (Schema-Version, jede Förderung mit id und Name) und verteilt die neue Fassung.</div></div>
+    <div class="stp"><span class="num">1</span><div><b>Katalog-Datei wählen.</b> Im Tab „Katalog hochladen" auf <em>„Katalog-Datei wählen …"</em> klicken und die <span class="pfad">foerderungen.json</span> aussuchen. Die App zeigt Anzahl der Förderungen und den Stand.</div></div>
+    <div class="stp"><span class="num">2</span><div><b>„Ergänzen" wählen (empfohlen).</b> Fügt die Förderungen aus der Datei zum <em>bestehenden</em> Katalog hinzu: gleiche <span class="pfad">id</span> wird aktualisiert, neue kommen dazu, alles andere bleibt erhalten. Vor dem Hochladen erscheint eine Vorschau („X neu, Y aktualisiert"). Ideal für neu recherchierte Förderungen – z. B. eine Scraper-Datei mit nur den neuen Einträgen.</div></div>
+    <div class="stp"><span class="num">3</span><div><b>Oder „Ersetzen (alles)".</b> Wirft den <em>gesamten</em> bisherigen Katalog weg und nimmt nur die Datei. Eine Sicherheitsabfrage warnt ausdrücklich, wenn die Datei weniger Förderungen enthält als der Server. Nur nutzen, wenn die Datei wirklich den vollständigen Katalog enthält.</div></div>
   </div>
+
+  <div class="warn"><strong>Wichtig:</strong> „Ersetzen" überschreibt alles und
+  kann nicht rückgängig gemacht werden. Wenn du nur neue Förderungen hinzufügen
+  willst, nimm <strong>„Ergänzen"</strong> – sonst gehen die bisherigen
+  verloren.</div>
 
   <div class="merke">Der Katalog liegt nach dem Upload in der Server-Datenbank.
   Beim Abruf liefert der Server diese Fassung; ohne Upload greift die
@@ -623,7 +628,7 @@ npm install</div>
     die Änderungen an.</dd>
   </dl>
 
-  <div class="ende">— Ende des Admin-Handbuchs · Antrag 3000, Version 0.1.0 —</div>
+  <div class="ende">— Ende des Admin-Handbuchs · Antrag 3000, Version 0.2.0 —</div>
 </section>
 
 </body>

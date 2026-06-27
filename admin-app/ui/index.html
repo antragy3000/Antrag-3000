@@ -35,8 +35,8 @@
     button.zweit { color: var(--dunkel); background: #fff; border: 2px solid var(--rand); }
     button.zweit:hover:not(:disabled) { border-color: var(--blau); background: #fff; }
     button.mini { padding: 4px 9px; font-size: 0.78rem; margin: 0 4px 4px 0; }
-    button.mini.gefahr { background: #ca3521; }
-    button.mini.gefahr:hover:not(:disabled) { background: #ae2e24; }
+    button.gefahr:not(:disabled) { background: #ca3521; }
+    button.gefahr:hover:not(:disabled) { background: #ae2e24; }
     .knoepfe { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
     .meld { margin-top: 12px; padding: 10px 12px; border-radius: 8px; font-size: 0.9rem; }
     .meld.ok { background: #e3fcef; color: #143d2b; }
@@ -220,12 +220,17 @@
       <div id="tab-katalog" class="karte tab verborgen">
         <h2>Förder-Katalog hochladen</h2>
         <p class="dezent">
-          Wähle die geprüfte <code>foerderungen.json</code>. Sie wird an den Server gesendet und ab dann
-          an alle Team-Geräte verteilt.
+          Wähle die <code>foerderungen.json</code>. Danach zwei Möglichkeiten:
+          <strong>Ergänzen</strong> fügt die Förderungen aus der Datei zum bestehenden
+          Katalog hinzu – gleiche <code>id</code> wird aktualisiert, alles andere bleibt
+          erhalten (empfohlen, z. B. für neu recherchierte Förderungen).
+          <strong>Ersetzen</strong> wirft den gesamten bisherigen Katalog weg und nimmt
+          nur die Datei.
         </p>
         <div class="knoepfe">
           <button id="katalogWaehlenBtn" class="zweit">Katalog-Datei wählen …</button>
-          <button id="katalogHochladenBtn" disabled>Hochladen</button>
+          <button id="katalogErgaenzenBtn" disabled>Ergänzen</button>
+          <button id="katalogHochladenBtn" class="gefahr" disabled>Ersetzen (alles)</button>
         </div>
         <div id="katalogInfo" class="dezent"></div>
         <div id="katalogMeldung"></div>
@@ -602,14 +607,107 @@
         } catch { meldung("katalogMeldung", "fehler", "⚠ Die Datei ist kein gültiges JSON."); return; }
         katalogText = text;
         $("katalogInfo").innerHTML = `Gewählt: <strong>${anzahl}</strong> Förderungen · Stand ${escape(stand)}`;
+        $("katalogErgaenzenBtn").disabled = false;
         $("katalogHochladenBtn").disabled = false;
       } catch (e) {
         meldung("katalogMeldung", "fehler", "⚠ " + e);
       }
     };
+    // Liest die Förder-Liste aus der gewählten Datei. Akzeptiert ein Objekt
+    // { schema_version, foerderungen: [...] } ODER eine blanke Liste [...]
+    // (so liefert ein reiner Sammel-Scraper oft nur das Array). Gibt null
+    // zurück, wenn keine verwertbare Liste gefunden wird.
+    function leseDateiFoerderungen(text) {
+      let d;
+      try { d = JSON.parse(text); } catch { return { fehler: "Die Datei ist kein gültiges JSON." }; }
+      const liste = Array.isArray(d) ? d : (Array.isArray(d.foerderungen) ? d.foerderungen : null);
+      if (!liste) return { fehler: "Keine Liste foerderungen in der Datei gefunden." };
+      return { liste };
+    }
+
+    // ERGÄNZEN: Förderungen aus der Datei zum bestehenden Katalog hinzufügen.
+    // Gleiche id = aktualisieren, neue id = anhängen, alles andere bleibt.
+    // Die Zusammenführung passiert hier im Client; hochgeladen wird der
+    // vereinte Gesamt-Katalog (der Server kennt nur „ersetzen", deshalb
+    // schicken wir die volle, ergänzte Liste).
+    $("katalogErgaenzenBtn").onclick = async () => {
+      if (!katalogText) return;
+      const geparst = leseDateiFoerderungen(katalogText);
+      if (geparst.fehler) { meldung("katalogMeldung", "fehler", "⚠ " + geparst.fehler); return; }
+
+      // Nur Einträge mit id UND name sind verwertbar (wie der Server prüft).
+      const gueltig = geparst.liste.filter(
+        (f) => f && typeof f.id === "string" && f.id.trim() && typeof f.name === "string" && f.name.trim()
+      );
+      const uebersprungen = geparst.liste.length - gueltig.length;
+
+      meldung("katalogMeldung", "info", "Lade aktuellen Katalog …");
+      try { await ladeKatalog(); }
+      catch (e) { meldung("katalogMeldung", "fehler", "⚠ Aktueller Katalog nicht ladbar: " + e); return; }
+
+      let neuAnz = 0, aktAnz = 0;
+      for (const f of gueltig) { if (katalogIndex[f.id]) aktAnz++; else neuAnz++; }
+      const vorher = (katalog.foerderungen || []).length;
+      const nachher = vorher + neuAnz;
+
+      const frage =
+        "Ergänzen:\n" +
+        `• ${neuAnz} neue Förderung(en) hinzufügen\n` +
+        `• ${aktAnz} vorhandene aktualisieren\n` +
+        `• ${vorher - aktAnz} bleiben unverändert\n` +
+        `→ Gesamt danach: ${nachher}` +
+        (uebersprungen ? `\n\n${uebersprungen} Eintrag/Einträge ohne id+name werden übersprungen.` : "") +
+        "\n\nFortfahren?";
+      if (!confirm(frage)) { meldung("katalogMeldung", "info", "Abgebrochen."); return; }
+
+      $("katalogErgaenzenBtn").disabled = true;
+      $("katalogHochladenBtn").disabled = true;
+      meldung("katalogMeldung", "info", "Ergänze und lade hoch …");
+      try {
+        for (const f of gueltig) {
+          const i = katalog.foerderungen.findIndex((x) => x.id === f.id);
+          if (i >= 0) katalog.foerderungen[i] = f; else katalog.foerderungen.push(f);
+          katalogIndex[f.id] = f;
+        }
+        const roh = await katalogSpeichern(); // lädt vereinten Katalog hoch, Stand = heute
+        let info = "";
+        try { const a = JSON.parse(roh); info = ` Gesamt ${a.anzahl}, Stand ${a.stand ?? "?"}.`; } catch {}
+        meldung("katalogMeldung", "ok", `✓ Ergänzt: ${neuAnz} neu, ${aktAnz} aktualisiert.${info}`);
+        katalogText = null;
+        $("katalogInfo").textContent = "";
+      } catch (e) {
+        meldung("katalogMeldung", "fehler", "⚠ " + e);
+        $("katalogErgaenzenBtn").disabled = false;
+        $("katalogHochladenBtn").disabled = false;
+      }
+    };
+
+    // ERSETZEN: wirft den bestehenden Katalog weg. Mit Sicherheitsabfrage,
+    // die ausdrücklich warnt, wenn die Datei WENIGER Förderungen enthält als
+    // der Server (genau der Unfall, der zur „Ergänzen"-Funktion geführt hat).
     $("katalogHochladenBtn").onclick = async () => {
       if (!katalogText) return;
+      const geparst = leseDateiFoerderungen(katalogText);
+      const dateiAnz = geparst.liste ? geparst.liste.length : "?";
+
+      // Aktuellen Stand holen, um die Warnung mit echten Zahlen zu füllen.
+      let serverAnz = "?";
+      try { await ladeKatalog(); serverAnz = (katalog.foerderungen || []).length; } catch {}
+
+      let warnung =
+        "ERSETZEN überschreibt den gesamten Katalog.\n\n" +
+        `Aktuell auf dem Server: ${serverAnz}\n` +
+        `In der Datei: ${dateiAnz}\n`;
+      if (typeof dateiAnz === "number" && typeof serverAnz === "number" && dateiAnz < serverAnz) {
+        warnung +=
+          `\n⚠ Die Datei hat WENIGER Förderungen als der Server – ` +
+          `${serverAnz - dateiAnz} würden gelöscht.\nMöchtest du vielleicht „Ergänzen" statt „Ersetzen"?\n`;
+      }
+      warnung += "\nWirklich ersetzen?";
+      if (!confirm(warnung)) { meldung("katalogMeldung", "info", "Abgebrochen."); return; }
+
       $("katalogHochladenBtn").disabled = true;
+      $("katalogErgaenzenBtn").disabled = true;
       meldung("katalogMeldung", "info", "Lade hoch …");
       try {
         const roh = await invoke("admin_katalog_hochladen", {
@@ -622,6 +720,7 @@
       } catch (e) {
         meldung("katalogMeldung", "fehler", "⚠ " + e);
         $("katalogHochladenBtn").disabled = false;
+        $("katalogErgaenzenBtn").disabled = false;
       }
     };
 
