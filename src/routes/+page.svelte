@@ -669,6 +669,25 @@
     }
   }
 
+  // Eine Beleg-Datei entschlüsselt an einen selbst gewählten Ort speichern.
+  async function belegDateiHerunterladen(belegId, dateiRef, name) {
+    const ziel = await dateiSpeichern({
+      title: "Beleg speichern unter",
+      defaultPath: name,
+    });
+    if (!ziel) return; // abgebrochen
+    try {
+      await invoke("beleg_datei_exportieren", {
+        projekt: aktivesProjekt.name,
+        belegId,
+        dateiRef,
+        ziel,
+      });
+    } catch (e) {
+      alert("Die Datei konnte nicht gespeichert werden.\n" + e);
+    }
+  }
+
   async function belegDateiEntfernen(belegId, dateiRef) {
     await invoke("beleg_datei_entfernen", {
       projekt: aktivesProjekt.name,
@@ -2086,6 +2105,7 @@
             projektName={aktivesProjekt.name}
             dateiHinzufuegen={belegDateiHinzufuegen}
             dateiOeffnen={belegDateiOeffnen}
+            dateiHerunterladen={belegDateiHerunterladen}
             dateiEntfernen={belegDateiEntfernen}
             ordnerEntfernen={belegOrdnerEntfernen}
           />

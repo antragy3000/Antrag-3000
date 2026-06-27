@@ -129,6 +129,26 @@ pub fn beleg_datei_oeffnen(
     Ok(())
 }
 
+/// Eine Beleg-Datei entschluesselt an einen selbst gewaehlten Ort
+/// speichern („herunterladen"). Das Ziel kommt aus dem Speichern-Dialog
+/// des Frontends; ab da liegt die Datei dort im Klartext (bewusste,
+/// vom Nutzer gewaehlte Ausgabe – wie beim Excel/Word-Export).
+#[tauri::command]
+pub fn beleg_datei_exportieren(
+    app: tauri::AppHandle,
+    state: tauri::State<TresorZustand>,
+    projekt: String,
+    beleg_id: String,
+    datei_ref: String,
+    ziel: String,
+) -> Result<(), String> {
+    let pfad = beleg_ordner(&app, &projekt, &beleg_id)?.join(pruefe_ref(&datei_ref)?);
+    let roh = fs::read(&pfad).map_err(|e| format!("Beleg-Datei nicht lesbar: {e}"))?;
+    let klar = crate::tresor::datei_entschluesseln(&state, &roh)?;
+    fs::write(&ziel, &klar).map_err(|e| format!("Datei nicht speicherbar: {e}"))?;
+    Ok(())
+}
+
 /// Eine einzelne Beleg-Datei loeschen.
 #[tauri::command]
 pub fn beleg_datei_entfernen(

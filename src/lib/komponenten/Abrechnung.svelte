@@ -27,6 +27,7 @@
     // die das Rust-Backend (Verschlüsseln/Ablegen/Öffnen/Löschen) aufrufen.
     dateiHinzufuegen,
     dateiOeffnen,
+    dateiHerunterladen,
     dateiEntfernen,
     ordnerEntfernen,
   } = $props();
@@ -133,6 +134,10 @@
     await dateiOeffnen(b.id, d.ref, d.name);
   }
 
+  async function dateiSpeichernUnter(b, d) {
+    await dateiHerunterladen(b.id, d.ref, d.name);
+  }
+
   async function dateiLoeschen(b, d) {
     if (!confirm(`Datei „${d.name}" löschen?`)) return;
     dateiBeschaeftigt = true;
@@ -236,6 +241,7 @@
               <span class="dn" title={d.name}>{d.name}</span>
               <span class="dg">{groesseText(d.groesse)}</span>
               <button class="leise" onclick={() => dateiAnsehen(dateienBeleg, d)}>ansehen</button>
+              <button class="leise" onclick={() => dateiSpeichernUnter(dateienBeleg, d)}>herunterladen</button>
               <button
                 class="leise gefahr"
                 onclick={() => dateiLoeschen(dateienBeleg, d)}

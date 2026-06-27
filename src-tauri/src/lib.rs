@@ -38,6 +38,7 @@ pub fn run() {
             dokument::dokument_hochladen,
             beleg::beleg_datei_hinzufuegen,
             beleg::beleg_datei_oeffnen,
+            beleg::beleg_datei_exportieren,
             beleg::beleg_datei_entfernen,
             beleg::beleg_ordner_entfernen,
             pdf::antrags_pdf_vorschau,
