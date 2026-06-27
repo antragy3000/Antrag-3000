@@ -1,0 +1,479 @@
+<script>
+  // Abrechnungs-Modus, Phase A1: Belege laufend erfassen.
+  // Tresor-Inhalt (Betraege, Lieferanten sind sensibel) – bleibt lokal.
+  // Kostenstellen-Verknuepfung, Dateien und Foerderer-Zuordnung folgen in
+  // spaeteren Phasen; die Felder existieren im Datenmodell bereits.
+  import { fade } from "svelte/transition";
+  import {
+    ZAHLUNGSARTEN,
+    BELEG_STATUS,
+    neuerBeleg,
+    naechsteBelegNr,
+    belegBrutto,
+    belegNetto,
+    belegMwstBetrag,
+    mwstSatz,
+    belegeSumme,
+    betragFormat,
+    datumText,
+  } from "$lib/abrechnung";
+
+  let { belege = [], speichern, projektName = "" } = $props();
+
+  // Lokale Arbeitskopie; jede Aenderung wird sofort verschluesselt
+  // gesichert (wie ein laufendes Kassenbuch). Quelle der Wahrheit bleibt
+  // der Tresor – wir schicken die volle Liste per speichern() hoch.
+  let liste = $state(structuredClone($state.snapshot(belege)));
+  let beschaeftigt = $state(false);
+
+  // Formular-Zustand (Hinzufuegen/Bearbeiten in einem Panel).
+  let formOffen = $state(false);
+  let bearbeiteId = $state(null); // null = neuer Beleg
+  let form = $state(null);
+  let formFehler = $state("");
+
+  let summe = $derived(belegeSumme(liste));
+
+  async function sichern() {
+    beschaeftigt = true;
+    try {
+      await speichern($state.snapshot(liste));
+    } finally {
+      beschaeftigt = false;
+    }
+  }
+
+  function neu() {
+    bearbeiteId = null;
+    form = neuerBeleg(naechsteBelegNr(liste));
+    formFehler = "";
+    formOffen = true;
+  }
+
+  function bearbeiten(b) {
+    bearbeiteId = b.id;
+    form = structuredClone($state.snapshot(b));
+    formFehler = "";
+    formOffen = true;
+  }
+
+  function abbrechen() {
+    formOffen = false;
+    form = null;
+    bearbeiteId = null;
+    formFehler = "";
+  }
+
+  async function formSpeichern() {
+    // Minimal-Pruefung: Datum und ein Betrag > 0 muessen sein.
+    if (!form.datum) {
+      formFehler = "Bitte ein Datum angeben.";
+      return;
+    }
+    if (belegBrutto(form) <= 0) {
+      formFehler = "Bitte einen Betrag größer als 0 angeben.";
+      return;
+    }
+    const eintrag = structuredClone($state.snapshot(form));
+    if (bearbeiteId) {
+      const i = liste.findIndex((x) => x.id === bearbeiteId);
+      if (i >= 0) liste[i] = eintrag;
+    } else {
+      liste.push(eintrag);
+    }
+    await sichern();
+    abbrechen();
+  }
+
+  async function entfernen(b) {
+    if (!confirm(`Beleg Nr. ${b.nr} wirklich löschen?`)) return;
+    liste = liste.filter((x) => x.id !== b.id);
+    await sichern();
+  }
+
+  // Belege nach Datum sortiert (neueste zuletzt), Nummer als Zweitschluessel.
+  let sortiert = $derived(
+    [...liste].sort((a, b) => {
+      const d = String(a.datum).localeCompare(String(b.datum));
+      return d !== 0 ? d : Number(a.nr) - Number(b.nr);
+    })
+  );
+</script>
+
+<div class="bereich">
+  <div class="kopfzeile">
+    <div class="titel-block">
+      <h2>Abrechnung – Belege</h2>
+      <p class="untertitel">
+        Erfasse hier laufend deine Belege{#if projektName}
+          für <strong>{projektName}</strong>{/if}. Später ordnest du sie den
+        Förderern zu. Alle Angaben bleiben lokal verschlüsselt auf deinem Gerät.
+      </p>
+    </div>
+    <button class="primaer" onclick={neu} disabled={beschaeftigt}>+ Neuer Beleg</button>
+  </div>
+
+  {#if liste.length === 0}
+    <div class="leer">
+      <p>Noch keine Belege erfasst.</p>
+      <button class="zweit" onclick={neu}>Ersten Beleg erfassen</button>
+    </div>
+  {:else}
+    <table class="belege">
+      <thead>
+        <tr>
+          <th class="num">Nr.</th>
+          <th>Datum</th>
+          <th>Empfänger</th>
+          <th>Zweck</th>
+          <th class="betrag">Betrag</th>
+          <th>Zahlung</th>
+          <th>Status</th>
+          <th class="akt"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {#each sortiert as b (b.id)}
+          <tr>
+            <td class="num">{b.nr}</td>
+            <td>{datumText(b.datum)}</td>
+            <td>{b.empfaenger || "—"}</td>
+            <td class="zweck">{b.zweck || "—"}</td>
+            <td class="betrag">
+              {betragFormat(belegBrutto(b))}
+              {#if mwstSatz(b) > 0}<div class="mwst">inkl. {mwstSatz(b)} % MwSt</div>{/if}
+            </td>
+            <td>{ZAHLUNGSARTEN[b.zahlungsart] || "—"}</td>
+            <td><span class="status s-{b.status}">{BELEG_STATUS[b.status] || b.status}</span></td>
+            <td class="akt">
+              <button class="leise" onclick={() => bearbeiten(b)}>bearbeiten</button>
+              <button class="leise gefahr" onclick={() => entfernen(b)}>löschen</button>
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4" class="summe-label">Summe ({liste.length} Belege)</td>
+          <td class="betrag summe">{betragFormat(summe)}</td>
+          <td colspan="3"></td>
+        </tr>
+      </tfoot>
+    </table>
+  {/if}
+</div>
+
+{#if formOffen && form}
+  <div class="overlay" transition:fade={{ duration: 120 }}>
+    <div class="dialog">
+      <h2>{bearbeiteId ? "Beleg bearbeiten" : "Neuer Beleg"} <span class="nr">Nr. {form.nr}</span></h2>
+
+      <div class="gitter">
+        <label class="feld">
+          <span>Datum</span>
+          <input type="date" bind:value={form.datum} />
+        </label>
+        <label class="feld">
+          <span>Betrag (brutto)</span>
+          <input type="text" bind:value={form.brutto} placeholder="z. B. 1.234,56" inputmode="decimal" />
+        </label>
+        <label class="feld">
+          <span>MwSt-Satz % <em>(optional)</em></span>
+          <input type="text" bind:value={form.mwst_satz} placeholder="z. B. 19" inputmode="decimal" />
+        </label>
+        <label class="feld">
+          <span>Zahlungsart</span>
+          <select bind:value={form.zahlungsart}>
+            <option value="">—</option>
+            {#each Object.entries(ZAHLUNGSARTEN) as [wert, text]}
+              <option value={wert}>{text}</option>
+            {/each}
+          </select>
+        </label>
+        <label class="feld breit">
+          <span>Empfänger / Lieferant</span>
+          <input type="text" bind:value={form.empfaenger} placeholder="An wen wurde gezahlt?" />
+        </label>
+        <label class="feld breit">
+          <span>Zweck / Beschreibung</span>
+          <input type="text" bind:value={form.zweck} placeholder="Wofür? (kurz)" />
+        </label>
+        <label class="feld">
+          <span>Status</span>
+          <select bind:value={form.status}>
+            {#each Object.entries(BELEG_STATUS) as [wert, text]}
+              <option value={wert}>{text}</option>
+            {/each}
+          </select>
+        </label>
+        <label class="feld breit">
+          <span>Notiz <em>(optional)</em></span>
+          <textarea rows="2" bind:value={form.notiz} placeholder="Interne Notiz"></textarea>
+        </label>
+      </div>
+
+      {#if mwstSatz(form) > 0 && belegBrutto(form) > 0}
+        <p class="rechen">
+          Netto {betragFormat(belegNetto(form))} · MwSt {betragFormat(belegMwstBetrag(form))} ·
+          Brutto {betragFormat(belegBrutto(form))}
+        </p>
+      {/if}
+
+      {#if formFehler}<p class="fehler">{formFehler}</p>{/if}
+
+      <div class="dialog-knoepfe">
+        <button class="zweit" onclick={abbrechen} disabled={beschaeftigt}>Abbrechen</button>
+        <button class="primaer" onclick={formSpeichern} disabled={beschaeftigt}>
+          {beschaeftigt ? "Speichert …" : "Speichern"}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<style>
+  .bereich {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+  }
+  .kopfzeile {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .titel-block {
+    flex: 1 1 300px;
+    min-width: 260px;
+  }
+  h2 {
+    margin: 0 0 4px;
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: #172b4d;
+  }
+  .untertitel {
+    margin: 0;
+    color: #5e6c84;
+    font-size: 0.9rem;
+    max-width: 520px;
+    line-height: 1.5;
+  }
+
+  .leer {
+    text-align: center;
+    color: #5e6c84;
+    padding: 48px 16px;
+    border: 1px dashed #dfe1e6;
+    border-radius: 12px;
+  }
+  .leer p {
+    margin: 0 0 14px;
+  }
+
+  table.belege {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  table.belege th,
+  table.belege td {
+    text-align: left;
+    padding: 9px 10px;
+    border-bottom: 1px solid #ebedf0;
+    vertical-align: top;
+  }
+  table.belege th {
+    color: #5e6c84;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .num {
+    width: 44px;
+    color: #8590a2;
+  }
+  .betrag {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .zweck {
+    color: #44546f;
+  }
+  .mwst {
+    font-size: 0.72rem;
+    color: #8590a2;
+  }
+  .summe-label {
+    text-align: right;
+    font-weight: 600;
+    color: #44546f;
+  }
+  .summe {
+    font-weight: 700;
+    color: #172b4d;
+  }
+  .akt {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .status {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 99px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    background: #eef1ff;
+    color: #3b4fb0;
+  }
+  .status.s-zugeordnet {
+    background: #fff7d6;
+    color: #7a5b00;
+  }
+  .status.s-abgerechnet {
+    background: #dcfff1;
+    color: #14794e;
+  }
+
+  button.primaer {
+    padding: 10px 18px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #fff;
+    background: #4f6df5;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  button.primaer:hover:not(:disabled) {
+    background: #3d5bf0;
+  }
+  button.primaer:disabled {
+    background: #c1c7d0;
+    cursor: default;
+  }
+  button.zweit {
+    padding: 10px 18px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: #172b4d;
+    background: #fff;
+    border: 2px solid #dfe1e6;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  button.zweit:hover:not(:disabled) {
+    border-color: #4f6df5;
+  }
+  button.leise {
+    background: none;
+    border: none;
+    color: #5e6c84;
+    font-size: 0.84rem;
+    cursor: pointer;
+    padding: 4px 6px;
+    font-family: inherit;
+  }
+  button.leise:hover {
+    color: #172b4d;
+    text-decoration: underline;
+  }
+  button.leise.gefahr:hover {
+    color: #ae2e24;
+  }
+
+  /* Dialog */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(9, 30, 66, 0.45);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 6vh 16px;
+    overflow-y: auto;
+    z-index: 50;
+  }
+  .dialog {
+    background: #fff;
+    border-radius: 14px;
+    padding: 24px;
+    width: 100%;
+    max-width: 560px;
+    box-shadow: 0 12px 40px rgba(9, 30, 66, 0.3);
+  }
+  .dialog h2 {
+    font-size: 1.2rem;
+    margin: 0 0 16px;
+  }
+  .dialog h2 .nr {
+    color: #8590a2;
+    font-weight: 500;
+    font-size: 0.9rem;
+  }
+  .gitter {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 14px;
+  }
+  .feld {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85rem;
+  }
+  .feld.breit {
+    grid-column: 1 / -1;
+  }
+  .feld > span {
+    color: #44546f;
+    font-weight: 600;
+  }
+  .feld em {
+    color: #8590a2;
+    font-weight: 400;
+    font-style: normal;
+  }
+  .feld input,
+  .feld select,
+  .feld textarea {
+    padding: 8px 10px;
+    border: 2px solid #dfe1e6;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    color: #172b4d;
+    background: #fff;
+  }
+  .feld input:focus,
+  .feld select:focus,
+  .feld textarea:focus {
+    outline: none;
+    border-color: #4f6df5;
+  }
+  .rechen {
+    margin: 14px 0 0;
+    color: #5e6c84;
+    font-size: 0.84rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .fehler {
+    margin: 12px 0 0;
+    color: #ae2e24;
+    font-size: 0.86rem;
+  }
+  .dialog-knoepfe {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+  }
+</style>

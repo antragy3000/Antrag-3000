@@ -27,6 +27,10 @@ const S = {
   notiz: "SENSIBEL_NOTIZ_nur_fuer_mich",
   dateiname: "SENSIBEL_DATEINAME_Lebenslauf.pdf",
   eigenBeschr: "SENSIBEL_EIGENE_FOERDERUNG_BESCHREIBUNG",
+  belegEmpf: "SENSIBEL_BELEG_EMPFAENGER_Baumarkt",
+  belegBetrag: "SENSIBEL_BELEG_BETRAG_777",
+  belegNotiz: "SENSIBEL_BELEG_NOTIZ_nur_fuer_mich",
+  belegDatei: "SENSIBEL_BELEG_DATEI_Rechnung42.pdf",
 };
 
 // Verbotene Feldnamen (dürfen als Schlüssel nie im Board stehen).
@@ -34,6 +38,9 @@ const VERBOTENE_FELDNAMEN = [
   "stammdaten", "formular", "kfp", "fragebogen", "budget",
   "iban", "bic", "steuer", "ustid", "bank", "notiz",
   "beschreibung", "ziele", "datei",
+  // Abrechnungs-Modus: nichts davon darf je das Geraet verlassen.
+  "abrechnung", "belege", "quellen", "empfaenger", "brutto",
+  "mwst_satz", "zahlungsart", "zuordnungen", "dateien", "sachbericht",
 ];
 
 // Tresor mit erfundenen sensiblen Daten.
@@ -76,6 +83,21 @@ const daten = {
         { id: "eigen-1", name: "Lokaler Kulturtopf", foerdergeber: "Stadt Musterstadt", beschreibung: S.eigenBeschr, fristen: ["2026-10-01"] },
       ],
       interneFristen: [{ id: "i1", datum: "2026-08-01", titel: "Kickoff-Treffen" }],
+      // Abrechnungs-Modus (Phase A1): Belege sind hochsensibel und duerfen
+      // NICHT synchronisiert werden.
+      abrechnung: {
+        belege: [
+          {
+            id: "b1", nr: 1, datum: "2026-05-01",
+            empfaenger: S.belegEmpf, zweck: "Mietscheinwerfer",
+            brutto: S.belegBetrag, mwst_satz: "19", zahlungsart: "karte",
+            kostenstelle: null, status: "erfasst",
+            dateien: [{ name: S.belegDatei, ref: "x" }],
+            zuordnungen: [], notiz: S.belegNotiz,
+          },
+        ],
+        quellen: [],
+      },
     },
   ],
   aktivesProjektId: "p1",

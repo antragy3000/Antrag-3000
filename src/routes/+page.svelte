@@ -9,6 +9,7 @@
   import Stammdaten from "$lib/komponenten/Stammdaten.svelte";
   import SammelFormular from "$lib/komponenten/SammelFormular.svelte";
   import KostenPlan from "$lib/komponenten/KostenPlan.svelte";
+  import Abrechnung from "$lib/komponenten/Abrechnung.svelte";
   import Sicherung from "$lib/komponenten/Sicherung.svelte";
   import TeamSync from "$lib/komponenten/TeamSync.svelte";
   import { katalog, setzeKatalog, setzeStandardKatalog, standardKatalog, pruefeKatalog, vergleicheKataloge, geaenderteFelder, setzeGeteilteFoerderer } from "$lib/katalog.svelte.js";
@@ -18,6 +19,7 @@
   import { leeresFormular, formularWordBauen } from "$lib/antrag";
   import { antragsPdfBauen } from "$lib/antragsPdf";
   import { leererKfp, kfpExport } from "$lib/kfp";
+  import { leereAbrechnung } from "$lib/abrechnung";
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
   import { boardAusTresor, geteilteFoerdererAusTresor } from "$lib/sync";
   import { fristNormalisieren, fristAlsDatum } from "$lib/begriffe";
@@ -146,6 +148,7 @@
       formular: leeresFormular(),
       kfp: leererKfp(),
       kfpHinweisAusblenden: false,
+      abrechnung: leereAbrechnung(),
       antraege: {},
       eigeneFoerderungen: [],
       interneFristen: [],
@@ -321,6 +324,21 @@
       if (!Array.isArray(p.katalogAktualisiert)) {
         p.katalogAktualisiert = [];
         veraendert = true;
+      }
+      // Abrechnungs-Block (Belege + Geldquellen) ergaenzen, falls aus einem
+      // aelteren Stand (vor dem Abrechnungs-Modus) fehlend.
+      if (!p.abrechnung || typeof p.abrechnung !== "object") {
+        p.abrechnung = leereAbrechnung();
+        veraendert = true;
+      } else {
+        if (!Array.isArray(p.abrechnung.belege)) {
+          p.abrechnung.belege = [];
+          veraendert = true;
+        }
+        if (!Array.isArray(p.abrechnung.quellen)) {
+          p.abrechnung.quellen = [];
+          veraendert = true;
+        }
       }
       // Antrag-Einträge älterer Stände um eigene Fristen ergänzen.
       const alleFoerd = [
@@ -606,6 +624,13 @@
   // sichern. Die Excel wird hier bewusst NICHT geschrieben.
   async function kfpSpeichern(neu) {
     aktivesProjekt.kfp = neu;
+    await tresorSpeichern();
+  }
+
+  // Belege des aktiven Projekts ersetzen und verschlüsselt sichern.
+  // (Abrechnungs-Modus, Phase A1. Quellen folgen in Phase A4.)
+  async function belegeSpeichern(neueBelege) {
+    aktivesProjekt.abrechnung.belege = neueBelege;
     await tresorSpeichern();
   }
 
@@ -1825,6 +1850,9 @@
         <button class:aktiv={bereich === "kostenplan"} onclick={() => (bereich = "kostenplan")}>
           Kostenplan
         </button>
+        <button class:aktiv={bereich === "abrechnung"} onclick={() => (bereich = "abrechnung")}>
+          Abrechnung{#if aktivesProjekt?.abrechnung?.belege?.length}&nbsp;({aktivesProjekt.abrechnung.belege.length}){/if}
+        </button>
         <span class="nav-trenner" aria-hidden="true"></span>
         <button class:aktiv={bereich === "stammdaten"} onclick={() => (bereich = "stammdaten")}>
           Stammdaten &amp; Team
@@ -1993,6 +2021,14 @@
             excelErzeugen={kfpExcelErzeugen}
             hinweisAusblenden={aktivesProjekt.kfpHinweisAusblenden}
             hinweisMerken={kfpHinweisMerken}
+          />
+        {/key}
+      {:else if bereich === "abrechnung"}
+        {#key daten.aktivesProjektId}
+          <Abrechnung
+            belege={aktivesProjekt.abrechnung.belege}
+            speichern={belegeSpeichern}
+            projektName={aktivesProjekt.name}
           />
         {/key}
       {:else if bereich === "fristen"}
