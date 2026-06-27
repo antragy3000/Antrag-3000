@@ -57,7 +57,21 @@
   let daten = $state(null);
 
   // Welcher Bereich ist nach dem Entsperren aktiv?
-  let bereich = $state("foerderungen"); // foerderungen | merkliste | fristen | formular | kostenplan | stammdaten
+  let bereich = $state("foerderungen"); // foerderungen | merkliste | fristen | formular | kostenplan | belege | stammdaten
+  // Oberster Arbeits-Modus: "antrag" (Recherche/Antrag) oder "abrechnung"
+  // (Belege/Verwendungsnachweis). Blendet jeweils nur die passenden Reiter
+  // ein, damit der andere Modus nicht visuell stört. Stammdaten ist in
+  // beiden Modi erreichbar (globale Angaben).
+  let arbeitsModus = $state("antrag");
+  const ANTRAG_BEREICHE = ["foerderungen", "merkliste", "fristen", "formular", "kostenplan", "stammdaten"];
+  const ABRECHNUNG_BEREICHE = ["belege", "stammdaten"];
+  function arbeitsModusWechseln(m) {
+    arbeitsModus = m;
+    const erlaubt = m === "abrechnung" ? ABRECHNUNG_BEREICHE : ANTRAG_BEREICHE;
+    if (!erlaubt.includes(bereich)) {
+      bereich = m === "abrechnung" ? "belege" : "foerderungen";
+    }
+  }
   let foerderAnsicht = $state("alle"); // innerhalb "Förderungen": alle | passend
   let projektMenuOffen = $state(false); // Projekt-Auswahlmenü (mit Umbenennen/Löschen)
 
@@ -572,6 +586,7 @@
     daten = null;
     fehler = "";
     bereich = "foerderungen";
+    arbeitsModus = "antrag";
     ansicht = "entsperren";
   }
 
@@ -1908,25 +1923,37 @@
         </div>
       </div>
       <nav>
-        <button class:aktiv={bereich === "foerderungen"} onclick={() => (bereich = "foerderungen")}>
-          Förderungen
-        </button>
+        <div class="modus-schalter" role="group" aria-label="Modus wählen">
+          <button class:aktiv={arbeitsModus === "antrag"} onclick={() => arbeitsModusWechseln("antrag")}>
+            Antrag
+          </button>
+          <button class:aktiv={arbeitsModus === "abrechnung"} onclick={() => arbeitsModusWechseln("abrechnung")}>
+            Abrechnung
+          </button>
+        </div>
         <span class="nav-trenner" aria-hidden="true"></span>
-        <button class:aktiv={bereich === "merkliste"} onclick={() => (bereich = "merkliste")}>
-          Merkliste{#if aktivesProjekt?.merkliste.length}&nbsp;({aktivesProjekt.merkliste.length}){/if}
-        </button>
-        <button class:aktiv={bereich === "fristen"} onclick={() => (bereich = "fristen")}>
-          Fristen
-        </button>
-        <button class:aktiv={bereich === "formular"} onclick={() => (bereich = "formular")}>
-          Formular
-        </button>
-        <button class:aktiv={bereich === "kostenplan"} onclick={() => (bereich = "kostenplan")}>
-          Kostenplan
-        </button>
-        <button class:aktiv={bereich === "abrechnung"} onclick={() => (bereich = "abrechnung")}>
-          Abrechnung{#if aktivesProjekt?.abrechnung?.belege?.length}&nbsp;({aktivesProjekt.abrechnung.belege.length}){/if}
-        </button>
+        {#if arbeitsModus === "antrag"}
+          <button class:aktiv={bereich === "foerderungen"} onclick={() => (bereich = "foerderungen")}>
+            Förderungen
+          </button>
+          <span class="nav-trenner" aria-hidden="true"></span>
+          <button class:aktiv={bereich === "merkliste"} onclick={() => (bereich = "merkliste")}>
+            Merkliste{#if aktivesProjekt?.merkliste.length}&nbsp;({aktivesProjekt.merkliste.length}){/if}
+          </button>
+          <button class:aktiv={bereich === "fristen"} onclick={() => (bereich = "fristen")}>
+            Fristen
+          </button>
+          <button class:aktiv={bereich === "formular"} onclick={() => (bereich = "formular")}>
+            Formular
+          </button>
+          <button class:aktiv={bereich === "kostenplan"} onclick={() => (bereich = "kostenplan")}>
+            Kostenplan
+          </button>
+        {:else}
+          <button class:aktiv={bereich === "belege"} onclick={() => (bereich = "belege")}>
+            Belege{#if aktivesProjekt?.abrechnung?.belege?.length}&nbsp;({aktivesProjekt.abrechnung.belege.length}){/if}
+          </button>
+        {/if}
         <span class="nav-trenner" aria-hidden="true"></span>
         <button class:aktiv={bereich === "stammdaten"} onclick={() => (bereich = "stammdaten")}>
           Stammdaten &amp; Team
@@ -2097,7 +2124,7 @@
             hinweisMerken={kfpHinweisMerken}
           />
         {/key}
-      {:else if bereich === "abrechnung"}
+      {:else if bereich === "belege"}
         {#key daten.aktivesProjektId}
           <Abrechnung
             belege={aktivesProjekt.abrechnung.belege}
@@ -2683,6 +2710,33 @@
     height: 22px;
     background: #dfe1e6;
     margin: 0 6px;
+  }
+
+  /* Oberster Modus-Umschalter (Antrag | Abrechnung): segmentierter Schalter,
+     deutlich abgesetzt von den normalen Reitern. */
+  .modus-schalter {
+    display: inline-flex;
+    align-items: center;
+    background: #eef0f3;
+    border-radius: 9px;
+    padding: 2px;
+    gap: 2px;
+  }
+  .modus-schalter button {
+    padding: 6px 14px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #44546f;
+    background: none;
+    border-radius: 7px;
+  }
+  .modus-schalter button:hover:not(.aktiv) {
+    background: #e2e5ea;
+    color: #172b4d;
+  }
+  .modus-schalter button.aktiv {
+    background: #4f6df5;
+    color: #fff;
   }
 
   .links {
