@@ -30,24 +30,24 @@
   let laedtIdx = $state(-1);
 
   // --- Antrags-PDF: Bereitschaft, Hinweis, Vorschau/Speichern ----------
-  // Der Knopf ist nur aktiv, wenn ALLE benötigten Dokumente den Status
-  // "abgeschlossen" haben UND alle hochgeladen sind.
+  // Der Knopf ist aktiv, wenn ALLE benötigten Dokumente den Status
+  // "abgeschlossen" haben UND alle hochgeladen sind. Eine LEERE Checkliste
+  // (man darf alle Dokumente entfernen) gilt als bereit – das PDF enthält
+  // dann Stammblatt, Formular und KFP, aber keine Anhänge.
   let alleAbgeschlossen = $derived(
-    antrag.checkliste.length > 0 &&
-      antrag.checkliste.every((p) => p.status === "abgeschlossen")
+    antrag.checkliste.every((p) => p.status === "abgeschlossen")
   );
   let alleHochgeladen = $derived(
-    antrag.checkliste.length > 0 &&
-      antrag.checkliste.every((p) => (p.datei || "").trim() !== "")
+    antrag.checkliste.every((p) => (p.datei || "").trim() !== "")
   );
   let pdfBereit = $derived(alleAbgeschlossen && alleHochgeladen);
   let pdfHinweis = $derived(
-    antrag.checkliste.length === 0
-      ? "Füge zuerst die benötigten Dokumente hinzu."
-      : !alleAbgeschlossen
-        ? "nicht alle erforderlichen Dateien haben den Status abgeschlossen"
-        : !alleHochgeladen
-          ? "es wurden noch nicht alle Dateien hochgeladen"
+    !alleAbgeschlossen
+      ? "nicht alle erforderlichen Dateien haben den Status abgeschlossen"
+      : !alleHochgeladen
+        ? "es wurden noch nicht alle Dateien hochgeladen"
+        : antrag.checkliste.length === 0
+          ? "Antrags-PDF aus Stammdaten, Formular und KFP erstellen (keine Anhänge hinterlegt)"
           : "Antrags-PDF aus Stammdaten, Formular, KFP und Anhängen erstellen"
   );
 

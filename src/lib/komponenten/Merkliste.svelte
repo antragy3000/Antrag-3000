@@ -96,10 +96,12 @@
     };
   }
 
-  // Checkliste zum Anzeigen: bearbeiteter Stand oder Vorschlag der Förderung.
+  // Checkliste zum Anzeigen: sobald ein Antrag existiert, seine (eigene)
+  // Liste – auch wenn sie leer ist (man darf alle Dokumente entfernen).
+  // Nur wenn es noch GAR keinen Antrag gibt, zeigen wir die Vorschläge.
   function checklisteFuer(f) {
     const a = antraege[f.id];
-    if (a?.checkliste?.length) return a.checkliste;
+    if (a?.checkliste) return a.checkliste;
     return (f.checkliste_vorschlag ?? []).map((t) => ({
       text: t,
       status: CHECK_STANDARD,
