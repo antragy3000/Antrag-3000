@@ -392,19 +392,45 @@
     }
 
     // --- Anmelden ---
+    const PAKET_PFAD_KEY = "a3k_paket_pfad";
+
+    // Ein geprüftes Paket übernehmen: Infos anzeigen, Code-Feld zeigen und den
+    // PFAD (nicht den Schlüssel!) merken, damit es beim nächsten Start direkt
+    // geladen wird.
+    function paketAnwenden(z) {
+      zugang = z;
+      if (z.pfad) localStorage.setItem(PAKET_PFAD_KEY, z.pfad);
+      $("paketInfo").textContent = `Gerät „${z.geraet_name}" · ${z.adresse}`;
+      $("codeBereich").classList.remove("verborgen");
+      $("codeFeld").focus();
+    }
+
     $("paketBtn").onclick = async () => {
       meldung("verbindenMeldung", "info", "");
       try {
         const z = await invoke("paket_waehlen");
         if (!z) return; // abgebrochen
-        zugang = z;
-        $("paketInfo").textContent = `Gerät „${z.geraet_name}" · ${z.adresse}`;
-        $("codeBereich").classList.remove("verborgen");
-        $("codeFeld").focus();
+        paketAnwenden(z);
       } catch (e) {
         meldung("verbindenMeldung", "fehler", "⚠ " + e);
       }
     };
+
+    // Beim Start das zuletzt genutzte Paket automatisch laden. Gemerkt wurde
+    // nur der Datei-Pfad; der private Schlüssel bleibt in der .a3kpaket-Datei.
+    // Schlägt es fehl (Datei verschoben/gelöscht), bleibt die manuelle Auswahl.
+    // Den TOTP-Code muss man weiterhin jedes Mal eingeben (zweiter Faktor).
+    (async () => {
+      const pfad = localStorage.getItem(PAKET_PFAD_KEY);
+      if (!pfad) return;
+      try {
+        const z = await invoke("paket_laden", { pfad });
+        paketAnwenden(z);
+        meldung("verbindenMeldung", "info", "Letztes Paket geladen – bitte Code eingeben.");
+      } catch {
+        localStorage.removeItem(PAKET_PFAD_KEY); // Pfad ungültig → vergessen
+      }
+    })();
 
     $("codeFeld").addEventListener("input", (e) => {
       e.target.value = e.target.value.replace(/\D/g, "").slice(0, 6);

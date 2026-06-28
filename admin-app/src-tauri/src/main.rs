@@ -41,6 +41,11 @@ pub struct ZugangsInfo {
     pub geraet_name: String,
     pub ausweis_pem: String,
     pub ca_pem: String,
+    /// Pfad der gewaehlten .a3kpaket-Datei. Das Frontend merkt sich nur
+    /// diesen Pfad (nicht den Schluessel), um das Paket beim naechsten Start
+    /// automatisch zu laden.
+    #[serde(default)]
+    pub pfad: String,
 }
 
 /// Liest den Common Name (Gerätenamen) aus dem ersten Zertifikat im PEM.
@@ -88,6 +93,7 @@ fn paket_aus_text(roh: &str) -> Result<ZugangsInfo, String> {
         geraet_name,
         ausweis_pem: paket.ausweis_pem,
         ca_pem: paket.ca_pem,
+        pfad: String::new(),
     })
 }
 
@@ -103,7 +109,21 @@ fn paket_waehlen(app: tauri::AppHandle) -> Result<Option<ZugangsInfo>, String> {
     let Some(fp) = datei else { return Ok(None) };
     let pfad = fp.into_path().map_err(|e| format!("Pfad ungültig: {e}"))?;
     let roh = std::fs::read_to_string(&pfad).map_err(|e| format!("Datei nicht lesbar: {e}"))?;
-    Ok(Some(paket_aus_text(&roh)?))
+    let mut z = paket_aus_text(&roh)?;
+    z.pfad = pfad.to_string_lossy().to_string();
+    Ok(Some(z))
+}
+
+/// Laedt ein .a3kpaket direkt von einem bekannten Pfad (ohne Dialog), damit
+/// das zuletzt genutzte Paket beim Start automatisch geladen werden kann.
+/// Fehler, wenn die Datei fehlt/verschoben wurde – das Frontend faellt dann
+/// auf die manuelle Auswahl zurueck.
+#[tauri::command]
+fn paket_laden(pfad: String) -> Result<ZugangsInfo, String> {
+    let roh = std::fs::read_to_string(&pfad).map_err(|e| format!("Datei nicht lesbar: {e}"))?;
+    let mut z = paket_aus_text(&roh)?;
+    z.pfad = pfad;
+    Ok(z)
 }
 
 /// Öffnet einen Datei-Dialog für eine Katalog-Datei (JSON) und gibt ihren
@@ -372,6 +392,7 @@ fn main() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             paket_waehlen,
+            paket_laden,
             katalog_waehlen,
             admin_anmelden,
             admin_meldungen,
