@@ -1,11 +1,18 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Capability for the main window",
+  "description": "Hauptfenster. Sicherheit/openUrl: Aus dem Fenster (JS) duerfen NUR http/https/mailto-Links ans Betriebssystem gegeben werden (scoped allow-open-url). Damit weist auch die Rust-Ebene gefaehrliche Schemata wie file:, ms-msdt:, vbscript: oder UNC-Pfade ab, selbst wenn die JS-Schleuse src/lib/sicherheit.js einmal umgangen wuerde. tel: ist bewusst nicht erlaubt. Projektordner/Belege werden ueber eigene Rust-Befehle (open_path direkt) geoeffnet und sind davon unberuehrt.",
   "windows": ["main"],
   "permissions": [
     "core:default",
-    "opener:default",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "http://*" },
+        { "url": "https://*" },
+        { "url": "mailto:*" }
+      ]
+    },
     "dialog:default",
     "updater:default",
     "process:default"
