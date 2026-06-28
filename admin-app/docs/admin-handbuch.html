@@ -273,6 +273,22 @@ otpauth://totp/Antrag%203000:Admin?secret=...&amp;issuer=Antrag%203000
   <div class="tipp"><strong>Uhrzeit.</strong> TOTP braucht eine korrekte Uhr.
   Die Synology ist per NTP synchron; falls Codes nie akzeptiert werden, prüfe
   die Server-Uhrzeit.</div>
+
+  <h3>Zwei Sicherheits-Schalter (optional, empfohlen)</h3>
+  <p>In <span class="pfad">server/.env</span> gibt es zwei Schalter, die das Team
+  nach der Einrichtung zusätzlich absichern:</p>
+  <ul>
+    <li><b>Geräte-Aufnahme einfrieren:</b> Sobald alle Team-Geräte einmal
+    verbunden waren, <code>AUTO_ENROLL=0</code> setzen. Dann kommen
+    <strong>keine neuen Geräte</strong> mehr von selbst dazu (auch nicht mit
+    gültigem Zertifikat). Ein gesperrtes Gerät kann sich danach nicht neu
+    anmelden.</li>
+    <li><b>Proxy festlegen:</b> <code>CERT_HEADER_MODE</code> ist in den
+    Compose-Dateien bereits passend gesetzt (<code>caddy</code> bzw.
+    <code>cloudflare</code>) – nur ändern, wenn du den Aufbau wechselst.</li>
+  </ul>
+  <p>Nach Änderungen den Server neu starten:
+  <span class="pfad">docker compose -f docker-compose.tailscale.yml up -d --build</span>.</p>
 </section>
 
 <!-- ===== 4 ===== -->
