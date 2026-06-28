@@ -473,6 +473,11 @@
     // (z. B. nach einem Absturz der vorigen Sitzung – Belege/PDF-Vorschau).
     invoke("temp_aufraeumen").catch(() => {});
 
+    // Nutzer-Aktivitaet für den Idle-Lock erfassen (nur Zeitstempel setzen).
+    for (const ev of ["mousemove", "keydown", "mousedown", "wheel", "touchstart"]) {
+      window.addEventListener(ev, aktivitaetMerken, { passive: true });
+    }
+
     // Aktualisierten Förder-Katalog laden, falls vorhanden (Phase 3).
     // Liegt keiner vor oder passt er nicht, bleibt die mitgelieferte
     // Standard-Fassung aktiv.
@@ -605,6 +610,30 @@
       beschaeftigt = false;
     }
   }
+
+  // --- Idle-Lock (Audit I3): sperrt den Tresor nach Inaktivitaet, damit ein
+  //     unbeaufsichtigtes, entsperrtes Geraet nicht offen stehen bleibt.
+  //     Aktivitaet aktualisiert nur einen Zeitstempel (billig); ein Intervall
+  //     prueft minuetlich, ob die Leerlauf-Grenze ueberschritten ist. ---
+  const IDLE_MS = 15 * 60 * 1000; // 15 Minuten ohne Aktivitaet -> sperren
+  let letzteAktivitaet = Date.now();
+  let idleInterval = null;
+  function aktivitaetMerken() {
+    letzteAktivitaet = Date.now();
+  }
+  $effect(() => {
+    if (daten) {
+      letzteAktivitaet = Date.now();
+      if (!idleInterval) {
+        idleInterval = setInterval(() => {
+          if (daten && Date.now() - letzteAktivitaet >= IDLE_MS) sperren();
+        }, 60 * 1000);
+      }
+    } else if (idleInterval) {
+      clearInterval(idleInterval);
+      idleInterval = null;
+    }
+  });
 
   async function sperren() {
     syncLoopStoppen();

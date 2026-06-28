@@ -30,6 +30,7 @@ use aes_gcm::aead::rand_core::RngCore;
 use aes_gcm::aead::{Aead, KeyInit, OsRng};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
 use tauri::Manager;
+use zeroize::Zeroize;
 
 pub(crate) const MAGIC: &[u8; 8] = b"ANTRAG3K";
 const VERSION: u8 = 1;
@@ -42,6 +43,16 @@ const KOPF_LAENGE: usize = 8 + 1 + SALT_LAENGE + NONCE_LAENGE;
 pub struct Geheimnis {
     schluessel: [u8; 32],
     salt: [u8; SALT_LAENGE],
+}
+
+/// Beim Verwerfen (Sperren oder Programmende) den Schluessel sicher mit
+/// Nullen ueberschreiben, statt ihn nur freizugeben. Sonst koennte er als
+/// Rest im Heap/Auslagerungsdatei/Crashdump zurueckbleiben. (Audit A1.)
+impl Drop for Geheimnis {
+    fn drop(&mut self) {
+        self.schluessel.zeroize();
+        self.salt.zeroize();
+    }
 }
 
 /// Tauri verwaltet diesen Zustand und reicht ihn an die Befehle durch.
@@ -187,7 +198,7 @@ pub fn tresor_status(app: tauri::AppHandle) -> Result<String, String> {
 pub fn tresor_erstellen(
     app: tauri::AppHandle,
     state: tauri::State<TresorZustand>,
-    passwort: String,
+    mut passwort: String,
     daten: String,
 ) -> Result<(), String> {
     if passwort.chars().count() < 8 {
@@ -201,7 +212,7 @@ pub fn tresor_erstellen(
     // Salt einmalig pro Tresor wuerfeln, Schluessel ableiten.
     let mut salt = [0u8; SALT_LAENGE];
     OsRng.fill_bytes(&mut salt);
-    let schluessel = schluessel_ableiten(&passwort, &salt)?;
+    let mut schluessel = schluessel_ableiten(&passwort, &salt)?;
 
     let inhalt = verschluesseln(&daten, &schluessel, &salt)?;
     sicher_schreiben(&pfad, &inhalt)?;
@@ -209,6 +220,10 @@ pub fn tresor_erstellen(
     // Schluessel im Arbeitsspeicher behalten, damit Speichern ohne
     // erneute Passworteingabe moeglich ist.
     *state.geheim.lock().unwrap() = Some(Geheimnis { schluessel, salt });
+    // Lokale Kopien von Schluessel und Passwort ueberschreiben (Audit A1);
+    // der Schluessel im Tresor-Zustand bleibt erhalten.
+    schluessel.zeroize();
+    passwort.zeroize();
     Ok(())
 }
 
@@ -217,7 +232,7 @@ pub fn tresor_erstellen(
 pub fn tresor_entsperren(
     app: tauri::AppHandle,
     state: tauri::State<TresorZustand>,
-    passwort: String,
+    mut passwort: String,
 ) -> Result<String, String> {
     let pfad = tresor_pfad(&app)?;
     let inhalt = fs::read(&pfad).map_err(|e| format!("Tresor nicht lesbar: {e}"))?;
@@ -234,7 +249,8 @@ pub fn tresor_entsperren(
     let nonce = &inhalt[9 + SALT_LAENGE..KOPF_LAENGE];
     let verschluesselt = &inhalt[KOPF_LAENGE..];
 
-    let schluessel = schluessel_ableiten(&passwort, &salt)?;
+    let mut schluessel = schluessel_ableiten(&passwort, &salt)?;
+    passwort.zeroize(); // Passwort wird nicht mehr gebraucht (Audit A1).
     let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&schluessel));
 
     // Bricht das Echtheits-Siegel, ist (praktisch immer) das Passwort
@@ -242,12 +258,16 @@ pub fn tresor_entsperren(
     // in eine freundliche Meldung uebersetzt.
     let klartext = cipher
         .decrypt(Nonce::from_slice(nonce), verschluesselt)
-        .map_err(|_| "falsches_passwort".to_string())?;
+        .map_err(|_| {
+            schluessel.zeroize();
+            "falsches_passwort".to_string()
+        })?;
 
     let daten = String::from_utf8(klartext)
         .map_err(|_| "Tresor-Inhalt ist kein gueltiger Text.".to_string())?;
 
     *state.geheim.lock().unwrap() = Some(Geheimnis { schluessel, salt });
+    schluessel.zeroize(); // lokale Kopie ueberschreiben (Audit A1).
     Ok(daten)
 }
 
