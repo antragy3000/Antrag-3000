@@ -1,5 +1,5 @@
 <script>
-  // Abrechnungs-Modus, Phase A4b: Verteilung PRO FÖRDERER.
+  // Abrechnungs-Modus, Phase A4b: Zuteilung PRO FÖRDERER.
   // Übersicht = Liste der Geldquellen (wie die Merkliste) mit Fortschritt.
   // Klick auf eine Quelle öffnet ihre Abrechnung: die zugeordneten Belege
   // als Liste – Betrag bearbeiten, entfernen, weitere Belege hinzufügen.
@@ -135,7 +135,7 @@
   {#if !ausgewaehlt}
     <!-- ===== Übersicht: Liste der Geldquellen ===== -->
     <div class="kopf">
-      <h2>Verteilung – Abrechnung je Förderer</h2>
+      <h2>Zuteilung – Abrechnung je Förderer</h2>
       <p class="untertitel">
         Wähle eine Geldquelle, um ihr Belege zuzuordnen{#if projektName} ({projektName}){/if}.
         Ziel: jede Quelle ausschöpfen, jeden Beleg decken.
