@@ -68,8 +68,9 @@ export function antragsPdfBauen(stammdaten, formular, kfp, foerderung, checklist
   }
 
   // 3. Kostenfinanzplan (auf diese Förderung zugeschnitten:
-  //    andere Mittel + zu beantragende Summe als Fehlbetrag)
-  for (const a of kfpAbschnitteFuerAntrag(kfp, foerderung.id)) {
+  //    andere Mittel + zu beantragende Summe als Fehlbetrag = der für
+  //    diesen Förderer im KFP eingeplante Betrag)
+  for (const a of kfpAbschnitteFuerAntrag(kfp, foerderung.id, foerderung.name)) {
     abschnitte.push({
       ueberschrift: a.ueberschrift,
       absaetze: a.absaetze ?? [],

@@ -307,10 +307,12 @@ export function kfpAbschnitte(kfp) {
 
 /// Word-Abschnitte FÜR EINEN bestimmten Antrag: Die Finanzierung
 /// listet nur die ANDEREN Mittel (alle Positionen, die nicht mit
-/// dieser Förderung verknüpft sind); die bei dieser Förderung zu
-/// beantragende Summe wird als Fehlbetrag ausgewiesen
-/// (Gesamtkosten − andere Mittel).
-export function kfpAbschnitteFuerAntrag(kfp, foerderungId) {
+/// dieser Förderung verknüpft sind). Die bei dieser Förderung zu
+/// beantragende Summe (Fehlbetrag) ist der im KFP für GENAU diesen
+/// Förderer eingeplante Betrag (Summe der mit ihm verknüpften
+/// Finanzierungs-Positionen); ist nichts verknüpft, ersatzweise der
+/// Fehlbetrag Gesamtkosten − andere Mittel.
+export function kfpAbschnitteFuerAntrag(kfp, foerderungId, foerderName = "") {
   const abschnitte = [];
   if (!kfp || (kfp.kosten.length === 0 && kfp.finanzierung.length === 0)) {
     return abschnitte;
@@ -364,16 +366,24 @@ export function kfpAbschnitteFuerAntrag(kfp, foerderungId) {
     });
   }
 
-  // 3. Beantragte Summe = Fehlbetrag
-  const fehlbetrag = gesamtKosten - summeAndere;
+  // 3. Beantragte Summe (Fehlbetrag) = der im KFP für DIESE Förderung
+  //    eingeplante Betrag (Summe der mit ihr verknüpften Finanzierungs-
+  //    Positionen). Ist nichts verknüpft, ersatzweise der rechnerische
+  //    Fehlbetrag Gesamtkosten − andere Mittel.
+  const eigenePosten = kfp.finanzierung
+    .flatMap((k) => k.posten ?? [])
+    .filter((p) => (p.foerderId || "") === foerderungId);
+  const eingeplant = eigenePosten.reduce((s, p) => s + postenBetrag(p), 0);
+  const beantragt = eigenePosten.length
+    ? eingeplant
+    : Math.max(0, gesamtKosten - summeAndere);
+  const label = (foerderName || "").trim() || "Beantragte Förderung";
   abschnitte.push({
     ueberschrift: "Bei dieser Förderung beantragte Summe",
     absaetze: [],
     tabelle: [
-      ["Posten", "Betrag"],
-      ["Gesamtkosten", betragFormat(gesamtKosten)],
-      ["Abzüglich andere Mittel", betragFormat(summeAndere)],
-      ["**Beantragte Summe (Fehlbetrag)", "**" + betragFormat(Math.max(0, fehlbetrag))],
+      ["Förderer", "Betrag"],
+      ["**" + label + " (Fehlbetrag)", "**" + betragFormat(beantragt)],
     ],
   });
 
