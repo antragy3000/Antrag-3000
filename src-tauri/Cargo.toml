@@ -51,7 +51,9 @@ rust_xlsxwriter = "0.79"
 genpdf = { version = "0.2", features = ["images"] }
 # lopdf: haengt die hochgeladenen PDF-/Bild-Anhaenge an das Antrags-PDF
 # an (Seiten zu EINER Datei zusammenfuegen). Genau dafuer gedacht.
-lopdf = "0.32"
+# >=0.42: behebt RUSTSEC-2026-0187 (Stack-Overflow bei tief verschachtelten
+# PDF-Objekten) - relevant, weil wir hier fremde Anhang-PDFs einlesen.
+lopdf = "0.42"
 # image: nur, um in der von genpdf genutzten image-0.23 die Decoder fuer
 # PNG und JPEG zu aktivieren (genpdf selbst schaltet sie nicht ein).
 # Cargo vereint die Features auf derselben Crate-Version.
