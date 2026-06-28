@@ -26,6 +26,10 @@
     interneFristen = [],
     interneAnlegen = null,
     interneEntfernen = null,
+    // Team-Kalender: die Fristen der anderen Team-Geräte (aus dem Board).
+    teamBoard = null,
+    meineProjektIds = [],
+    foerderungLabel = null,
   } = $props();
 
   let ausgewaehlt = $state(null);
@@ -124,7 +128,44 @@
     return { typ: "offen" }; // keine feste Frist hinterlegt
   }
 
-  // Alle Termine: Förderungs-Fristen plus interne Fristen.
+  // Gehört eine Board-Projekt-ID zu DIESEM Gerät? (Dann nicht doppelt zeigen –
+  // die eigenen Termine kommen schon aus dem lokalen Tresor.)
+  function istEigenes(projektId) {
+    return (meineProjektIds ?? []).includes(projektId);
+  }
+
+  // Team-Termine: alle konkreten Fristen der ANDEREN Team-Geräte aus dem
+  // Board – offizielle und eigene Fristen je Förderung sowie interne Fristen.
+  // Jede Frist wird ein eigener (flacher) Termin mit Projekt-Kontext.
+  let teamTermine = $derived.by(() => {
+    const liste = [];
+    for (const e of teamBoard ?? []) {
+      if (istEigenes(e.projekt_id)) continue;
+      const projektName = e.inhalt?.name || "Projekt";
+      for (const f of e.inhalt?.eintraege ?? []) {
+        const fname = foerderungLabel ? foerderungLabel(f) : f.eigenesLabel || "Förderung";
+        for (const d of f.offizielleFristen ?? []) {
+          const dt = fristAlsDatum(fristNormalisieren(d).datum);
+          if (!dt) continue;
+          const iso = isoVon(dt);
+          liste.push({ kind: "team", id: `${e.projekt_id}|${f.foerderungId}|of|${iso}`, projektName, titel: fname, untertitel: "", frist: iso, tage: tageBis(iso) });
+        }
+        for (const ef of f.eigeneFristen ?? []) {
+          const datum = typeof ef === "string" ? ef : ef?.datum;
+          if (!datum) continue;
+          const titel = typeof ef === "string" ? "" : ef.titel || "";
+          liste.push({ kind: "team", id: `${e.projekt_id}|${f.foerderungId}|ef|${datum}|${titel}`, projektName, titel: fname, untertitel: titel || "Eigene Frist", frist: datum, tage: tageBis(datum) });
+        }
+      }
+      for (const t of e.inhalt?.interneFristen ?? []) {
+        if (!t?.datum) continue;
+        liste.push({ kind: "team", id: `${e.projekt_id}|int|${t.id || t.datum}`, projektName, titel: t.titel || "Interne Frist", untertitel: "", frist: t.datum, tage: tageBis(t.datum) });
+      }
+    }
+    return liste;
+  });
+
+  // Alle Termine: Förderungs-Fristen plus interne Fristen plus Team-Termine.
   let termine = $derived.by(() => {
     const liste = [];
     for (const f of gemerkte) {
@@ -136,6 +177,7 @@
     for (const t of interneFristen) {
       liste.push({ kind: "intern", id: t.id, titel: t.titel, frist: t.datum, tage: tageBis(t.datum) });
     }
+    for (const tt of teamTermine) liste.push(tt);
     return liste;
   });
 
@@ -249,6 +291,22 @@
             </div>
             <div class="countdown farbe-{dringlichkeit(t.tage)}">{countdownText(t.tage)}</div>
           </div>
+        {:else if t.kind === "team"}
+          <div class="zeile team schlicht">
+            <div class="datum farbe-{dringlichkeit(t.tage)}">
+              <span class="tag">{tag(t.frist)}</span>
+              <span class="monat">{monat(t.frist)}</span>
+              <span class="jahr">{jahr(t.frist)}</span>
+            </div>
+            <div class="haupt">
+              <div class="kopf">
+                <span class="team-tag">👥 Team</span>
+                <h3>{t.titel}{#if t.untertitel} – {t.untertitel}{/if}</h3>
+              </div>
+              <p class="meta">{t.projektName}</p>
+            </div>
+            <div class="countdown farbe-{dringlichkeit(t.tage)}">{countdownText(t.tage)}</div>
+          </div>
         {:else}
           <div class="zeile intern">
             <div class="datum farbe-{dringlichkeit(t.tage)}">
@@ -315,6 +373,21 @@
               </div>
               <p class="meta">{t.f.foerdergeber} · vor {Math.abs(t.tage)} Tagen</p>
               {@render unterfristen(eigeneFristenVon(t.f))}
+            </div>
+          </div>
+        {:else if t.kind === "team"}
+          <div class="zeile team schlicht verg">
+            <div class="datum farbe-grau">
+              <span class="tag">{tag(t.frist)}</span>
+              <span class="monat">{monat(t.frist)}</span>
+              <span class="jahr">{jahr(t.frist)}</span>
+            </div>
+            <div class="haupt">
+              <div class="kopf">
+                <span class="team-tag">👥 Team</span>
+                <h3>{t.titel}{#if t.untertitel} – {t.untertitel}{/if}</h3>
+              </div>
+              <p class="meta">{t.projektName} · vor {Math.abs(t.tage)} Tagen</p>
             </div>
           </div>
         {:else}
@@ -489,6 +562,23 @@
   .zeile.intern .entfernen:hover {
     background: #ffeceb;
     color: #ae2e24;
+  }
+
+  /* Team-Termine (aus dem Board anderer Geräte – nur Ansicht) */
+  .team-tag {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 3px 9px;
+    border-radius: 99px;
+    background: #e6f4ff;
+    color: #0c5a8f;
+  }
+  .zeile.team {
+    cursor: default;
+  }
+  .zeile.team:hover {
+    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.12);
   }
 
   .liste {

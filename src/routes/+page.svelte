@@ -2294,6 +2294,9 @@
           interneFristen={aktivesProjekt.interneFristen}
           interneAnlegen={interneFristAnlegen}
           interneEntfernen={interneFristEntfernen}
+          teamBoard={daten.sync?.teamBoard ?? null}
+          {meineProjektIds}
+          foerderungLabel={boardFoerderungLabel}
         />
       {:else}
         <Merkliste
