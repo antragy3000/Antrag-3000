@@ -1,7 +1,8 @@
 <script>
-  // Abrechnungs-Modus, Phase A4b: Verteil-Ansicht ("rumschieben, bis es
-  // aufgeht"). Belege als Zeilen, Geldquellen als Spalten; in den Zellen
-  // stehen die anteilig zugeordneten Beträge. Live-Summen + Warnungen.
+  // Abrechnungs-Modus, Phase A4b: Verteilung PRO FÖRDERER.
+  // Übersicht = Liste der Geldquellen (wie die Merkliste) mit Fortschritt.
+  // Klick auf eine Quelle öffnet ihre Abrechnung: die zugeordneten Belege
+  // als Liste – Betrag bearbeiten, entfernen, weitere Belege hinzufügen.
   // Tresor-Inhalt (bleibt lokal).
   import {
     belegBrutto,
@@ -12,6 +13,7 @@
     belegNummern,
     betragFormat,
     betragParsen,
+    datumText,
     QUELLE_TYP,
   } from "$lib/abrechnung";
 
@@ -23,32 +25,51 @@
     projektName = "",
   } = $props();
 
-  // Arbeitskopie der Belege; Änderungen werden sofort gesichert.
   let liste = $state(structuredClone($state.snapshot(belege)));
   let beschaeftigt = $state(false);
 
+  let ausgewaehltId = $state(null);
+  let zuordnenOffen = $state(false);
+
   let nummern = $derived(belegNummern(liste, kfp));
   const anzeigeNr = (b) => nummern.get(b.id) ?? `#${b.nr}`;
-
   let zugeordnetQ = $derived(zugeordnetJeQuelle(liste));
 
-  // Sortierung wie in der Belegliste (Datum, dann Roh-Nr).
-  let sortiert = $derived(
-    [...liste].sort((a, b) => {
-      const d = String(a.datum ?? "").localeCompare(String(b.datum ?? ""));
-      return d !== 0 ? d : Number(a.nr) - Number(b.nr);
-    })
-  );
+  let ausgewaehlt = $derived(quellen.find((q) => q.id === ausgewaehltId) ?? null);
 
-  // Warnungen.
+  // Kennzahlen je Quelle.
+  function info(q) {
+    const soll = quelleSoll(q);
+    const zu = zugeordnetQ.get(q.id) ?? 0;
+    const anzahl = liste.filter((b) => (b.zuordnungen ?? []).some((z) => z.quelleId === q.id)).length;
+    return { soll, zu, rest: soll - zu, anzahl, anteil: soll > 0 ? Math.min(100, (zu / soll) * 100) : zu > 0 ? 100 : 0 };
+  }
+
+  // Warnungen (für die Statusleiste oben).
   let belegeUeberzogen = $derived(liste.filter((b) => belegFrei(b) < -0.005).length);
-  let belegeOhne = $derived(
-    liste.filter((b) => belegBrutto(b) > 0 && belegZugeordnet(b) < 0.005).length
-  );
-  let quellenUeberzogen = $derived(
-    quellen.filter((q) => quelleSoll(q) - (zugeordnetQ.get(q.id) ?? 0) < -0.005).length
-  );
+  let belegeOhne = $derived(liste.filter((b) => belegBrutto(b) > 0 && belegZugeordnet(b) < 0.005).length);
+  let quellenUeberzogen = $derived(quellen.filter((q) => quelleSoll(q) - (zugeordnetQ.get(q.id) ?? 0) < -0.005).length);
   let allesOk = $derived(belegeUeberzogen === 0 && belegeOhne === 0 && quellenUeberzogen === 0);
+
+  // Belege, die der ausgewählten Quelle zugeordnet sind (mit Datum sortiert).
+  let zugeordneteBelege = $derived(
+    !ausgewaehlt
+      ? []
+      : [...liste]
+          .filter((b) => (b.zuordnungen ?? []).some((z) => z.quelleId === ausgewaehltId))
+          .sort((a, b) => String(a.datum ?? "").localeCompare(String(b.datum ?? "")))
+  );
+  // Belege, die noch freien Betrag haben und dieser Quelle NICHT zugeordnet sind.
+  let verfuegbareBelege = $derived(
+    !ausgewaehlt
+      ? []
+      : [...liste]
+          .filter(
+            (b) =>
+              belegFrei(b) > 0.005 && !(b.zuordnungen ?? []).some((z) => z.quelleId === ausgewaehltId)
+          )
+          .sort((a, b) => String(a.datum ?? "").localeCompare(String(b.datum ?? "")))
+  );
 
   async function sichern() {
     beschaeftigt = true;
@@ -59,12 +80,12 @@
     }
   }
 
-  function zellenWert(b, qId) {
+  function zuordnungBetrag(b, qId) {
     const z = (b.zuordnungen ?? []).find((x) => x.quelleId === qId);
     return z ? z.betrag : "";
   }
 
-  async function setzeZelle(b, qId, roh) {
+  async function setzeZuordnung(b, qId, roh) {
     const wert = String(roh ?? "").trim();
     const zahl = betragParsen(wert);
     if (!Array.isArray(b.zuordnungen)) b.zuordnungen = [];
@@ -79,126 +100,190 @@
     await sichern();
   }
 
-  // Den noch freien Betrag eines Belegs ganz dieser Quelle zuordnen
-  // (bequemes "Rest hierhin"). Addiert zum schon zugeordneten Wert.
-  async function restHierhin(b, qId) {
+  async function entfernen(b, qId) {
+    await setzeZuordnung(b, qId, "");
+  }
+
+  // Beleg dieser Quelle zuordnen: schlägt den sinnvollen Betrag vor
+  // (freier Betrag des Belegs, höchstens der noch offene Rest der Quelle).
+  async function zuordnen(b) {
+    const frei = belegFrei(b);
+    const rest = ausgewaehlt ? quelleSoll(ausgewaehlt) - (zugeordnetQ.get(ausgewaehltId) ?? 0) : frei;
+    const betrag = rest > 0.005 ? Math.min(frei, rest) : frei;
+    await setzeZuordnung(b, ausgewaehltId, String(Math.round(betrag * 100) / 100));
+  }
+
+  // Den freien Rest eines bereits zugeordneten Belegs ganz dieser Quelle geben.
+  async function restHierhin(b) {
     const frei = belegFrei(b);
     if (frei <= 0.005) return;
-    const aktuell = betragParsen(zellenWert(b, qId));
-    await setzeZelle(b, qId, String(Math.round((aktuell + frei) * 100) / 100));
+    const aktuell = betragParsen(zuordnungBetrag(b, ausgewaehltId));
+    await setzeZuordnung(b, ausgewaehltId, String(Math.round((aktuell + frei) * 100) / 100));
+  }
+
+  function oeffnen(q) {
+    ausgewaehltId = q.id;
+    zuordnenOffen = false;
+  }
+  function zurueck() {
+    ausgewaehltId = null;
+    zuordnenOffen = false;
   }
 </script>
 
 <div class="bereich">
-  <div class="kopf">
-    <h2>Verteilung</h2>
-    <p class="untertitel">
-      Ordne jeden Beleg{#if projektName} von <strong>{projektName}</strong>{/if} anteilig den
-      Geldquellen zu – so lange, bis jeder Beleg gedeckt und jede Quelle ausgeschöpft ist.
-    </p>
-  </div>
+  {#if !ausgewaehlt}
+    <!-- ===== Übersicht: Liste der Geldquellen ===== -->
+    <div class="kopf">
+      <h2>Verteilung – Abrechnung je Förderer</h2>
+      <p class="untertitel">
+        Wähle eine Geldquelle, um ihr Belege zuzuordnen{#if projektName} ({projektName}){/if}.
+        Ziel: jede Quelle ausschöpfen, jeden Beleg decken.
+      </p>
+    </div>
 
-  {#if quellen.length === 0}
-    <div class="leer">
-      <p>Noch keine Geldquellen.</p>
-      <p class="dezent">Lege zuerst im Reiter <strong>Geldquellen</strong> Förderer/Eigenmittel an.</p>
-    </div>
-  {:else if liste.length === 0}
-    <div class="leer">
-      <p>Noch keine Belege.</p>
-      <p class="dezent">Erfasse zuerst im Reiter <strong>Belege</strong> ein paar Belege.</p>
-    </div>
-  {:else}
-    <!-- Warn-/Status-Leiste -->
-    {#if allesOk}
-      <div class="status ok">✓ Geht auf: kein Beleg überzogen, keine Quelle überschritten, alle Belege zugeordnet.</div>
+    {#if quellen.length === 0}
+      <div class="leer">
+        <p>Noch keine Geldquellen.</p>
+        <p class="dezent">Lege zuerst im Reiter <strong>Geldquellen</strong> Förderer/Eigenmittel an.</p>
+      </div>
     {:else}
-      <div class="status warn">
-        {#if belegeUeberzogen}<span>⚠ {belegeUeberzogen} Beleg(e) überzogen</span>{/if}
-        {#if quellenUeberzogen}<span>⚠ {quellenUeberzogen} Quelle(n) überschritten</span>{/if}
-        {#if belegeOhne}<span>• {belegeOhne} Beleg(e) ohne Zuordnung</span>{/if}
+      {#if allesOk}
+        <div class="status ok">✓ Geht auf: kein Beleg überzogen, keine Quelle überschritten, alle Belege zugeordnet.</div>
+      {:else}
+        <div class="status warn">
+          {#if belegeUeberzogen}<span>⚠ {belegeUeberzogen} Beleg(e) überzogen</span>{/if}
+          {#if quellenUeberzogen}<span>⚠ {quellenUeberzogen} Quelle(n) überschritten</span>{/if}
+          {#if belegeOhne}<span>• {belegeOhne} Beleg(e) ohne Zuordnung</span>{/if}
+        </div>
+      {/if}
+
+      <div class="quellen-liste">
+        {#each quellen as q (q.id)}
+          {@const i = info(q)}
+          <div
+            class="qkarte"
+            role="button"
+            tabindex="0"
+            onclick={() => oeffnen(q)}
+            onkeydown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); oeffnen(q); } }}
+          >
+            <div class="qk-kopf">
+              <span class="typ t-{q.typ}">{QUELLE_TYP[q.typ] || q.typ}</span>
+              <h3>{q.name}</h3>
+              <span class="anzahl">{i.anzahl} Beleg{i.anzahl === 1 ? "" : "e"}</span>
+            </div>
+            <div class="balken"><div class="fuellung" class:voll={i.rest < -0.005} style="width:{i.anteil}%"></div></div>
+            <div class="qk-zahlen">
+              <span>Soll <strong>{betragFormat(i.soll)}</strong></span>
+              <span>Zugeordnet <strong>{betragFormat(i.zu)}</strong></span>
+              <span class="rest" class:ueber={i.rest < -0.005} class:offen={i.rest > 0.005}>
+                {#if i.rest < -0.005}überzogen {betragFormat(-i.rest)}
+                {:else if i.rest > 0.005}offen {betragFormat(i.rest)}
+                {:else}✓ vollständig{/if}
+              </span>
+            </div>
+          </div>
+        {/each}
       </div>
     {/if}
+  {:else}
+    <!-- ===== Detail: Abrechnung einer Quelle ===== -->
+    {@const i = info(ausgewaehlt)}
+    <button class="zurueck" onclick={zurueck}>← Übersicht</button>
+    <div class="d-kopf">
+      <span class="typ t-{ausgewaehlt.typ}">{QUELLE_TYP[ausgewaehlt.typ] || ausgewaehlt.typ}</span>
+      <h2>{ausgewaehlt.name}</h2>
+    </div>
+    <div class="d-zahlen">
+      <span>Soll <strong>{betragFormat(i.soll)}</strong></span>
+      <span>Zugeordnet <strong>{betragFormat(i.zu)}</strong></span>
+      <span class="rest" class:ueber={i.rest < -0.005} class:offen={i.rest > 0.005}>
+        {#if i.rest < -0.005}überzogen {betragFormat(-i.rest)}
+        {:else if i.rest > 0.005}offen {betragFormat(i.rest)}
+        {:else}✓ vollständig{/if}
+      </span>
+    </div>
 
-    <div class="scroll">
-      <table class="matrix">
+    {#if zugeordneteBelege.length === 0}
+      <p class="leer-klein">Noch keine Belege zugeordnet. Füge unten Belege hinzu.</p>
+    {:else}
+      <table class="belege">
         <thead>
           <tr>
             <th class="num">Nr.</th>
-            <th class="beleg">Beleg</th>
+            <th>Datum</th>
+            <th>Beleg</th>
             <th class="betrag">Betrag</th>
-            {#each quellen as q (q.id)}
-              <th class="q">
-                <div class="qname" title={q.name}>{q.name}</div>
-                <div class="qsoll">Soll {betragFormat(quelleSoll(q))}</div>
-              </th>
-            {/each}
-            <th class="betrag frei-h">Frei</th>
+            <th class="betrag">zugeordnet</th>
+            <th class="akt"></th>
           </tr>
         </thead>
         <tbody>
-          {#each sortiert as b (b.id)}
+          {#each zugeordneteBelege as b (b.id)}
             {@const frei = belegFrei(b)}
             <tr>
               <td class="num">{anzeigeNr(b)}</td>
-              <td class="beleg">
+              <td>{datumText(b.datum)}</td>
+              <td class="bel">
                 <div class="b-emp">{b.empfaenger || "—"}</div>
                 {#if b.zweck}<div class="b-zw">{b.zweck}</div>{/if}
               </td>
               <td class="betrag">{betragFormat(belegBrutto(b))}</td>
-              {#each quellen as q (q.id)}
-                <td class="zelle">
-                  <input
-                    type="text"
-                    inputmode="decimal"
-                    value={zellenWert(b, q.id)}
-                    onchange={(e) => setzeZelle(b, q.id, e.currentTarget.value)}
-                    placeholder="–"
-                  />
-                  {#if frei > 0.005}
-                    <button class="rest" title="freien Rest hierhin" onclick={() => restHierhin(b, q.id)}>+</button>
-                  {/if}
-                </td>
-              {/each}
-              <td class="betrag frei" class:ueber={frei < -0.005} class:offen={frei > 0.005}>
-                {betragFormat(frei)}
+              <td class="betrag zelle">
+                <input
+                  type="text"
+                  inputmode="decimal"
+                  value={zuordnungBetrag(b, ausgewaehltId)}
+                  onchange={(e) => setzeZuordnung(b, ausgewaehltId, e.currentTarget.value)}
+                />
+                {#if frei > 0.005}
+                  <button class="rest-btn" title="freien Rest ({betragFormat(frei)}) hierhin" onclick={() => restHierhin(b)}>+{betragFormat(frei)}</button>
+                {/if}
+              </td>
+              <td class="akt">
+                <button class="leise gefahr" onclick={() => entfernen(b, ausgewaehltId)} disabled={beschaeftigt}>entfernen</button>
               </td>
             </tr>
           {/each}
         </tbody>
         <tfoot>
           <tr>
-            <td colspan="3" class="summe-label">Zugeordnet</td>
-            {#each quellen as q (q.id)}
-              <td class="betrag">{betragFormat(zugeordnetQ.get(q.id) ?? 0)}</td>
-            {/each}
-            <td></td>
-          </tr>
-          <tr>
-            <td colspan="3" class="summe-label">Rest (Soll − zugeordnet)</td>
-            {#each quellen as q (q.id)}
-              {@const rest = quelleSoll(q) - (zugeordnetQ.get(q.id) ?? 0)}
-              <td class="betrag" class:ueber={rest < -0.005} class:offen={rest > 0.005}>
-                {betragFormat(rest)}
-              </td>
-            {/each}
+            <td colspan="4" class="summe-label">Summe zugeordnet</td>
+            <td class="betrag summe">{betragFormat(i.zu)}</td>
             <td></td>
           </tr>
         </tfoot>
       </table>
-    </div>
+    {/if}
 
-    <p class="hinweis">
-      Tipp: Das <strong>+</strong> in einer Zelle ordnet den noch freien Restbetrag des Belegs ganz
-      dieser Quelle zu. „Frei" zeigt, was an einem Beleg noch offen ist (rot = mehr zugeordnet als
-      der Beleg hergibt). Eigenmittel zählen wie eine Quelle.
-    </p>
+    <!-- Belege hinzufügen -->
+    <div class="zuordnen">
+      <button class="zweit" onclick={() => (zuordnenOffen = !zuordnenOffen)} disabled={!verfuegbareBelege.length}>
+        + Beleg zuordnen{#if verfuegbareBelege.length} ({verfuegbareBelege.length} verfügbar){/if}
+      </button>
+      {#if !verfuegbareBelege.length}
+        <span class="dezent"> – alle Belege mit freiem Betrag sind dieser Quelle bereits zugeordnet.</span>
+      {/if}
+      {#if zuordnenOffen && verfuegbareBelege.length}
+        <ul class="verfuegbar">
+          {#each verfuegbareBelege as b (b.id)}
+            <li>
+              <span class="vb-nr">{anzeigeNr(b)}</span>
+              <span class="vb-emp">{b.empfaenger || "—"}{#if b.zweck} · {b.zweck}{/if}</span>
+              <span class="vb-frei">frei {betragFormat(belegFrei(b))}</span>
+              <button class="zweit schmal" onclick={() => zuordnen(b)} disabled={beschaeftigt}>zuordnen</button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </div>
   {/if}
 </div>
 
 <style>
   .bereich {
-    max-width: 1100px;
+    max-width: 1000px;
     margin: 0 auto;
     padding: 32px 24px 64px;
   }
@@ -215,10 +300,9 @@
     margin: 0;
     color: #5e6c84;
     font-size: 0.9rem;
-    max-width: 600px;
+    max-width: 620px;
     line-height: 1.5;
   }
-
   .leer {
     text-align: center;
     color: #5e6c84;
@@ -226,12 +310,9 @@
     border: 1px dashed #dfe1e6;
     border-radius: 12px;
   }
-  .leer p {
-    margin: 0 0 8px;
-  }
-  .dezent {
-    font-size: 0.88rem;
-  }
+  .leer p { margin: 0 0 8px; }
+  .leer-klein { color: #5e6c84; font-size: 0.9rem; margin: 14px 0; }
+  .dezent { color: #8590a2; font-size: 0.88rem; }
 
   .status {
     border-radius: 8px;
@@ -239,133 +320,88 @@
     font-size: 0.88rem;
     margin-bottom: 14px;
   }
-  .status.ok {
-    background: #dcfff1;
-    color: #14794e;
-  }
-  .status.warn {
-    background: #fff7d6;
-    color: #7a5b00;
-    display: flex;
-    gap: 18px;
-    flex-wrap: wrap;
-  }
+  .status.ok { background: #dcfff1; color: #14794e; }
+  .status.warn { background: #fff7d6; color: #7a5b00; display: flex; gap: 18px; flex-wrap: wrap; }
 
-  .scroll {
-    overflow-x: auto;
-  }
-  table.matrix {
-    border-collapse: collapse;
-    font-size: 0.88rem;
-    min-width: 100%;
-  }
-  table.matrix th,
-  table.matrix td {
-    padding: 7px 9px;
-    border-bottom: 1px solid #ebedf0;
-    text-align: left;
-    vertical-align: middle;
-  }
-  table.matrix th {
-    color: #5e6c84;
-    font-weight: 600;
-    font-size: 0.76rem;
-  }
-  .num {
-    width: 56px;
-    color: #44546f;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-  .beleg {
-    min-width: 150px;
-  }
-  .b-emp {
-    color: #172b4d;
-  }
-  .b-zw {
-    color: #8590a2;
-    font-size: 0.78rem;
-  }
-  .betrag {
-    text-align: right;
-    white-space: nowrap;
-    font-variant-numeric: tabular-nums;
-  }
-  th.q {
-    text-align: right;
-    min-width: 96px;
-  }
-  .qname {
-    color: #172b4d;
-    font-weight: 600;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 130px;
-    margin-left: auto;
-  }
-  .qsoll {
-    color: #8590a2;
-    font-weight: 500;
-  }
-  td.zelle {
-    text-align: right;
-    white-space: nowrap;
-    position: relative;
-  }
-  td.zelle input {
-    width: 78px;
-    padding: 5px 7px;
-    border: 2px solid #dfe1e6;
-    border-radius: 7px;
-    font-family: inherit;
-    font-size: 0.85rem;
-    text-align: right;
-    color: #172b4d;
-    font-variant-numeric: tabular-nums;
-  }
-  td.zelle input:focus {
-    outline: none;
-    border-color: #4f6df5;
-  }
-  .rest {
-    margin-left: 4px;
-    width: 20px;
-    height: 26px;
-    border: none;
-    border-radius: 6px;
-    background: #eef1ff;
-    color: #3d5bf0;
-    font-weight: 700;
+  /* Quellen-Liste (Merkliste-Stil) */
+  .quellen-liste { display: flex; flex-direction: column; gap: 12px; }
+  .qkarte {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.12);
+    padding: 14px 18px;
     cursor: pointer;
-    vertical-align: middle;
+    transition: box-shadow 0.15s;
   }
-  .rest:hover {
-    background: #4f6df5;
-    color: #fff;
+  .qkarte:hover { box-shadow: 0 4px 14px rgba(9, 30, 66, 0.18); }
+  .qkarte:focus-visible { outline: 2px solid #4f6df5; outline-offset: 2px; }
+  .qk-kopf { display: flex; align-items: center; gap: 10px; }
+  .qk-kopf h3 { margin: 0; font-size: 1.02rem; font-weight: 600; flex: 1; min-width: 0; color: #172b4d; }
+  .qk-kopf .anzahl { color: #8590a2; font-size: 0.82rem; white-space: nowrap; }
+  .balken { height: 7px; background: #eef0f3; border-radius: 99px; margin: 10px 0; overflow: hidden; }
+  .fuellung { height: 100%; background: #4f6df5; border-radius: 99px; }
+  .fuellung.voll { background: #ca3521; }
+  .qk-zahlen { display: flex; gap: 20px; font-size: 0.86rem; color: #5e6c84; flex-wrap: wrap; }
+  .qk-zahlen strong { color: #172b4d; }
+  .rest.offen { color: #7a5b00; font-weight: 600; }
+  .rest.ueber { color: #ca3521; font-weight: 700; }
+
+  /* Detail */
+  .zurueck {
+    background: none; border: none; color: #4f6df5; font-size: 0.9rem;
+    font-weight: 600; cursor: pointer; padding: 0; margin-bottom: 14px; font-family: inherit;
   }
-  .frei.ueber,
-  .ueber {
-    color: #ca3521;
-    font-weight: 700;
+  .zurueck:hover { text-decoration: underline; }
+  .d-kopf { display: flex; align-items: center; gap: 10px; }
+  .d-kopf h2 { margin: 0; }
+  .d-zahlen { display: flex; gap: 22px; font-size: 0.92rem; color: #5e6c84; margin: 8px 0 18px; flex-wrap: wrap; }
+  .d-zahlen strong { color: #172b4d; }
+
+  .typ { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 0.74rem; font-weight: 600; }
+  .typ.t-foerderung { background: #eef1ff; color: #3b4fb0; }
+  .typ.t-eigenmittel { background: #dcfff1; color: #14794e; }
+
+  table.belege { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  table.belege th, table.belege td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #ebedf0; vertical-align: middle; }
+  table.belege th { color: #5e6c84; font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .num { width: 56px; color: #44546f; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .bel { min-width: 150px; }
+  .b-emp { color: #172b4d; }
+  .b-zw { color: #8590a2; font-size: 0.78rem; }
+  .betrag { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  td.zelle input {
+    width: 90px; padding: 5px 7px; border: 2px solid #dfe1e6; border-radius: 7px;
+    font-family: inherit; font-size: 0.85rem; text-align: right; color: #172b4d; font-variant-numeric: tabular-nums;
   }
-  .frei.offen,
-  .offen {
-    color: #7a5b00;
+  td.zelle input:focus { outline: none; border-color: #4f6df5; }
+  .rest-btn {
+    display: block; margin: 4px 0 0 auto; border: none; border-radius: 6px;
+    background: #eef1ff; color: #3d5bf0; font-size: 0.72rem; font-weight: 600;
+    padding: 2px 6px; cursor: pointer; font-family: inherit;
   }
-  tfoot td {
-    border-top: 2px solid #dfe1e6;
-    font-weight: 600;
-    color: #172b4d;
+  .rest-btn:hover { background: #4f6df5; color: #fff; }
+  .akt { text-align: right; white-space: nowrap; }
+  .summe-label { text-align: right; font-weight: 600; color: #44546f; }
+  .summe { font-weight: 700; color: #172b4d; }
+
+  .zuordnen { margin-top: 18px; }
+  .verfuegbar { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .verfuegbar li {
+    display: flex; align-items: center; gap: 12px; padding: 8px 12px;
+    background: #f7f8fa; border: 1px solid #ebedf0; border-radius: 8px; font-size: 0.88rem;
   }
-  .summe-label {
-    text-align: right;
-    color: #44546f;
+  .vb-nr { color: #44546f; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .vb-emp { flex: 1; min-width: 0; color: #172b4d; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vb-frei { color: #5e6c84; white-space: nowrap; }
+
+  button.zweit {
+    padding: 9px 14px; font-size: 0.9rem; font-weight: 600; font-family: inherit;
+    color: #172b4d; background: #fff; border: 2px solid #dfe1e6; border-radius: 8px; cursor: pointer;
   }
-  .hinweis {
-    margin-top: 14px;
-    color: #5e6c84;
-    font-size: 0.84rem;
-    line-height: 1.5;
-  }
+  button.zweit:hover:not(:disabled) { border-color: #4f6df5; }
+  button.zweit:disabled { color: #b3bac5; border-color: #ebedf0; cursor: default; }
+  button.zweit.schmal { padding: 6px 11px; font-size: 0.82rem; }
+  button.leise { background: none; border: none; color: #5e6c84; font-size: 0.84rem; cursor: pointer; padding: 4px 6px; font-family: inherit; }
+  button.leise:hover { color: #172b4d; text-decoration: underline; }
+  button.leise.gefahr:hover { color: #ae2e24; }
 </style>
