@@ -17,12 +17,18 @@
     betragFormat,
     datumText,
     groesseText,
+    kostenstellenNachKategorie,
+    kostenstelleLabel,
   } from "$lib/abrechnung";
 
   let {
     belege = [],
     speichern,
     projektName = "",
+    // KFP für die Kostenstellen-Auswahl (Phase A3): nur lesen, plus ein
+    // Callback zum Anlegen eines neuen Kosten-Postens.
+    kfp = { kosten: [], finanzierung: [] },
+    kostenstelleAnlegen,
     // Beleg-Dateien (Phase A2) – kommen als Callbacks aus +page.svelte,
     // die das Rust-Backend (Verschlüsseln/Ablegen/Öffnen/Löschen) aufrufen.
     dateiHinzufuegen,
@@ -44,6 +50,13 @@
   let form = $state(null);
   let formFehler = $state("");
 
+  // Kostenstellen-Auswahl im Formular (nach Kategorie gruppiert) + das
+  // Anlegen einer neuen Kostenstelle direkt aus der Beleg-Maske.
+  let kategorien = $derived(kostenstellenNachKategorie(kfp));
+  let neuKsOffen = $state(false);
+  let neuKsKategorie = $state(0);
+  let neuKsBezeichnung = $state("");
+
   // Welcher Beleg hat gerade sein Datei-Panel offen?
   let dateienOffenId = $state(null);
   let dateiBeschaeftigt = $state(false);
@@ -60,10 +73,17 @@
     }
   }
 
+  function neuKsZuruecksetzen() {
+    neuKsOffen = false;
+    neuKsKategorie = 0;
+    neuKsBezeichnung = "";
+  }
+
   function neu() {
     bearbeiteId = null;
     form = neuerBeleg(naechsteBelegNr(liste));
     formFehler = "";
+    neuKsZuruecksetzen();
     formOffen = true;
   }
 
@@ -71,6 +91,7 @@
     bearbeiteId = b.id;
     form = structuredClone($state.snapshot(b));
     formFehler = "";
+    neuKsZuruecksetzen();
     formOffen = true;
   }
 
@@ -79,6 +100,17 @@
     form = null;
     bearbeiteId = null;
     formFehler = "";
+    neuKsZuruecksetzen();
+  }
+
+  // Neue Kostenstelle (KFP-Kosten-Posten) direkt aus der Beleg-Maske
+  // anlegen und gleich auswählen.
+  async function neueKostenstelle() {
+    const bez = neuKsBezeichnung.trim();
+    if (!bez) return;
+    const id = await kostenstelleAnlegen(neuKsKategorie, bez);
+    if (id) form.kostenstelle = id;
+    neuKsZuruecksetzen();
   }
 
   async function formSpeichern() {
@@ -185,6 +217,7 @@
           <th>Datum</th>
           <th>Empfänger</th>
           <th>Zweck</th>
+          <th>Kostenstelle</th>
           <th class="betrag">Betrag</th>
           <th>Zahlung</th>
           <th>Status</th>
@@ -198,6 +231,7 @@
             <td>{datumText(b.datum)}</td>
             <td>{b.empfaenger || "—"}</td>
             <td class="zweck">{b.zweck || "—"}</td>
+            <td class="ks">{kostenstelleLabel(kfp, b.kostenstelle) || "—"}</td>
             <td class="betrag">
               {betragFormat(belegBrutto(b))}
               {#if mwstSatz(b) > 0}<div class="mwst">inkl. {mwstSatz(b)} % MwSt</div>{/if}
@@ -216,7 +250,7 @@
       </tbody>
       <tfoot>
         <tr>
-          <td colspan="4" class="summe-label">Summe ({liste.length} Belege)</td>
+          <td colspan="5" class="summe-label">Summe ({liste.length} Belege)</td>
           <td class="betrag summe">{betragFormat(summe)}</td>
           <td colspan="3"></td>
         </tr>
@@ -300,6 +334,49 @@
           <span>Zweck / Beschreibung</span>
           <input type="text" bind:value={form.zweck} placeholder="Wofür? (kurz)" />
         </label>
+        <div class="feld breit">
+          <span>Kostenstelle <em>(optional)</em></span>
+          <select bind:value={form.kostenstelle}>
+            <option value={null}>— keine —</option>
+            {#each kategorien as kat}
+              {#if kat.posten.length}
+                <optgroup label={kat.name}>
+                  {#each kat.posten as p}
+                    <option value={p.id}>{p.nummer} {p.bezeichnung}</option>
+                  {/each}
+                </optgroup>
+              {/if}
+            {/each}
+          </select>
+          {#if !neuKsOffen}
+            <div class="ks-zeile">
+              <button
+                type="button"
+                class="leise"
+                onclick={() => (neuKsOffen = true)}
+                disabled={!kfp.kosten?.length}>＋ neue Kostenstelle</button
+              >
+              {#if !kfp.kosten?.length}
+                <span class="ks-hinweis">Lege zuerst im Kostenplan eine Kategorie an.</span>
+              {/if}
+            </div>
+          {:else}
+            <div class="ks-neu">
+              <select bind:value={neuKsKategorie} aria-label="Kategorie">
+                {#each kfp.kosten as k, i}
+                  <option value={i}>{k.name || "(ohne Name)"}</option>
+                {/each}
+              </select>
+              <input
+                type="text"
+                bind:value={neuKsBezeichnung}
+                placeholder="Bezeichnung, z. B. Honorar Regie"
+              />
+              <button type="button" class="zweit schmal" onclick={neueKostenstelle}>anlegen</button>
+              <button type="button" class="leise" onclick={neuKsZuruecksetzen}>abbrechen</button>
+            </div>
+          {/if}
+        </div>
         <label class="feld">
           <span>Status</span>
           <select bind:value={form.status}>
@@ -582,6 +659,44 @@
   button.leise.aktiv {
     color: #3d5bf0;
     font-weight: 700;
+  }
+
+  td.ks {
+    color: #44546f;
+    font-size: 0.84rem;
+  }
+
+  /* Kostenstelle im Formular */
+  .ks-zeile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 2px;
+  }
+  .ks-zeile button.leise {
+    padding: 2px 0;
+  }
+  .ks-hinweis {
+    color: #8590a2;
+    font-size: 0.78rem;
+  }
+  .ks-neu {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .ks-neu select {
+    flex: 0 0 auto;
+    max-width: 45%;
+  }
+  .ks-neu input {
+    flex: 1 1 160px;
+  }
+  button.zweit.schmal {
+    padding: 7px 12px;
+    font-size: 0.85rem;
   }
 
   /* Datei-Panel */

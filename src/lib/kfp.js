@@ -38,6 +38,15 @@ export function leererKfp() {
   return { kosten: [], finanzierung: [] };
 }
 
+/// Stabile ID fuer einen KFP-Posten. Kosten-Posten dienen als
+/// "Kostenstelle" im Abrechnungs-Modus; ueber diese ID bleibt die
+/// Verknuepfung eines Belegs erhalten, auch wenn der KFP umgebaut wird.
+export function neuePostenId() {
+  return crypto?.randomUUID
+    ? crypto.randomUUID()
+    : "ks-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+}
+
 /// Startvorlage mit den ueblichen Kategorien (aus echten KFPs).
 export function vorlageKfp() {
   const kat = (name) => ({ name, posten: [] });

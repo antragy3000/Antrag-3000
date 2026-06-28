@@ -20,7 +20,7 @@
 // (deutsche Schreibweise, z. B. "1.234,56"); so kann man tippen wie gewohnt.
 // ============================================================
 
-import { betragParsen, betragFormat } from "./kfp.js";
+import { betragParsen, betragFormat, postenBetrag } from "./kfp.js";
 
 export { betragFormat };
 
@@ -109,6 +109,100 @@ export function belegMwstBetrag(b) {
 /// Summe aller Belege (brutto).
 export function belegeSumme(belege) {
   return (belege ?? []).reduce((s, b) => s + belegBrutto(b), 0);
+}
+
+// ============================================================
+// Kostenstellen = KFP-Kosten-Posten (Phase A3). Ein Beleg verweist per
+// Posten-ID (Feld kostenstelle) auf einen Kosten-Posten.
+// ============================================================
+
+/// KFP-Kosten-Posten nach Kategorie gruppiert – fuer die Auswahl im
+/// Beleg-Formular. Liefert [{ name, posten: [{ id, nummer, bezeichnung }] }].
+export function kostenstellenNachKategorie(kfp) {
+  return (kfp?.kosten ?? []).map((k, ki) => ({
+    name: k.name || "(ohne Name)",
+    posten: (k.posten ?? [])
+      .filter((p) => p.id)
+      .map((p, pi) => ({
+        id: p.id,
+        nummer: `${ki + 1}.${pi + 1}`,
+        bezeichnung: p.bezeichnung || "(ohne Bezeichnung)",
+      })),
+  }));
+}
+
+/// Lesbares Etikett einer Kostenstelle (z. B. "1.2 Honorar Regie"), oder
+/// "" wenn keine, bzw. "(entfernt)" wenn der Posten nicht mehr existiert.
+export function kostenstelleLabel(kfp, id) {
+  if (!id) return "";
+  let ki = 0;
+  for (const k of kfp?.kosten ?? []) {
+    ki += 1;
+    let pi = 0;
+    for (const p of k.posten ?? []) {
+      pi += 1;
+      if (p.id === id) return `${ki}.${pi} ${p.bezeichnung || "(ohne Bezeichnung)"}`;
+    }
+  }
+  return "(entfernt)";
+}
+
+/// Plan-/Ist-Uebersicht je Kostenstelle: Plan (KFP), Ist (Summe der
+/// zugeordneten Belege), Rest (Plan - Ist). Plus eine Sammelzeile fuer
+/// Belege ohne (gueltige) Kostenstelle und die Gesamtsummen.
+export function kostenstellenUebersicht(kfp, belege) {
+  const belegeArr = belege ?? [];
+
+  // Ist je gueltiger Posten-ID aufsummieren; der Rest gilt als „unzugeordnet".
+  const gueltig = new Set();
+  for (const k of kfp?.kosten ?? []) for (const p of k.posten ?? []) if (p.id) gueltig.add(p.id);
+
+  const ist = new Map(); // id -> { summe, anzahl }
+  let unzugeordnetSumme = 0;
+  let unzugeordnetAnzahl = 0;
+  for (const b of belegeArr) {
+    const betrag = belegBrutto(b);
+    const ks = b.kostenstelle;
+    if (ks && gueltig.has(ks)) {
+      const cur = ist.get(ks) ?? { summe: 0, anzahl: 0 };
+      cur.summe += betrag;
+      cur.anzahl += 1;
+      ist.set(ks, cur);
+    } else {
+      unzugeordnetSumme += betrag;
+      unzugeordnetAnzahl += 1;
+    }
+  }
+
+  const kategorien = (kfp?.kosten ?? []).map((k, ki) => {
+    const posten = (k.posten ?? []).map((p, pi) => {
+      const plan = postenBetrag(p);
+      const i = ist.get(p.id) ?? { summe: 0, anzahl: 0 };
+      return {
+        id: p.id,
+        nummer: `${ki + 1}.${pi + 1}`,
+        bezeichnung: p.bezeichnung || "(ohne Bezeichnung)",
+        plan,
+        ist: i.summe,
+        rest: plan - i.summe,
+        anzahl: i.anzahl,
+      };
+    });
+    const planSumme = posten.reduce((s, p) => s + p.plan, 0);
+    const istSumme = posten.reduce((s, p) => s + p.ist, 0);
+    return {
+      name: k.name || "(ohne Name)",
+      nummer: String(ki + 1),
+      posten,
+      planSumme,
+      istSumme,
+      restSumme: planSumme - istSumme,
+    };
+  });
+
+  const planGesamt = kategorien.reduce((s, k) => s + k.planSumme, 0);
+  const istGesamt = belegeArr.reduce((s, b) => s + belegBrutto(b), 0);
+  return { kategorien, planGesamt, istGesamt, unzugeordnetSumme, unzugeordnetAnzahl };
 }
 
 /// Dateigröße menschlich lesbar (z. B. "1,2 MB", "340 KB").

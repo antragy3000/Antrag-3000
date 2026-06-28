@@ -10,6 +10,7 @@
   import SammelFormular from "$lib/komponenten/SammelFormular.svelte";
   import KostenPlan from "$lib/komponenten/KostenPlan.svelte";
   import Abrechnung from "$lib/komponenten/Abrechnung.svelte";
+  import Kostenstellen from "$lib/komponenten/Kostenstellen.svelte";
   import Sicherung from "$lib/komponenten/Sicherung.svelte";
   import TeamSync from "$lib/komponenten/TeamSync.svelte";
   import { katalog, setzeKatalog, setzeStandardKatalog, standardKatalog, pruefeKatalog, vergleicheKataloge, geaenderteFelder, setzeGeteilteFoerderer } from "$lib/katalog.svelte.js";
@@ -18,7 +19,7 @@
   import { check as appUpdateCheck } from "@tauri-apps/plugin-updater";
   import { leeresFormular, formularWordBauen } from "$lib/antrag";
   import { antragsPdfBauen } from "$lib/antragsPdf";
-  import { leererKfp, kfpExport } from "$lib/kfp";
+  import { leererKfp, kfpExport, neuePostenId } from "$lib/kfp";
   import { leereAbrechnung } from "$lib/abrechnung";
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
   import { boardAusTresor, geteilteFoerdererAusTresor } from "$lib/sync";
@@ -64,7 +65,7 @@
   // beiden Modi erreichbar (globale Angaben).
   let arbeitsModus = $state("antrag");
   const ANTRAG_BEREICHE = ["foerderungen", "merkliste", "fristen", "formular", "kostenplan", "stammdaten"];
-  const ABRECHNUNG_BEREICHE = ["belege", "stammdaten"];
+  const ABRECHNUNG_BEREICHE = ["belege", "kostenstellen", "stammdaten"];
   function arbeitsModusWechseln(m) {
     arbeitsModus = m;
     const erlaubt = m === "abrechnung" ? ABRECHNUNG_BEREICHE : ANTRAG_BEREICHE;
@@ -310,6 +311,18 @@
             }
             if (typeof po.foerderId !== "string") {
               po.foerderId = "";
+              veraendert = true;
+            }
+          }
+        }
+      }
+      // Kosten-Posten brauchen eine stabile ID (Kostenstelle fuer die
+      // Abrechnung); aelteren Staenden nachtragen.
+      if (Array.isArray(p.kfp?.kosten)) {
+        for (const k of p.kfp.kosten) {
+          for (const po of k.posten ?? []) {
+            if (typeof po.id !== "string" || !po.id) {
+              po.id = neuePostenId();
               veraendert = true;
             }
           }
@@ -647,6 +660,18 @@
   async function belegeSpeichern(neueBelege) {
     aktivesProjekt.abrechnung.belege = neueBelege;
     await tresorSpeichern();
+  }
+
+  // Neue Kostenstelle (KFP-Kosten-Posten) aus der Beleg-Maske anlegen.
+  // Gibt die neue Posten-ID zurück, die die Beleg-Maske gleich auswählt.
+  async function kostenstelleAnlegen(kategorieIndex, bezeichnung) {
+    const kat = aktivesProjekt.kfp?.kosten?.[kategorieIndex];
+    if (!kat) return null;
+    const id = neuePostenId();
+    if (!Array.isArray(kat.posten)) kat.posten = [];
+    kat.posten.push({ id, bezeichnung: bezeichnung.trim(), erlaeuterung: "", betrag: "" });
+    await tresorSpeichern();
+    return id;
   }
 
   // --- Beleg-Dateien (Phase A2): verschlüsselt im Projektordner ---
@@ -1953,6 +1978,9 @@
           <button class:aktiv={bereich === "belege"} onclick={() => (bereich = "belege")}>
             Belege{#if aktivesProjekt?.abrechnung?.belege?.length}&nbsp;({aktivesProjekt.abrechnung.belege.length}){/if}
           </button>
+          <button class:aktiv={bereich === "kostenstellen"} onclick={() => (bereich = "kostenstellen")}>
+            Kostenstellen
+          </button>
         {/if}
         <span class="nav-trenner" aria-hidden="true"></span>
         <button class:aktiv={bereich === "stammdaten"} onclick={() => (bereich = "stammdaten")}>
@@ -2130,11 +2158,21 @@
             belege={aktivesProjekt.abrechnung.belege}
             speichern={belegeSpeichern}
             projektName={aktivesProjekt.name}
+            kfp={aktivesProjekt.kfp}
+            {kostenstelleAnlegen}
             dateiHinzufuegen={belegDateiHinzufuegen}
             dateiOeffnen={belegDateiOeffnen}
             dateiHerunterladen={belegDateiHerunterladen}
             dateiEntfernen={belegDateiEntfernen}
             ordnerEntfernen={belegOrdnerEntfernen}
+          />
+        {/key}
+      {:else if bereich === "kostenstellen"}
+        {#key daten.aktivesProjektId}
+          <Kostenstellen
+            kfp={aktivesProjekt.kfp}
+            belege={aktivesProjekt.abrechnung.belege}
+            projektName={aktivesProjekt.name}
           />
         {/key}
       {:else if bereich === "fristen"}

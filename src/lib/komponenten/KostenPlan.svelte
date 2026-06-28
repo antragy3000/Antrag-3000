@@ -4,6 +4,7 @@
   import { fade } from "svelte/transition";
   import {
     vorlageKfp,
+    neuePostenId,
     betragFormat,
     istFormel,
     formelAuswerten,
@@ -69,7 +70,7 @@
   function postenHinzufuegen(seite, kategorie) {
     kategorie.posten.push(
       seite === "kosten"
-        ? { bezeichnung: "", erlaeuterung: "", betrag: "" }
+        ? { id: neuePostenId(), bezeichnung: "", erlaeuterung: "", betrag: "" }
         : { bezeichnung: "", betrag: "", foerderId: "" }
     );
   }
