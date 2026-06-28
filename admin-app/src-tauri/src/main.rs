@@ -18,6 +18,7 @@
 // ============================================================
 
 use serde::{Deserialize, Serialize};
+use tauri::Manager;
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_opener::OpenerExt;
 
@@ -124,6 +125,43 @@ fn paket_laden(pfad: String) -> Result<ZugangsInfo, String> {
     let mut z = paket_aus_text(&roh)?;
     z.pfad = pfad;
     Ok(z)
+}
+
+// --- Zuletzt genutztes Paket merken (nur der Pfad, in einer kleinen Datei
+//     im App-Konfigordner – zuverlaessiger als localStorage des Webviews) ---
+
+fn merk_datei(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    let dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| format!("Konfig-Ordner nicht ermittelbar: {e}"))?;
+    std::fs::create_dir_all(&dir).map_err(|e| format!("Konfig-Ordner nicht anlegbar: {e}"))?;
+    Ok(dir.join("letztes_paket.txt"))
+}
+
+/// Merkt sich den Pfad des zuletzt genutzten .a3kpaket (nur den Pfad).
+#[tauri::command]
+fn pfad_merken(app: tauri::AppHandle, pfad: String) -> Result<(), String> {
+    std::fs::write(merk_datei(&app)?, pfad).map_err(|e| format!("Konnte Pfad nicht merken: {e}"))
+}
+
+/// Gibt den gemerkten Pfad zurueck ("" wenn keiner gemerkt ist).
+#[tauri::command]
+fn pfad_gemerkt(app: tauri::AppHandle) -> String {
+    merk_datei(&app)
+        .ok()
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .map(|s| s.trim().to_string())
+        .unwrap_or_default()
+}
+
+/// Loescht den gemerkten Pfad (z. B. wenn die Datei verschoben wurde).
+#[tauri::command]
+fn pfad_vergessen(app: tauri::AppHandle) -> Result<(), String> {
+    if let Ok(p) = merk_datei(&app) {
+        let _ = std::fs::remove_file(p);
+    }
+    Ok(())
 }
 
 /// Öffnet einen Datei-Dialog für eine Katalog-Datei (JSON) und gibt ihren
@@ -393,6 +431,9 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             paket_waehlen,
             paket_laden,
+            pfad_merken,
+            pfad_gemerkt,
+            pfad_vergessen,
             katalog_waehlen,
             admin_anmelden,
             admin_meldungen,
