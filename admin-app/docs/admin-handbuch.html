@@ -247,12 +247,17 @@
   </div>
   <div class="cmd">docker compose -f docker-compose.tailscale.yml run --rm api totp</div>
   <p>Der Befehl gibt das Geheimnis, die <code>otpauth://</code>-URL und einen
-  <strong>QR-Code direkt im Terminal</strong> aus:</p>
-  <div class="cmd">ADMIN_TOTP_SECRET=***REMOVED***
+  <strong>QR-Code direkt im Terminal</strong> aus (jeder Lauf erzeugt ein
+  <em>neues, zufälliges</em> Geheimnis – die Zeichen unten sind nur ein
+  Platzhalter):</p>
+  <div class="cmd">ADMIN_TOTP_SECRET=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 otpauth://totp/Antrag%203000:Admin?secret=...&amp;issuer=Antrag%203000
 
 (QR-Code zum Scannen)</div>
+  <p class="warn"><strong>Geheim halten:</strong> Dieses Geheimnis ist der
+  zweite Admin-Faktor. Niemals in Dokumente, Chats oder ins Git übernehmen –
+  nur in <span class="pfad">server/.env</span> auf der NAS.</p>
 
   <div class="struktur">
     <div class="stp"><span class="num">2</span><div><b>Authenticator-App einrichten.</b> Den <strong>QR-Code scannen</strong> – oder den base32-Schlüssel manuell eintragen (Typ: zeitbasiert/TOTP).</div></div>
