@@ -22,7 +22,7 @@
 
 import { betragParsen, betragFormat, postenBetrag } from "./kfp.js";
 
-export { betragFormat };
+export { betragFormat, betragParsen };
 
 // Zahlungsarten (Auswahl im Beleg-Formular).
 export const ZAHLUNGSARTEN = {
@@ -109,6 +109,84 @@ export function belegMwstBetrag(b) {
 /// Summe aller Belege (brutto).
 export function belegeSumme(belege) {
   return (belege ?? []).reduce((s, b) => s + belegBrutto(b), 0);
+}
+
+// ============================================================
+// Geldquellen (Phase A4): Förderer + Eigenmittel/Einnahmen. Jede Quelle hat
+// ein "Soll" (bewilligter/erwarteter Betrag). Belege werden anteilig auf
+// Quellen verteilt – jede Zuordnung ist { quelleId, betrag } am Beleg.
+// ============================================================
+
+export const QUELLE_TYP = {
+  foerderung: "Förderer",
+  eigenmittel: "Eigenmittel / Einnahmen",
+};
+
+function neueQuelleId() {
+  return crypto?.randomUUID
+    ? crypto.randomUUID()
+    : "q-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+}
+
+/// Frische Geldquelle.
+export function neueQuelle(typ = "foerderung") {
+  return { id: neueQuelleId(), typ, foerderId: "", name: "", soll: "", sachbericht: "" };
+}
+
+/// Soll-Betrag einer Quelle als Zahl.
+export function quelleSoll(q) {
+  return betragParsen(q?.soll);
+}
+
+/// Vorschlag für Geldquellen aus dem KFP-Finanzierungsplan: jede
+/// Finanzierungs-Position wird eine Quelle (Name aus der Position, Soll =
+/// ausgerechneter Betrag, Förderer wenn verknüpft). Liefert nur Quellen, die
+/// noch NICHT vorhanden sind (Abgleich über foerderId bzw. Name).
+export function quellenAusFinanzierung(kfp, vorhandene = []) {
+  const habenFoerder = new Set(vorhandene.filter((q) => q.foerderId).map((q) => q.foerderId));
+  const habenNamen = new Set(vorhandene.map((q) => (q.name || "").trim().toLowerCase()));
+  const neu = [];
+  for (const k of kfp?.finanzierung ?? []) {
+    for (const p of k.posten ?? []) {
+      const foerderId = p.foerderId || "";
+      const name = (p.bezeichnung || "").trim();
+      if (!name && !foerderId) continue;
+      if (foerderId && habenFoerder.has(foerderId)) continue;
+      if (!foerderId && name && habenNamen.has(name.toLowerCase())) continue;
+      neu.push({
+        id: neueQuelleId(),
+        typ: foerderId ? "foerderung" : "eigenmittel",
+        foerderId,
+        name: name || "(Förderung)",
+        soll: String(postenBetrag(p) || ""),
+        sachbericht: "",
+      });
+      if (foerderId) habenFoerder.add(foerderId);
+      if (name) habenNamen.add(name.toLowerCase());
+    }
+  }
+  return neu;
+}
+
+/// Summe der Zuordnungen eines Belegs.
+export function belegZugeordnet(b) {
+  return (b?.zuordnungen ?? []).reduce((s, z) => s + betragParsen(z.betrag), 0);
+}
+
+/// Noch nicht zugeordneter ("freier") Betrag eines Belegs.
+export function belegFrei(b) {
+  return belegBrutto(b) - belegZugeordnet(b);
+}
+
+/// Je Quelle die Summe aller zugeordneten Beträge. Map<quelleId, Zahl>.
+export function zugeordnetJeQuelle(belege) {
+  const m = new Map();
+  for (const b of belege ?? []) {
+    for (const z of b.zuordnungen ?? []) {
+      m.set(z.quelleId, (m.get(z.quelleId) ?? 0) + betragParsen(z.betrag));
+    }
+  }
+  return m;
 }
 
 // ============================================================

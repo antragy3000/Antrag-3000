@@ -11,6 +11,7 @@
   import KostenPlan from "$lib/komponenten/KostenPlan.svelte";
   import Abrechnung from "$lib/komponenten/Abrechnung.svelte";
   import Kostenstellen from "$lib/komponenten/Kostenstellen.svelte";
+  import Geldquellen from "$lib/komponenten/Geldquellen.svelte";
   import Sicherung from "$lib/komponenten/Sicherung.svelte";
   import TeamSync from "$lib/komponenten/TeamSync.svelte";
   import { katalog, setzeKatalog, setzeStandardKatalog, standardKatalog, pruefeKatalog, vergleicheKataloge, geaenderteFelder, setzeGeteilteFoerderer } from "$lib/katalog.svelte.js";
@@ -65,7 +66,7 @@
   // beiden Modi erreichbar (globale Angaben).
   let arbeitsModus = $state("antrag");
   const ANTRAG_BEREICHE = ["foerderungen", "merkliste", "fristen", "formular", "kostenplan", "stammdaten"];
-  const ABRECHNUNG_BEREICHE = ["belege", "kostenstellen", "stammdaten"];
+  const ABRECHNUNG_BEREICHE = ["belege", "kostenstellen", "geldquellen", "stammdaten"];
   function arbeitsModusWechseln(m) {
     arbeitsModus = m;
     const erlaubt = m === "abrechnung" ? ABRECHNUNG_BEREICHE : ANTRAG_BEREICHE;
@@ -659,6 +660,26 @@
   // (Abrechnungs-Modus, Phase A1. Quellen folgen in Phase A4.)
   async function belegeSpeichern(neueBelege) {
     aktivesProjekt.abrechnung.belege = neueBelege;
+    await tresorSpeichern();
+  }
+
+  // Geldquellen des aktiven Projekts ersetzen und sichern (Phase A4).
+  async function quellenSpeichern(neueQuellen) {
+    aktivesProjekt.abrechnung.quellen = neueQuellen;
+    await tresorSpeichern();
+  }
+
+  // Eine Geldquelle entfernen UND ihre Zuordnungen aus allen Belegen
+  // herausnehmen (sonst zeigten Belege auf eine nicht mehr existierende
+  // Quelle).
+  async function quelleEntfernen(quelleId) {
+    const a = aktivesProjekt.abrechnung;
+    a.quellen = a.quellen.filter((q) => q.id !== quelleId);
+    for (const b of a.belege) {
+      if (Array.isArray(b.zuordnungen)) {
+        b.zuordnungen = b.zuordnungen.filter((z) => z.quelleId !== quelleId);
+      }
+    }
     await tresorSpeichern();
   }
 
@@ -1981,6 +2002,9 @@
           <button class:aktiv={bereich === "kostenstellen"} onclick={() => (bereich = "kostenstellen")}>
             Kostenstellen
           </button>
+          <button class:aktiv={bereich === "geldquellen"} onclick={() => (bereich = "geldquellen")}>
+            Geldquellen
+          </button>
         {/if}
         <span class="nav-trenner" aria-hidden="true"></span>
         <button class:aktiv={bereich === "stammdaten"} onclick={() => (bereich = "stammdaten")}>
@@ -2170,6 +2194,17 @@
       {:else if bereich === "kostenstellen"}
         {#key daten.aktivesProjektId}
           <Kostenstellen
+            kfp={aktivesProjekt.kfp}
+            belege={aktivesProjekt.abrechnung.belege}
+            projektName={aktivesProjekt.name}
+          />
+        {/key}
+      {:else if bereich === "geldquellen"}
+        {#key daten.aktivesProjektId}
+          <Geldquellen
+            quellen={aktivesProjekt.abrechnung.quellen}
+            speichern={quellenSpeichern}
+            entfernen={quelleEntfernen}
             kfp={aktivesProjekt.kfp}
             belege={aktivesProjekt.abrechnung.belege}
             projektName={aktivesProjekt.name}
