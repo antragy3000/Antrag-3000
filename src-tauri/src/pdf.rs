@@ -178,6 +178,21 @@ fn flach_auf_weiss(img: &DynamicImage) -> DynamicImage {
 }
 
 fn bild_pdf(daten: Vec<u8>) -> Result<Vec<u8>, String> {
+    // Schutz vor "Dekompressions-Bomben" (Audit D2): erst die Abmessungen aus
+    // dem Datei-Kopf lesen und begrenzen, BEVOR das Bild voll dekodiert wird
+    // (sonst koennte ein winziges Bild mit riesigen Abmessungen w*h*3 Byte
+    // Speicher anfordern und das Programm zum Absturz bringen).
+    const MAX_PIXEL: u64 = 40_000_000; // ~40 Megapixel
+    if let Ok((w, h)) = image::io::Reader::new(std::io::Cursor::new(&daten))
+        .with_guessed_format()
+        .map_err(|e| format!("Bild nicht lesbar: {e}"))?
+        .into_dimensions()
+    {
+        if (w as u64) * (h as u64) > MAX_PIXEL {
+            return Err("Das Bild hat zu viele Pixel (höchstens ~40 Megapixel).".into());
+        }
+    }
+
     let img = image::load_from_memory(&daten).map_err(|e| format!("Bild nicht lesbar: {e}"))?;
     let (w, h) = img.dimensions();
 

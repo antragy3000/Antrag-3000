@@ -44,6 +44,17 @@ pub(crate) fn bereinigen(name: &str) -> Result<String, String> {
     if sauber.is_empty() {
         return Err("Der Name ergibt keinen gueltigen Ordnernamen.".into());
     }
+    // Reservierte Windows-Geraetenamen (CON, NUL, COM1 ... LPT9) sind als
+    // Datei-/Ordnername verboten – auch mit Endung (CON.txt). Wir stellen
+    // ihnen ein "_" voran, damit das Anlegen nicht fehlschlaegt. (Audit D3.)
+    const RESERVIERT: [&str; 22] = [
+        "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7",
+        "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+    ];
+    let basis = sauber.split('.').next().unwrap_or("").to_ascii_uppercase();
+    if RESERVIERT.contains(&basis.as_str()) {
+        return Ok(format!("_{sauber}"));
+    }
     Ok(sauber)
 }
 

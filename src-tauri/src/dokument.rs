@@ -191,6 +191,16 @@ pub fn dokument_hochladen(
         return Err("Nur PDF-, JPG- oder PNG-Dateien sind erlaubt.".into());
     }
 
+    // Größenlimit wie bei Belegen (Audit D2): verhindert, dass eine riesige
+    // Datei beim PDF-Zusammenbau den Speicher sprengt.
+    const MAX_BYTES: u64 = 30 * 1024 * 1024;
+    let groesse = fs::metadata(quell_pfad)
+        .map_err(|e| format!("Datei nicht lesbar: {e}"))?
+        .len();
+    if groesse > MAX_BYTES {
+        return Err("Die Datei ist zu groß (höchstens 30 MB).".into());
+    }
+
     let dateien_ordner = ordner::wurzel(&app)?
         .join(ordner::bereinigen(&projekt)?)
         .join(ordner::bereinigen(&foerderung)?)

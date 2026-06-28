@@ -39,6 +39,14 @@ pub struct ZugangsInfo {
 /// Liest und prueft ein Zugangs-Paket (.a3kpaket).
 #[tauri::command]
 pub fn zugangspaket_pruefen(pfad: String) -> Result<ZugangsInfo, String> {
+    // Größenlimit (Audit E2): ein Zugangs-Paket ist nur ein paar KB (Adresse +
+    // Zertifikat + Schlüssel als PEM). So kann eine riesige Datei nicht den
+    // Speicher fluten.
+    if let Ok(meta) = std::fs::metadata(&pfad) {
+        if meta.len() > 256 * 1024 {
+            return Err("Die Datei ist zu groß für ein Zugangs-Paket.".into());
+        }
+    }
     let roh = std::fs::read_to_string(&pfad).map_err(|e| format!("Datei nicht lesbar: {e}"))?;
     let paket: Paket = serde_json::from_str(&roh)
         .map_err(|_| "Das ist kein gueltiges Zugangs-Paket.".to_string())?;
@@ -98,13 +106,18 @@ fn client_mit_ausweis(ausweis_pem: &str, ca_pem: &str) -> Result<reqwest::Client
         .identity(id)
         .timeout(std::time::Duration::from_secs(12));
     // Wenn ein Team-CA-Zertifikat vorliegt, ihm auch fuer die Server-Seite
-    // vertrauen (das Server-Zertifikat ist von derselben CA signiert).
-    // Sonst gelten die normalen oeffentlichen Wurzeln (z. B. Let's Encrypt).
+    // vertrauen (das Server-Zertifikat ist von derselben CA signiert) – und
+    // dann AUSSCHLIESSLICH ihr: die oeffentlichen Wurzeln (Let's Encrypt &
+    // Co.) werden abgeschaltet, damit nur unser eigener Server akzeptiert
+    // wird (Audit E1). Ohne Team-CA (aeltere Pakete) gelten die normalen
+    // oeffentlichen Wurzeln weiter.
     let ca = ca_pem.trim();
     if !ca.is_empty() {
         let root = reqwest::Certificate::from_pem(ca.as_bytes())
             .map_err(|e| format!("Team-CA-Zertifikat ungueltig: {e}"))?;
-        builder = builder.add_root_certificate(root);
+        builder = builder
+            .add_root_certificate(root)
+            .tls_built_in_root_certs(false);
     }
     builder
         .build()
