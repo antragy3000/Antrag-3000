@@ -51,6 +51,9 @@
   function tageBis(d) {
     return Math.round((new Date(d) - HEUTE) / 86400000);
   }
+  function fmtDatum(d) {
+    return new Date(d).toLocaleDateString("de-DE");
+  }
   function tag(d) {
     return new Date(d).toLocaleDateString("de-DE", { day: "2-digit" });
   }
@@ -74,20 +77,35 @@
     return `${dt.getFullYear()}-${m}-${t}`;
   }
 
-  // Alle Frist-Datumswerte einer Förderung: offizielle (editierbare
-  // Übernahme aus der Datenbank) plus eigene benannte Fristen. Wiederkehrende
-  // Daten ohne Jahr werden auf das nächste konkrete Vorkommen aufgelöst.
+  // Die OFFIZIELLEN Frist-Datumswerte einer Förderung (editierbare Übernahme
+  // aus der Datenbank). Wiederkehrende Daten ohne Jahr werden auf das nächste
+  // konkrete Vorkommen aufgelöst. Diese bestimmen die Hauptfrist der Zeile.
   function fristenVon(f) {
     const a = antraege[f.id];
     const roh = a?.offizielleFristen ?? f.fristen ?? [];
-    const offiziell = roh
+    return roh
       .map((e) => fristAlsDatum(fristNormalisieren(e).datum))
       .filter(Boolean)
       .map(isoVon);
-    const eigene = (a?.eigeneFristen ?? [])
-      .map((e) => (typeof e === "string" ? e : e.datum))
-      .filter(Boolean);
-    return [...offiziell, ...eigene];
+  }
+
+  // Die in der Detailansicht eingetragenen EIGENEN Fristen einer Förderung,
+  // nach Datum sortiert – werden als Unterfristen unter der Zeile gezeigt.
+  function eigeneFristenVon(f) {
+    const a = antraege[f.id];
+    return (a?.eigeneFristen ?? [])
+      .map((e) => {
+        const datum = typeof e === "string" ? e : e.datum;
+        const titel = typeof e === "string" ? "" : e.titel || "";
+        return datum ? { datum, titel, tage: tageBis(datum) } : null;
+      })
+      .filter(Boolean)
+      .sort((x, y) => new Date(x.datum) - new Date(y.datum));
+  }
+
+  // Dringlichkeitsfarbe einer Unterfrist (vergangene = grau).
+  function ufFarbe(tage) {
+    return tage < 0 ? "grau" : dringlichkeit(tage);
   }
 
   // Pro Förderung: nächste zukünftige bzw. letzte vergangene Frist.
@@ -181,6 +199,21 @@
     </p>
   {/if}
 
+  {#snippet unterfristen(eigene)}
+    {#if eigene.length}
+      <ul class="unterfristen">
+        {#each eigene as uf (uf.datum + uf.titel)}
+          <li class="farbe-{ufFarbe(uf.tage)}">
+            <span class="uf-pin">↳</span>
+            <span class="uf-datum">{fmtDatum(uf.datum)}</span>
+            <span class="uf-titel">{uf.titel || "Eigene Frist"}</span>
+            <span class="uf-cd">{uf.tage >= 0 ? countdownText(uf.tage) : "vor " + Math.abs(uf.tage) + " Tagen"}</span>
+          </li>
+        {/each}
+      </ul>
+    {/if}
+  {/snippet}
+
   {#if anstehend.length}
     <div class="liste">
       {#each anstehend as t (t.kind + t.id)}
@@ -212,6 +245,7 @@
                 </span>
               </div>
               <p class="meta">{t.f.foerdergeber}</p>
+              {@render unterfristen(eigeneFristenVon(t.f))}
             </div>
             <div class="countdown farbe-{dringlichkeit(t.tage)}">{countdownText(t.tage)}</div>
           </div>
@@ -253,6 +287,7 @@
               <h3>{f.name}</h3>
             </div>
             <p class="meta">{f.foerdergeber} · {fristText(f)}</p>
+            {@render unterfristen(eigeneFristenVon(f))}
           </div>
         </div>
       {/each}
@@ -279,6 +314,7 @@
                 <h3>{t.f.name}</h3>
               </div>
               <p class="meta">{t.f.foerdergeber} · vor {Math.abs(t.tage)} Tagen</p>
+              {@render unterfristen(eigeneFristenVon(t.f))}
             </div>
           </div>
         {:else}
@@ -536,6 +572,50 @@
     color: #5e6c84;
     font-size: 0.85rem;
   }
+
+  /* Unterfristen (eigene Fristen aus der Detailansicht) */
+  .unterfristen {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .unterfristen li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+  }
+  .uf-pin {
+    color: #8590a2;
+  }
+  .uf-datum {
+    font-variant-numeric: tabular-nums;
+    color: #44546f;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .uf-titel {
+    flex: 1;
+    min-width: 0;
+    color: #172b4d;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .uf-cd {
+    white-space: nowrap;
+    padding: 1px 9px;
+    border-radius: 99px;
+    font-weight: 700;
+    font-size: 0.72rem;
+  }
+  .unterfristen li.farbe-rot .uf-cd { background: #ffeceb; color: #ae2e24; }
+  .unterfristen li.farbe-gelb .uf-cd { background: #fff7d6; color: #7f5f01; }
+  .unterfristen li.farbe-gruen .uf-cd { background: #dcfff1; color: #216e4e; }
+  .unterfristen li.farbe-grau .uf-cd { background: #f1f2f4; color: #5e6c84; }
 
   .countdown {
     flex-shrink: 0;
