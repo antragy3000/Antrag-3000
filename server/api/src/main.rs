@@ -73,6 +73,9 @@ const MELDUNG_QUOTA: i64 = 50;
 const FOERDERER_QUOTA: i64 = 100;
 /// Größenlimit für einen geteilten Förderer-Datensatz (JSON, Bytes).
 const FOERDERER_MAX_BYTES: usize = 8192;
+/// Größenlimit für ein Board-Projekt (JSON, Bytes). Großzügig – das Board
+/// enthält nur Status/Fristen/Dokumenttitel, nie sensible Inhalte.
+const BOARD_MAX_BYTES: usize = 262_144;
 /// Größenlimit für den hochgeladenen Gesamt-Katalog (JSON, Bytes).
 const KATALOG_MAX_BYTES: usize = 2_000_000;
 /// Gültigkeitsdauer einer Admin-Sitzung (Sekunden).
@@ -237,6 +240,9 @@ async fn main() {
         .route("/api/admin/meldungen/:meldung_id", put(admin_meldung_status))
         .route("/api/admin/foerderer", get(admin_foerderer))
         .route("/api/admin/foerderer/:foerderer_id", delete(admin_foerderer_loeschen))
+        // Geräte-Verwaltung: auflisten + sperren/entsperren (Zertifikat-Rückruf).
+        .route("/api/admin/geraete", get(admin_geraete))
+        .route("/api/admin/geraete/:geraet_id", put(admin_geraet_status))
         .route("/api/admin/katalog", put(admin_katalog_hochladen))
         .route("/api/admin/vorschlaege", get(admin_vorschlaege))
         .route("/api/admin/vorschlaege/:vid/freigeben", post(admin_vorschlag_freigeben))
@@ -413,31 +419,53 @@ fn fingerprint(headers: &HeaderMap) -> Option<String> {
     hash_der(headers.get("x-client-cert-der")?.to_str().ok()?)
 }
 
+/// Darf ein UNBEKANNTES (aber CA-geprüftes) Gerät sich automatisch anmelden?
+/// Per ENV `AUTO_ENROLL` (Standard an). Nach dem Einrichten des Teams kann man
+/// es auf "0"/"false"/"nein" stellen, damit keine weiteren Geräte mehr von
+/// selbst dazukommen ("Trust on first use" einfrieren).
+fn auto_enroll_erlaubt() -> bool {
+    match env::var("AUTO_ENROLL") {
+        Ok(v) => !matches!(v.trim().to_lowercase().as_str(), "0" | "false" | "nein" | "off"),
+        Err(_) => true,
+    }
+}
+
 /// Ermittelt zu einem Request das Konto (und die Geräte-id). Unbekannte,
-/// aber von Caddy gegen unsere CA geprüfte Geräte werden automatisch dem
-/// Standard-Team-Konto zugeordnet ("Trust on first use" – die CA bürgt
-/// bereits, dass das Zertifikat von uns stammt).
+/// aber von Caddy gegen unsere CA geprüfte Geräte werden – sofern erlaubt –
+/// automatisch dem Standard-Team-Konto zugeordnet ("Trust on first use").
 async fn konto_und_geraet(
     pool: &SqlitePool,
     headers: &HeaderMap,
 ) -> Result<(i64, i64), StatusCode> {
     let fp = fingerprint(headers).ok_or(StatusCode::UNAUTHORIZED)?;
 
-    if let Some((geraet_id, konto_id)) = sqlx::query_as::<_, (i64, i64)>(
-        "SELECT g.id, n.konto_id
+    // Bekanntes Gerät? (Status MIT abfragen, nicht im WHERE filtern – sonst
+    // würde ein gesperrtes Gerät unten einfach neu auto-enrollt.)
+    if let Some((geraet_id, konto_id, status)) = sqlx::query_as::<_, (i64, i64, String)>(
+        "SELECT g.id, n.konto_id, g.status
          FROM geraet g JOIN nutzer n ON n.id = g.nutzer_id
-         WHERE g.cert_fingerprint = ? AND g.status = 'aktiv'",
+         WHERE g.cert_fingerprint = ?",
     )
     .bind(&fp)
     .fetch_optional(pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
     {
+        // Gesperrtes/inaktives Gerät: abweisen – KEIN erneutes Auto-Enroll.
+        // So wirkt eine Sperre (status <> 'aktiv') tatsächlich.
+        if status != "aktiv" {
+            return Err(StatusCode::FORBIDDEN);
+        }
         let _ = sqlx::query("UPDATE geraet SET zuletzt_gesehen = datetime('now') WHERE id = ?")
             .bind(geraet_id)
             .execute(pool)
             .await;
         return Ok((konto_id, geraet_id));
+    }
+
+    // Unbekanntes Gerät: nur anlegen, wenn Auto-Enroll erlaubt ist.
+    if !auto_enroll_erlaubt() {
+        return Err(StatusCode::FORBIDDEN);
     }
 
     // Auto-Enroll unter Konto/Nutzer 1.
@@ -525,6 +553,15 @@ async fn board_schreiben(
 ) -> Result<Json<SchreibAntwort>, StatusCode> {
     let (konto_id, geraet_id) = konto_und_geraet(&st.pool, &headers).await?;
 
+    // Tempo-Bremse + Längenlimits (wie bei Meldungen/Förderern). Das Board
+    // war bisher ungebremst und ohne Größenlimit beschreibbar.
+    if !tempo_ok(&st, geraet_id) {
+        return Err(StatusCode::TOO_MANY_REQUESTS);
+    }
+    if projekt_id.len() > FELD_MAX {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+
     let aktuell = sqlx::query_as::<_, (i64, String)>(
         "SELECT version, inhalt_json FROM board_projekt WHERE konto_id = ? AND projekt_id = ?",
     )
@@ -546,6 +583,9 @@ async fn board_schreiben(
 
     let neue_version = aktuell.as_ref().map(|(v, _)| v + 1).unwrap_or(1);
     let inhalt_str = serde_json::to_string(&body.inhalt).map_err(|_| StatusCode::BAD_REQUEST)?;
+    if inhalt_str.len() > BOARD_MAX_BYTES {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
 
     sqlx::query(
         "INSERT INTO board_projekt
@@ -579,7 +619,10 @@ async fn board_loeschen(
     headers: HeaderMap,
     Path(projekt_id): Path<String>,
 ) -> Result<StatusCode, StatusCode> {
-    let (konto_id, _) = konto_und_geraet(&st.pool, &headers).await?;
+    let (konto_id, geraet_id) = konto_und_geraet(&st.pool, &headers).await?;
+    if !tempo_ok(&st, geraet_id) {
+        return Err(StatusCode::TOO_MANY_REQUESTS);
+    }
     sqlx::query("DELETE FROM board_projekt WHERE konto_id = ? AND projekt_id = ?")
         .bind(konto_id)
         .bind(&projekt_id)
@@ -1080,6 +1123,77 @@ async fn admin_meldung_status(
     .bind(&body.status)
     .bind(konto_id)
     .bind(&meldung_id)
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if res.rows_affected() == 0 {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Serialize)]
+struct GeraetZeile {
+    id: i64,
+    bezeichnung: String,
+    cert_fingerprint: String,
+    status: String,
+    zuletzt_gesehen: Option<String>,
+    erstellt_am: String,
+}
+
+/// Alle Geräte des Kontos (GET /api/admin/geraete) – zum Sperren/Entsperren
+/// (Zertifikat-Rückruf). Nur für Admins.
+async fn admin_geraete(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<GeraetZeile>>, StatusCode> {
+    let (konto_id, _) = admin_pruefen(&st, &headers).await?;
+    let rows = sqlx::query_as::<_, (i64, String, String, String, Option<String>, String)>(
+        "SELECT g.id, g.bezeichnung, g.cert_fingerprint, g.status, g.zuletzt_gesehen, g.erstellt_am
+         FROM geraet g JOIN nutzer n ON n.id = g.nutzer_id
+         WHERE n.konto_id = ? ORDER BY g.zuletzt_gesehen DESC",
+    )
+    .bind(konto_id)
+    .fetch_all(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let liste = rows
+        .into_iter()
+        .map(|(id, bezeichnung, cert_fingerprint, status, zuletzt_gesehen, erstellt_am)| GeraetZeile {
+            id,
+            bezeichnung,
+            cert_fingerprint,
+            status,
+            zuletzt_gesehen,
+            erstellt_am,
+        })
+        .collect();
+    Ok(Json(liste))
+}
+
+/// Setzt den Status eines Geräts (PUT /api/admin/geraete/{id}). Erlaubt:
+/// aktiv, gesperrt. Ein gesperrtes Gerät wird abgewiesen und NICHT neu
+/// auto-enrollt (siehe konto_und_geraet) – das ist der Zertifikat-Rückruf.
+/// Nur für Admins.
+async fn admin_geraet_status(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    Path(geraet_id): Path<i64>,
+    Json(body): Json<StatusBody>,
+) -> Result<StatusCode, StatusCode> {
+    let (konto_id, _) = admin_pruefen(&st, &headers).await?;
+    if !["aktiv", "gesperrt"].contains(&body.status.as_str()) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    let res = sqlx::query(
+        "UPDATE geraet SET status = ?
+         WHERE id = ? AND nutzer_id IN (SELECT id FROM nutzer WHERE konto_id = ?)",
+    )
+    .bind(&body.status)
+    .bind(geraet_id)
+    .bind(konto_id)
     .execute(&st.pool)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
