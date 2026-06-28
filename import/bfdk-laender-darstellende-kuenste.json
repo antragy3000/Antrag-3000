@@ -46,7 +46,7 @@
         ],
         "projektarten": [],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 5000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -104,7 +104,7 @@
           "gastspiel_tournee"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 3000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -162,7 +162,7 @@
         "projektarten": [
           "produktion"
         ],
-        "budget_min": null,
+        "budget_min": 2000,
         "budget_max": null,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
@@ -221,7 +221,7 @@
           "produktion"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 30000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -278,7 +278,7 @@
         "projektarten": [
           "festival"
         ],
-        "budget_min": null,
+        "budget_min": 2000,
         "budget_max": null,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
@@ -337,7 +337,7 @@
           "produktion",
           "vermittlung"
         ],
-        "budget_min": null,
+        "budget_min": 2000,
         "budget_max": null,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
@@ -395,7 +395,7 @@
         "projektarten": [
           "produktion"
         ],
-        "budget_min": null,
+        "budget_min": 2000,
         "budget_max": null,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
@@ -452,7 +452,7 @@
           "produktion"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 15000,
         "waehrung": "EUR",
         "zeitpunkt": "fristen"
       },
@@ -508,7 +508,7 @@
           "produktion"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 9000,
         "waehrung": "EUR",
         "zeitpunkt": "fristen"
       },
@@ -562,7 +562,7 @@
         ],
         "projektarten": [],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 15600,
         "waehrung": "EUR",
         "zeitpunkt": "fristen"
       },
@@ -616,7 +616,7 @@
         ],
         "projektarten": [],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 3000,
         "waehrung": "EUR",
         "zeitpunkt": "fristen"
       },
@@ -725,8 +725,8 @@
           "interdisziplinaer"
         ],
         "projektarten": [],
-        "budget_min": null,
-        "budget_max": null,
+        "budget_min": 10000,
+        "budget_max": 1000000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -840,8 +840,8 @@
         "projektarten": [
           "recherche_entwicklung"
         ],
-        "budget_min": null,
-        "budget_max": null,
+        "budget_min": 500,
+        "budget_max": 8000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -1121,7 +1121,7 @@
         ],
         "projektarten": [],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 150000,
         "waehrung": "EUR",
         "zeitpunkt": "fristen"
       },
@@ -1180,7 +1180,7 @@
           "produktion"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 30000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -1238,7 +1238,7 @@
           "recherche_entwicklung"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 8000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -1524,8 +1524,8 @@
           "produktion",
           "vermittlung"
         ],
-        "budget_min": null,
-        "budget_max": null,
+        "budget_min": 5001,
+        "budget_max": 23000,
         "waehrung": "EUR",
         "zeitpunkt": "fristen"
       },
@@ -1581,7 +1581,7 @@
         ],
         "projektarten": [],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 150000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -1714,7 +1714,7 @@
       "foerdergeber": "Kultur Räume Berlin – Bündnis Raum für künstlerische Arbeit der Freien Szene für das Land Berlin",
       "land": "DE",
       "beschreibung": "Landesförderung der Freien Darstellenden Künste in Berlin. Förderinstrument „Arbeitsraumprogramm“ von Kultur Räume Berlin – Bündnis Raum für künstlerische Arbeit der Freien Szene für das Land Berlin.",
-      "webseite": "",
+      "webseite": "https://kulturraeume.berlin",
       "foerderhoehe_text": "—",
       "max_anteil_prozent": null,
       "anteil_ausnahme": false,
@@ -1921,7 +1921,7 @@
         ],
         "projektarten": [],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 15000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -2146,7 +2146,7 @@
         ],
         "projektarten": [],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 50000,
         "waehrung": "EUR",
         "zeitpunkt": "fristen"
       },
@@ -2202,7 +2202,7 @@
         ],
         "projektarten": [],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 30000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -2256,7 +2256,7 @@
         ],
         "projektarten": [],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 60000,
         "waehrung": "EUR",
         "zeitpunkt": "fristen"
       },
@@ -2371,7 +2371,7 @@
           "gastspiel_tournee"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 100000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -2429,7 +2429,7 @@
           "produktion"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 190000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -2487,7 +2487,7 @@
           "produktion"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 190000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -3507,8 +3507,8 @@
           "interdisziplinaer"
         ],
         "projektarten": [],
-        "budget_min": null,
-        "budget_max": null,
+        "budget_min": 500,
+        "budget_max": 1500,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -3625,7 +3625,7 @@
           "produktion"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 50000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -3681,7 +3681,7 @@
         ],
         "projektarten": [],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 20000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -3737,7 +3737,7 @@
         ],
         "projektarten": [],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 7500,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -3795,7 +3795,7 @@
           "recherche_entwicklung"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 6000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -3853,7 +3853,7 @@
           "produktion"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 144000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -3968,7 +3968,7 @@
           "produktion"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 10000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -4429,7 +4429,7 @@
         "projektarten": [
           "produktion"
         ],
-        "budget_min": null,
+        "budget_min": 10000,
         "budget_max": null,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
@@ -4487,7 +4487,7 @@
         "projektarten": [
           "produktion"
         ],
-        "budget_min": null,
+        "budget_min": 10000,
         "budget_max": null,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
@@ -4541,8 +4541,8 @@
           "interdisziplinaer"
         ],
         "projektarten": [],
-        "budget_min": null,
-        "budget_max": null,
+        "budget_min": 2500,
+        "budget_max": 60000,
         "waehrung": "EUR",
         "zeitpunkt": "fristen"
       },
@@ -4561,7 +4561,7 @@
       "foerdergeber": "Vergabe über Landschaften und Landschaftsverbände",
       "land": "DE",
       "beschreibung": "Landesförderung der Freien Darstellenden Künste in Niedersachsen. Förderinstrument „regionale Kulturförderung“ von Vergabe über Landschaften und Landschaftsverbände.",
-      "webseite": "",
+      "webseite": "https://www.allvin.de",
       "foerderhoehe_text": "max. 10.000",
       "max_anteil_prozent": null,
       "anteil_ausnahme": false,
@@ -4596,7 +4596,7 @@
         ],
         "projektarten": [],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 10000,
         "waehrung": "EUR",
         "zeitpunkt": "fristen"
       },
@@ -4654,8 +4654,8 @@
         "projektarten": [
           "produktion"
         ],
-        "budget_min": null,
-        "budget_max": null,
+        "budget_min": 5000,
+        "budget_max": 20000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -4769,7 +4769,7 @@
         ],
         "projektarten": [],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 8000,
         "waehrung": "EUR",
         "zeitpunkt": "fristen"
       },
@@ -4823,7 +4823,7 @@
         ],
         "projektarten": [],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 8000,
         "waehrung": "EUR",
         "zeitpunkt": "fristen"
       },
@@ -4879,7 +4879,7 @@
           "produktion"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 50000,
         "waehrung": "EUR",
         "zeitpunkt": "fristen"
       },
@@ -4934,7 +4934,7 @@
           "interdisziplinaer"
         ],
         "projektarten": [],
-        "budget_min": null,
+        "budget_min": 5000,
         "budget_max": null,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
@@ -4989,7 +4989,7 @@
         ],
         "projektarten": [],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 80000,
         "waehrung": "EUR",
         "zeitpunkt": "fristen"
       },
@@ -5043,7 +5043,7 @@
         ],
         "projektarten": [],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 100000,
         "waehrung": "EUR",
         "zeitpunkt": "fristen"
       },
@@ -5156,7 +5156,7 @@
           "produktion"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 25000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -5289,7 +5289,7 @@
       "foerdergeber": "Stiftung Rheinland-Pfalz für Kultur",
       "land": "DE",
       "beschreibung": "Landesförderung der Freien Darstellenden Künste in Rheinland-Pfalz. Förderinstrument „Projektförderung im Kultursommer Rheinland-Pfalz“ von Stiftung Rheinland-Pfalz für Kultur.",
-      "webseite": "",
+      "webseite": "https://kultursommer.de/kulturfoerderung/",
       "foerderhoehe_text": "—",
       "max_anteil_prozent": null,
       "anteil_ausnahme": false,
@@ -5384,7 +5384,7 @@
         ],
         "projektarten": [],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 10000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -5403,7 +5403,7 @@
       "foerdergeber": "Lotto Rheinland-Pfalz - Stiftung",
       "land": "DE",
       "beschreibung": "Landesförderung der Freien Darstellenden Künste in Rheinland-Pfalz. Förderinstrument „Projektförderung“ von Lotto Rheinland-Pfalz - Stiftung.",
-      "webseite": "",
+      "webseite": "https://www.lotto-rlp.de/lotto-stiftung",
       "foerderhoehe_text": "—",
       "max_anteil_prozent": null,
       "anteil_ausnahme": false,
@@ -5498,7 +5498,7 @@
           "produktion"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 30000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -5556,7 +5556,7 @@
           "recherche_entwicklung"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 3000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -5902,7 +5902,7 @@
           "produktion"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 5000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -6077,7 +6077,7 @@
           "recherche_entwicklung"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 5000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -6189,7 +6189,7 @@
         ],
         "projektarten": [],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 75000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -6247,7 +6247,7 @@
           "produktion"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 30000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -6303,7 +6303,7 @@
         ],
         "projektarten": [],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 5000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
@@ -6322,7 +6322,7 @@
       "foerdergeber": "LOTTO Toto Stiftung",
       "land": "DE",
       "beschreibung": "Landesförderung der Freien Darstellenden Künste in Sachsen-Anhalt. Förderinstrument „Projektförderung“ von LOTTO Toto Stiftung.",
-      "webseite": "",
+      "webseite": "https://www.lottosachsenanhalt.de/lotto-foerdert/projektfoerderung",
       "foerderhoehe_text": "mind. 2.500",
       "max_anteil_prozent": null,
       "anteil_ausnahme": false,
@@ -6358,7 +6358,7 @@
         "projektarten": [
           "produktion"
         ],
-        "budget_min": null,
+        "budget_min": 2500,
         "budget_max": null,
         "waehrung": "EUR",
         "zeitpunkt": "laufend"
@@ -6533,7 +6533,7 @@
           "produktion"
         ],
         "budget_min": null,
-        "budget_max": null,
+        "budget_max": 20000,
         "waehrung": "EUR",
         "zeitpunkt": "periodisch"
       },
