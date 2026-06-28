@@ -13,6 +13,7 @@
   import Kostenstellen from "$lib/komponenten/Kostenstellen.svelte";
   import Geldquellen from "$lib/komponenten/Geldquellen.svelte";
   import Zuteilung from "$lib/komponenten/Zuteilung.svelte";
+  import Sachbericht from "$lib/komponenten/Sachbericht.svelte";
   import Sicherung from "$lib/komponenten/Sicherung.svelte";
   import TeamSync from "$lib/komponenten/TeamSync.svelte";
   import { katalog, setzeKatalog, setzeStandardKatalog, standardKatalog, pruefeKatalog, vergleicheKataloge, geaenderteFelder, setzeGeteilteFoerderer } from "$lib/katalog.svelte.js";
@@ -67,7 +68,7 @@
   // beiden Modi erreichbar (globale Angaben).
   let arbeitsModus = $state("antrag");
   const ANTRAG_BEREICHE = ["foerderungen", "merkliste", "fristen", "formular", "kostenplan", "stammdaten"];
-  const ABRECHNUNG_BEREICHE = ["belege", "kostenstellen", "geldquellen", "zuteilung", "stammdaten"];
+  const ABRECHNUNG_BEREICHE = ["belege", "kostenstellen", "geldquellen", "zuteilung", "sachbericht", "stammdaten"];
   function arbeitsModusWechseln(m) {
     arbeitsModus = m;
     const erlaubt = m === "abrechnung" ? ABRECHNUNG_BEREICHE : ANTRAG_BEREICHE;
@@ -368,6 +369,10 @@
           p.abrechnung.quellen = [];
           veraendert = true;
         }
+        if (typeof p.abrechnung.sachbericht !== "string") {
+          p.abrechnung.sachbericht = "";
+          veraendert = true;
+        }
       }
       // Antrag-Einträge älterer Stände um eigene Fristen ergänzen.
       const alleFoerd = [
@@ -664,6 +669,12 @@
     await tresorSpeichern();
   }
 
+  // Projektweiten Sachbericht speichern.
+  async function sachberichtSpeichern(text) {
+    aktivesProjekt.abrechnung.sachbericht = text;
+    await tresorSpeichern();
+  }
+
   // Verwendungsnachweis einer Geldquelle als PDF bzw. Word erzeugen
   // (Phase A5). Baut die Abschnitte im Frontend und lässt Rust rendern.
   async function nachweisExport(quelleId, format) {
@@ -674,7 +685,8 @@
       q,
       a.belege,
       aktivesProjekt.kfp,
-      aktivesProjekt.name
+      aktivesProjekt.name,
+      a.sachbericht
     );
     const cmd = format === "word" ? "verwendungsnachweis_word" : "verwendungsnachweis_pdf";
     try {
@@ -2035,6 +2047,9 @@
           <button class:aktiv={bereich === "zuteilung"} onclick={() => (bereich = "zuteilung")}>
             Zuteilung
           </button>
+          <button class:aktiv={bereich === "sachbericht"} onclick={() => (bereich = "sachbericht")}>
+            Sachbericht
+          </button>
         {/if}
         <span class="nav-trenner" aria-hidden="true"></span>
         <button class:aktiv={bereich === "stammdaten"} onclick={() => (bereich = "stammdaten")}>
@@ -2250,6 +2265,14 @@
             projektName={aktivesProjekt.name}
             nachweisPdf={(id) => nachweisExport(id, "pdf")}
             nachweisWord={(id) => nachweisExport(id, "word")}
+          />
+        {/key}
+      {:else if bereich === "sachbericht"}
+        {#key daten.aktivesProjektId}
+          <Sachbericht
+            sachbericht={aktivesProjekt.abrechnung.sachbericht}
+            speichern={sachberichtSpeichern}
+            projektName={aktivesProjekt.name}
           />
         {/key}
       {:else if bereich === "fristen"}

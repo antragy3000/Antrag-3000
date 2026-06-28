@@ -43,8 +43,10 @@ export const BELEG_STATUS = {
 };
 
 /// Leere Abrechnungs-Struktur fuer ein neues Projekt.
+/// `sachbericht` ist EIN projektweiter Bericht (erscheint in jedem
+/// Verwendungsnachweis).
 export function leereAbrechnung() {
-  return { belege: [], quellen: [] };
+  return { belege: [], quellen: [], sachbericht: "" };
 }
 
 /// Naechste freie laufende Beleg-Nummer (fortlaufend je Projekt).
@@ -128,9 +130,9 @@ function neueQuelleId() {
     : "q-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
 }
 
-/// Frische Geldquelle.
+/// Frische Geldquelle. (Der Sachbericht ist projektweit, nicht je Quelle.)
 export function neueQuelle(typ = "foerderung") {
-  return { id: neueQuelleId(), typ, foerderId: "", name: "", soll: "", sachbericht: "" };
+  return { id: neueQuelleId(), typ, foerderId: "", name: "", soll: "" };
 }
 
 /// Soll-Betrag einer Quelle als Zahl.
@@ -159,7 +161,6 @@ export function quellenAusFinanzierung(kfp, vorhandene = []) {
         foerderId,
         name: name || "(Förderung)",
         soll: String(postenBetrag(p) || ""),
-        sachbericht: "",
       });
       if (foerderId) habenFoerder.add(foerderId);
       if (name) habenNamen.add(name.toLowerCase());
@@ -250,7 +251,7 @@ export function belegNummern(belege, kfp) {
 /// (Phase A5). Wird ans Rust-Backend gegeben, das daraus PDF/Word rendert.
 /// Abschnitte: Angaben, Sachbericht, Belegliste, Kostenübersicht.
 /// In Tabellenzellen markiert ** am Anfang eine fette (Summen-)Zeile.
-export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName) {
+export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName, sachbericht = "") {
   const nummern = belegNummern(belege, kfp);
   const anteil = (b) =>
     betragParsen((b.zuordnungen ?? []).find((z) => z.quelleId === quelle.id)?.betrag);
@@ -278,9 +279,9 @@ export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName) 
     ],
   });
 
-  // 2) Sachbericht (falls hinterlegt).
-  if ((quelle.sachbericht ?? "").trim()) {
-    abschnitte.push({ ueberschrift: "Sachbericht", absaetze: [quelle.sachbericht.trim()], tabelle: [] });
+  // 2) Sachbericht (projektweit, falls hinterlegt).
+  if ((sachbericht ?? "").trim()) {
+    abschnitte.push({ ueberschrift: "Sachbericht", absaetze: [sachbericht.trim()], tabelle: [] });
   }
 
   // 3) Belegliste.

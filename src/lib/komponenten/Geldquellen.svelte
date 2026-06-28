@@ -193,10 +193,6 @@
           <span>Soll (bewilligt)</span>
           <input type="text" bind:value={form.soll} placeholder="z. B. 5.000" inputmode="decimal" />
         </label>
-        <label class="feld breit">
-          <span>Sachbericht <em>(optional, für den Verwendungsnachweis)</em></span>
-          <textarea rows="3" bind:value={form.sachbericht} placeholder="Kurzer Bericht zur Mittelverwendung"></textarea>
-        </label>
       </div>
       {#if betragParsen(form.soll) > 0}
         <p class="rechen">Soll: {betragFormat(betragParsen(form.soll))}</p>
