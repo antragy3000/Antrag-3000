@@ -131,6 +131,43 @@ export function kostenstellenNachKategorie(kfp) {
   }));
 }
 
+/// Belegnummern je Kostenstelle: der erste Beleg der Kostenstelle "3.1"
+/// erhält "3.1.1", der zweite "3.1.2" usw. Reihenfolge innerhalb der
+/// Kostenstelle nach Datum (dann laufender Beleg-Nr). Wird berechnet, damit
+/// die Nummer immer zum aktuellen Stand passt. Liefert Map<belegId, "3.1.1">.
+/// Belege ohne (gültige) Kostenstelle bekommen keine Nummer.
+export function belegNummern(belege, kfp) {
+  const ksNummer = new Map(); // posten-id -> "3.1"
+  let ki = 0;
+  for (const k of kfp?.kosten ?? []) {
+    ki += 1;
+    let pi = 0;
+    for (const p of k.posten ?? []) {
+      pi += 1;
+      if (p.id) ksNummer.set(p.id, `${ki}.${pi}`);
+    }
+  }
+
+  const proKs = new Map(); // ks-id -> Belege
+  for (const b of belege ?? []) {
+    const ks = b.kostenstelle;
+    if (ks && ksNummer.has(ks)) {
+      if (!proKs.has(ks)) proKs.set(ks, []);
+      proKs.get(ks).push(b);
+    }
+  }
+
+  const nummern = new Map();
+  for (const [ks, arr] of proKs) {
+    arr.sort((a, b) => {
+      const d = String(a.datum ?? "").localeCompare(String(b.datum ?? ""));
+      return d !== 0 ? d : Number(a.nr) - Number(b.nr);
+    });
+    arr.forEach((b, i) => nummern.set(b.id, `${ksNummer.get(ks)}.${i + 1}`));
+  }
+  return nummern;
+}
+
 /// Lesbares Etikett einer Kostenstelle (z. B. "1.2 Honorar Regie"), oder
 /// "" wenn keine, bzw. "(entfernt)" wenn der Posten nicht mehr existiert.
 export function kostenstelleLabel(kfp, id) {

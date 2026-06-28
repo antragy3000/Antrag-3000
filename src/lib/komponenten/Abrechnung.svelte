@@ -19,6 +19,7 @@
     groesseText,
     kostenstellenNachKategorie,
     kostenstelleLabel,
+    belegNummern,
   } from "$lib/abrechnung";
 
   let {
@@ -63,6 +64,11 @@
   let dateienBeleg = $derived(liste.find((b) => b.id === dateienOffenId) ?? null);
 
   let summe = $derived(belegeSumme(liste));
+
+  // Belegnummer je Kostenstelle (z. B. "3.1.1"); Belege ohne Kostenstelle
+  // haben keine – dort zeigen wir die laufende Roh-Nummer als "#7".
+  let nummern = $derived(belegNummern(liste, kfp));
+  const anzeigeNr = (b) => nummern.get(b.id) ?? `#${b.nr}`;
 
   async function sichern() {
     beschaeftigt = true;
@@ -135,7 +141,7 @@
   }
 
   async function entfernen(b) {
-    if (!confirm(`Beleg Nr. ${b.nr} wirklich löschen?`)) return;
+    if (!confirm(`Beleg ${anzeigeNr(b)} wirklich löschen?`)) return;
     // Erst die (verschlüsselten) Dateien des Belegs entfernen, dann den Beleg.
     if (b.dateien?.length) await ordnerEntfernen(b.id);
     if (dateienOffenId === b.id) dateienOffenId = null;
@@ -227,7 +233,9 @@
       <tbody>
         {#each sortiert as b (b.id)}
           <tr>
-            <td class="num">{b.nr}</td>
+            <td class="num">
+              {#if nummern.get(b.id)}{nummern.get(b.id)}{:else}<span class="roh-nr">#{b.nr}</span>{/if}
+            </td>
             <td>{datumText(b.datum)}</td>
             <td>{b.empfaenger || "—"}</td>
             <td class="zweck">{b.zweck || "—"}</td>
@@ -262,7 +270,7 @@
     <div class="datei-panel" transition:fade={{ duration: 120 }}>
       <div class="dp-kopf">
         <h3>
-          📎 Dateien zu Beleg Nr. {dateienBeleg.nr}{#if dateienBeleg.empfaenger}
+          📎 Dateien zu Beleg {anzeigeNr(dateienBeleg)}{#if dateienBeleg.empfaenger}
             – {dateienBeleg.empfaenger}{/if}
         </h3>
         <button class="leise" onclick={() => (dateienOffenId = null)}>schließen</button>
@@ -302,7 +310,7 @@
 {#if formOffen && form}
   <div class="overlay" transition:fade={{ duration: 120 }}>
     <div class="dialog">
-      <h2>{bearbeiteId ? "Beleg bearbeiten" : "Neuer Beleg"} <span class="nr">Nr. {form.nr}</span></h2>
+      <h2>{bearbeiteId ? "Beleg bearbeiten" : "Neuer Beleg"} <span class="nr">{anzeigeNr(form)}</span></h2>
 
       <div class="gitter">
         <label class="feld">
@@ -473,8 +481,13 @@
     letter-spacing: 0.03em;
   }
   .num {
-    width: 44px;
-    color: #8590a2;
+    width: 60px;
+    color: #44546f;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .roh-nr {
+    color: #b3bac5;
   }
   .betrag {
     text-align: right;
