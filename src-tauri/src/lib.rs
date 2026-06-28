@@ -36,6 +36,8 @@ pub fn run() {
             ordner::ordner_umbenennen,
             dokument::formular_word_erzeugen,
             dokument::dokument_hochladen,
+            dokument::verwendungsnachweis_word,
+            pdf::verwendungsnachweis_pdf,
             beleg::beleg_datei_hinzufuegen,
             beleg::beleg_datei_oeffnen,
             beleg::beleg_datei_exportieren,

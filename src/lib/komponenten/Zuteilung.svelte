@@ -23,6 +23,9 @@
     speichern, // (neueBelege) – speichert die geänderten Zuordnungen
     kfp = { kosten: [], finanzierung: [] },
     projektName = "",
+    // Verwendungsnachweis-Export (Phase A5).
+    nachweisPdf,
+    nachweisWord,
   } = $props();
 
   let liste = $state(structuredClone($state.snapshot(belege)));
@@ -205,6 +208,12 @@
       </span>
     </div>
 
+    <div class="export">
+      <span class="export-titel">Verwendungsnachweis:</span>
+      <button class="zweit schmal" onclick={() => nachweisPdf(ausgewaehltId)}>PDF</button>
+      <button class="zweit schmal" onclick={() => nachweisWord(ausgewaehltId)}>Word</button>
+    </div>
+
     {#if zugeordneteBelege.length === 0}
       <p class="leer-klein">Noch keine Belege zugeordnet. Füge unten Belege hinzu.</p>
     {:else}
@@ -354,8 +363,10 @@
   .zurueck:hover { text-decoration: underline; }
   .d-kopf { display: flex; align-items: center; gap: 10px; }
   .d-kopf h2 { margin: 0; }
-  .d-zahlen { display: flex; gap: 22px; font-size: 0.92rem; color: #5e6c84; margin: 8px 0 18px; flex-wrap: wrap; }
+  .d-zahlen { display: flex; gap: 22px; font-size: 0.92rem; color: #5e6c84; margin: 8px 0 14px; flex-wrap: wrap; }
   .d-zahlen strong { color: #172b4d; }
+  .export { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
+  .export-titel { font-size: 0.85rem; color: #5e6c84; font-weight: 600; }
 
   .typ { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 0.74rem; font-weight: 600; }
   .typ.t-foerderung { background: #eef1ff; color: #3b4fb0; }

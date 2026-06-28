@@ -86,6 +86,9 @@ fn tabelle_einfuegen(doc: &mut Document, zeilen: &[Vec<String>]) {
     let gewichte: Vec<usize> = match spalten {
         2 => vec![6, 2],
         3 => vec![5, 4, 2],
+        // Belegliste des Verwendungsnachweises: Nr · Datum · Beleg ·
+        // Kostenstelle · Belegsumme · Zugeordnet.
+        6 => vec![2, 2, 5, 4, 3, 3],
         n => vec![1; n],
     };
     let mut tabelle = elements::TableLayout::new(gewichte);
@@ -384,6 +387,38 @@ pub fn antrags_pdf_speichern(
     fs::write(&pfad, &bytes).map_err(|e| format!("PDF nicht schreibbar: {e}"))?;
     tauri_plugin_opener::open_path(ordner_pfad.clone(), None::<&str>)
         .map_err(|e| format!("Ordner laesst sich nicht oeffnen: {e}"))?;
+    Ok(pfad.to_string_lossy().to_string())
+}
+
+/// Verwendungsnachweis (Abrechnung) als PDF: nur das Vorblatt (Titel +
+/// Abschnitte), ohne Anhaenge. Wird in den Unterordner _Abrechnung des
+/// Projekts geschrieben und die Datei geoeffnet.
+#[tauri::command]
+pub fn verwendungsnachweis_pdf(
+    app: tauri::AppHandle,
+    projekt: String,
+    foerderer: String,
+    titel: String,
+    abschnitte: Vec<PdfAbschnitt>,
+    logo: Option<String>,
+) -> Result<String, String> {
+    let mut doc = neues_dokument()?;
+    vorblatt_fuellen(&mut doc, &titel, &abschnitte, logo.as_deref());
+    let mut bytes = Vec::new();
+    doc.render(&mut bytes)
+        .map_err(|e| format!("PDF-Inhalt nicht erzeugbar: {e}"))?;
+
+    let ordner_pfad = ordner::wurzel(&app)?
+        .join(ordner::bereinigen(&projekt)?)
+        .join("_Abrechnung");
+    fs::create_dir_all(&ordner_pfad).map_err(|e| format!("Ordner nicht anlegbar: {e}"))?;
+    let name =
+        ordner::bereinigen(&format!("Verwendungsnachweis_{}_{}", projekt.trim(), foerderer.trim()))?
+            + ".pdf";
+    let pfad = ordner_pfad.join(&name);
+    fs::write(&pfad, &bytes).map_err(|e| format!("PDF nicht schreibbar: {e}"))?;
+    tauri_plugin_opener::open_path(pfad.clone(), None::<&str>)
+        .map_err(|e| format!("PDF laesst sich nicht oeffnen: {e}"))?;
     Ok(pfad.to_string_lossy().to_string())
 }
 

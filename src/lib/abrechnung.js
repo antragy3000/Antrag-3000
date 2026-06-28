@@ -246,6 +246,83 @@ export function belegNummern(belege, kfp) {
   return nummern;
 }
 
+/// Baut Titel + Abschnitte für den Verwendungsnachweis EINER Geldquelle
+/// (Phase A5). Wird ans Rust-Backend gegeben, das daraus PDF/Word rendert.
+/// Abschnitte: Angaben, Sachbericht, Belegliste, Kostenübersicht.
+/// In Tabellenzellen markiert ** am Anfang eine fette (Summen-)Zeile.
+export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName) {
+  const nummern = belegNummern(belege, kfp);
+  const anteil = (b) =>
+    betragParsen((b.zuordnungen ?? []).find((z) => z.quelleId === quelle.id)?.betrag);
+
+  const zugeordnet = (belege ?? [])
+    .filter((b) => (b.zuordnungen ?? []).some((z) => z.quelleId === quelle.id))
+    .sort((a, b) => String(a.datum ?? "").localeCompare(String(b.datum ?? "")));
+  const soll = quelleSoll(quelle);
+  const summe = zugeordnet.reduce((s, b) => s + anteil(b), 0);
+
+  const titel = `Verwendungsnachweis – ${quelle.name}`;
+  const abschnitte = [];
+
+  // 1) Angaben.
+  abschnitte.push({
+    ueberschrift: "Angaben",
+    absaetze: [],
+    tabelle: [
+      ["Angabe", "Wert"],
+      ["Projekt", projektName || "—"],
+      ["Geldquelle", quelle.name || "—"],
+      ["Bewilligt (Soll)", betragFormat(soll)],
+      ["Abgerechnet", betragFormat(summe)],
+      ["Stand", new Date().toLocaleDateString("de-DE")],
+    ],
+  });
+
+  // 2) Sachbericht (falls hinterlegt).
+  if ((quelle.sachbericht ?? "").trim()) {
+    abschnitte.push({ ueberschrift: "Sachbericht", absaetze: [quelle.sachbericht.trim()], tabelle: [] });
+  }
+
+  // 3) Belegliste.
+  if (zugeordnet.length) {
+    const zeilen = [["Beleg-Nr.", "Datum", "Beleg", "Kostenstelle", "Belegsumme", "Zugeordnet"]];
+    for (const b of zugeordnet) {
+      const beleg = [b.empfaenger, b.zweck].filter(Boolean).join(" · ") || "—";
+      zeilen.push([
+        nummern.get(b.id) ?? `#${b.nr}`,
+        datumText(b.datum),
+        beleg,
+        kostenstelleLabel(kfp, b.kostenstelle) || "—",
+        betragFormat(belegBrutto(b)),
+        betragFormat(anteil(b)),
+      ]);
+    }
+    zeilen.push(["**Summe", "", "", "", "", "**" + betragFormat(summe)]);
+    abschnitte.push({ ueberschrift: "Belegliste", absaetze: [], tabelle: zeilen });
+  } else {
+    abschnitte.push({
+      ueberschrift: "Belegliste",
+      absaetze: ["Dieser Geldquelle sind noch keine Belege zugeordnet."],
+      tabelle: [],
+    });
+  }
+
+  // 4) Kostenübersicht: diesem Förderer zugeordnete Beträge je Kostenstelle.
+  if (zugeordnet.length) {
+    const proKs = new Map();
+    for (const b of zugeordnet) {
+      const label = kostenstelleLabel(kfp, b.kostenstelle) || "ohne Kostenstelle";
+      proKs.set(label, (proKs.get(label) ?? 0) + anteil(b));
+    }
+    const zeilen = [["Kostenstelle", "Zugeordnet"]];
+    for (const [label, betrag] of proKs) zeilen.push([label, betragFormat(betrag)]);
+    zeilen.push(["**Summe", "**" + betragFormat(summe)]);
+    abschnitte.push({ ueberschrift: "Kostenübersicht", absaetze: [], tabelle: zeilen });
+  }
+
+  return { titel, abschnitte };
+}
+
 /// Lesbares Etikett einer Kostenstelle (z. B. "1.2 Honorar Regie"), oder
 /// "" wenn keine, bzw. "(entfernt)" wenn der Posten nicht mehr existiert.
 export function kostenstelleLabel(kfp, id) {

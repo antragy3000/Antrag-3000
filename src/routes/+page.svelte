@@ -22,7 +22,7 @@
   import { leeresFormular, formularWordBauen } from "$lib/antrag";
   import { antragsPdfBauen } from "$lib/antragsPdf";
   import { leererKfp, kfpExport, neuePostenId } from "$lib/kfp";
-  import { leereAbrechnung } from "$lib/abrechnung";
+  import { leereAbrechnung, verwendungsnachweisAbschnitte } from "$lib/abrechnung";
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
   import { boardAusTresor, geteilteFoerdererAusTresor } from "$lib/sync";
   import { fristNormalisieren, fristAlsDatum } from "$lib/begriffe";
@@ -662,6 +662,32 @@
   async function belegeSpeichern(neueBelege) {
     aktivesProjekt.abrechnung.belege = neueBelege;
     await tresorSpeichern();
+  }
+
+  // Verwendungsnachweis einer Geldquelle als PDF bzw. Word erzeugen
+  // (Phase A5). Baut die Abschnitte im Frontend und lässt Rust rendern.
+  async function nachweisExport(quelleId, format) {
+    const a = aktivesProjekt.abrechnung;
+    const q = a.quellen.find((x) => x.id === quelleId);
+    if (!q) return;
+    const { titel, abschnitte } = verwendungsnachweisAbschnitte(
+      q,
+      a.belege,
+      aktivesProjekt.kfp,
+      aktivesProjekt.name
+    );
+    const cmd = format === "word" ? "verwendungsnachweis_word" : "verwendungsnachweis_pdf";
+    try {
+      await invoke(cmd, {
+        projekt: aktivesProjekt.name,
+        foerderer: q.name,
+        titel,
+        abschnitte,
+        logo: daten.stammdaten?.logo || null,
+      });
+    } catch (e) {
+      alert("Der Verwendungsnachweis konnte nicht erzeugt werden.\n" + e);
+    }
   }
 
   // Geldquellen des aktiven Projekts ersetzen und sichern (Phase A4).
@@ -2222,6 +2248,8 @@
             speichern={belegeSpeichern}
             kfp={aktivesProjekt.kfp}
             projektName={aktivesProjekt.name}
+            nachweisPdf={(id) => nachweisExport(id, "pdf")}
+            nachweisWord={(id) => nachweisExport(id, "word")}
           />
         {/key}
       {:else if bereich === "fristen"}

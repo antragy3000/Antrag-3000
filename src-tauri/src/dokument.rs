@@ -71,25 +71,19 @@ fn zelle(text: &str, fett: bool) -> TableCell {
     TableCell::new().add_paragraph(Paragraph::new().add_run(run))
 }
 
-/// Schreibt die Word-Datei in den PROJEKT-Ordner und oeffnet diesen
-/// im Explorer. Ohne antworten.json, ohne Foerderungs-Unterordner.
-#[tauri::command]
-pub fn formular_word_erzeugen(
-    app: tauri::AppHandle,
-    projekt: String,
-    titel: String,
-    warnhinweis: String,
-    abschnitte: Vec<DocAbschnitt>,
-    logo: Option<String>,
-) -> Result<String, String> {
-    let ordner_pfad = ordner::wurzel(&app)?.join(ordner::bereinigen(&projekt)?);
-    fs::create_dir_all(&ordner_pfad).map_err(|e| format!("Ordner nicht anlegbar: {e}"))?;
-
-    // Menschenlesbare Word-Datei.
+/// Baut ein Word-Dokument aus Titel, optionalem (rotem) Warnhinweis und
+/// Abschnitten (Ueberschrift + Absaetze + Tabelle). Gemeinsam genutzt von
+/// der Formular-Kopie und dem Verwendungsnachweis (Abrechnung).
+pub(crate) fn docx_bauen(
+    titel: &str,
+    warnhinweis: &str,
+    abschnitte: &[DocAbschnitt],
+    logo: Option<&str>,
+) -> Docx {
     let mut docx = Docx::new();
 
     // Briefkopf (Logo) ganz oben, falls vorhanden.
-    if let Some(absatz) = briefkopf_absatz(logo.as_deref()) {
+    if let Some(absatz) = briefkopf_absatz(logo) {
         docx = docx.add_paragraph(absatz);
     }
 
@@ -97,11 +91,7 @@ pub fn formular_word_erzeugen(
     for zeile in warnhinweis.lines() {
         docx = docx.add_paragraph(
             Paragraph::new().add_run(
-                Run::new()
-                    .add_text(zeile)
-                    .bold()
-                    .color("C0392B")
-                    .size(18), // 9 pt (Angabe in Halbpunkten)
+                Run::new().add_text(zeile).bold().color("C0392B").size(18), // 9 pt
             ),
         );
     }
@@ -111,23 +101,16 @@ pub fn formular_word_erzeugen(
     docx = docx.add_paragraph(
         Paragraph::new()
             .align(AlignmentType::Left)
-            .add_run(Run::new().add_text(&titel).bold().size(36)), // 18 pt
+            .add_run(Run::new().add_text(titel).bold().size(36)), // 18 pt
     );
     docx = docx.add_paragraph(Paragraph::new());
 
     // Inhaltliche Abschnitte.
-    for abschnitt in &abschnitte {
+    for abschnitt in abschnitte {
         docx = docx.add_paragraph(
-            Paragraph::new().add_run(
-                Run::new()
-                    .add_text(&abschnitt.ueberschrift)
-                    .bold()
-                    .size(26), // 13 pt
-            ),
+            Paragraph::new().add_run(Run::new().add_text(&abschnitt.ueberschrift).bold().size(26)),
         );
         for absatz in &abschnitt.absaetze {
-            // Mehrzeilige Texte: jede Zeile als eigener Absatz,
-            // damit Zeilenumbrueche aus dem Formular erhalten bleiben.
             for zeile in absatz.lines() {
                 docx = docx.add_paragraph(
                     Paragraph::new().add_run(Run::new().add_text(zeile).size(22)), // 11 pt
@@ -142,16 +125,31 @@ pub fn formular_word_erzeugen(
                 .tabelle
                 .iter()
                 .enumerate()
-                .map(|(nr, zellen)| {
-                    TableRow::new(
-                        zellen.iter().map(|t| zelle(t, nr == 0)).collect(),
-                    )
-                })
+                .map(|(nr, zellen)| TableRow::new(zellen.iter().map(|t| zelle(t, nr == 0)).collect()))
                 .collect();
             docx = docx.add_table(Table::new(zeilen));
         }
         docx = docx.add_paragraph(Paragraph::new());
     }
+    docx
+}
+
+/// Schreibt die Word-Datei in den PROJEKT-Ordner und oeffnet diesen
+/// im Explorer. Ohne antworten.json, ohne Foerderungs-Unterordner.
+#[tauri::command]
+pub fn formular_word_erzeugen(
+    app: tauri::AppHandle,
+    projekt: String,
+    titel: String,
+    warnhinweis: String,
+    abschnitte: Vec<DocAbschnitt>,
+    logo: Option<String>,
+) -> Result<String, String> {
+    let ordner_pfad = ordner::wurzel(&app)?.join(ordner::bereinigen(&projekt)?);
+    fs::create_dir_all(&ordner_pfad).map_err(|e| format!("Ordner nicht anlegbar: {e}"))?;
+
+    // Menschenlesbare Word-Datei (gemeinsamer Bau-Helfer).
+    let docx = docx_bauen(&titel, &warnhinweis, &abschnitte, logo.as_deref());
 
     let docx_name = ordner::bereinigen(&format!("Projektbeschrieb - {projekt}"))? + ".docx";
     let docx_pfad = ordner_pfad.join(&docx_name);
@@ -205,4 +203,37 @@ pub fn dokument_hochladen(
 
     fs::copy(quell_pfad, &ziel).map_err(|e| format!("Datei nicht kopierbar: {e}"))?;
     Ok(datei_name)
+}
+
+/// Verwendungsnachweis (Abrechnung) als Word: Titel + Abschnitte (Sachbericht,
+/// Belegliste, Kostenuebersicht) werden in den Unterordner _Abrechnung des
+/// Projekts geschrieben und die Datei geoeffnet. Kein Warnhinweis (es ist ein
+/// fertiges Dokument, keine Entwurfs-Kopie).
+#[tauri::command]
+pub fn verwendungsnachweis_word(
+    app: tauri::AppHandle,
+    projekt: String,
+    foerderer: String,
+    titel: String,
+    abschnitte: Vec<DocAbschnitt>,
+    logo: Option<String>,
+) -> Result<String, String> {
+    let ordner_pfad = ordner::wurzel(&app)?
+        .join(ordner::bereinigen(&projekt)?)
+        .join("_Abrechnung");
+    fs::create_dir_all(&ordner_pfad).map_err(|e| format!("Ordner nicht anlegbar: {e}"))?;
+
+    let docx = docx_bauen(&titel, "", &abschnitte, logo.as_deref());
+    let name =
+        ordner::bereinigen(&format!("Verwendungsnachweis_{}_{}", projekt.trim(), foerderer.trim()))?
+            + ".docx";
+    let pfad = ordner_pfad.join(&name);
+    let datei = fs::File::create(&pfad).map_err(|e| format!("Word-Datei nicht anlegbar: {e}"))?;
+    docx.build()
+        .pack(datei)
+        .map_err(|e| format!("Word-Datei nicht schreibbar: {e}"))?;
+
+    tauri_plugin_opener::open_path(pfad.clone(), None::<&str>)
+        .map_err(|e| format!("Datei laesst sich nicht oeffnen: {e}"))?;
+    Ok(pfad.to_string_lossy().to_string())
 }
