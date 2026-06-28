@@ -1661,9 +1661,8 @@
   // gemerkten Förderung. Die Checkliste startet mit den üblichen
   // Unterlagen der Förderung.
   function antragHolen(foerderung) {
-    let a = aktivesProjekt.antraege[foerderung.id];
-    if (!a) {
-      a = {
+    if (!aktivesProjekt.antraege[foerderung.id]) {
+      aktivesProjekt.antraege[foerderung.id] = {
         status: ANTRAG_STANDARD,
         statusFrei: "",
         offizielleFristen: offizielleFristenAus(foerderung),
@@ -1676,8 +1675,12 @@
           datei: "",
         })),
       };
-      aktivesProjekt.antraege[foerderung.id] = a;
     }
+    // WICHTIG: immer den reaktiven $state-Proxy verwenden – NICHT das frisch
+    // erzeugte Roh-Objekt. Sonst lösen Änderungen in der Detailansicht
+    // (z. B. ein Dokument entfernen) keine Aktualisierung der Listenansicht
+    // und des PDF-Knopfs aus.
+    const a = aktivesProjekt.antraege[foerderung.id];
     // Offizielle Frist(en): aus der Datenbank vorbefüllt, aber editierbar.
     if (!Array.isArray(a.offizielleFristen)) {
       a.offizielleFristen = offizielleFristenAus(foerderung);
