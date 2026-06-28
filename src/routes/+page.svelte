@@ -26,6 +26,7 @@
   import { leereAbrechnung, verwendungsnachweisAbschnitte } from "$lib/abrechnung";
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
   import { boardAusTresor, geteilteFoerdererAusTresor } from "$lib/sync";
+  import { sichereWebUrl, kappen } from "$lib/sicherheit";
   import { fristNormalisieren, fristAlsDatum } from "$lib/begriffe";
 
   // Die editierbaren „offiziellen Fristen" im Tresor sind konkrete Datums-
@@ -113,15 +114,19 @@
       const i = r.inhalt ?? {};
       const hk = i.harte_kriterien ?? {};
       const wk = i.weiche_kriterien ?? {};
+      // Diese Daten kommen von fremden Geräten: Texte kappen (gegen
+      // aufgeblähte Datensätze + versteckte Steuerzeichen) und die
+      // Webseite hier schon auf eine echte http/https-Adresse einschränken
+      // (sichereWebUrl gibt sonst null → Feld bleibt leer).
       return {
         id: r.id,
         geteilt: true,
-        name: i.name || "(ohne Name)",
-        foerdergeber: i.foerdergeber ?? "",
+        name: kappen(i.name, 200) || "(ohne Name)",
+        foerdergeber: kappen(i.foerdergeber, 200),
         land: i.land ?? "ANDERES",
         beschreibung: "", // bewusst leer – bleibt lokal beim Ersteller
-        webseite: i.webseite ?? "",
-        foerderhoehe_text: i.foerderhoehe_text || "—",
+        webseite: sichereWebUrl(i.webseite) ?? "",
+        foerderhoehe_text: kappen(i.foerderhoehe_text, 200) || "—",
         fristen: Array.isArray(i.fristen) ? i.fristen : [],
         unvertraeglich_mit: Array.isArray(i.unvertraeglich_mit) ? i.unvertraeglich_mit : [],
         checkliste_vorschlag: Array.isArray(i.checkliste_vorschlag) ? i.checkliste_vorschlag : [],

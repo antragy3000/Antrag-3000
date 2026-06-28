@@ -10,6 +10,7 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch",
     "waechter": "node tools/sync-waechter.mjs",
+    "sicherheit": "node tools/sicherheit-test.mjs",
     "tauri": "tauri"
   },
   "license": "MIT",

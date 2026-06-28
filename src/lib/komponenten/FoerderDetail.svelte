@@ -3,6 +3,7 @@
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { LAENDER, SPARTEN, PROJEKTARTEN, TRAEGERSCHAFT, fristText, anteilText } from "$lib/begriffe";
   import { regionName } from "$lib/daten/orte.js";
+  import { sichereWebUrl } from "$lib/sicherheit";
   import AntragBlock from "./AntragBlock.svelte";
 
   let {
@@ -31,6 +32,11 @@
   function neu(...keys) {
     return keys.some((k) => geaenderteFelder.includes(k));
   }
+
+  // Die Webseite kann aus geteilten/synchronisierten Daten stammen und
+  // ist deshalb nicht vertrauenswürdig: nur eine echte http/https-Adresse
+  // wird ans Betriebssystem zum Öffnen gegeben (sonst null).
+  let webseiteSicher = $derived(sichereWebUrl(f.webseite));
 </script>
 
 <div class="schleier" onclick={schliessen} role="presentation">
@@ -140,14 +146,34 @@
         {gemerkt ? "★ Von der Merkliste entfernen" : "☆ Auf die Merkliste setzen"}
       </button>
     {/if}
-    <button class="primaer" onclick={() => openUrl(f.webseite)}>
-      Webseite des Fördergebers öffnen
-    </button>
+    {#if webseiteSicher}
+      <button class="primaer" onclick={() => openUrl(webseiteSicher)}>
+        Webseite des Fördergebers öffnen
+      </button>
+    {:else if (f.webseite ?? "").trim()}
+      <p class="unsichere-url">
+        ⚠ Die hinterlegte Webseite ist kein normaler Web-Link und wird aus
+        Sicherheitsgründen nicht geöffnet: <code>{f.webseite}</code>
+      </p>
+    {/if}
     {#if neu("webseite")}<span class="neu-feld">Webseite NEU</span>{/if}
   </article>
 </div>
 
 <style>
+  .unsichere-url {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: #fff4e5;
+    border: 1px solid #f0c36d;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: #7a4f01;
+    overflow-wrap: anywhere;
+  }
+  .unsichere-url code {
+    overflow-wrap: anywhere;
+  }
   .schleier {
     position: fixed;
     inset: 0;

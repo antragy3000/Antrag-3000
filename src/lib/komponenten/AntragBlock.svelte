@@ -5,6 +5,7 @@
   // und ruft danach aendern() zum verschlüsselten Speichern.
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { ANTRAG_STATUS, CHECK_STATUS, statusFarbe } from "$lib/status";
+  import { sichereWebUrl, sichereMailUrl } from "$lib/sicherheit";
 
   let {
     antrag,
@@ -18,7 +19,10 @@
     einreichUrl = "",
   } = $props();
 
-  let onlineUrl = $derived((einreichUrl ?? "").trim());
+  // Die Einreich-Adresse kann aus dem (synchronisierten) Katalog stammen
+  // und ist deshalb nicht vertrauenswürdig: nur eine echte http/https-URL
+  // wird geöffnet (sonst null → der Online-Knopf erscheint gar nicht).
+  let onlineUrl = $derived(sichereWebUrl(einreichUrl));
   function onlineFormularOeffnen() {
     if (onlineUrl) openUrl(onlineUrl);
   }
@@ -100,17 +104,22 @@
       const pfad = await pdfSpeichern();
       if (pfad) {
         pdfGespeichert = pfad;
-        const betreff = "Förderantrag";
-        const text =
-          `Guten Tag${kontaktName ? " " + kontaktName : ""},\n\n` +
-          `im Anhang sende ich Ihnen meinen Förderantrag.\n` +
-          `Bitte hängen Sie diese Datei an:\n${pfad}\n\n` +
-          `Mit freundlichen Grüßen`;
-        const adresse =
-          `mailto:${encodeURIComponent(kontaktEmail)}` +
-          `?subject=${encodeURIComponent(betreff)}` +
-          `&body=${encodeURIComponent(text)}`;
-        openUrl(adresse);
+        // Empfänger-Adresse erst absichern (gültige Einzeladresse, keine
+        // versteckten mailto-Felder), dann Betreff/Text anhängen.
+        const mailtoBasis = sichereMailUrl(kontaktEmail);
+        if (mailtoBasis) {
+          const betreff = "Förderantrag";
+          const text =
+            `Guten Tag${kontaktName ? " " + kontaktName : ""},\n\n` +
+            `im Anhang sende ich Ihnen meinen Förderantrag.\n` +
+            `Bitte hängen Sie diese Datei an:\n${pfad}\n\n` +
+            `Mit freundlichen Grüßen`;
+          const adresse =
+            `${mailtoBasis}` +
+            `?subject=${encodeURIComponent(betreff)}` +
+            `&body=${encodeURIComponent(text)}`;
+          openUrl(adresse);
+        }
         pdfModalOffen = false;
       }
     } finally {

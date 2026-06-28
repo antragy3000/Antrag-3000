@@ -4,6 +4,7 @@
   // ihrem Status. Klick auf eine Zeile öffnet die Detailansicht mit dem
   // Status-/Checklisten-Block. Warnung bei unverträglichen Förderungen.
   import { openUrl } from "@tauri-apps/plugin-opener";
+  import { sichereMailUrl } from "$lib/sicherheit";
   import FoerderDetail from "./FoerderDetail.svelte";
   import EigeneFoerderung from "./EigeneFoerderung.svelte";
   import { LAENDER, SPARTEN, fristText } from "$lib/begriffe";
@@ -122,8 +123,9 @@
     return (antraege[id]?.kontakt?.email ?? "").trim();
   }
   function mailSchreiben(id) {
-    const adr = kontaktEmail(id);
-    if (adr) openUrl("mailto:" + adr);
+    // Adresse absichern, statt sie roh hinter „mailto:" zu hängen.
+    const mailto = sichereMailUrl(kontaktEmail(id));
+    if (mailto) openUrl(mailto);
   }
 
   // Fristen zur Anzeige in der Zeile: offizielle (editierbare Übernahme
