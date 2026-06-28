@@ -12,6 +12,7 @@
   import Abrechnung from "$lib/komponenten/Abrechnung.svelte";
   import Kostenstellen from "$lib/komponenten/Kostenstellen.svelte";
   import Geldquellen from "$lib/komponenten/Geldquellen.svelte";
+  import Verteilung from "$lib/komponenten/Verteilung.svelte";
   import Sicherung from "$lib/komponenten/Sicherung.svelte";
   import TeamSync from "$lib/komponenten/TeamSync.svelte";
   import { katalog, setzeKatalog, setzeStandardKatalog, standardKatalog, pruefeKatalog, vergleicheKataloge, geaenderteFelder, setzeGeteilteFoerderer } from "$lib/katalog.svelte.js";
@@ -66,7 +67,7 @@
   // beiden Modi erreichbar (globale Angaben).
   let arbeitsModus = $state("antrag");
   const ANTRAG_BEREICHE = ["foerderungen", "merkliste", "fristen", "formular", "kostenplan", "stammdaten"];
-  const ABRECHNUNG_BEREICHE = ["belege", "kostenstellen", "geldquellen", "stammdaten"];
+  const ABRECHNUNG_BEREICHE = ["belege", "kostenstellen", "geldquellen", "verteilung", "stammdaten"];
   function arbeitsModusWechseln(m) {
     arbeitsModus = m;
     const erlaubt = m === "abrechnung" ? ABRECHNUNG_BEREICHE : ANTRAG_BEREICHE;
@@ -2005,6 +2006,9 @@
           <button class:aktiv={bereich === "geldquellen"} onclick={() => (bereich = "geldquellen")}>
             Geldquellen
           </button>
+          <button class:aktiv={bereich === "verteilung"} onclick={() => (bereich = "verteilung")}>
+            Verteilung
+          </button>
         {/if}
         <span class="nav-trenner" aria-hidden="true"></span>
         <button class:aktiv={bereich === "stammdaten"} onclick={() => (bereich = "stammdaten")}>
@@ -2207,6 +2211,16 @@
             entfernen={quelleEntfernen}
             kfp={aktivesProjekt.kfp}
             belege={aktivesProjekt.abrechnung.belege}
+            projektName={aktivesProjekt.name}
+          />
+        {/key}
+      {:else if bereich === "verteilung"}
+        {#key daten.aktivesProjektId}
+          <Verteilung
+            belege={aktivesProjekt.abrechnung.belege}
+            quellen={aktivesProjekt.abrechnung.quellen}
+            speichern={belegeSpeichern}
+            kfp={aktivesProjekt.kfp}
             projektName={aktivesProjekt.name}
           />
         {/key}
