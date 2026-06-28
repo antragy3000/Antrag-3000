@@ -615,7 +615,7 @@
   //     unbeaufsichtigtes, entsperrtes Geraet nicht offen stehen bleibt.
   //     Aktivitaet aktualisiert nur einen Zeitstempel (billig); ein Intervall
   //     prueft minuetlich, ob die Leerlauf-Grenze ueberschritten ist. ---
-  const IDLE_MS = 15 * 60 * 1000; // 15 Minuten ohne Aktivitaet -> sperren
+  const IDLE_MS = 30 * 60 * 1000; // 30 Minuten ohne Aktivitaet -> sperren
   let letzteAktivitaet = Date.now();
   let idleInterval = null;
   function aktivitaetMerken() {
