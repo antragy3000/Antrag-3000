@@ -21,6 +21,14 @@
 	}
 
 	reverse_proxy api:8080 {
+		# Sicherheit: zuerst ALLE vom Client mitgeschickten Zertifikat-Header
+		# entfernen, damit niemand einen fremden Fingerabdruck vortaeuscht.
+		# Erst danach setzt Caddy die ECHTEN, von der mTLS-Pruefung
+		# stammenden Werte. (header_up Name value ersetzt ohnehin, das
+		# Loeschen ist Defense-in-depth.)
+		header_up -Cf-Client-Cert-Sha256
+		header_up -Cf-Client-Cert-Der-Base64
+		header_up -Cf-Client-Cert-Der
 		header_up X-Client-Cert-DER {http.request.tls.client.certificate_der_base64}
 		header_up X-Client-Cert-Subject {http.request.tls.client.subject}
 	}

@@ -362,36 +362,55 @@ async fn schema_anlegen(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
-/// Bildet den Geräte-Fingerabdruck (SHA-256-Hex des Zertifikats). Drei
-/// Wege werden akzeptiert:
-///  1. `Cf-Client-Cert-Sha256` – fertiger Fingerabdruck von Cloudflare
-///     (per Transform Rule weitergegeben; einfachster Weg).
-///  2. `Cf-Client-Cert-Der-Base64` – das DER-Zertifikat von Cloudflare.
-///  3. `X-Client-Cert-DER` – das DER-Zertifikat von Caddy (DDNS-Variante).
-/// None, wenn nichts Brauchbares da ist.
+/// Welcher Reverse-Proxy steht VOR diesem Dienst und liefert den geprüften
+/// Zertifikat-Header? Per ENV `CERT_HEADER_MODE`:
+///   - "caddy" (Standard): nur `X-Client-Cert-DER` (Caddy/Tailscale & DDNS).
+///   - "cloudflare": nur `Cf-Client-Cert-Sha256` bzw. `Cf-Client-Cert-Der-Base64`.
+///
+/// SICHERHEIT: Der Dienst vertraut AUSSCHLIESSLICH dem Header seines eigenen
+/// Proxys und ignoriert die jeweils anderen. Sonst könnte ein Client hinter
+/// Caddy einen `Cf-*`-Header selbst setzen und damit einen FREMDEN
+/// Fingerabdruck vortäuschen (Ownership-Checks umgehen, Limits aushebeln).
+/// Zusätzlich entfernt Caddy diese Header eingehend (Defense-in-depth).
+fn cert_header_mode() -> &'static str {
+    static MODE: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    MODE.get_or_init(|| {
+        env::var("CERT_HEADER_MODE")
+            .unwrap_or_else(|_| "caddy".into())
+            .trim()
+            .to_lowercase()
+    })
+}
+
+/// Bildet den Geräte-Fingerabdruck (SHA-256-Hex des Zertifikats) – nur aus
+/// dem zum konfigurierten Proxy passenden Header. None, wenn nichts
+/// Brauchbares (bzw. nur ein fremder Header) da ist.
 fn fingerprint(headers: &HeaderMap) -> Option<String> {
-    // 1. Fertiger SHA-256-Fingerabdruck (Cloudflare).
-    if let Some(fp) = headers.get("cf-client-cert-sha256").and_then(|v| v.to_str().ok()) {
-        let norm = fp.trim().to_lowercase().replace(':', "");
-        if norm.len() == 64 && norm.chars().all(|c| c.is_ascii_hexdigit()) {
-            return Some(norm);
+    fn hash_der(der_b64: &str) -> Option<String> {
+        let der_b64 = der_b64.trim();
+        if der_b64.is_empty() {
+            return None;
         }
+        let der = base64::engine::general_purpose::STANDARD.decode(der_b64).ok()?;
+        let mut h = Sha256::new();
+        h.update(&der);
+        Some(hex::encode(h.finalize()))
     }
-    // 2./3. Sonst das DER-Zertifikat selbst hashen.
-    let der_b64 = headers
-        .get("cf-client-cert-der-base64")
-        .or_else(|| headers.get("x-client-cert-der"))?
-        .to_str()
-        .ok()?
-        .trim()
-        .to_string();
-    if der_b64.is_empty() {
-        return None;
+
+    if cert_header_mode() == "cloudflare" {
+        // 1. Fertiger SHA-256-Fingerabdruck (Cloudflare, per Transform Rule).
+        if let Some(fp) = headers.get("cf-client-cert-sha256").and_then(|v| v.to_str().ok()) {
+            let norm = fp.trim().to_lowercase().replace(':', "");
+            if norm.len() == 64 && norm.chars().all(|c| c.is_ascii_hexdigit()) {
+                return Some(norm);
+            }
+        }
+        // 2. Sonst das DER-Zertifikat von Cloudflare hashen.
+        return hash_der(headers.get("cf-client-cert-der-base64")?.to_str().ok()?);
     }
-    let der = base64::engine::general_purpose::STANDARD.decode(der_b64).ok()?;
-    let mut h = Sha256::new();
-    h.update(&der);
-    Some(hex::encode(h.finalize()))
+
+    // Standard (Caddy/Tailscale & DDNS): NUR der von Caddy gesetzte Header.
+    hash_der(headers.get("x-client-cert-der")?.to_str().ok()?)
 }
 
 /// Ermittelt zu einem Request das Konto (und die Geräte-id). Unbekannte,

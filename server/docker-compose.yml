@@ -44,6 +44,9 @@ services:
       # ihn unter ./katalog/foerderungen.json ab (Upload-Werkzeug folgt in
       # Etappe 4).
       - KATALOG_PFAD=/srv/foerderungen.json
+      # Vor dem Dienst steht Caddy (mTLS) und setzt X-Client-Cert-DER; der
+      # Dienst vertraut NUR diesem Header (Standard). Siehe Caddyfile.
+      - CERT_HEADER_MODE=caddy
     volumes:
       - api_data:/data
       - ./katalog:/srv:ro
