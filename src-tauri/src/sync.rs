@@ -220,6 +220,21 @@ pub async fn sync_trockenlauf(ziel_url: String, koerper: Vec<String>) -> Result<
         .build()
         .map_err(|e| format!("Client-Fehler: {e}"))?;
     let basis = basis_url(&ziel_url);
+
+    // SICHERHEIT: Dieser Transparenz-Befehl darf AUSSCHLIESSLICH an localhost
+    // senden. Sonst waere er ein Egress-Kanal, ueber den (z. B. via XSS) ein
+    // beliebiger Koerper an ein fremdes Netzwerkziel geschickt werden koennte.
+    let url = reqwest::Url::parse(&basis).map_err(|_| "Ungueltige Ziel-Adresse.".to_string())?;
+    let host = url.host_str().unwrap_or("").trim_start_matches('[').trim_end_matches(']');
+    let ist_loopback = host == "localhost"
+        || host
+            .parse::<std::net::IpAddr>()
+            .map(|ip| ip.is_loopback())
+            .unwrap_or(false);
+    if !ist_loopback {
+        return Err("Der Trockenlauf darf nur an localhost (127.0.0.1) senden.".into());
+    }
+
     let mut gesendet = 0;
     for body in &koerper {
         client

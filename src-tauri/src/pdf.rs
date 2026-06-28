@@ -314,6 +314,20 @@ fn baue_antrags_pdf(
         .join("Dateien");
 
     for name in anhaenge {
+        // SICHERHEIT: Der Anhang-Name darf nicht aus dem Dateien-Ordner
+        // ausbrechen. Normalerweise liefert dokument_hochladen bereinigte
+        // Namen; diese Sink-Pruefung faengt einen praeparierten Tresor/Backup
+        // ab (kein Pfad-Trenner, kein .., kein Laufwerk/ADS, nicht absolut).
+        if name.is_empty()
+            || name.contains('/')
+            || name.contains('\\')
+            || name.contains(':')
+            || name == "."
+            || name == ".."
+            || std::path::Path::new(name).is_absolute()
+        {
+            return Err(format!("Ungueltiger Anhang-Name: {name}"));
+        }
         let pfad = dateien.join(name);
         let daten = fs::read(&pfad).map_err(|e| format!("Anhang nicht lesbar ({name}): {e}"))?;
         let ext = pfad
