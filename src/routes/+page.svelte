@@ -469,6 +469,10 @@
   }
 
   onMount(async () => {
+    // Beim Start eventuelle Klartext-Reste aus dem Temp-Ordner entfernen
+    // (z. B. nach einem Absturz der vorigen Sitzung – Belege/PDF-Vorschau).
+    invoke("temp_aufraeumen").catch(() => {});
+
     // Aktualisierten Förder-Katalog laden, falls vorhanden (Phase 3).
     // Liegt keiner vor oder passt er nicht, bleibt die mitgelieferte
     // Standard-Fassung aktiv.
@@ -608,6 +612,9 @@
     syncMeldung = null;
     zuletztGeprueft = null;
     await invoke("tresor_sperren");
+    // Beim Sperren die kurzlebigen Klartext-Reste (entschluesselte Belege,
+    // Antrags-PDF-Vorschau) aus dem Temp-Ordner entfernen.
+    invoke("temp_aufraeumen").catch(() => {});
     daten = null;
     fehler = "";
     bereich = "foerderungen";

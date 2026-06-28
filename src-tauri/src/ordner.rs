@@ -65,6 +65,33 @@ pub fn ordner_oeffnen(
     Ok(pfad.to_string_lossy().to_string())
 }
 
+/// Entfernt die kurzlebigen KLARTEXT-Dateien aus dem System-Temp-Ordner:
+/// den Ordner mit entschluesselten Belegen und die Antrags-PDF-Vorschauen.
+/// Wird beim Sperren des Tresors und beim Programmstart aufgerufen, damit
+/// keine sensiblen Reste (IBAN/Steuer im PDF, Belege) liegen bleiben.
+/// Best-effort: eine gerade im Betrachter geoeffnete (gesperrte) Datei wird
+/// uebersprungen und beim naechsten Mal entfernt.
+#[tauri::command]
+pub fn temp_aufraeumen() -> Result<(), String> {
+    let temp = std::env::temp_dir();
+    // 1. Entschluesselte Belege (ganzer Ordner).
+    let belege = temp.join("Antrag3000-Belege");
+    if belege.exists() {
+        let _ = fs::remove_dir_all(&belege);
+    }
+    // 2. Antrags-PDF-Vorschauen (antrag3000-vorschau-*.pdf).
+    if let Ok(eintraege) = fs::read_dir(&temp) {
+        for e in eintraege.flatten() {
+            if let Some(n) = e.file_name().to_str() {
+                if n.starts_with("antrag3000-vorschau-") && n.ends_with(".pdf") {
+                    let _ = fs::remove_file(e.path());
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Zieht den Projektordner bei einer Umbenennung mit um.
 /// Existiert der alte Ordner nicht, ist nichts zu tun.
 #[tauri::command]

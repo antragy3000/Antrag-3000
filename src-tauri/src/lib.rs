@@ -34,6 +34,7 @@ pub fn run() {
             tresor::merken_vergessen,
             ordner::ordner_oeffnen,
             ordner::ordner_umbenennen,
+            ordner::temp_aufraeumen,
             dokument::formular_word_erzeugen,
             dokument::dokument_hochladen,
             dokument::verwendungsnachweis_word,
