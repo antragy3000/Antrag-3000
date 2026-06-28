@@ -197,6 +197,8 @@
       </select>
       <label for="m-t">Anmerkung (optional)</label>
       <textarea id="m-t" rows="2" maxlength="500" bind:value={mText} placeholder="Was stimmt nicht?"></textarea>
+      <p class="hinweis klein">Diese Anmerkung wird ans Team gesendet – bitte
+        <strong>keine persönlichen Daten</strong> (Namen, Adresse, Budget) hineinschreiben.</p>
       {#if mFehler}<p class="fehler klein">⚠ {mFehler}</p>{/if}
       <div class="knoepfe">
         <button class="zweit" disabled={!mFoerderung} onclick={melden}>Melden</button>
@@ -241,6 +243,7 @@
   p { margin: 0 0 10px; }
   .dezent { color: #5e6c84; font-size: 0.9rem; line-height: 1.5; }
   .klein { font-size: 0.82rem; }
+  .hinweis { color: #6b778c; margin: 4px 0 0; }
   .zeile { display: flex; gap: 12px; padding: 4px 0; font-size: 0.95rem; }
   .etikett { flex: 0 0 110px; color: #5e6c84; font-weight: 600; }
   .knoepfe { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 6px; }

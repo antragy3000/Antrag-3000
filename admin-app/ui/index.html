@@ -377,11 +377,13 @@
 
     function meldung(ziel, art, text) {
       const el = $(ziel);
-      el.innerHTML = text ? `<div class="meld ${art}">${text}</div>` : "";
+      // text kann eine Fehlermeldung (z. B. vom Server) enthalten -> escapen,
+      // damit darin kein HTML/Script ausgefuehrt wird (Audit G1).
+      el.innerHTML = text ? `<div class="meld ${art}">${escape(text)}</div>` : "";
     }
     function escape(s) {
-      return String(s ?? "").replace(/[&<>"]/g, (c) =>
-        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+      return String(s ?? "").replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     }
     function zeit(iso) {
       const d = new Date(iso);
