@@ -13,9 +13,16 @@
 
 name: macOS-Pilot-Build
 
-# Nur per Hand starten (kein automatischer Lauf bei jedem Push).
+# Ausloeser:
+#  - workflow_dispatch: per Hand ueber den "Run workflow"-Knopf.
+#  - push auf master, wenn diese Workflow-Datei ODER Programmcode sich
+#    aendert. So startet der Bau auch ohne Knopf zuverlaessig. (Spaeter
+#    kann man den push-Ausloeser wieder entfernen, wenn nur noch
+#    Hand-Starts gewuenscht sind.)
 on:
   workflow_dispatch:
+  push:
+    branches: [master]
 
 jobs:
   build:
