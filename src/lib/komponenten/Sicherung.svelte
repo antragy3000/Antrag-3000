@@ -126,21 +126,21 @@
   .schleier {
     position: fixed;
     inset: 0;
-    background: rgba(9, 30, 66, 0.45);
+    background: var(--schatten-xl);
     display: grid;
     place-items: center;
     padding: 24px;
     z-index: 40;
   }
   .dialog {
-    background: #fff;
+    background: var(--weiss);
     border-radius: 12px;
     padding: 32px;
     max-width: 480px;
     width: 100%;
     max-height: 85vh;
     overflow-y: auto;
-    box-shadow: 0 12px 40px rgba(9, 30, 66, 0.3);
+    box-shadow: 0 12px 40px var(--schatten-lg);
   }
   h2 {
     margin: 0 0 16px;
@@ -153,7 +153,7 @@
   }
   section {
     padding: 16px 0;
-    border-top: 1px solid #f1f2f4;
+    border-top: 1px solid var(--flaeche-2b);
   }
   section:first-of-type {
     border-top: none;
@@ -163,11 +163,11 @@
     margin: 0 0 12px;
     font-size: 0.92rem;
     line-height: 1.55;
-    color: #44546f;
+    color: var(--text-2);
   }
   .warn {
-    background: #fff7d6;
-    color: #533f04;
+    background: var(--warnung-bg);
+    color: var(--warnung-text2);
     border-radius: 8px;
     padding: 10px 14px;
   }
@@ -176,13 +176,13 @@
     word-break: break-all;
   }
   .ok {
-    color: #216e4e;
+    color: var(--erfolg-text);
     font-weight: 600;
     white-space: pre-wrap;
     word-break: break-all;
   }
   .fehler {
-    color: #ae2e24;
+    color: var(--gefahr-text);
     font-weight: 600;
   }
 
@@ -196,26 +196,26 @@
     border: none;
   }
   .primaer {
-    color: #fff;
-    background: #4f6df5;
+    color: var(--weiss);
+    background: var(--akzent);
   }
   .primaer:hover:not(:disabled) {
-    background: #3d5bf0;
+    background: var(--akzent-d);
   }
   .zweit {
-    color: #172b4d;
-    background: #fff;
-    border: 2px solid #dfe1e6;
+    color: var(--text);
+    background: var(--weiss);
+    border: 2px solid var(--rand);
   }
   .zweit:hover:not(:disabled) {
-    border-color: #4f6df5;
+    border-color: var(--akzent);
   }
   .gefahr {
-    color: #fff;
-    background: #ca3521;
+    color: var(--weiss);
+    background: var(--gefahr);
   }
   .gefahr:hover:not(:disabled) {
-    background: #ae2e24;
+    background: var(--gefahr-text);
   }
   button:disabled {
     opacity: 0.6;
@@ -223,11 +223,11 @@
   }
   .leise {
     background: none;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-weight: 400;
   }
   .leise:hover {
-    color: #172b4d;
+    color: var(--text);
     text-decoration: underline;
   }
   .fuss {

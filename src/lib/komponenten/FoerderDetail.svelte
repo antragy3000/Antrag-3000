@@ -164,11 +164,11 @@
   .unsichere-url {
     margin-top: 8px;
     padding: 8px 10px;
-    background: #fff4e5;
-    border: 1px solid #f0c36d;
+    background: var(--warnung-bg3);
+    border: 1px solid var(--warnung-rand);
     border-radius: 8px;
     font-size: 0.85rem;
-    color: #7a4f01;
+    color: var(--warnung-text6);
     overflow-wrap: anywhere;
   }
   .unsichere-url code {
@@ -177,21 +177,21 @@
   .schleier {
     position: fixed;
     inset: 0;
-    background: rgba(9, 30, 66, 0.45);
+    background: var(--schatten-xl);
     display: grid;
     place-items: center;
     padding: 24px;
     z-index: 10;
   }
   .detail {
-    background: #fff;
+    background: var(--weiss);
     border-radius: 12px;
     padding: 32px;
     max-width: 560px;
     width: 100%;
     max-height: 85vh;
     overflow-y: auto;
-    box-shadow: 0 12px 40px rgba(9, 30, 66, 0.3);
+    box-shadow: 0 12px 40px var(--schatten-lg);
   }
   .detail header {
     display: flex;
@@ -210,7 +210,7 @@
   }
   .geber {
     margin: 0;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.85rem;
   }
   .herkunft {
@@ -221,9 +221,9 @@
     padding: 2px 9px;
     border-radius: 99px;
   }
-  .herkunft.selbst { background: #eef1ff; color: #3b4fb0; }
-  .herkunft.geteilt { background: #e6f4ff; color: #0c5a8f; }
-  .herkunft.weg { background: #ffeceb; color: #ae2e24; }
+  .herkunft.selbst { background: var(--akzent-bg); color: var(--akzent-d4); }
+  .herkunft.geteilt { background: var(--akzent-bg5); color: var(--link-d3); }
+  .herkunft.weg { background: var(--gefahr-bg); color: var(--gefahr-text); }
   .neu-feld {
     display: inline-block;
     margin-left: 8px;
@@ -233,14 +233,14 @@
     vertical-align: middle;
     padding: 1px 7px;
     border-radius: 99px;
-    background: #e9f0ff;
-    color: #2b46c4;
-    border: 1px solid #b9c7f7;
+    background: var(--akzent-bg2);
+    color: var(--akzent-d3);
+    border: 1px solid var(--akzent-rand);
   }
   .stand {
     margin: 4px 0 0;
     font-size: 0.78rem;
-    color: #a9b0bd;
+    color: var(--grau-5);
   }
 
   .land {
@@ -252,24 +252,24 @@
     border-radius: 99px;
     text-transform: uppercase;
   }
-  .land-DE { background: #e9f2ff; color: #0055cc; }
-  .land-AT { background: #ffeceb; color: #ae2e24; }
-  .land-CH { background: #fff7d6; color: #7f5f01; }
-  .land-INT { background: #f3f0ff; color: #5e4db2; }
-  .land-ANDERES { background: #f1f2f4; color: #44546f; }
+  .land-DE { background: var(--akzent-bg3); color: var(--link); }
+  .land-AT { background: var(--gefahr-bg); color: var(--gefahr-text); }
+  .land-CH { background: var(--warnung-bg); color: var(--warnung-text); }
+  .land-INT { background: var(--lila-bg); color: var(--lila-d); }
+  .land-ANDERES { background: var(--flaeche-2b); color: var(--text-2); }
 
   .schliessen {
     background: none;
     border: none;
     font-size: 1.1rem;
-    color: #5e6c84;
+    color: var(--text-muted);
     cursor: pointer;
     padding: 6px 10px;
     border-radius: 8px;
   }
   .schliessen:hover {
-    background: #f1f2f4;
-    color: #172b4d;
+    background: var(--flaeche-2b);
+    color: var(--text);
   }
 
   dl {
@@ -280,7 +280,7 @@
     font-size: 0.9rem;
   }
   dt {
-    color: #5e6c84;
+    color: var(--text-muted);
     font-weight: 600;
   }
   dd {
@@ -291,11 +291,11 @@
     padding-left: 18px;
   }
   .warn {
-    color: #ae2e24;
+    color: var(--gefahr-text);
   }
 
   .datenstand {
-    color: #8590a2;
+    color: var(--text-leise);
     font-size: 0.8rem;
   }
 
@@ -305,15 +305,15 @@
     padding: 11px;
     font-size: 0.95rem;
     font-weight: 600;
-    color: #172b4d;
-    background: #fff;
-    border: 2px solid #dfe1e6;
+    color: var(--text);
+    background: var(--weiss);
+    border: 2px solid var(--rand);
     border-radius: 8px;
     cursor: pointer;
   }
   .zweit:hover {
-    border-color: #e2a400;
-    background: #fffaf0;
+    border-color: var(--warnung);
+    background: var(--warnung-bg2);
   }
 
   .primaer {
@@ -321,13 +321,13 @@
     padding: 11px;
     font-size: 0.95rem;
     font-weight: 600;
-    color: #fff;
-    background: #4f6df5;
+    color: var(--weiss);
+    background: var(--akzent);
     border: none;
     border-radius: 8px;
     cursor: pointer;
   }
   .primaer:hover {
-    background: #3d5bf0;
+    background: var(--akzent-d);
   }
 </style>

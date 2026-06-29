@@ -133,40 +133,40 @@
 
 <style>
   .schleier {
-    position: fixed; inset: 0; background: rgba(9, 30, 66, 0.45);
+    position: fixed; inset: 0; background: var(--schatten-xl);
     display: grid; place-items: center; padding: 24px; z-index: 50;
   }
   .dialog {
-    background: #fff; border-radius: 12px; padding: 32px;
-    max-width: 460px; width: 100%; box-shadow: 0 12px 40px rgba(9, 30, 66, 0.3);
+    background: var(--weiss); border-radius: 12px; padding: 32px;
+    max-width: 460px; width: 100%; box-shadow: 0 12px 40px var(--schatten-lg);
   }
   h2 { margin: 0 0 12px; font-size: 1.2rem; }
   p { margin: 0 0 10px; }
-  .dezent { color: #5e6c84; font-size: 0.9rem; line-height: 1.5; }
+  .dezent { color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; }
   .klein { font-size: 0.82rem; }
   .status { font-size: 1rem; font-weight: 600; margin: 14px 0; }
   .box { border-radius: 8px; padding: 12px 14px; margin: 12px 0; font-size: 0.95rem; }
-  .ok-box { background: #e3fcef; color: #143d2b; }
-  .info-box { background: #deebff; color: #0747a6; }
-  .fehler-box { background: #ffebe6; color: #8a1c0a; }
+  .ok-box { background: var(--erfolg-bg2); color: var(--erfolg-d2); }
+  .info-box { background: var(--akzent-bg6); color: var(--link-d); }
+  .fehler-box { background: var(--gefahr-bg3); color: var(--gefahr-d); }
   .notizen { margin-top: 8px; white-space: pre-wrap; font-size: 0.9rem; }
-  .balken { height: 10px; background: #ebecf0; border-radius: 6px; overflow: hidden; margin: 6px 0; }
-  .balken-fuell { height: 100%; background: #4f6df5; transition: width 0.2s; }
+  .balken { height: 10px; background: var(--flaeche-3b); border-radius: 6px; overflow: hidden; margin: 6px 0; }
+  .balken-fuell { height: 100%; background: var(--akzent); transition: width 0.2s; }
   .knoepfe { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
   .primaer {
     padding: 9px 16px; font-size: 0.92rem; font-weight: 600; font-family: inherit;
-    color: #fff; background: #4f6df5; border: none; border-radius: 8px; cursor: pointer;
+    color: var(--weiss); background: var(--akzent); border: none; border-radius: 8px; cursor: pointer;
   }
-  .primaer:hover { background: #3d5bf0; }
+  .primaer:hover { background: var(--akzent-d); }
   .zweit {
     padding: 8px 14px; font-size: 0.9rem; font-weight: 600; font-family: inherit;
-    color: #172b4d; background: #fff; border: 2px solid #dfe1e6; border-radius: 8px; cursor: pointer;
+    color: var(--text); background: var(--weiss); border: 2px solid var(--rand); border-radius: 8px; cursor: pointer;
   }
-  .zweit:hover { border-color: #4f6df5; }
+  .zweit:hover { border-color: var(--akzent); }
   .leise {
-    background: none; border: none; color: #5e6c84; font-size: 0.9rem;
+    background: none; border: none; color: var(--text-muted); font-size: 0.9rem;
     font-family: inherit; cursor: pointer; padding: 8px;
   }
-  .leise:hover { color: #172b4d; text-decoration: underline; }
+  .leise:hover { color: var(--text); text-decoration: underline; }
   .fuss { display: flex; justify-content: flex-end; margin-top: 14px; }
 </style>

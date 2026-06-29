@@ -209,7 +209,7 @@
   }
   .untertitel {
     margin: 0;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.9rem;
     max-width: 520px;
     line-height: 1.5;
@@ -221,7 +221,7 @@
     gap: 14px;
   }
   .ok {
-    color: #216e4e;
+    color: var(--erfolg-text);
     font-size: 0.88rem;
     font-weight: 600;
   }
@@ -231,17 +231,17 @@
     font-size: 0.95rem;
     font-weight: 600;
     font-family: inherit;
-    color: #fff;
-    background: #4f6df5;
+    color: var(--weiss);
+    background: var(--akzent);
     border: none;
     border-radius: 8px;
     cursor: pointer;
   }
   button:hover:not(:disabled) {
-    background: #3d5bf0;
+    background: var(--akzent-d);
   }
   button:disabled {
-    background: #c1c7d0;
+    background: var(--grau-3);
     cursor: default;
   }
 
@@ -253,9 +253,9 @@
   }
 
   .karte {
-    background: #fff;
+    background: var(--weiss);
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.12);
+    box-shadow: 0 1px 3px var(--schatten-sm);
     padding: 24px;
   }
   h3 {
@@ -268,7 +268,7 @@
     display: block;
     font-size: 0.82rem;
     font-weight: 600;
-    color: #5e6c84;
+    color: var(--text-muted);
     margin: 14px 0 5px;
   }
   input {
@@ -277,44 +277,44 @@
     padding: 9px 12px;
     font-size: 0.95rem;
     font-family: inherit;
-    border: 2px solid #dfe1e6;
+    border: 2px solid var(--rand);
     border-radius: 8px;
-    background: #fafbfc;
+    background: var(--flaeche);
     transition: border-color 0.15s, background 0.15s;
   }
   input:focus {
     outline: none;
-    border-color: #4f6df5;
-    background: #fff;
+    border-color: var(--akzent);
+    background: var(--weiss);
   }
 
   .warnung {
     margin: 6px 0 0;
-    color: #ae2e24;
+    color: var(--gefahr-text);
     font-size: 0.82rem;
   }
 
   .logo-karte { margin-bottom: 16px; }
-  .logo-hinweis { margin: 0 0 14px; color: #5e6c84; font-size: 0.88rem; line-height: 1.5; }
+  .logo-hinweis { margin: 0 0 14px; color: var(--text-muted); font-size: 0.88rem; line-height: 1.5; }
   .logo-zeile { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
   .logo-vorschau {
     max-width: 220px; max-height: 90px; object-fit: contain;
-    border: 1px solid #dfe1e6; border-radius: 8px; padding: 8px; background: #fff;
+    border: 1px solid var(--rand); border-radius: 8px; padding: 8px; background: var(--weiss);
   }
   .logo-platzhalter {
     width: 220px; height: 90px; display: grid; place-items: center;
-    border: 2px dashed #dfe1e6; border-radius: 8px; color: #8590a2; font-size: 0.85rem; background: #fafbfc;
+    border: 2px dashed var(--rand); border-radius: 8px; color: var(--text-leise); font-size: 0.85rem; background: var(--flaeche);
   }
   .logo-knoepfe { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
   .datei-knopf {
     display: inline-block; padding: 9px 16px; font-size: 0.9rem; font-weight: 600;
-    color: #172b4d; background: #fff; border: 2px solid #dfe1e6; border-radius: 8px; cursor: pointer;
+    color: var(--text); background: var(--weiss); border: 2px solid var(--rand); border-radius: 8px; cursor: pointer;
   }
-  .datei-knopf:hover { border-color: #4f6df5; }
+  .datei-knopf:hover { border-color: var(--akzent); }
   .entfernen {
-    padding: 7px 14px; font-size: 0.85rem; background: #fff; color: #ae2e24;
-    border: 2px solid #f1c7c2; border-radius: 8px;
+    padding: 7px 14px; font-size: 0.85rem; background: var(--weiss); color: var(--gefahr-text);
+    border: 2px solid var(--gefahr-rand2); border-radius: 8px;
   }
-  .entfernen:hover:not(:disabled) { background: #ffeceb; }
-  .logo-tipp { color: #8590a2; font-size: 0.8rem; }
+  .entfernen:hover:not(:disabled) { background: var(--gefahr-bg); }
+  .logo-tipp { color: var(--text-leise); font-size: 0.8rem; }
 </style>

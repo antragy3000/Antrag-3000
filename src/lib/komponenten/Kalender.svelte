@@ -446,7 +446,7 @@
     font-weight: 600;
   }
   .anzahl {
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.9rem;
     font-weight: 400;
     margin-left: 8px;
@@ -455,10 +455,10 @@
     margin: 32px 0 12px;
     font-size: 1.05rem;
     font-weight: 600;
-    color: #44546f;
+    color: var(--text-2);
   }
   .leer {
-    color: #5e6c84;
+    color: var(--text-muted);
   }
 
   .kopfzeile {
@@ -477,14 +477,14 @@
     font-size: 0.9rem;
     font-weight: 600;
     font-family: inherit;
-    color: #172b4d;
-    background: #fff;
-    border: 2px solid #dfe1e6;
+    color: var(--text);
+    background: var(--weiss);
+    border: 2px solid var(--rand);
     border-radius: 8px;
     cursor: pointer;
   }
   .ordner:hover {
-    border-color: #4f6df5;
+    border-color: var(--akzent);
   }
 
   .interne-form {
@@ -492,9 +492,9 @@
     gap: 10px;
     flex-wrap: wrap;
     align-items: center;
-    background: #fff;
+    background: var(--weiss);
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.12);
+    box-shadow: 0 1px 3px var(--schatten-sm);
     padding: 14px 18px;
     margin-bottom: 20px;
   }
@@ -502,9 +502,9 @@
     padding: 9px 12px;
     font-size: 0.92rem;
     font-family: inherit;
-    border: 2px solid #dfe1e6;
+    border: 2px solid var(--rand);
     border-radius: 8px;
-    background: #fafbfc;
+    background: var(--flaeche);
   }
   .interne-form input[type="text"] {
     flex: 1;
@@ -512,28 +512,28 @@
   }
   .interne-form input:focus {
     outline: none;
-    border-color: #4f6df5;
-    background: #fff;
+    border-color: var(--akzent);
+    background: var(--weiss);
   }
   .interne-form .primaer {
     padding: 9px 18px;
     font-size: 0.92rem;
     font-weight: 600;
     font-family: inherit;
-    color: #fff;
-    background: #4f6df5;
+    color: var(--weiss);
+    background: var(--akzent);
     border: none;
     border-radius: 8px;
     cursor: pointer;
   }
   .interne-form .primaer:disabled {
-    background: #c1c7d0;
+    background: var(--grau-3);
     cursor: default;
   }
   .interne-form .leise {
     background: none;
     border: none;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.9rem;
     font-family: inherit;
     cursor: pointer;
@@ -545,13 +545,13 @@
     letter-spacing: 0.03em;
     padding: 3px 9px;
     border-radius: 99px;
-    background: #eae6ff;
-    color: #5e44b0;
+    background: var(--lila-bg4);
+    color: var(--lila-d2);
   }
   .zeile.intern .entfernen {
     background: none;
     border: none;
-    color: #8590a2;
+    color: var(--text-leise);
     font-size: 0.95rem;
     cursor: pointer;
     padding: 4px 8px;
@@ -560,8 +560,8 @@
     align-self: center;
   }
   .zeile.intern .entfernen:hover {
-    background: #ffeceb;
-    color: #ae2e24;
+    background: var(--gefahr-bg);
+    color: var(--gefahr-text);
   }
 
   /* Team-Termine (aus dem Board anderer Geräte – nur Ansicht) */
@@ -571,14 +571,14 @@
     letter-spacing: 0.03em;
     padding: 3px 9px;
     border-radius: 99px;
-    background: #e6f4ff;
-    color: #0c5a8f;
+    background: var(--akzent-bg5);
+    color: var(--link-d3);
   }
   .zeile.team {
     cursor: default;
   }
   .zeile.team:hover {
-    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.12);
+    box-shadow: 0 1px 3px var(--schatten-sm);
   }
 
   .liste {
@@ -590,18 +590,18 @@
     display: flex;
     align-items: center;
     gap: 16px;
-    background: #fff;
+    background: var(--weiss);
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.12);
+    box-shadow: 0 1px 3px var(--schatten-sm);
     padding: 14px 18px;
     cursor: pointer;
     transition: box-shadow 0.15s;
   }
   .zeile:hover {
-    box-shadow: 0 4px 14px rgba(9, 30, 66, 0.18);
+    box-shadow: 0 4px 14px var(--schatten-md);
   }
   .zeile:focus-visible {
-    outline: 2px solid #4f6df5;
+    outline: 2px solid var(--akzent);
     outline-offset: 2px;
   }
   .zeile.verg {
@@ -637,10 +637,10 @@
     font-size: 1.6rem;
     font-weight: 700;
   }
-  .datum.farbe-rot { background: #ffeceb; color: #ae2e24; }
-  .datum.farbe-gelb { background: #fff7d6; color: #7f5f01; }
-  .datum.farbe-gruen { background: #dcfff1; color: #216e4e; }
-  .datum.farbe-grau { background: #f1f2f4; color: #5e6c84; }
+  .datum.farbe-rot { background: var(--gefahr-bg); color: var(--gefahr-text); }
+  .datum.farbe-gelb { background: var(--warnung-bg); color: var(--warnung-text); }
+  .datum.farbe-gruen { background: var(--erfolg-bg); color: var(--erfolg-text); }
+  .datum.farbe-grau { background: var(--flaeche-2b); color: var(--text-muted); }
 
   .haupt {
     flex: 1;
@@ -659,7 +659,7 @@
   }
   .meta {
     margin: 4px 0 0;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.85rem;
   }
 
@@ -679,18 +679,18 @@
     font-size: 0.8rem;
   }
   .uf-pin {
-    color: #8590a2;
+    color: var(--text-leise);
   }
   .uf-datum {
     font-variant-numeric: tabular-nums;
-    color: #44546f;
+    color: var(--text-2);
     font-weight: 600;
     white-space: nowrap;
   }
   .uf-titel {
     flex: 1;
     min-width: 0;
-    color: #172b4d;
+    color: var(--text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -702,10 +702,10 @@
     font-weight: 700;
     font-size: 0.72rem;
   }
-  .unterfristen li.farbe-rot .uf-cd { background: #ffeceb; color: #ae2e24; }
-  .unterfristen li.farbe-gelb .uf-cd { background: #fff7d6; color: #7f5f01; }
-  .unterfristen li.farbe-gruen .uf-cd { background: #dcfff1; color: #216e4e; }
-  .unterfristen li.farbe-grau .uf-cd { background: #f1f2f4; color: #5e6c84; }
+  .unterfristen li.farbe-rot .uf-cd { background: var(--gefahr-bg); color: var(--gefahr-text); }
+  .unterfristen li.farbe-gelb .uf-cd { background: var(--warnung-bg); color: var(--warnung-text); }
+  .unterfristen li.farbe-gruen .uf-cd { background: var(--erfolg-bg); color: var(--erfolg-text); }
+  .unterfristen li.farbe-grau .uf-cd { background: var(--flaeche-2b); color: var(--text-muted); }
 
   .countdown {
     flex-shrink: 0;
@@ -715,9 +715,9 @@
     border-radius: 99px;
     white-space: nowrap;
   }
-  .countdown.farbe-rot { background: #ffeceb; color: #ae2e24; }
-  .countdown.farbe-gelb { background: #fff7d6; color: #7f5f01; }
-  .countdown.farbe-gruen { background: #dcfff1; color: #216e4e; }
+  .countdown.farbe-rot { background: var(--gefahr-bg); color: var(--gefahr-text); }
+  .countdown.farbe-gelb { background: var(--warnung-bg); color: var(--warnung-text); }
+  .countdown.farbe-gruen { background: var(--erfolg-bg); color: var(--erfolg-text); }
 
   .land {
     font-size: 0.72rem;
@@ -727,11 +727,11 @@
     border-radius: 99px;
     text-transform: uppercase;
   }
-  .land-DE { background: #e9f2ff; color: #0055cc; }
-  .land-AT { background: #ffeceb; color: #ae2e24; }
-  .land-CH { background: #fff7d6; color: #7f5f01; }
-  .land-INT { background: #f3f0ff; color: #5e4db2; }
-  .land-ANDERES { background: #f1f2f4; color: #44546f; }
+  .land-DE { background: var(--akzent-bg3); color: var(--link); }
+  .land-AT { background: var(--gefahr-bg); color: var(--gefahr-text); }
+  .land-CH { background: var(--warnung-bg); color: var(--warnung-text); }
+  .land-INT { background: var(--lila-bg); color: var(--lila-d); }
+  .land-ANDERES { background: var(--flaeche-2b); color: var(--text-2); }
 
   .status-badge {
     display: inline-flex;
@@ -747,16 +747,16 @@
     height: 8px;
     border-radius: 50%;
   }
-  .status-badge.farbe-blau { background: #e9f0ff; color: #2b46c4; }
-  .status-badge.farbe-blau .punkt { background: #4f6df5; }
-  .status-badge.farbe-lila { background: #f1edff; color: #5e44b0; }
-  .status-badge.farbe-lila .punkt { background: #8270db; }
-  .status-badge.farbe-gruen { background: #dcfff1; color: #216e4e; }
-  .status-badge.farbe-gruen .punkt { background: #22a06b; }
-  .status-badge.farbe-rot { background: #ffeceb; color: #ae2e24; }
-  .status-badge.farbe-rot .punkt { background: #ca3521; }
-  .status-badge.farbe-gelb { background: #fff7d6; color: #7f5f01; }
-  .status-badge.farbe-gelb .punkt { background: #e2a400; }
-  .status-badge.farbe-grau { background: #f1f2f4; color: #44546f; }
-  .status-badge.farbe-grau .punkt { background: #b3bac5; }
+  .status-badge.farbe-blau { background: var(--akzent-bg2); color: var(--akzent-d3); }
+  .status-badge.farbe-blau .punkt { background: var(--akzent); }
+  .status-badge.farbe-lila { background: var(--lila-bg2); color: var(--lila-d2); }
+  .status-badge.farbe-lila .punkt { background: var(--lila); }
+  .status-badge.farbe-gruen { background: var(--erfolg-bg); color: var(--erfolg-text); }
+  .status-badge.farbe-gruen .punkt { background: var(--erfolg); }
+  .status-badge.farbe-rot { background: var(--gefahr-bg); color: var(--gefahr-text); }
+  .status-badge.farbe-rot .punkt { background: var(--gefahr); }
+  .status-badge.farbe-gelb { background: var(--warnung-bg); color: var(--warnung-text); }
+  .status-badge.farbe-gelb .punkt { background: var(--warnung); }
+  .status-badge.farbe-grau { background: var(--flaeche-2b); color: var(--text-2); }
+  .status-badge.farbe-grau .punkt { background: var(--grau-4); }
 </style>

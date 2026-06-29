@@ -238,9 +238,9 @@
     padding: 48px 24px;
   }
   .karte {
-    background: #fff;
+    background: var(--weiss);
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.12), 0 8px 24px rgba(9, 30, 66, 0.08);
+    box-shadow: 0 1px 3px var(--schatten-sm), 0 8px 24px var(--schatten-xs);
     padding: 40px;
     width: 100%;
     max-width: 520px;
@@ -253,7 +253,7 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: #8590a2;
+    color: var(--text-leise);
   }
   h2 {
     margin: 0 0 6px;
@@ -262,7 +262,7 @@
   }
   .hinweis {
     margin: 0 0 12px;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.88rem;
   }
 
@@ -282,20 +282,20 @@
     padding: 12px 16px;
     font-size: 0.98rem;
     font-weight: 500;
-    color: #172b4d;
-    background: #fafbfc;
-    border: 2px solid #dfe1e6;
+    color: var(--text);
+    background: var(--flaeche);
+    border: 2px solid var(--rand);
     border-radius: 10px;
     cursor: pointer;
     transition: border-color 0.12s, background 0.12s;
     font-family: inherit;
   }
   .option:hover {
-    border-color: #4f6df5;
+    border-color: var(--akzent);
   }
   .option.gewaehlt {
-    border-color: #4f6df5;
-    background: #eef1ff;
+    border-color: var(--akzent);
+    background: var(--akzent-bg);
   }
 
   .ort-felder {
@@ -307,10 +307,10 @@
   .ort-felder label {
     font-size: 0.82rem;
     font-weight: 600;
-    color: #5e6c84;
+    color: var(--text-muted);
     margin: 10px 0 2px;
   }
-  .ort-felder .opt { color: #8590a2; font-weight: 400; }
+  .ort-felder .opt { color: var(--text-leise); font-weight: 400; }
 
   .primaer {
     width: 100%;
@@ -318,17 +318,17 @@
     padding: 11px;
     font-size: 1rem;
     font-weight: 600;
-    color: #fff;
-    background: #4f6df5;
+    color: var(--weiss);
+    background: var(--akzent);
     border: none;
     border-radius: 8px;
     cursor: pointer;
   }
   .primaer:hover:not(:disabled) {
-    background: #3d5bf0;
+    background: var(--akzent-d);
   }
   .primaer:disabled {
-    background: #c1c7d0;
+    background: var(--grau-3);
     cursor: default;
   }
 
@@ -340,14 +340,14 @@
   .leise {
     background: none;
     border: none;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.875rem;
     cursor: pointer;
     padding: 6px;
     font-family: inherit;
   }
   .leise:hover {
-    color: #172b4d;
+    color: var(--text);
     text-decoration: underline;
   }
 </style>

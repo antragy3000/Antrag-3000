@@ -128,7 +128,7 @@
     font-weight: 600;
   }
   .anzahl {
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.9rem;
     font-weight: 400;
     margin-left: 8px;
@@ -137,7 +137,7 @@
     margin-top: 44px;
   }
   .erklaerung {
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.88rem;
     margin: 6px 0 20px;
   }
@@ -147,20 +147,20 @@
     gap: 16px;
   }
   .leer {
-    color: #5e6c84;
+    color: var(--text-muted);
     grid-column: 1 / -1;
   }
   .leise {
     background: none;
     border: none;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.875rem;
     cursor: pointer;
     padding: 6px;
     font-family: inherit;
   }
   .leise:hover {
-    color: #172b4d;
+    color: var(--text);
     text-decoration: underline;
   }
   .kopf-knoepfe {
@@ -169,18 +169,18 @@
     gap: 6px;
   }
   .db-knopf {
-    background: #f1f2f4;
+    background: var(--flaeche-2b);
     border: none;
     border-radius: 6px;
     padding: 5px 11px;
     font-size: 0.82rem;
     font-weight: 600;
     font-family: inherit;
-    color: #44546f;
+    color: var(--text-2);
     cursor: pointer;
   }
   .db-knopf:hover {
-    background: #e4e7ec;
-    color: #172b4d;
+    background: var(--rand-2);
+    color: var(--text);
   }
 </style>

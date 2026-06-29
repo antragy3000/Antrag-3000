@@ -71,27 +71,27 @@
     margin-bottom: 16px;
   }
   .titel-block { flex: 1 1 300px; min-width: 260px; }
-  h2 { margin: 0 0 4px; font-size: 1.35rem; font-weight: 600; color: #172b4d; }
-  .untertitel { margin: 0; color: #5e6c84; font-size: 0.9rem; max-width: 560px; line-height: 1.5; }
+  h2 { margin: 0 0 4px; font-size: 1.35rem; font-weight: 600; color: var(--text); }
+  .untertitel { margin: 0; color: var(--text-muted); font-size: 0.9rem; max-width: 560px; line-height: 1.5; }
   .status { display: flex; align-items: center; gap: 12px; }
-  .ok { color: #14794e; font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
+  .ok { color: var(--erfolg-text2); font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
 
   textarea {
     flex: 1;
     width: 100%;
     min-height: 340px;
     padding: 16px 18px;
-    border: 2px solid #dfe1e6;
+    border: 2px solid var(--rand);
     border-radius: 12px;
     font-family: inherit;
     font-size: 0.95rem;
     line-height: 1.6;
-    color: #172b4d;
-    background: #fff;
+    color: var(--text);
+    background: var(--weiss);
     resize: vertical;
     box-sizing: border-box;
   }
-  textarea:focus { outline: none; border-color: #4f6df5; }
+  textarea:focus { outline: none; border-color: var(--akzent); }
 
   .fuss {
     display: flex;
@@ -99,20 +99,20 @@
     justify-content: space-between;
     margin-top: 10px;
   }
-  .zeichen { color: #8590a2; font-size: 0.8rem; }
-  .hinweis { color: #8590a2; font-size: 0.8rem; }
+  .zeichen { color: var(--text-leise); font-size: 0.8rem; }
+  .hinweis { color: var(--text-leise); font-size: 0.8rem; }
 
   button.primaer {
     padding: 10px 20px;
     font-size: 0.92rem;
     font-weight: 600;
     font-family: inherit;
-    color: #fff;
-    background: #4f6df5;
+    color: var(--weiss);
+    background: var(--akzent);
     border: none;
     border-radius: 8px;
     cursor: pointer;
   }
-  button.primaer:hover:not(:disabled) { background: #3d5bf0; }
-  button.primaer:disabled { background: #c1c7d0; cursor: default; }
+  button.primaer:hover:not(:disabled) { background: var(--akzent-d); }
+  button.primaer:disabled { background: var(--grau-3); cursor: default; }
 </style>

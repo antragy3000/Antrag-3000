@@ -113,7 +113,7 @@
   }
   .untertitel {
     margin: 0;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.9rem;
     max-width: 460px;
     line-height: 1.5;
@@ -125,7 +125,7 @@
     gap: 14px;
   }
   .ok {
-    color: #216e4e;
+    color: var(--erfolg-text);
     font-size: 0.88rem;
     font-weight: 600;
   }
@@ -135,41 +135,41 @@
     font-size: 0.95rem;
     font-weight: 600;
     font-family: inherit;
-    color: #fff;
-    background: #4f6df5;
+    color: var(--weiss);
+    background: var(--akzent);
     border: none;
     border-radius: 8px;
     cursor: pointer;
   }
   button:hover:not(:disabled) {
-    background: #3d5bf0;
+    background: var(--akzent-d);
   }
   button:disabled {
-    background: #c1c7d0;
+    background: var(--grau-3);
     cursor: default;
   }
 
   /* Word-Knopf: zweitrangig (weiß), gleiche Höhe wie Speichern */
   button.word {
     padding: 8px 20px;
-    color: #172b4d;
-    background: #fff;
-    border: 2px solid #dfe1e6;
+    color: var(--text);
+    background: var(--weiss);
+    border: 2px solid var(--rand);
   }
   button.word:hover:not(:disabled) {
-    background: #fffaf0;
-    border-color: #e2a400;
+    background: var(--warnung-bg2);
+    border-color: var(--warnung);
   }
   button.word:disabled {
-    color: #8590a2;
-    background: #f4f5f7;
-    border-color: #dfe1e6;
+    color: var(--text-leise);
+    background: var(--flaeche-2);
+    border-color: var(--rand);
   }
 
   .karte {
-    background: #fff;
+    background: var(--weiss);
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.12);
+    box-shadow: 0 1px 3px var(--schatten-sm);
     padding: 32px;
   }
 
@@ -177,7 +177,7 @@
     display: block;
     font-size: 0.82rem;
     font-weight: 600;
-    color: #5e6c84;
+    color: var(--text-muted);
     margin: 18px 0 5px;
   }
   label:first-of-type {
@@ -192,16 +192,16 @@
     font-size: 0.95rem;
     font-family: inherit;
     line-height: 1.5;
-    border: 2px solid #dfe1e6;
+    border: 2px solid var(--rand);
     border-radius: 8px;
-    background: #fafbfc;
+    background: var(--flaeche);
     transition: border-color 0.15s, background 0.15s;
     resize: vertical;
   }
   input:focus,
   textarea:focus {
     outline: none;
-    border-color: #4f6df5;
-    background: #fff;
+    border-color: var(--akzent);
+    background: var(--weiss);
   }
 </style>

@@ -303,25 +303,25 @@
     margin: 0 0 4px;
     font-size: 1.35rem;
     font-weight: 600;
-    color: #172b4d;
+    color: var(--text);
   }
   .untertitel {
     margin: 0;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.9rem;
     max-width: 620px;
     line-height: 1.5;
   }
   .leer {
     text-align: center;
-    color: #5e6c84;
+    color: var(--text-muted);
     padding: 44px 16px;
-    border: 1px dashed #dfe1e6;
+    border: 1px dashed var(--rand);
     border-radius: 12px;
   }
   .leer p { margin: 0 0 8px; }
-  .leer-klein { color: #5e6c84; font-size: 0.9rem; margin: 14px 0; }
-  .dezent { color: #8590a2; font-size: 0.88rem; }
+  .leer-klein { color: var(--text-muted); font-size: 0.9rem; margin: 14px 0; }
+  .dezent { color: var(--text-leise); font-size: 0.88rem; }
 
   .status {
     border-radius: 8px;
@@ -329,90 +329,90 @@
     font-size: 0.88rem;
     margin-bottom: 14px;
   }
-  .status.ok { background: #dcfff1; color: #14794e; }
-  .status.warn { background: #fff7d6; color: #7a5b00; display: flex; gap: 18px; flex-wrap: wrap; }
+  .status.ok { background: var(--erfolg-bg); color: var(--erfolg-text2); }
+  .status.warn { background: var(--warnung-bg); color: var(--warnung-text3); display: flex; gap: 18px; flex-wrap: wrap; }
 
   /* Quellen-Liste (Merkliste-Stil) */
   .quellen-liste { display: flex; flex-direction: column; gap: 12px; }
   .qkarte {
-    background: #fff;
+    background: var(--weiss);
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.12);
+    box-shadow: 0 1px 3px var(--schatten-sm);
     padding: 14px 18px;
     cursor: pointer;
     transition: box-shadow 0.15s;
   }
-  .qkarte:hover { box-shadow: 0 4px 14px rgba(9, 30, 66, 0.18); }
-  .qkarte:focus-visible { outline: 2px solid #4f6df5; outline-offset: 2px; }
+  .qkarte:hover { box-shadow: 0 4px 14px var(--schatten-md); }
+  .qkarte:focus-visible { outline: 2px solid var(--akzent); outline-offset: 2px; }
   .qk-kopf { display: flex; align-items: center; gap: 10px; }
-  .qk-kopf h3 { margin: 0; font-size: 1.02rem; font-weight: 600; flex: 1; min-width: 0; color: #172b4d; }
-  .qk-kopf .anzahl { color: #8590a2; font-size: 0.82rem; white-space: nowrap; }
-  .balken { height: 7px; background: #eef0f3; border-radius: 99px; margin: 10px 0; overflow: hidden; }
-  .fuellung { height: 100%; background: #4f6df5; border-radius: 99px; }
-  .fuellung.voll { background: #ca3521; }
-  .qk-zahlen { display: flex; gap: 20px; font-size: 0.86rem; color: #5e6c84; flex-wrap: wrap; }
-  .qk-zahlen strong { color: #172b4d; }
-  .rest.offen { color: #7a5b00; font-weight: 600; }
-  .rest.ueber { color: #ca3521; font-weight: 700; }
+  .qk-kopf h3 { margin: 0; font-size: 1.02rem; font-weight: 600; flex: 1; min-width: 0; color: var(--text); }
+  .qk-kopf .anzahl { color: var(--text-leise); font-size: 0.82rem; white-space: nowrap; }
+  .balken { height: 7px; background: var(--flaeche-2c); border-radius: 99px; margin: 10px 0; overflow: hidden; }
+  .fuellung { height: 100%; background: var(--akzent); border-radius: 99px; }
+  .fuellung.voll { background: var(--gefahr); }
+  .qk-zahlen { display: flex; gap: 20px; font-size: 0.86rem; color: var(--text-muted); flex-wrap: wrap; }
+  .qk-zahlen strong { color: var(--text); }
+  .rest.offen { color: var(--warnung-text3); font-weight: 600; }
+  .rest.ueber { color: var(--gefahr); font-weight: 700; }
 
   /* Detail */
   .zurueck {
-    background: none; border: none; color: #4f6df5; font-size: 0.9rem;
+    background: none; border: none; color: var(--akzent); font-size: 0.9rem;
     font-weight: 600; cursor: pointer; padding: 0; margin-bottom: 14px; font-family: inherit;
   }
   .zurueck:hover { text-decoration: underline; }
   .d-kopf { display: flex; align-items: center; gap: 10px; }
   .d-kopf h2 { margin: 0; }
-  .d-zahlen { display: flex; gap: 22px; font-size: 0.92rem; color: #5e6c84; margin: 8px 0 14px; flex-wrap: wrap; }
-  .d-zahlen strong { color: #172b4d; }
+  .d-zahlen { display: flex; gap: 22px; font-size: 0.92rem; color: var(--text-muted); margin: 8px 0 14px; flex-wrap: wrap; }
+  .d-zahlen strong { color: var(--text); }
   .export { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
-  .export-titel { font-size: 0.85rem; color: #5e6c84; font-weight: 600; }
+  .export-titel { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; }
 
   .typ { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 0.74rem; font-weight: 600; }
-  .typ.t-foerderung { background: #eef1ff; color: #3b4fb0; }
-  .typ.t-eigenmittel { background: #dcfff1; color: #14794e; }
+  .typ.t-foerderung { background: var(--akzent-bg); color: var(--akzent-d4); }
+  .typ.t-eigenmittel { background: var(--erfolg-bg); color: var(--erfolg-text2); }
 
   table.belege { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-  table.belege th, table.belege td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #ebedf0; vertical-align: middle; }
-  table.belege th { color: #5e6c84; font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
-  .num { width: 56px; color: #44546f; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.belege th, table.belege td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--flaeche-3); vertical-align: middle; }
+  table.belege th { color: var(--text-muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .num { width: 56px; color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .bel { min-width: 150px; }
-  .b-emp { color: #172b4d; }
-  .b-zw { color: #8590a2; font-size: 0.78rem; }
+  .b-emp { color: var(--text); }
+  .b-zw { color: var(--text-leise); font-size: 0.78rem; }
   .betrag { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
   td.zelle input {
-    width: 90px; padding: 5px 7px; border: 2px solid #dfe1e6; border-radius: 7px;
-    font-family: inherit; font-size: 0.85rem; text-align: right; color: #172b4d; font-variant-numeric: tabular-nums;
+    width: 90px; padding: 5px 7px; border: 2px solid var(--rand); border-radius: 7px;
+    font-family: inherit; font-size: 0.85rem; text-align: right; color: var(--text); font-variant-numeric: tabular-nums;
   }
-  td.zelle input:focus { outline: none; border-color: #4f6df5; }
+  td.zelle input:focus { outline: none; border-color: var(--akzent); }
   .rest-btn {
     display: block; margin: 4px 0 0 auto; border: none; border-radius: 6px;
-    background: #eef1ff; color: #3d5bf0; font-size: 0.72rem; font-weight: 600;
+    background: var(--akzent-bg); color: var(--akzent-d); font-size: 0.72rem; font-weight: 600;
     padding: 2px 6px; cursor: pointer; font-family: inherit;
   }
-  .rest-btn:hover { background: #4f6df5; color: #fff; }
+  .rest-btn:hover { background: var(--akzent); color: var(--weiss); }
   .akt { text-align: right; white-space: nowrap; }
-  .summe-label { text-align: right; font-weight: 600; color: #44546f; }
-  .summe { font-weight: 700; color: #172b4d; }
+  .summe-label { text-align: right; font-weight: 600; color: var(--text-2); }
+  .summe { font-weight: 700; color: var(--text); }
 
   .zuordnen { margin-top: 18px; }
   .verfuegbar { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
   .verfuegbar li {
     display: flex; align-items: center; gap: 12px; padding: 8px 12px;
-    background: #f7f8fa; border: 1px solid #ebedf0; border-radius: 8px; font-size: 0.88rem;
+    background: var(--flaeche-b); border: 1px solid var(--flaeche-3); border-radius: 8px; font-size: 0.88rem;
   }
-  .vb-nr { color: #44546f; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .vb-emp { flex: 1; min-width: 0; color: #172b4d; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .vb-frei { color: #5e6c84; white-space: nowrap; }
+  .vb-nr { color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .vb-emp { flex: 1; min-width: 0; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vb-frei { color: var(--text-muted); white-space: nowrap; }
 
   button.zweit {
     padding: 9px 14px; font-size: 0.9rem; font-weight: 600; font-family: inherit;
-    color: #172b4d; background: #fff; border: 2px solid #dfe1e6; border-radius: 8px; cursor: pointer;
+    color: var(--text); background: var(--weiss); border: 2px solid var(--rand); border-radius: 8px; cursor: pointer;
   }
-  button.zweit:hover:not(:disabled) { border-color: #4f6df5; }
-  button.zweit:disabled { color: #b3bac5; border-color: #ebedf0; cursor: default; }
+  button.zweit:hover:not(:disabled) { border-color: var(--akzent); }
+  button.zweit:disabled { color: var(--grau-4); border-color: var(--flaeche-3); cursor: default; }
   button.zweit.schmal { padding: 6px 11px; font-size: 0.82rem; }
-  button.leise { background: none; border: none; color: #5e6c84; font-size: 0.84rem; cursor: pointer; padding: 4px 6px; font-family: inherit; }
-  button.leise:hover { color: #172b4d; text-decoration: underline; }
-  button.leise.gefahr:hover { color: #ae2e24; }
+  button.leise { background: none; border: none; color: var(--text-muted); font-size: 0.84rem; cursor: pointer; padding: 4px 6px; font-family: inherit; }
+  button.leise:hover { color: var(--text); text-decoration: underline; }
+  button.leise.gefahr:hover { color: var(--gefahr-text); }
 </style>

@@ -440,11 +440,11 @@
     margin: 0 0 4px;
     font-size: 1.35rem;
     font-weight: 600;
-    color: #172b4d;
+    color: var(--text);
   }
   .untertitel {
     margin: 0;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.9rem;
     max-width: 520px;
     line-height: 1.5;
@@ -452,9 +452,9 @@
 
   .leer {
     text-align: center;
-    color: #5e6c84;
+    color: var(--text-muted);
     padding: 48px 16px;
-    border: 1px dashed #dfe1e6;
+    border: 1px dashed var(--rand);
     border-radius: 12px;
   }
   .leer p {
@@ -470,11 +470,11 @@
   table.belege td {
     text-align: left;
     padding: 9px 10px;
-    border-bottom: 1px solid #ebedf0;
+    border-bottom: 1px solid var(--flaeche-3);
     vertical-align: top;
   }
   table.belege th {
-    color: #5e6c84;
+    color: var(--text-muted);
     font-weight: 600;
     font-size: 0.8rem;
     text-transform: uppercase;
@@ -482,12 +482,12 @@
   }
   .num {
     width: 60px;
-    color: #44546f;
+    color: var(--text-2);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
   .roh-nr {
-    color: #b3bac5;
+    color: var(--grau-4);
   }
   .betrag {
     text-align: right;
@@ -495,20 +495,20 @@
     font-variant-numeric: tabular-nums;
   }
   .zweck {
-    color: #44546f;
+    color: var(--text-2);
   }
   .mwst {
     font-size: 0.72rem;
-    color: #8590a2;
+    color: var(--text-leise);
   }
   .summe-label {
     text-align: right;
     font-weight: 600;
-    color: #44546f;
+    color: var(--text-2);
   }
   .summe {
     font-weight: 700;
-    color: #172b4d;
+    color: var(--text);
   }
   .akt {
     text-align: right;
@@ -521,16 +521,16 @@
     border-radius: 99px;
     font-size: 0.74rem;
     font-weight: 600;
-    background: #eef1ff;
-    color: #3b4fb0;
+    background: var(--akzent-bg);
+    color: var(--akzent-d4);
   }
   .status.s-zugeordnet {
-    background: #fff7d6;
-    color: #7a5b00;
+    background: var(--warnung-bg);
+    color: var(--warnung-text3);
   }
   .status.s-abgerechnet {
-    background: #dcfff1;
-    color: #14794e;
+    background: var(--erfolg-bg);
+    color: var(--erfolg-text2);
   }
 
   button.primaer {
@@ -538,17 +538,17 @@
     font-size: 0.92rem;
     font-weight: 600;
     font-family: inherit;
-    color: #fff;
-    background: #4f6df5;
+    color: var(--weiss);
+    background: var(--akzent);
     border: none;
     border-radius: 8px;
     cursor: pointer;
   }
   button.primaer:hover:not(:disabled) {
-    background: #3d5bf0;
+    background: var(--akzent-d);
   }
   button.primaer:disabled {
-    background: #c1c7d0;
+    background: var(--grau-3);
     cursor: default;
   }
   button.zweit {
@@ -556,37 +556,37 @@
     font-size: 0.92rem;
     font-weight: 600;
     font-family: inherit;
-    color: #172b4d;
-    background: #fff;
-    border: 2px solid #dfe1e6;
+    color: var(--text);
+    background: var(--weiss);
+    border: 2px solid var(--rand);
     border-radius: 8px;
     cursor: pointer;
   }
   button.zweit:hover:not(:disabled) {
-    border-color: #4f6df5;
+    border-color: var(--akzent);
   }
   button.leise {
     background: none;
     border: none;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.84rem;
     cursor: pointer;
     padding: 4px 6px;
     font-family: inherit;
   }
   button.leise:hover {
-    color: #172b4d;
+    color: var(--text);
     text-decoration: underline;
   }
   button.leise.gefahr:hover {
-    color: #ae2e24;
+    color: var(--gefahr-text);
   }
 
   /* Dialog */
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(9, 30, 66, 0.45);
+    background: var(--schatten-xl);
     display: flex;
     align-items: flex-start;
     justify-content: center;
@@ -595,19 +595,19 @@
     z-index: 50;
   }
   .dialog {
-    background: #fff;
+    background: var(--weiss);
     border-radius: 14px;
     padding: 24px;
     width: 100%;
     max-width: 560px;
-    box-shadow: 0 12px 40px rgba(9, 30, 66, 0.3);
+    box-shadow: 0 12px 40px var(--schatten-lg);
   }
   .dialog h2 {
     font-size: 1.2rem;
     margin: 0 0 16px;
   }
   .dialog h2 .nr {
-    color: #8590a2;
+    color: var(--text-leise);
     font-weight: 500;
     font-size: 0.9rem;
   }
@@ -626,11 +626,11 @@
     grid-column: 1 / -1;
   }
   .feld > span {
-    color: #44546f;
+    color: var(--text-2);
     font-weight: 600;
   }
   .feld em {
-    color: #8590a2;
+    color: var(--text-leise);
     font-weight: 400;
     font-style: normal;
   }
@@ -638,28 +638,28 @@
   .feld select,
   .feld textarea {
     padding: 8px 10px;
-    border: 2px solid #dfe1e6;
+    border: 2px solid var(--rand);
     border-radius: 8px;
     font-family: inherit;
     font-size: 0.9rem;
-    color: #172b4d;
-    background: #fff;
+    color: var(--text);
+    background: var(--weiss);
   }
   .feld input:focus,
   .feld select:focus,
   .feld textarea:focus {
     outline: none;
-    border-color: #4f6df5;
+    border-color: var(--akzent);
   }
   .rechen {
     margin: 14px 0 0;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.84rem;
     font-variant-numeric: tabular-nums;
   }
   .fehler {
     margin: 12px 0 0;
-    color: #ae2e24;
+    color: var(--gefahr-text);
     font-size: 0.86rem;
   }
   .dialog-knoepfe {
@@ -670,12 +670,12 @@
   }
 
   button.leise.aktiv {
-    color: #3d5bf0;
+    color: var(--akzent-d);
     font-weight: 700;
   }
 
   td.ks {
-    color: #44546f;
+    color: var(--text-2);
     font-size: 0.84rem;
   }
 
@@ -690,7 +690,7 @@
     padding: 2px 0;
   }
   .ks-hinweis {
-    color: #8590a2;
+    color: var(--text-leise);
     font-size: 0.78rem;
   }
   .ks-neu {
@@ -715,10 +715,10 @@
   /* Datei-Panel */
   .datei-panel {
     margin-top: 18px;
-    border: 1px solid #dfe1e6;
+    border: 1px solid var(--rand);
     border-radius: 12px;
     padding: 16px 18px;
-    background: #f7f8fa;
+    background: var(--flaeche-b);
   }
   .dp-kopf {
     display: flex;
@@ -730,7 +730,7 @@
   .dp-kopf h3 {
     margin: 0;
     font-size: 1rem;
-    color: #172b4d;
+    color: var(--text);
   }
   .datei-liste {
     list-style: none;
@@ -742,29 +742,29 @@
     align-items: center;
     gap: 10px;
     padding: 7px 0;
-    border-bottom: 1px solid #ebedf0;
+    border-bottom: 1px solid var(--flaeche-3);
   }
   .datei-liste .dn {
     flex: 1;
-    color: #172b4d;
+    color: var(--text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .datei-liste .dg {
-    color: #8590a2;
+    color: var(--text-leise);
     font-size: 0.8rem;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
   .dp-leer {
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.88rem;
     margin: 0 0 12px;
   }
   .dp-hinweis {
     margin: 12px 0 0;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.8rem;
     line-height: 1.5;
   }

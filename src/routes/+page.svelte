@@ -2466,8 +2466,8 @@
   }
   :global(body) {
     font-family: "Segoe UI", system-ui, sans-serif;
-    background: #f4f5f7;
-    color: #172b4d;
+    background: var(--flaeche-2);
+    color: var(--text);
   }
 
   /* Zentrierte Bühne für die Passwort-Karten */
@@ -2480,9 +2480,9 @@
   }
 
   .karte {
-    background: #fff;
+    background: var(--weiss);
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.12), 0 8px 24px rgba(9, 30, 66, 0.08);
+    box-shadow: 0 1px 3px var(--schatten-sm), 0 8px 24px var(--schatten-xs);
     padding: 40px;
     width: 100%;
     max-width: 380px;
@@ -2501,12 +2501,12 @@
   }
   .untertitel {
     margin: 0 0 28px;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.95rem;
     line-height: 1.5;
   }
   .warntext {
-    color: #ae2e24;
+    color: var(--gefahr-text);
   }
   /* Projekt-Auswahlmenü (mit Umbenennen/Löschen je Projekt) */
   .projekt-menu {
@@ -2523,18 +2523,18 @@
     font-size: 0.95rem;
     font-weight: 600;
     font-family: inherit;
-    color: #172b4d;
-    background: #fff;
-    border: 2px solid #dfe1e6;
+    color: var(--text);
+    background: var(--weiss);
+    border: 2px solid var(--rand);
     border-radius: 8px;
     cursor: pointer;
     max-width: 280px;
   }
   .projekt-knopf:hover {
-    border-color: #4f6df5;
+    border-color: var(--akzent);
   }
   .projekt-knopf .pfeil {
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.8rem;
   }
   .menu-backdrop {
@@ -2549,10 +2549,10 @@
     z-index: 31;
     min-width: 240px;
     max-width: 340px;
-    background: #fff;
-    border: 1px solid #dfe1e6;
+    background: var(--weiss);
+    border: 1px solid var(--rand);
     border-radius: 10px;
-    box-shadow: 0 8px 28px rgba(9, 30, 66, 0.18);
+    box-shadow: 0 8px 28px var(--schatten-md);
     padding: 6px;
   }
   .projekt-zeile {
@@ -2562,10 +2562,10 @@
     border-radius: 7px;
   }
   .projekt-zeile.aktiv {
-    background: #b3d4ff;
+    background: var(--akzent-rand3);
   }
   .projekt-zeile:hover {
-    background: #f1f4ff;
+    background: var(--lila-bg5);
   }
   .projekt-name {
     flex: 1 1 auto;
@@ -2575,7 +2575,7 @@
     padding: 8px 10px;
     font-size: 0.92rem;
     font-family: inherit;
-    color: #172b4d;
+    color: var(--text);
     background: none;
     border: none;
     border-radius: 7px;
@@ -2592,7 +2592,7 @@
     font-size: 0.9rem;
     /* Explizite Farbe, damit einfarbig gezeichnete Emoji (z. B. 🗑) nicht
        die geerbte weiße Button-Textfarbe bekommen und unsichtbar werden. */
-    color: #44546f;
+    color: var(--text-2);
     background: none;
     border: none;
     border-radius: 6px;
@@ -2601,7 +2601,7 @@
   }
   .zeile-icon:hover {
     opacity: 1;
-    background: #fff;
+    background: var(--weiss);
   }
   .projekt-neu {
     width: 100%;
@@ -2611,15 +2611,15 @@
     font-size: 0.9rem;
     font-weight: 600;
     font-family: inherit;
-    color: #4f6df5;
+    color: var(--akzent);
     background: none;
     border: none;
-    border-top: 1px solid #f1f2f4;
+    border-top: 1px solid var(--flaeche-2b);
     border-radius: 0 0 7px 7px;
     cursor: pointer;
   }
   .projekt-neu:hover {
-    background: #f1f4ff;
+    background: var(--lila-bg5);
   }
 
   /* Unter-Umschalter im Reiter „Förderungen" (Alle / Passende) */
@@ -2628,7 +2628,7 @@
     gap: 4px;
     margin-bottom: 18px;
     padding: 4px;
-    background: #ebecf0;
+    background: var(--flaeche-3b);
     border-radius: 9px;
   }
   .unter-reiter button {
@@ -2638,16 +2638,16 @@
     font-size: 0.9rem;
     font-weight: 600;
     font-family: inherit;
-    color: #5e6c84;
+    color: var(--text-muted);
     background: none;
     border: none;
     border-radius: 6px;
     cursor: pointer;
   }
   .unter-reiter button.aktiv {
-    background: #fff;
-    color: #172b4d;
-    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.15);
+    background: var(--weiss);
+    color: var(--text);
+    box-shadow: 0 1px 3px var(--schatten-md2);
   }
 
   /* Betriebsart-Wähler (Einzelplatz / Team) */
@@ -2662,31 +2662,31 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    color: #5e6c84;
+    color: var(--text-muted);
   }
   .modus-knoepfe {
     display: inline-flex;
-    border: 2px solid #dfe1e6;
+    border: 2px solid var(--rand);
     border-radius: 8px;
     overflow: hidden;
   }
   .modus-knoepfe button {
     border: none;
-    background: #fff;
+    background: var(--weiss);
     padding: 7px 16px;
     font-size: 0.9rem;
     font-weight: 600;
     font-family: inherit;
-    color: #5e6c84;
+    color: var(--text-muted);
     cursor: pointer;
   }
   .modus-knoepfe button.aktiv {
-    background: #4f6df5;
-    color: #fff;
+    background: var(--akzent);
+    color: var(--weiss);
   }
   .einzel-panel {
-    background: #fff;
-    border: 1px solid #dfe1e6;
+    background: var(--weiss);
+    border: 1px solid var(--rand);
     border-radius: 12px;
     padding: 20px 22px;
   }
@@ -2698,7 +2698,7 @@
     display: block;
     font-size: 0.8rem;
     font-weight: 600;
-    color: #5e6c84;
+    color: var(--text-muted);
     margin: 14px 0 4px;
   }
   .einzel-panel input {
@@ -2706,9 +2706,9 @@
     box-sizing: border-box;
     padding: 9px 11px;
     font-size: 0.95rem;
-    border: 2px solid #dfe1e6;
+    border: 2px solid var(--rand);
     border-radius: 8px;
-    background: #fafbfc;
+    background: var(--flaeche);
   }
   .einzel-knoepfe {
     margin-top: 14px;
@@ -2720,23 +2720,23 @@
     font-size: 0.92rem;
     font-weight: 600;
     font-family: inherit;
-    color: #fff;
-    background: #4f6df5;
+    color: var(--weiss);
+    background: var(--akzent);
     border: none;
     border-radius: 8px;
     cursor: pointer;
   }
   .einzel-panel .primaer:hover {
-    background: #3d5bf0;
+    background: var(--akzent-d);
   }
   .einzel-meldung {
     margin-top: 12px;
     font-size: 0.9rem;
     font-weight: 600;
-    color: #172b4d;
+    color: var(--text);
   }
   .dezent {
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.92rem;
     line-height: 1.55;
   }
@@ -2751,7 +2751,7 @@
     gap: 8px;
     margin: 14px 0 4px;
     font-size: 0.88rem;
-    color: #5e6c84;
+    color: var(--text-muted);
     line-height: 1.4;
     cursor: pointer;
   }
@@ -2768,11 +2768,11 @@
     border-radius: 0;
     background: none;
     transition: none;
-    accent-color: #4f6df5;
+    accent-color: var(--akzent);
     cursor: pointer;
   }
   .merken input[type="checkbox"]:focus-visible {
-    outline: 2px solid #4f6df5;
+    outline: 2px solid var(--akzent);
     outline-offset: 2px;
   }
 
@@ -2780,7 +2780,7 @@
     display: block;
     font-size: 0.85rem;
     font-weight: 600;
-    color: #5e6c84;
+    color: var(--text-muted);
     margin: 16px 0 6px;
   }
 
@@ -2789,15 +2789,15 @@
     box-sizing: border-box;
     padding: 10px 12px;
     font-size: 1rem;
-    border: 2px solid #dfe1e6;
+    border: 2px solid var(--rand);
     border-radius: 8px;
-    background: #fafbfc;
+    background: var(--flaeche);
     transition: border-color 0.15s, background 0.15s;
   }
   input:focus {
     outline: none;
-    border-color: #4f6df5;
-    background: #fff;
+    border-color: var(--akzent);
+    background: var(--weiss);
   }
 
   button {
@@ -2806,31 +2806,31 @@
     padding: 11px;
     font-size: 1rem;
     font-weight: 600;
-    color: #fff;
-    background: #4f6df5;
+    color: var(--weiss);
+    background: var(--akzent);
     border: none;
     border-radius: 8px;
     cursor: pointer;
     transition: background 0.15s;
   }
   button:hover:not(:disabled) {
-    background: #3d5bf0;
+    background: var(--akzent-d);
   }
   button:disabled {
-    background: #c1c7d0;
+    background: var(--grau-3);
     cursor: default;
   }
 
   button.gefahr {
-    background: #ca3521;
+    background: var(--gefahr);
   }
   button.gefahr:hover:not(:disabled) {
-    background: #ae2e24;
+    background: var(--gefahr-text);
   }
 
   button.leise {
     background: none;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-weight: 400;
     font-size: 0.875rem;
     margin-top: 16px;
@@ -2838,24 +2838,24 @@
   }
   button.leise:hover {
     background: none;
-    color: #172b4d;
+    color: var(--text);
     text-decoration: underline;
   }
 
   .fehler {
     margin: 14px 0 0;
-    color: #ae2e24;
+    color: var(--gefahr-text);
     font-size: 0.9rem;
   }
 
   .warnung {
     margin: 24px 0 0;
     padding: 12px 14px;
-    background: #fff7d6;
+    background: var(--warnung-bg);
     border-radius: 8px;
     font-size: 0.85rem;
     line-height: 1.5;
-    color: #533f04;
+    color: var(--warnung-text2);
   }
 
   /* Ansicht nach dem Entsperren */
@@ -2864,8 +2864,8 @@
     align-items: center;
     justify-content: space-between;
     padding: 12px 24px;
-    background: #fff;
-    box-shadow: 0 1px 2px rgba(9, 30, 66, 0.08);
+    background: var(--weiss);
+    box-shadow: 0 1px 2px var(--schatten-xs);
   }
   .logo {
     font-weight: 700;
@@ -2887,12 +2887,12 @@
     margin-left: 6px;
     flex: 0 0 auto;
     cursor: default;
-    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 0 0 3px var(--schatten-schwach);
   }
-  .status-punkt.rot { background: #ca3521; }
-  .status-punkt.blau { background: #4f6df5; }
-  .status-punkt.orange { background: #f08c00; }
-  .status-punkt.gruen { background: #22a06b; }
+  .status-punkt.rot { background: var(--gefahr); }
+  .status-punkt.blau { background: var(--akzent); }
+  .status-punkt.orange { background: var(--warnung-3); }
+  .status-punkt.gruen { background: var(--erfolg); }
 
   nav {
     display: flex;
@@ -2904,17 +2904,17 @@
     padding: 7px 14px;
     font-size: 0.9rem;
     font-weight: 500;
-    color: #44546f;
+    color: var(--text-2);
     background: none;
     border-radius: 8px;
   }
   nav button:hover:not(.aktiv) {
-    background: #f1f2f4;
-    color: #172b4d;
+    background: var(--flaeche-2b);
+    color: var(--text);
   }
   nav button.aktiv {
-    background: #eef1ff;
-    color: #3d5bf0;
+    background: var(--akzent-bg);
+    color: var(--akzent-d);
     font-weight: 600;
   }
   /* trennt die drei Navigations-Blöcke */
@@ -2922,7 +2922,7 @@
     width: 1px;
     align-self: center;
     height: 22px;
-    background: #dfe1e6;
+    background: var(--rand);
     margin: 0 6px;
   }
 
@@ -2931,7 +2931,7 @@
   .modus-schalter {
     display: inline-flex;
     align-items: center;
-    background: #eef0f3;
+    background: var(--flaeche-2c);
     border-radius: 9px;
     padding: 2px;
     gap: 2px;
@@ -2940,17 +2940,17 @@
     padding: 6px 14px;
     font-size: 0.9rem;
     font-weight: 600;
-    color: #44546f;
+    color: var(--text-2);
     background: none;
     border-radius: 7px;
   }
   .modus-schalter button:hover:not(.aktiv) {
-    background: #e2e5ea;
-    color: #172b4d;
+    background: var(--flaeche-3c);
+    color: var(--text);
   }
   .modus-schalter button.aktiv {
-    background: #4f6df5;
-    color: #fff;
+    background: var(--akzent);
+    color: var(--weiss);
   }
 
   .links {
@@ -2967,15 +2967,15 @@
     padding: 7px 10px;
     font-size: 0.9rem;
     font-family: inherit;
-    color: #172b4d;
-    background: #f7f8f9;
-    border: 2px solid #dfe1e6;
+    color: var(--text);
+    background: var(--flaeche-c);
+    border: 2px solid var(--rand);
     border-radius: 8px;
     max-width: 220px;
   }
   .projektwahl select:focus {
     outline: none;
-    border-color: #4f6df5;
+    border-color: var(--akzent);
   }
   .projektwahl button.leise {
     width: auto;
@@ -2985,7 +2985,7 @@
   .schleier {
     position: fixed;
     inset: 0;
-    background: rgba(9, 30, 66, 0.45);
+    background: var(--schatten-xl);
     display: grid;
     place-items: center;
     padding: 24px;
@@ -3010,7 +3010,7 @@
     min-width: 0;
   }
   .konto-rechts {
-    border-left: 1px solid #e4e7ec;
+    border-left: 1px solid var(--rand-2);
   }
   @media (max-width: 900px) {
     .konto-seite {
@@ -3018,7 +3018,7 @@
     }
     .konto-rechts {
       border-left: none;
-      border-top: 1px solid #e4e7ec;
+      border-top: 1px solid var(--rand-2);
     }
   }
 </style>

@@ -100,7 +100,7 @@
     font-weight: 600;
   }
   .anzahl {
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.9rem;
     font-weight: 400;
     margin-left: 8px;
@@ -111,35 +111,35 @@
     max-width: 360px;
     padding: 9px 14px;
     font-size: 0.95rem;
-    border: 2px solid #dfe1e6;
+    border: 2px solid var(--rand);
     border-radius: 8px;
-    background: #fff;
+    background: var(--weiss);
   }
   input[type="search"]:focus {
     outline: none;
-    border-color: #4f6df5;
+    border-color: var(--akzent);
   }
 
   .datenstand {
-    color: #8590a2;
+    color: var(--text-leise);
     font-size: 0.8rem;
     margin: 10px 0 24px;
   }
   .db-knopf {
     margin-left: 8px;
-    background: #f1f2f4;
+    background: var(--flaeche-2b);
     border: none;
     border-radius: 6px;
     padding: 3px 9px;
     font-size: 0.78rem;
     font-weight: 600;
     font-family: inherit;
-    color: #44546f;
+    color: var(--text-2);
     cursor: pointer;
   }
   .db-knopf:hover {
-    background: #e4e7ec;
-    color: #172b4d;
+    background: var(--rand-2);
+    color: var(--text);
   }
 
   .raster {
@@ -149,7 +149,7 @@
   }
 
   .leer {
-    color: #5e6c84;
+    color: var(--text-muted);
     grid-column: 1 / -1;
   }
 </style>

@@ -418,7 +418,7 @@
 
 <style>
   .antrag {
-    border-top: 1px solid #dfe1e6;
+    border-top: 1px solid var(--rand);
     margin-top: 20px;
     padding-top: 20px;
   }
@@ -441,15 +441,15 @@
     padding: 8px 10px;
     font-size: 0.9rem;
     font-family: inherit;
-    color: #172b4d;
-    border: 2px solid #dfe1e6;
+    color: var(--text);
+    border: 2px solid var(--rand);
     border-radius: 8px;
-    background: #fafbfc;
+    background: var(--flaeche);
   }
   select:focus {
     outline: none;
-    border-color: #4f6df5;
-    background: #fff;
+    border-color: var(--akzent);
+    background: var(--weiss);
   }
   .frei {
     width: 100%;
@@ -458,18 +458,18 @@
     padding: 8px 10px;
     font-size: 0.9rem;
     font-family: inherit;
-    border: 2px solid #dfe1e6;
+    border: 2px solid var(--rand);
     border-radius: 8px;
-    background: #fafbfc;
+    background: var(--flaeche);
   }
   .frei:focus {
     outline: none;
-    border-color: #4f6df5;
-    background: #fff;
+    border-color: var(--akzent);
+    background: var(--weiss);
   }
 
   .leer {
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.9rem;
     margin: 0 0 10px;
   }
@@ -478,14 +478,14 @@
     display: block;
     font-size: 0.82rem;
     font-weight: 600;
-    color: #5e6c84;
+    color: var(--text-muted);
     margin: 10px 0 5px;
   }
   /* dezenter Hinweis: dieses Feld bleibt lokal */
   .nur-lokal {
     font-weight: 400;
     font-size: 0.76rem;
-    color: #8590a2;
+    color: var(--text-leise);
   }
   .kontakt input,
   .kontakt textarea {
@@ -494,15 +494,15 @@
     padding: 8px 10px;
     font-size: 0.9rem;
     font-family: inherit;
-    border: 2px solid #dfe1e6;
+    border: 2px solid var(--rand);
     border-radius: 8px;
-    background: #fafbfc;
+    background: var(--flaeche);
   }
   .kontakt input:focus,
   .kontakt textarea:focus {
     outline: none;
-    border-color: #4f6df5;
-    background: #fff;
+    border-color: var(--akzent);
+    background: var(--weiss);
   }
   .kontakt textarea {
     resize: vertical;
@@ -528,7 +528,7 @@
     justify-content: space-between;
     gap: 10px;
     padding: 6px 0;
-    border-bottom: 1px solid #f1f2f4;
+    border-bottom: 1px solid var(--flaeche-2b);
   }
   .frist-datum {
     font-size: 0.9rem;
@@ -549,19 +549,19 @@
     padding: 7px 9px;
     font-size: 0.9rem;
     font-family: inherit;
-    border: 2px solid #dfe1e6;
+    border: 2px solid var(--rand);
     border-radius: 8px;
-    background: #fafbfc;
+    background: var(--flaeche);
   }
   .off-frist input[type="date"]:focus {
     outline: none;
-    border-color: #4f6df5;
-    background: #fff;
+    border-color: var(--akzent);
+    background: var(--weiss);
   }
   .off-add {
     background: none;
     border: none;
-    color: #4f6df5;
+    color: var(--akzent);
     font-size: 0.85rem;
     font-family: inherit;
     cursor: pointer;
@@ -569,7 +569,7 @@
     border-radius: 6px;
   }
   .off-add:hover {
-    background: #eef1ff;
+    background: var(--akzent-bg);
   }
   .hinzufuegen input[type="date"] {
     flex: 1;
@@ -579,7 +579,7 @@
   }
   .hinweis-klein {
     font-size: 0.8rem;
-    color: #8590a2;
+    color: var(--text-leise);
     margin: 4px 0 0;
   }
   .checkliste {
@@ -592,7 +592,7 @@
     align-items: flex-start;
     gap: 10px;
     padding: 10px 0;
-    border-bottom: 1px solid #f1f2f4;
+    border-bottom: 1px solid var(--flaeche-2b);
   }
   .punkt-inhalt {
     flex: 1;
@@ -604,7 +604,7 @@
     margin-bottom: 6px;
   }
   .punkt-text.fertig {
-    color: #5e6c84;
+    color: var(--text-muted);
     text-decoration: line-through;
   }
   .punkt-status {
@@ -629,8 +629,8 @@
   }
   .datei-name {
     font-size: 0.82rem;
-    color: #216e4e;
-    background: #dcfff1;
+    color: var(--erfolg-text);
+    background: var(--erfolg-bg);
     padding: 3px 10px;
     border-radius: 99px;
     max-width: 100%;
@@ -640,8 +640,8 @@
   }
   .datei-knopf {
     background: none;
-    border: 2px solid #dfe1e6;
-    color: #44546f;
+    border: 2px solid var(--rand);
+    color: var(--text-2);
     font-size: 0.82rem;
     font-family: inherit;
     cursor: pointer;
@@ -649,29 +649,29 @@
     border-radius: 8px;
   }
   .datei-knopf:hover:not(:disabled) {
-    border-color: #4f6df5;
-    color: #172b4d;
+    border-color: var(--akzent);
+    color: var(--text);
   }
   .datei-knopf:disabled {
     opacity: 0.6;
     cursor: default;
   }
   .datei-knopf.hochladen {
-    color: #3d5bf0;
-    border-color: #c7d0f8;
+    color: var(--akzent-d);
+    border-color: var(--akzent-rand2);
   }
   .datei-entfernen {
     background: none;
     border: none;
-    color: #8590a2;
+    color: var(--text-leise);
     font-size: 0.9rem;
     cursor: pointer;
     padding: 2px 6px;
     border-radius: 6px;
   }
   .datei-entfernen:hover {
-    background: #ffeceb;
-    color: #ae2e24;
+    background: var(--gefahr-bg);
+    color: var(--gefahr-text);
   }
 
   /* runder Farbpunkt je Status */
@@ -682,17 +682,17 @@
     flex-shrink: 0;
     margin-top: 4px;
   }
-  .farbe-blau { background: #4f6df5; }
-  .farbe-lila { background: #8270db; }
-  .farbe-gruen { background: #22a06b; }
-  .farbe-rot { background: #ca3521; }
-  .farbe-gelb { background: #e2a400; }
-  .farbe-grau { background: #b3bac5; }
+  .farbe-blau { background: var(--akzent); }
+  .farbe-lila { background: var(--lila); }
+  .farbe-gruen { background: var(--erfolg); }
+  .farbe-rot { background: var(--gefahr); }
+  .farbe-gelb { background: var(--warnung); }
+  .farbe-grau { background: var(--grau-4); }
 
   .entfernen {
     background: none;
     border: none;
-    color: #8590a2;
+    color: var(--text-leise);
     font-size: 0.95rem;
     cursor: pointer;
     padding: 4px 8px;
@@ -700,8 +700,8 @@
     flex-shrink: 0;
   }
   .entfernen:hover {
-    background: #ffeceb;
-    color: #ae2e24;
+    background: var(--gefahr-bg);
+    color: var(--gefahr-text);
   }
 
   .hinzufuegen {
@@ -715,31 +715,31 @@
     padding: 9px 12px;
     font-size: 0.9rem;
     font-family: inherit;
-    border: 2px solid #dfe1e6;
+    border: 2px solid var(--rand);
     border-radius: 8px;
-    background: #fafbfc;
+    background: var(--flaeche);
   }
   .hinzufuegen input:focus {
     outline: none;
-    border-color: #4f6df5;
-    background: #fff;
+    border-color: var(--akzent);
+    background: var(--weiss);
   }
   .hinzufuegen button {
     padding: 9px 16px;
     font-size: 0.9rem;
     font-weight: 600;
     font-family: inherit;
-    color: #fff;
-    background: #4f6df5;
+    color: var(--weiss);
+    background: var(--akzent);
     border: none;
     border-radius: 8px;
     cursor: pointer;
   }
   .hinzufuegen button:hover:not(:disabled) {
-    background: #3d5bf0;
+    background: var(--akzent-d);
   }
   .hinzufuegen button:disabled {
-    background: #c1c7d0;
+    background: var(--grau-3);
     cursor: default;
   }
 
@@ -747,15 +747,15 @@
   .online-bereich {
     margin-top: 22px;
     padding: 14px 16px;
-    border: 1px solid #94c0ff;
-    background: #e6f0ff;
+    border: 1px solid var(--akzent-rand4);
+    background: var(--akzent-bg4);
     border-radius: 8px;
   }
   .online-hinweis {
     margin: 0;
     font-size: 0.88rem;
     line-height: 1.5;
-    color: #0c4a8f;
+    color: var(--link-d2);
   }
   .online-knopf {
     margin-top: 12px;
@@ -763,26 +763,26 @@
     font-size: 0.95rem;
     font-weight: 600;
     font-family: inherit;
-    color: #fff;
-    background: #1f6feb;
+    color: var(--weiss);
+    background: var(--link-2);
     border: none;
     border-radius: 8px;
     cursor: pointer;
   }
   .online-knopf:hover {
-    background: #195fc9;
+    background: var(--link-3);
   }
   .online-fehlt {
     margin: 10px 0 0;
     font-size: 0.82rem;
-    color: #5e6c84;
+    color: var(--text-muted);
   }
 
   /* Antrags-PDF erstellen */
   .pdf-bereich {
     margin-top: 22px;
     padding-top: 18px;
-    border-top: 1px solid #dfe1e6;
+    border-top: 1px solid var(--rand);
   }
   .pdf-knopf {
     width: 100%;
@@ -790,42 +790,42 @@
     font-size: 0.95rem;
     font-weight: 600;
     font-family: inherit;
-    color: #fff;
-    background: #216e4e;
+    color: var(--weiss);
+    background: var(--erfolg-text);
     border: none;
     border-radius: 8px;
     cursor: pointer;
   }
   .pdf-knopf:hover:not(:disabled) {
-    background: #1a5a40;
+    background: var(--erfolg-d);
   }
   .pdf-knopf:disabled {
-    background: #c1c7d0;
+    background: var(--grau-3);
     cursor: not-allowed;
   }
   .pdf-ok {
     margin: 10px 0 0;
     font-size: 0.82rem;
-    color: #216e4e;
+    color: var(--erfolg-text);
     word-break: break-all;
   }
 
   .pdf-schleier {
     position: fixed;
     inset: 0;
-    background: rgba(9, 30, 66, 0.45);
+    background: var(--schatten-xl);
     display: grid;
     place-items: center;
     padding: 24px;
     z-index: 30;
   }
   .pdf-dialog {
-    background: #fff;
+    background: var(--weiss);
     border-radius: 12px;
     padding: 28px;
     max-width: 440px;
     width: 100%;
-    box-shadow: 0 12px 40px rgba(9, 30, 66, 0.3);
+    box-shadow: 0 12px 40px var(--schatten-lg);
   }
   .pdf-dialog h3 {
     margin: 0 0 10px;
@@ -835,7 +835,7 @@
     margin: 0 0 18px;
     font-size: 0.92rem;
     line-height: 1.55;
-    color: #44546f;
+    color: var(--text-2);
   }
   .pdf-aktionen {
     display: flex;
@@ -848,17 +848,17 @@
     font-size: 0.93rem;
     font-weight: 600;
     font-family: inherit;
-    color: #fff;
-    background: #216e4e;
+    color: var(--weiss);
+    background: var(--erfolg-text);
     border: none;
     border-radius: 8px;
     cursor: pointer;
   }
   .pdf-aktionen .primaer:hover:not(:disabled) {
-    background: #1a5a40;
+    background: var(--erfolg-d);
   }
   .pdf-aktionen .primaer:disabled {
-    background: #c1c7d0;
+    background: var(--grau-3);
     cursor: default;
   }
   .pdf-aktionen .zweit {
@@ -866,38 +866,38 @@
     font-size: 0.93rem;
     font-weight: 600;
     font-family: inherit;
-    color: #172b4d;
-    background: #fff;
-    border: 2px solid #dfe1e6;
+    color: var(--text);
+    background: var(--weiss);
+    border: 2px solid var(--rand);
     border-radius: 8px;
     cursor: pointer;
   }
   .pdf-aktionen .zweit:hover:not(:disabled) {
-    border-color: #4f6df5;
+    border-color: var(--akzent);
   }
   .pdf-aktionen .zweit:disabled {
-    color: #b3bac5;
-    background: #f4f5f7;
-    border-color: #ebecf0;
+    color: var(--grau-4);
+    background: var(--flaeche-2);
+    border-color: var(--flaeche-3b);
     cursor: not-allowed;
   }
   .pdf-aktionen .leise {
     background: none;
     border: none;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.9rem;
     font-family: inherit;
     cursor: pointer;
     padding: 8px;
   }
   .pdf-aktionen .leise:hover:not(:disabled) {
-    color: #172b4d;
+    color: var(--text);
     text-decoration: underline;
   }
   .pdf-mail-hinweis {
     margin: 14px 0 0;
     font-size: 0.78rem;
     line-height: 1.5;
-    color: #8590a2;
+    color: var(--text-leise);
   }
 </style>

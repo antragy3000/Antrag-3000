@@ -393,7 +393,7 @@
     font-weight: 600;
   }
   .anzahl {
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.9rem;
     font-weight: 400;
     margin-left: 8px;
@@ -408,29 +408,29 @@
     font-size: 0.9rem;
     font-weight: 600;
     font-family: inherit;
-    color: #172b4d;
-    background: #fff;
-    border: 2px solid #dfe1e6;
+    color: var(--text);
+    background: var(--weiss);
+    border: 2px solid var(--rand);
     border-radius: 8px;
     cursor: pointer;
   }
   .ordner:hover {
-    border-color: #4f6df5;
+    border-color: var(--akzent);
   }
 
   .konflikt {
-    background: #ffeceb;
-    border-left: 4px solid #ca3521;
+    background: var(--gefahr-bg);
+    border-left: 4px solid var(--gefahr);
     border-radius: 8px;
     padding: 14px 16px;
     margin-bottom: 16px;
     font-size: 0.92rem;
     line-height: 1.5;
-    color: #5d1f1a;
+    color: var(--gefahr-d2);
   }
 
   .leer {
-    color: #5e6c84;
+    color: var(--text-muted);
   }
 
   /* Listenansicht */
@@ -442,27 +442,27 @@
   .zeile {
     display: flex;
     gap: 14px;
-    background: #fff;
+    background: var(--weiss);
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.12);
+    box-shadow: 0 1px 3px var(--schatten-sm);
     padding: 16px 20px;
     cursor: pointer;
     transition: box-shadow 0.15s;
   }
   .zeile:hover {
-    box-shadow: 0 4px 14px rgba(9, 30, 66, 0.18);
+    box-shadow: 0 4px 14px var(--schatten-md);
   }
   .zeile:focus-visible {
-    outline: 2px solid #4f6df5;
+    outline: 2px solid var(--akzent);
     outline-offset: 2px;
   }
   .zeile.weg {
-    border-left: 5px solid #ca3521;
-    background: #fff8f7;
+    border-left: 5px solid var(--gefahr);
+    background: var(--gefahr-bg4);
   }
   .zeile.akt {
-    border-left: 5px solid #4f6df5;
-    background: #f7f9ff;
+    border-left: 5px solid var(--akzent);
+    background: var(--flaeche-blau);
   }
 
   .katalog-hinweis {
@@ -471,29 +471,29 @@
     justify-content: space-between;
     gap: 14px;
     flex-wrap: wrap;
-    background: #fff7ef;
-    border: 1px solid #ffd9b0;
+    background: var(--warnung-bg4);
+    border: 1px solid var(--warnung-rand3);
     border-radius: 10px;
     padding: 12px 16px;
     margin-bottom: 16px;
   }
   .kh-text { display: flex; flex-direction: column; gap: 4px; }
   .kh-zeile { font-size: 0.92rem; line-height: 1.45; }
-  .kh-zeile.weg { color: #ae2e24; }
-  .kh-zeile.akt { color: #7a4a00; }
+  .kh-zeile.weg { color: var(--gefahr-text); }
+  .kh-zeile.akt { color: var(--warnung-text4); }
   .kh-ok {
-    background: #fff;
-    border: 2px solid #e7c9a3;
+    background: var(--weiss);
+    border: 2px solid var(--warnung-rand2);
     border-radius: 8px;
     padding: 7px 13px;
     font-size: 0.85rem;
     font-weight: 600;
     font-family: inherit;
-    color: #7a4a00;
+    color: var(--warnung-text4);
     cursor: pointer;
     white-space: nowrap;
   }
-  .kh-ok:hover { background: #fdf1e3; }
+  .kh-ok:hover { background: var(--warnung-bg5); }
 
   .aktionen {
     display: flex;
@@ -507,31 +507,31 @@
     border: none;
     font-size: 1.2rem;
     line-height: 1;
-    color: #e2a400;
+    color: var(--warnung);
     cursor: pointer;
     padding: 2px 4px;
     border-radius: 6px;
     height: fit-content;
   }
   .stern:hover {
-    background: #fffaf0;
+    background: var(--warnung-bg2);
   }
   .mail {
     background: none;
     border: none;
     font-size: 1.05rem;
     line-height: 1;
-    color: #4f6df5;
+    color: var(--akzent);
     cursor: pointer;
     padding: 3px 4px;
     border-radius: 6px;
     height: fit-content;
   }
   .mail:hover {
-    background: #eef1ff;
+    background: var(--akzent-bg);
   }
   .mail.aus {
-    color: #c1c7d0;
+    color: var(--grau-3);
     cursor: not-allowed;
   }
   .mail.aus:hover {
@@ -558,7 +558,7 @@
 
   .meta {
     margin: 6px 0 0;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.85rem;
     display: flex;
     justify-content: space-between;
@@ -567,7 +567,7 @@
   }
   .meta-links { min-width: 0; }
   .hoehe {
-    color: #216e4e;
+    color: var(--erfolg-text);
     font-weight: 600;
   }
 
@@ -586,8 +586,8 @@
   }
   .chip {
     font-size: 0.75rem;
-    background: #f1f2f4;
-    color: #44546f;
+    background: var(--flaeche-2b);
+    color: var(--text-2);
     padding: 3px 9px;
     border-radius: 99px;
   }
@@ -602,26 +602,26 @@
   .frist {
     font-size: 1rem;
     font-weight: 600;
-    color: #5e6c84;
+    color: var(--text-muted);
     white-space: nowrap;
   }
   .frist.dringend {
-    color: #ae2e24;
+    color: var(--gefahr-text);
     font-weight: 700;
   }
   .kontaktperson {
     margin: 8px 0 0;
     font-size: 0.82rem;
-    color: #44546f;
+    color: var(--text-2);
   }
   .kontaktperson.leer-kontakt {
-    color: #b3bac5;
+    color: var(--grau-4);
   }
   .konflikt-zeile {
     margin: 8px 0 0;
     font-size: 0.82rem;
     font-weight: 600;
-    color: #ae2e24;
+    color: var(--gefahr-text);
   }
 
   .land {
@@ -632,22 +632,22 @@
     border-radius: 99px;
     text-transform: uppercase;
   }
-  .land-DE { background: #e9f2ff; color: #0055cc; }
-  .land-AT { background: #ffeceb; color: #ae2e24; }
-  .land-CH { background: #fff7d6; color: #7f5f01; }
-  .land-INT { background: #f3f0ff; color: #5e4db2; }
-  .land-ANDERES { background: #f1f2f4; color: #44546f; }
+  .land-DE { background: var(--akzent-bg3); color: var(--link); }
+  .land-AT { background: var(--gefahr-bg); color: var(--gefahr-text); }
+  .land-CH { background: var(--warnung-bg); color: var(--warnung-text); }
+  .land-INT { background: var(--lila-bg); color: var(--lila-d); }
+  .land-ANDERES { background: var(--flaeche-2b); color: var(--text-2); }
 
   /* Dokumente mit Status */
   .dokumente {
     margin-top: 12px;
     padding-top: 10px;
-    border-top: 1px solid #f1f2f4;
+    border-top: 1px solid var(--flaeche-2b);
   }
   .dok-titel {
     font-size: 0.78rem;
     font-weight: 600;
-    color: #8590a2;
+    color: var(--text-leise);
     text-transform: uppercase;
     letter-spacing: 0.03em;
   }
@@ -665,21 +665,21 @@
     font-size: 0.85rem;
   }
   .dok-text {
-    color: #172b4d;
+    color: var(--text);
   }
   .dok-text.fertig {
-    color: #5e6c84;
+    color: var(--text-muted);
     text-decoration: line-through;
   }
   .dok-status {
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.8rem;
   }
   .dok-status::before {
     content: "– ";
   }
   .dok-leer {
-    color: #8590a2;
+    color: var(--text-leise);
     font-size: 0.82rem;
   }
 
@@ -691,12 +691,12 @@
     flex-shrink: 0;
     display: inline-block;
   }
-  .farbe-blau { background: #4f6df5; }
-  .farbe-lila { background: #8270db; }
-  .farbe-gruen { background: #22a06b; }
-  .farbe-rot { background: #ca3521; }
-  .farbe-gelb { background: #e2a400; }
-  .farbe-grau { background: #b3bac5; }
+  .farbe-blau { background: var(--akzent); }
+  .farbe-lila { background: var(--lila); }
+  .farbe-gruen { background: var(--erfolg); }
+  .farbe-rot { background: var(--gefahr); }
+  .farbe-gelb { background: var(--warnung); }
+  .farbe-grau { background: var(--grau-4); }
 
   /* Antrag-Status-Etikett */
   .status-badge {
@@ -714,25 +714,25 @@
     padding: 2px 8px;
     border-radius: 99px;
   }
-  .herkunft.selbst { background: #eef1ff; color: #3b4fb0; }
-  .herkunft.geteilt { background: #e6f4ff; color: #0c5a8f; }
+  .herkunft.selbst { background: var(--akzent-bg); color: var(--akzent-d4); }
+  .herkunft.geteilt { background: var(--akzent-bg5); color: var(--link-d3); }
   .herkunft.akt {
     font-size: 0.76rem;
     font-weight: 700;
     padding: 3px 10px;
-    background: #e9f0ff;
-    color: #2b46c4;
-    border: 1px solid #b9c7f7;
+    background: var(--akzent-bg2);
+    color: var(--akzent-d3);
+    border: 1px solid var(--akzent-rand);
   }
   .herkunft.weg {
     font-size: 0.76rem;
     font-weight: 700;
     padding: 3px 10px;
-    background: #ffeceb;
-    color: #ae2e24;
-    border: 1px solid #f4b1a8;
+    background: var(--gefahr-bg);
+    color: var(--gefahr-text);
+    border: 1px solid var(--gefahr-rand);
   }
-  .stand { color: #a9b0bd; font-size: 0.82rem; white-space: nowrap; }
+  .stand { color: var(--grau-5); font-size: 0.82rem; white-space: nowrap; }
   .neu-feld {
     display: inline-block;
     margin-left: 6px;
@@ -742,21 +742,21 @@
     vertical-align: middle;
     padding: 1px 6px;
     border-radius: 99px;
-    background: #e9f0ff;
-    color: #2b46c4;
-    border: 1px solid #b9c7f7;
+    background: var(--akzent-bg2);
+    color: var(--akzent-d3);
+    border: 1px solid var(--akzent-rand);
   }
-  .status-badge.farbe-blau { background: #e9f0ff; color: #2b46c4; }
-  .status-badge.farbe-lila { background: #f1edff; color: #5e44b0; }
-  .status-badge.farbe-gruen { background: #dcfff1; color: #216e4e; }
-  .status-badge.farbe-rot { background: #ffeceb; color: #ae2e24; }
-  .status-badge.farbe-gelb { background: #fff7d6; color: #7f5f01; }
-  .status-badge.farbe-grau { background: #f1f2f4; color: #44546f; }
+  .status-badge.farbe-blau { background: var(--akzent-bg2); color: var(--akzent-d3); }
+  .status-badge.farbe-lila { background: var(--lila-bg2); color: var(--lila-d2); }
+  .status-badge.farbe-gruen { background: var(--erfolg-bg); color: var(--erfolg-text); }
+  .status-badge.farbe-rot { background: var(--gefahr-bg); color: var(--gefahr-text); }
+  .status-badge.farbe-gelb { background: var(--warnung-bg); color: var(--warnung-text); }
+  .status-badge.farbe-grau { background: var(--flaeche-2b); color: var(--text-2); }
   .status-badge .punkt { width: 8px; height: 8px; }
-  .status-badge.farbe-blau .punkt { background: #4f6df5; }
-  .status-badge.farbe-lila .punkt { background: #8270db; }
-  .status-badge.farbe-gruen .punkt { background: #22a06b; }
-  .status-badge.farbe-rot .punkt { background: #ca3521; }
-  .status-badge.farbe-gelb .punkt { background: #e2a400; }
-  .status-badge.farbe-grau .punkt { background: #b3bac5; }
+  .status-badge.farbe-blau .punkt { background: var(--akzent); }
+  .status-badge.farbe-lila .punkt { background: var(--lila); }
+  .status-badge.farbe-gruen .punkt { background: var(--erfolg); }
+  .status-badge.farbe-rot .punkt { background: var(--gefahr); }
+  .status-badge.farbe-gelb .punkt { background: var(--warnung); }
+  .status-badge.farbe-grau .punkt { background: var(--grau-4); }
 </style>

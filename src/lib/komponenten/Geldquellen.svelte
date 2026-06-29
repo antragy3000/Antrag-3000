@@ -230,11 +230,11 @@
     margin: 0 0 4px;
     font-size: 1.35rem;
     font-weight: 600;
-    color: #172b4d;
+    color: var(--text);
   }
   .untertitel {
     margin: 0;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.9rem;
     max-width: 520px;
     line-height: 1.5;
@@ -248,9 +248,9 @@
 
   .leer {
     text-align: center;
-    color: #5e6c84;
+    color: var(--text-muted);
     padding: 44px 16px;
-    border: 1px dashed #dfe1e6;
+    border: 1px dashed var(--rand);
     border-radius: 12px;
   }
   .leer p {
@@ -269,17 +269,17 @@
   table.quellen td {
     text-align: left;
     padding: 9px 10px;
-    border-bottom: 1px solid #ebedf0;
+    border-bottom: 1px solid var(--flaeche-3);
   }
   table.quellen th {
-    color: #5e6c84;
+    color: var(--text-muted);
     font-weight: 600;
     font-size: 0.78rem;
     text-transform: uppercase;
     letter-spacing: 0.03em;
   }
   .name {
-    color: #172b4d;
+    color: var(--text);
     font-weight: 500;
   }
   .betrag {
@@ -288,17 +288,17 @@
     font-variant-numeric: tabular-nums;
   }
   .betrag.ueber {
-    color: #ca3521;
+    color: var(--gefahr);
     font-weight: 700;
   }
   .summe-label {
     text-align: right;
     font-weight: 600;
-    color: #44546f;
+    color: var(--text-2);
   }
   .summe {
     font-weight: 700;
-    color: #172b4d;
+    color: var(--text);
   }
   .akt {
     text-align: right;
@@ -312,12 +312,12 @@
     font-weight: 600;
   }
   .typ.t-foerderung {
-    background: #eef1ff;
-    color: #3b4fb0;
+    background: var(--akzent-bg);
+    color: var(--akzent-d4);
   }
   .typ.t-eigenmittel {
-    background: #dcfff1;
-    color: #14794e;
+    background: var(--erfolg-bg);
+    color: var(--erfolg-text2);
   }
 
   button.primaer {
@@ -325,17 +325,17 @@
     font-size: 0.92rem;
     font-weight: 600;
     font-family: inherit;
-    color: #fff;
-    background: #4f6df5;
+    color: var(--weiss);
+    background: var(--akzent);
     border: none;
     border-radius: 8px;
     cursor: pointer;
   }
   button.primaer:hover:not(:disabled) {
-    background: #3d5bf0;
+    background: var(--akzent-d);
   }
   button.primaer:disabled {
-    background: #c1c7d0;
+    background: var(--grau-3);
     cursor: default;
   }
   button.zweit {
@@ -343,36 +343,36 @@
     font-size: 0.9rem;
     font-weight: 600;
     font-family: inherit;
-    color: #172b4d;
-    background: #fff;
-    border: 2px solid #dfe1e6;
+    color: var(--text);
+    background: var(--weiss);
+    border: 2px solid var(--rand);
     border-radius: 8px;
     cursor: pointer;
   }
   button.zweit:hover:not(:disabled) {
-    border-color: #4f6df5;
+    border-color: var(--akzent);
   }
   button.leise {
     background: none;
     border: none;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.84rem;
     cursor: pointer;
     padding: 4px 6px;
     font-family: inherit;
   }
   button.leise:hover {
-    color: #172b4d;
+    color: var(--text);
     text-decoration: underline;
   }
   button.leise.gefahr:hover {
-    color: #ae2e24;
+    color: var(--gefahr-text);
   }
 
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(9, 30, 66, 0.45);
+    background: var(--schatten-xl);
     display: flex;
     align-items: flex-start;
     justify-content: center;
@@ -381,12 +381,12 @@
     z-index: 50;
   }
   .dialog {
-    background: #fff;
+    background: var(--weiss);
     border-radius: 14px;
     padding: 24px;
     width: 100%;
     max-width: 540px;
-    box-shadow: 0 12px 40px rgba(9, 30, 66, 0.3);
+    box-shadow: 0 12px 40px var(--schatten-lg);
   }
   .dialog h2 {
     font-size: 1.2rem;
@@ -407,11 +407,11 @@
     grid-column: 1 / -1;
   }
   .feld > span {
-    color: #44546f;
+    color: var(--text-2);
     font-weight: 600;
   }
   .feld em {
-    color: #8590a2;
+    color: var(--text-leise);
     font-weight: 400;
     font-style: normal;
   }
@@ -419,27 +419,27 @@
   .feld select,
   .feld textarea {
     padding: 8px 10px;
-    border: 2px solid #dfe1e6;
+    border: 2px solid var(--rand);
     border-radius: 8px;
     font-family: inherit;
     font-size: 0.9rem;
-    color: #172b4d;
-    background: #fff;
+    color: var(--text);
+    background: var(--weiss);
   }
   .feld input:focus,
   .feld select:focus,
   .feld textarea:focus {
     outline: none;
-    border-color: #4f6df5;
+    border-color: var(--akzent);
   }
   .rechen {
     margin: 14px 0 0;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.84rem;
   }
   .fehler {
     margin: 12px 0 0;
-    color: #ae2e24;
+    color: var(--gefahr-text);
     font-size: 0.86rem;
   }
   .dialog-knoepfe {

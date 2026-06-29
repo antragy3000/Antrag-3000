@@ -482,7 +482,7 @@
   }
   .untertitel {
     margin: 0 0 20px;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.92rem;
     line-height: 1.55;
     max-width: 560px;
@@ -493,19 +493,19 @@
     font-weight: 600;
   }
   .karte {
-    background: #fff;
+    background: var(--weiss);
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.12);
+    box-shadow: 0 1px 3px var(--schatten-sm);
     padding: 22px;
   }
   .karte.leer p {
     margin: 0 0 16px;
     font-size: 0.92rem;
     line-height: 1.55;
-    color: #44546f;
+    color: var(--text-2);
   }
   code {
-    background: #f1f2f4;
+    background: var(--flaeche-2b);
     border-radius: 4px;
     padding: 1px 5px;
     font-size: 0.85rem;
@@ -514,16 +514,16 @@
     display: flex;
     gap: 14px;
     padding: 8px 0;
-    border-bottom: 1px solid #f1f2f4;
+    border-bottom: 1px solid var(--flaeche-2b);
     font-size: 0.95rem;
   }
   .etikett {
     flex: 0 0 130px;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-weight: 600;
   }
   .wert {
-    color: #172b4d;
+    color: var(--text);
   }
   .pfad {
     font-family: "Consolas", "Courier New", monospace;
@@ -531,12 +531,12 @@
   }
   .ok {
     margin: 0 0 4px;
-    color: #216e4e;
+    color: var(--erfolg-text);
     font-weight: 600;
   }
   .fehler {
     margin: 14px 0 0;
-    color: #ae2e24;
+    color: var(--gefahr-text);
     font-weight: 600;
   }
   .knoepfe {
@@ -561,14 +561,14 @@
     border-radius: 50%;
     flex: 0 0 auto;
   }
-  .licht.aus { background: #c1c7d0; }
+  .licht.aus { background: var(--grau-3); }
   .licht.an {
-    background: #36b37e;
-    box-shadow: 0 0 0 4px rgba(54, 179, 126, 0.18);
+    background: var(--erfolg-2);
+    box-shadow: 0 0 0 4px var(--erfolg-glow);
   }
   .licht.warn {
-    background: #ffab00;
-    box-shadow: 0 0 0 4px rgba(255, 171, 0, 0.18);
+    background: var(--warnung-2);
+    box-shadow: 0 0 0 4px var(--warnung-glow);
   }
   .zustand {
     font-size: 0.88rem;
@@ -578,15 +578,15 @@
     font-size: 0.93rem;
     font-weight: 600;
     font-family: inherit;
-    color: #fff;
-    background: #c9372c;
+    color: var(--weiss);
+    background: var(--gefahr-2);
     border: none;
     border-radius: 8px;
     cursor: pointer;
     white-space: nowrap;
   }
   .stop:hover {
-    background: #ae2e24;
+    background: var(--gefahr-text);
   }
   .klein {
     font-size: 0.85rem;
@@ -604,12 +604,12 @@
   .hinweis-box {
     margin: 14px 0 6px;
     padding: 10px 12px;
-    background: #f4f7ff;
-    border: 1px solid #dce4fb;
+    background: var(--akzent-bg-x);
+    border: 1px solid var(--akzent-bg8);
     border-radius: 8px;
     font-size: 0.82rem;
     line-height: 1.5;
-    color: #44546f;
+    color: var(--text-2);
   }
   .board {
     list-style: none;
@@ -618,7 +618,7 @@
   }
   .board-projekt {
     padding: 12px 0;
-    border-top: 1px solid #f1f2f4;
+    border-top: 1px solid var(--flaeche-2b);
   }
   .bp-kopf {
     display: flex;
@@ -628,18 +628,18 @@
   }
   .bp-name {
     font-weight: 600;
-    color: #172b4d;
+    color: var(--text);
   }
   .bp-zeit {
     margin-left: auto;
     font-size: 0.78rem;
-    color: #8590a2;
+    color: var(--text-leise);
   }
   .badge.eigen {
     font-size: 0.72rem;
     font-weight: 600;
-    color: #0055cc;
-    background: #e9f2ff;
+    color: var(--link);
+    background: var(--akzent-bg3);
     border-radius: 10px;
     padding: 1px 8px;
   }
@@ -661,7 +661,7 @@
     font-size: 0.88rem;
   }
   .foerd-name {
-    color: #44546f;
+    color: var(--text-2);
   }
   .chip {
     margin-left: auto;
@@ -671,18 +671,18 @@
     padding: 2px 9px;
     white-space: nowrap;
   }
-  .chip.blau { background: #e9f2ff; color: #0055cc; }
-  .chip.lila { background: #f3eefe; color: #5e3bb7; }
-  .chip.gruen { background: #e3fcef; color: #216e4e; }
-  .chip.rot { background: #ffecec; color: #ae2e24; }
-  .chip.gelb { background: #fff4e5; color: #a54800; }
-  .chip.grau { background: #f1f2f4; color: #5e6c84; }
+  .chip.blau { background: var(--akzent-bg3); color: var(--link); }
+  .chip.lila { background: var(--lila-bg3); color: var(--lila-d3); }
+  .chip.gruen { background: var(--erfolg-bg2); color: var(--erfolg-text); }
+  .chip.rot { background: var(--gefahr-bg2); color: var(--gefahr-text); }
+  .chip.gelb { background: var(--warnung-bg3); color: var(--orange-d); }
+  .chip.grau { background: var(--flaeche-2b); color: var(--text-muted); }
 
   .payload {
     margin: 8px 0 0;
     padding: 10px 12px;
-    background: #0b1020;
-    color: #d7e0ff;
+    background: var(--text-tief);
+    color: var(--akzent-bg7);
     border-radius: 8px;
     font-size: 0.78rem;
     line-height: 1.45;
@@ -706,24 +706,24 @@
   }
   .prot-zeit {
     flex: 0 0 64px;
-    color: #8590a2;
+    color: var(--text-leise);
     font-variant-numeric: tabular-nums;
   }
   .prot-text {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    color: #44546f;
+    color: var(--text-2);
   }
   .prot-zeile {
-    color: #172b4d;
+    color: var(--text);
   }
 
   .verwaltung-toggle {
     margin: 22px 0 0;
     background: none;
     border: none;
-    color: #44546f;
+    color: var(--text-2);
     font-size: 0.95rem;
     font-weight: 600;
     font-family: inherit;
@@ -731,10 +731,10 @@
     padding: 6px 0;
   }
   .verwaltung-toggle:hover {
-    color: #172b4d;
+    color: var(--text);
   }
   .dezent {
-    color: #8590a2;
+    color: var(--text-leise);
     font-weight: 400;
     font-size: 0.85rem;
   }
@@ -745,16 +745,16 @@
     margin: 0 0 14px;
     font-size: 0.9rem;
     line-height: 1.55;
-    color: #44546f;
+    color: var(--text-2);
   }
   .block {
     padding: 14px 0;
-    border-top: 1px solid #f1f2f4;
+    border-top: 1px solid var(--flaeche-2b);
   }
   .block-titel {
     font-weight: 700;
     font-size: 0.9rem;
-    color: #172b4d;
+    color: var(--text);
   }
   .block .dezent {
     display: block;
@@ -766,7 +766,7 @@
     display: block;
     font-size: 0.82rem;
     font-weight: 600;
-    color: #5e6c84;
+    color: var(--text-muted);
     margin: 6px 0 5px;
   }
   input {
@@ -775,14 +775,14 @@
     padding: 9px 12px;
     font-size: 0.92rem;
     font-family: inherit;
-    border: 2px solid #dfe1e6;
+    border: 2px solid var(--rand);
     border-radius: 8px;
-    background: #fafbfc;
+    background: var(--flaeche);
   }
   input:focus {
     outline: none;
-    border-color: #4f6df5;
-    background: #fff;
+    border-color: var(--akzent);
+    background: var(--weiss);
   }
   .reihe {
     display: flex;
@@ -798,18 +798,18 @@
     font-size: 0.93rem;
     font-weight: 600;
     font-family: inherit;
-    color: #fff;
-    background: #4f6df5;
+    color: var(--weiss);
+    background: var(--akzent);
     border: none;
     border-radius: 8px;
     cursor: pointer;
     white-space: nowrap;
   }
   .primaer:hover:not(:disabled) {
-    background: #3d5bf0;
+    background: var(--akzent-d);
   }
   .primaer:disabled {
-    background: #c1c7d0;
+    background: var(--grau-3);
     cursor: default;
   }
   .zweit {
@@ -817,41 +817,41 @@
     font-size: 0.9rem;
     font-weight: 600;
     font-family: inherit;
-    color: #172b4d;
-    background: #fff;
-    border: 2px solid #dfe1e6;
+    color: var(--text);
+    background: var(--weiss);
+    border: 2px solid var(--rand);
     border-radius: 8px;
     cursor: pointer;
     white-space: nowrap;
   }
   .zweit:hover:not(:disabled) {
-    border-color: #4f6df5;
+    border-color: var(--akzent);
   }
   .zweit:disabled {
-    color: #b3bac5;
-    background: #f4f5f7;
+    color: var(--grau-4);
+    background: var(--flaeche-2);
     cursor: default;
   }
   .leise {
     background: none;
     border: none;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.9rem;
     font-family: inherit;
     cursor: pointer;
     padding: 8px;
   }
   .leise:hover:not(:disabled) {
-    color: #ae2e24;
+    color: var(--gefahr-text);
     text-decoration: underline;
   }
   .zeile .leise.klein {
     margin-left: auto;
     padding: 0 6px;
-    color: #4f6df5;
+    color: var(--akzent);
   }
   .zeile .leise.klein:hover:not(:disabled) {
-    color: #3a55d9;
+    color: var(--akzent-d2);
   }
   .adr-aendern {
     margin: 8px 0 4px;

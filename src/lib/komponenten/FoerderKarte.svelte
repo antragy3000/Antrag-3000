@@ -100,10 +100,10 @@
 <style>
   .foerderkarte {
     text-align: left;
-    background: #fff;
+    background: var(--weiss);
     border-radius: 12px;
     padding: 20px;
-    box-shadow: 0 1px 3px rgba(9, 30, 66, 0.12);
+    box-shadow: 0 1px 3px var(--schatten-sm);
     cursor: pointer;
     transition: box-shadow 0.15s, transform 0.15s;
     display: flex;
@@ -111,11 +111,11 @@
     gap: 6px;
   }
   .foerderkarte:hover {
-    box-shadow: 0 4px 14px rgba(9, 30, 66, 0.18);
+    box-shadow: 0 4px 14px var(--schatten-md);
     transform: translateY(-1px);
   }
   .foerderkarte:focus-visible {
-    outline: 2px solid #4f6df5;
+    outline: 2px solid var(--akzent);
     outline-offset: 2px;
   }
   .foerderkarte.gedimmt {
@@ -141,8 +141,8 @@
   .punkte {
     font-size: 0.78rem;
     font-weight: 700;
-    color: #216e4e;
-    background: #dcfff1;
+    color: var(--erfolg-text);
+    background: var(--erfolg-bg);
     padding: 3px 9px;
     border-radius: 99px;
   }
@@ -152,16 +152,16 @@
     border: none;
     font-size: 1.15rem;
     line-height: 1;
-    color: #b3bac5;
+    color: var(--grau-4);
     cursor: pointer;
     padding: 2px 4px;
     border-radius: 6px;
   }
   .stern:hover {
-    color: #e2a400;
+    color: var(--warnung);
   }
   .stern.aktiv {
-    color: #e2a400;
+    color: var(--warnung);
   }
 
   .herkunft {
@@ -171,9 +171,9 @@
     padding: 2px 8px;
     border-radius: 99px;
   }
-  .herkunft.selbst { background: #eef1ff; color: #3b4fb0; }
-  .herkunft.geteilt { background: #e6f4ff; color: #0c5a8f; }
-  .herkunft.weg { background: #ffeceb; color: #ae2e24; }
+  .herkunft.selbst { background: var(--akzent-bg); color: var(--akzent-d4); }
+  .herkunft.geteilt { background: var(--akzent-bg5); color: var(--link-d3); }
+  .herkunft.weg { background: var(--gefahr-bg); color: var(--gefahr-text); }
   .neu-feld {
     display: inline-block;
     margin-left: 6px;
@@ -183,36 +183,36 @@
     vertical-align: middle;
     padding: 1px 6px;
     border-radius: 99px;
-    background: #e9f0ff;
-    color: #2b46c4;
-    border: 1px solid #b9c7f7;
+    background: var(--akzent-bg2);
+    color: var(--akzent-d3);
+    border: 1px solid var(--akzent-rand);
   }
   .geber {
     margin: 0;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.85rem;
   }
   .hoehe {
     margin: 4px 0 0;
     font-size: 0.9rem;
     font-weight: 600;
-    color: #216e4e;
+    color: var(--erfolg-text);
   }
   .frist {
     margin: 6px 0 0;
     font-size: 0.8rem;
-    color: #8590a2;
+    color: var(--text-leise);
   }
   .stand {
     margin: 2px 0 0;
     font-size: 0.72rem;
-    color: #a9b0bd;
+    color: var(--grau-5);
     text-align: right;
   }
   .treffer {
     margin: 4px 0 0;
     font-size: 0.8rem;
-    color: #216e4e;
+    color: var(--erfolg-text);
   }
 
   .status-badge {
@@ -231,22 +231,22 @@
     height: 8px;
     border-radius: 50%;
   }
-  .status-badge.farbe-blau { background: #e9f0ff; color: #2b46c4; }
-  .status-badge.farbe-blau .punkt { background: #4f6df5; }
-  .status-badge.farbe-lila { background: #f1edff; color: #5e44b0; }
-  .status-badge.farbe-lila .punkt { background: #8270db; }
-  .status-badge.farbe-gruen { background: #dcfff1; color: #216e4e; }
-  .status-badge.farbe-gruen .punkt { background: #22a06b; }
-  .status-badge.farbe-rot { background: #ffeceb; color: #ae2e24; }
-  .status-badge.farbe-rot .punkt { background: #ca3521; }
-  .status-badge.farbe-gelb { background: #fff7d6; color: #7f5f01; }
-  .status-badge.farbe-gelb .punkt { background: #e2a400; }
-  .status-badge.farbe-grau { background: #f1f2f4; color: #44546f; }
-  .status-badge.farbe-grau .punkt { background: #b3bac5; }
+  .status-badge.farbe-blau { background: var(--akzent-bg2); color: var(--akzent-d3); }
+  .status-badge.farbe-blau .punkt { background: var(--akzent); }
+  .status-badge.farbe-lila { background: var(--lila-bg2); color: var(--lila-d2); }
+  .status-badge.farbe-lila .punkt { background: var(--lila); }
+  .status-badge.farbe-gruen { background: var(--erfolg-bg); color: var(--erfolg-text); }
+  .status-badge.farbe-gruen .punkt { background: var(--erfolg); }
+  .status-badge.farbe-rot { background: var(--gefahr-bg); color: var(--gefahr-text); }
+  .status-badge.farbe-rot .punkt { background: var(--gefahr); }
+  .status-badge.farbe-gelb { background: var(--warnung-bg); color: var(--warnung-text); }
+  .status-badge.farbe-gelb .punkt { background: var(--warnung); }
+  .status-badge.farbe-grau { background: var(--flaeche-2b); color: var(--text-2); }
+  .status-badge.farbe-grau .punkt { background: var(--grau-4); }
   .gruende {
     margin: 4px 0 0;
     font-size: 0.8rem;
-    color: #ae2e24;
+    color: var(--gefahr-text);
   }
 
   .land {
@@ -258,10 +258,10 @@
     border-radius: 99px;
     text-transform: uppercase;
   }
-  .land-DE { background: #e9f2ff; color: #0055cc; }
-  .land-AT { background: #ffeceb; color: #ae2e24; }
-  .land-CH { background: #fff7d6; color: #7f5f01; }
-  .land-INT { background: #f3f0ff; color: #5e4db2; }
+  .land-DE { background: var(--akzent-bg3); color: var(--link); }
+  .land-AT { background: var(--gefahr-bg); color: var(--gefahr-text); }
+  .land-CH { background: var(--warnung-bg); color: var(--warnung-text); }
+  .land-INT { background: var(--lila-bg); color: var(--lila-d); }
 
   .chips {
     display: flex;
@@ -271,8 +271,8 @@
   }
   .chip {
     font-size: 0.75rem;
-    background: #f1f2f4;
-    color: #44546f;
+    background: var(--flaeche-2b);
+    color: var(--text-2);
     padding: 3px 9px;
     border-radius: 99px;
   }

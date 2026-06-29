@@ -105,11 +105,11 @@
     margin: 0 0 4px;
     font-size: 1.35rem;
     font-weight: 600;
-    color: #172b4d;
+    color: var(--text);
   }
   .untertitel {
     margin: 0;
-    color: #5e6c84;
+    color: var(--text-muted);
     font-size: 0.9rem;
     max-width: 520px;
     line-height: 1.5;
@@ -117,9 +117,9 @@
 
   .leer {
     text-align: center;
-    color: #5e6c84;
+    color: var(--text-muted);
     padding: 44px 16px;
-    border: 1px dashed #dfe1e6;
+    border: 1px dashed var(--rand);
     border-radius: 12px;
   }
   .leer p {
@@ -138,10 +138,10 @@
   table.ks-tab td {
     text-align: left;
     padding: 8px 10px;
-    border-bottom: 1px solid #ebedf0;
+    border-bottom: 1px solid var(--flaeche-3);
   }
   table.ks-tab th {
-    color: #5e6c84;
+    color: var(--text-muted);
     font-weight: 600;
     font-size: 0.78rem;
     text-transform: uppercase;
@@ -150,7 +150,7 @@
   .num {
     text-align: center;
     width: 70px;
-    color: #5e6c84;
+    color: var(--text-muted);
   }
   .betrag {
     text-align: right;
@@ -158,32 +158,32 @@
     font-variant-numeric: tabular-nums;
   }
   tr.kat td {
-    background: #f4f6fb;
+    background: var(--akzent-bg-y);
     font-weight: 600;
-    color: #172b4d;
+    color: var(--text);
   }
   .pname {
     padding-left: 22px;
-    color: #44546f;
+    color: var(--text-2);
   }
   tr.unzu td {
-    color: #8a6d00;
-    background: #fffaf0;
+    color: var(--warnung-text5);
+    background: var(--warnung-bg2);
     font-style: italic;
   }
   tfoot td {
-    border-top: 2px solid #dfe1e6;
+    border-top: 2px solid var(--rand);
     font-weight: 700;
-    color: #172b4d;
+    color: var(--text);
   }
   .betrag.ueber {
-    color: #ca3521;
+    color: var(--gefahr);
     font-weight: 700;
   }
   .hinweis {
     margin-top: 14px;
-    color: #8a6d00;
-    background: #fffaf0;
+    color: var(--warnung-text5);
+    background: var(--warnung-bg2);
     border-radius: 8px;
     padding: 10px 12px;
     font-size: 0.86rem;
