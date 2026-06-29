@@ -14,6 +14,7 @@
     laden,
     testen,
     entfernen,
+    adresseAendern,
     caErstellen,
     caExportieren,
     serverZert,
@@ -116,6 +117,25 @@
     }
   }
 
+  let adresseOffen = $state(false);
+  let neueAdresse = $state("");
+  async function adresseAendernKlick() {
+    const a = neueAdresse.trim();
+    if (!a) return;
+    beschaeftigt = true;
+    status = null;
+    try {
+      const ok = await adresseAendern(a);
+      if (ok) {
+        adresseOffen = false;
+        neueAdresse = "";
+        status = await testen(); // mit der neuen Adresse gleich neu testen
+      }
+    } finally {
+      beschaeftigt = false;
+    }
+  }
+
   async function caErstellenKlick() {
     if (!caAdresse.trim()) return;
     beschaeftigt = true;
@@ -181,7 +201,30 @@
   {:else}
     <div class="karte">
       <div class="zeile"><span class="etikett">Gerät</span><span class="wert">{sync.geraetName}</span></div>
-      <div class="zeile"><span class="etikett">Team-Adresse</span><span class="wert pfad">{sync.adresse}</span></div>
+      <div class="zeile">
+        <span class="etikett">Team-Adresse</span>
+        <span class="wert pfad">{sync.adresse}</span>
+        <button class="leise klein" disabled={beschaeftigt} onclick={() => { adresseOffen = !adresseOffen; neueAdresse = sync.adresse; }}>
+          {adresseOffen ? "abbrechen" : "ändern"}
+        </button>
+      </div>
+      {#if adresseOffen}
+        <div class="reihe adr-aendern">
+          <input
+            type="text"
+            placeholder={sync.adresse}
+            bind:value={neueAdresse}
+            onkeydown={(e) => { if (e.key === "Enter" && neueAdresse.trim()) adresseAendernKlick(); }}
+          />
+          <button class="zweit" disabled={beschaeftigt || !neueAdresse.trim()} onclick={adresseAendernKlick}>
+            Adresse speichern
+          </button>
+        </div>
+        <p class="dezent klein">
+          Nur die NAS-Adresse ändern – z. B. nach einem Tailscale-Wechsel. Dein
+          Geräte-Ausweis und die Team-CA bleiben unverändert.
+        </p>
+      {/if}
       {#if status}
         {#if status.ok}
           <p class="ok">✓ Verbunden – der Team-Server ist erreichbar.</p>
@@ -801,5 +844,16 @@
   .leise:hover:not(:disabled) {
     color: #ae2e24;
     text-decoration: underline;
+  }
+  .zeile .leise.klein {
+    margin-left: auto;
+    padding: 0 6px;
+    color: #4f6df5;
+  }
+  .zeile .leise.klein:hover:not(:disabled) {
+    color: #3a55d9;
+  }
+  .adr-aendern {
+    margin: 8px 0 4px;
   }
 </style>
