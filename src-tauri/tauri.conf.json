@@ -44,7 +44,7 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "http://100.75.66.27:8445/updates/latest.json"
+        "http://100.78.49.51:8445/updates/latest.json"
       ],
       "dangerousInsecureTransportProtocol": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDUzOEU0REZFNDVEN0RGRTAKUldUZzM5ZEYvazJPVTJLNzhxN0RVekpLRk4yaS9ScDJ5d0s1UU1BSEdjd1grQThzNHpGUVh6SXEK"

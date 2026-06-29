@@ -202,7 +202,7 @@
       projekte: [],
       aktivesProjektId: null,
       modus: "einzel", // "einzel" (ohne Team) oder "team"
-      einzelServer: "100.75.66.27:8445", // Update-/Katalog-Server (Einzelplatz)
+      einzelServer: "100.78.49.51:8445", // Update-/Katalog-Server (Einzelplatz)
       sync: null,
       teamCa: null,
       katalogMeldungen: [],
@@ -446,7 +446,7 @@
       veraendert = true;
     }
     if (typeof d.einzelServer !== "string") {
-      d.einzelServer = "100.75.66.27:8445";
+      d.einzelServer = "100.78.49.51:8445";
       veraendert = true;
     }
     if (!Array.isArray(d.katalogMeldungen)) {
@@ -2187,7 +2187,7 @@
                   type="text"
                   bind:value={daten.einzelServer}
                   onchange={tresorSpeichern}
-                  placeholder="100.75.66.27:8445"
+                  placeholder="100.78.49.51:8445"
                 />
                 <div class="einzel-knoepfe">
                   <button class="primaer" onclick={einzelKatalogHolen}>

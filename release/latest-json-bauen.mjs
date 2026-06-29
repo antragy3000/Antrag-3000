@@ -16,7 +16,7 @@ const hier = path.dirname(fileURLToPath(import.meta.url));
 const wurzel = path.join(hier, "..");
 
 // Update-Adresse der NAS (muss zum Endpoint in tauri.conf.json passen).
-const ENDPOINT_BASIS = "http://100.75.66.27:8445/updates";
+const ENDPOINT_BASIS = "http://100.78.49.51:8445/updates";
 
 const conf = JSON.parse(
   fs.readFileSync(path.join(wurzel, "src-tauri", "tauri.conf.json"), "utf8"),
