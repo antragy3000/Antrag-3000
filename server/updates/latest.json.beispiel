@@ -5,7 +5,7 @@
   "platforms": {
     "windows-x86_64": {
       "signature": "HIER DEN GESAMTEN INHALT DER .sig-DATEI EINFUEGEN",
-      "url": "http://100.78.49.51:8445/updates/Antrag.3000_0.2.0_x64-setup.exe"
+      "url": "http://nas-yh.tail70a6af.ts.net:8445/updates/Antrag.3000_0.2.0_x64-setup.exe"
     }
   }
 }
