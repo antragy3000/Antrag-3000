@@ -44,7 +44,7 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "http://nas-yh.tail70a6af.ts.net:8445/updates/latest.json"
+        "http://nas-yh.tail73a506.ts.net:8445/updates/latest.json"
       ],
       "dangerousInsecureTransportProtocol": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDUzOEU0REZFNDVEN0RGRTAKUldUZzM5ZEYvazJPVTJLNzhxN0RVekpLRk4yaS9ScDJ5d0s1UU1BSEdjd1grQThzNHpGUVh6SXEK"

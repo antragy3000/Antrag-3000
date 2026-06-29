@@ -25,11 +25,11 @@ param(
   [string]$Notes,
 
   [string]$SshUser     = "admin",
-  [string]$NasHost     = "nas-yh.tail70a6af.ts.net",
+  [string]$NasHost     = "nas-yh.tail73a506.ts.net",
   [string]$UpdatesPfad = "/volume1/docker/antrag3000/updates",
   [string]$KeyDatei    = "$HOME\.tauri\antrag3000.key",
   # Endpoint nur zur Schluss-Pruefung (muss zu tauri.conf.json passen).
-  [string]$PruefUrl    = "http://nas-yh.tail70a6af.ts.net:8445/updates/latest.json",
+  [string]$PruefUrl    = "http://nas-yh.tail73a506.ts.net:8445/updates/latest.json",
   # Frisch gebautes Handbuch wird zusaetzlich hierhin kopiert (Desktop).
   [string]$DesktopKopie = "$HOME\Desktop\Benutzerhandbuch Antrag 3000.pdf",
   # Setzen, falls das Handbuch-PDF NICHT neu erzeugt werden soll

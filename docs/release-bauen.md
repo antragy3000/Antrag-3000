@@ -53,7 +53,7 @@ Das Skript
 2. baut signiert (fragt **einmal** nach deinem Schlüssel-Passwort),
 3. erzeugt `latest.json`,
 4. lädt Installer **und** `latest.json` per `scp` auf die NAS
-   (`admin@nas-yh.tail70a6af.ts.net:/volume1/docker/antrag3000/updates/`) – ohne
+   (`admin@nas-yh.tail73a506.ts.net:/volume1/docker/antrag3000/updates/`) – ohne
    eingerichteten SSH-Schlüssel fragt es einmal nach dem NAS-Passwort,
 5. prüft am Server, dass Version und URL zusammenpassen.
 
