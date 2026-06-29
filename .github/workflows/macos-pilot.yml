@@ -1,0 +1,59 @@
+# GitHub Actions: macOS-Pilot-Build fuer Antrag 3000.
+#
+# Baut auf einem macOS-Cloud-Runner ein UNIVERSAL-.dmg (laeuft auf Intel
+# UND Apple Silicon). Bewusst:
+#   - OHNE Code-Signing/Notarisierung  -> Pilot-Tester oeffnen die App
+#     einmalig per Rechtsklick -> "Oeffnen" (kein Apple-Konto noetig).
+#   - OHNE Auto-Update-Artefakte       -> kein Signatur-Schluessel noetig,
+#     Verteilung fuer den Pilot von Hand (.dmg weitergeben).
+#
+# Starten: Reiter "Actions" -> links "macOS-Pilot-Build" -> Knopf
+# "Run workflow". Nach ~15-25 Min liegt unten beim Lauf das Artefakt
+# "Antrag-3000-macOS-universal" (enthaelt die .dmg) zum Download.
+
+name: macOS-Pilot-Build
+
+# Nur per Hand starten (kein automatischer Lauf bei jedem Push).
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Quellcode auschecken
+        uses: actions/checkout@v4
+
+      - name: Node einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Rust einrichten (beide Apple-Architekturen)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Rust-Build-Cache (macht spaetere Laeufe schneller)
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: JS-Abhaengigkeiten installieren
+        run: npm ci
+
+      # Universal = ein Paket fuer Intel + Apple Silicon. --bundles dmg baut
+      # nur die .dmg (das die .app enthaelt). Das --config schaltet die
+      # Updater-Artefakte ab, damit KEIN Signatur-Schluessel gebraucht wird.
+      - name: Universal-.dmg bauen (unsigniert, ohne Updater)
+        env:
+          # Ad-hoc-Signatur ("-"): kein Apple-Zertifikat noetig.
+          APPLE_SIGNING_IDENTITY: "-"
+        run: npm run tauri build -- --target universal-apple-darwin --bundles dmg --config '{"bundle":{"createUpdaterArtifacts":false}}'
+
+      - name: .dmg als Artefakt hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: Antrag-3000-macOS-universal
+          path: src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          if-no-files-found: error

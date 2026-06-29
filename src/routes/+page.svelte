@@ -49,6 +49,8 @@
   // -> offen (entsperrt) | neu-aufsetzen (Passwort vergessen)
   let ansicht = $state("laden");
   // "Auf diesem Gerät merken" (passwortloses Entsperren per Windows DPAPI).
+  // Nur auf Windows verfügbar; auf macOS/Linux wird die Option ausgeblendet.
+  let merkenMoeglich = $state(false); // Plattform unterstützt DPAPI-Merken?
   let merkenAktiv = $state(false); // auf diesem Gerät bereits hinterlegt?
   let merkenWunsch = $state(false); // Häkchen auf dem Entsperr-Bildschirm
 
@@ -489,6 +491,13 @@
       }
     } catch (e) {
       console.warn("Katalog-Override nicht ladbar:", e);
+    }
+
+    // Unterstützt diese Plattform "Auf diesem Gerät merken"? (nur Windows)
+    try {
+      merkenMoeglich = await invoke("merken_moeglich");
+    } catch {
+      merkenMoeglich = false;
     }
 
     const status = await invoke("tresor_status");
@@ -1977,10 +1986,12 @@
         <label for="pw">Passwort</label>
         <input id="pw" type="password" bind:value={passwort} autocomplete="current-password" />
 
-        <label class="merken">
-          <input type="checkbox" bind:checked={merkenWunsch} />
-          Auf diesem Gerät merken (künftig ohne Passwort starten)
-        </label>
+        {#if merkenMoeglich}
+          <label class="merken">
+            <input type="checkbox" bind:checked={merkenWunsch} />
+            Auf diesem Gerät merken (künftig ohne Passwort starten)
+          </label>
+        {/if}
 
         {#if fehler && !merkenAktiv}<p class="fehler">{fehler}</p>{/if}
 

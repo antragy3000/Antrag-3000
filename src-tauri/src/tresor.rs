@@ -365,6 +365,15 @@ fn merken_pfad(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     Ok(ordner.join("merken.bin"))
 }
 
+/// Ist "Auf diesem Geraet merken" auf dieser Plattform ueberhaupt moeglich?
+/// Nur Windows hat DPAPI (passwortloses Entsperren, an das Windows-Konto
+/// gebunden). Auf macOS/Linux gibt es das (noch) nicht – das Frontend
+/// blendet die Option dann aus, damit niemand auf einen Fehler laeuft.
+#[tauri::command]
+pub fn merken_moeglich() -> bool {
+    cfg!(target_os = "windows")
+}
+
 /// Ist auf diesem Geraet ein passwortloses Entsperren hinterlegt?
 #[tauri::command]
 pub fn merken_status(app: tauri::AppHandle) -> Result<bool, String> {

@@ -19,3 +19,21 @@ node_modules
 !.env.example
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Geheimnisse / Schluessel – NIEMALS versionieren (Schutz, falls so eine
+# Datei mal versehentlich im Projektordner landet – besonders wichtig,
+# weil der Code jetzt auch auf GitHub liegt):
+*.key
+*.pem
+*.crt
+*.cer
+*.pfx
+*.p12
+*.a3kpaket
+# Build-/Release-Artefakte (werden erzeugt, gehoeren nicht ins Repo):
+*-setup.exe
+*-setup.exe.sig
+*-setup.exe.sha256
+*.dmg
+*.app.tar.gz
+*.app.tar.gz.sig

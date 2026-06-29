@@ -28,6 +28,7 @@ pub fn run() {
             tresor::tresor_speichern,
             tresor::tresor_sperren,
             tresor::tresor_neu_aufsetzen,
+            tresor::merken_moeglich,
             tresor::merken_status,
             tresor::merken_anlegen,
             tresor::merken_entsperren,
