@@ -65,15 +65,17 @@
   .demo-bar i{width:11px; height:11px; border-radius:50%; background:var(--border)}
   .demo-bar .t{margin-left:8px; font-size:13px; color:var(--muted)}
   .demo-stage{position:relative; height:320px; overflow:hidden}
-  .scr{position:absolute; inset:0; opacity:0; animation:scrcycle 20s infinite}
-  .scr:nth-child(2){animation-delay:4s}
-  .scr:nth-child(3){animation-delay:8s}
-  .scr:nth-child(4){animation-delay:12s}
-  .scr:nth-child(5){animation-delay:16s}
-  @keyframes scrcycle{
-    0%{opacity:0; transform:translateY(10px)} 2%{opacity:1; transform:none}
-    18%{opacity:1; transform:none} 20.5%{opacity:0; transform:translateY(-8px)} 100%{opacity:0}
-  }
+  .scr{position:absolute; inset:0; opacity:0}
+  .scr:nth-child(1){animation:vis1 15s infinite}
+  .scr:nth-child(2){animation:vis2 15s infinite}
+  .scr:nth-child(3){animation:vis3 15s infinite}
+  .scr:nth-child(4){animation:vis4 15s infinite}
+  .scr:nth-child(5){animation:vis5 15s infinite}
+  @keyframes vis1{ 0%{opacity:0;transform:translateY(8px)} 1.5%{opacity:1;transform:none} 40%{opacity:1;transform:none} 42%{opacity:0;transform:translateY(-6px)} 100%{opacity:0} }
+  @keyframes vis2{ 0%,42%{opacity:0;transform:translateY(8px)} 43.5%{opacity:1;transform:none} 55.5%{opacity:1} 57%{opacity:0;transform:translateY(-6px)} 100%{opacity:0} }
+  @keyframes vis3{ 0%,57%{opacity:0;transform:translateY(8px)} 58.5%{opacity:1;transform:none} 70.5%{opacity:1} 72%{opacity:0;transform:translateY(-6px)} 100%{opacity:0} }
+  @keyframes vis4{ 0%,72%{opacity:0;transform:translateY(8px)} 73.5%{opacity:1;transform:none} 84.5%{opacity:1} 86%{opacity:0;transform:translateY(-6px)} 100%{opacity:0} }
+  @keyframes vis5{ 0%,86%{opacity:0;transform:translateY(8px)} 87.5%{opacity:1;transform:none} 98.5%{opacity:1} 100%{opacity:0;transform:translateY(-6px)} }
   .scr-h{position:absolute; left:26px; top:22px; font-size:13px; font-weight:600;
     color:var(--accent-on-tint); background:var(--accent-tint); padding:4px 12px; border-radius:999px}
   .qq{position:absolute; left:26px; font-size:18px; font-weight:600; color:var(--text)}
@@ -108,48 +110,57 @@
   .cur svg{display:block; filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.35))}
   .ring{position:absolute; left:-4px; top:-4px; width:16px; height:16px; border-radius:50%;
     background:var(--accent); opacity:0; transform:scale(0)}
-  .c1{animation:cur1 20s infinite} .c1 .ring{animation:click 20s infinite}
-  .c2{animation:cur2 20s infinite; animation-delay:4s} .c2 .ring{animation:click 20s infinite; animation-delay:4s}
-  .c3{animation:cur3 20s infinite; animation-delay:8s} .c3 .ring{animation:click 20s infinite; animation-delay:8s}
-  .c4{animation:cur4 20s infinite; animation-delay:12s} .c4 .ring{animation:click 20s infinite; animation-delay:12s}
-  .c5{animation:cur5 20s infinite; animation-delay:16s} .c5 .ring{animation:click 20s infinite; animation-delay:16s}
-  @keyframes click{ 0%,11%{opacity:0; transform:scale(0)} 12%{opacity:.45; transform:scale(.5)}
-    15.5%{opacity:0; transform:scale(2.3)} 100%{opacity:0; transform:scale(2.3)} }
-  @keyframes cur1{ 0%{opacity:0;left:80%;top:250px} 2%{opacity:1;left:80%;top:250px}
-    11%{left:50%;top:120px} 13.5%{left:50%;top:120px} 19%{opacity:1;left:50%;top:120px} 21%,100%{opacity:0;left:50%;top:120px} }
-  @keyframes cur2{ 0%{opacity:0;left:30%;top:255px} 2%{opacity:1;left:30%;top:255px}
-    11%{left:91%;top:90px} 13.5%{left:91%;top:90px} 19%{opacity:1;left:91%;top:90px} 21%,100%{opacity:0;left:91%;top:90px} }
-  @keyframes cur3{ 0%{opacity:0;left:18%;top:60px} 2%{opacity:1;left:18%;top:60px}
-    11%{left:50%;top:158px} 13.5%{left:50%;top:158px} 19%{opacity:1;left:50%;top:158px} 21%,100%{opacity:0;left:50%;top:158px} }
-  @keyframes cur4{ 0%{opacity:0;left:80%;top:252px} 2%{opacity:1;left:80%;top:252px}
-    10%{left:13%;top:80px} 12%{left:13%;top:80px} 19%{opacity:1;left:13%;top:80px} 21%,100%{opacity:0;left:13%;top:80px} }
-  @keyframes cur5{ 0%{opacity:0;left:24%;top:60px} 2%{opacity:1;left:24%;top:60px}
-    11%{left:67%;top:128px} 13.5%{left:67%;top:128px} 19%{opacity:1;left:67%;top:128px} 21%,100%{opacity:0;left:67%;top:128px} }
+  .c1{animation:cur1 15s infinite} .c1 .ring{animation:click1 15s infinite}
+  .c2{animation:cur2 15s infinite} .c2 .ring{animation:click2 15s infinite}
+  .c3{animation:cur3 15s infinite} .c3 .ring{animation:click3 15s infinite}
+  .c4{animation:cur4 15s infinite} .c4 .ring{animation:click4 15s infinite}
+  .c5{animation:cur5 15s infinite} .c5 .ring{animation:click5 15s infinite}
+  @keyframes click1{ 0%,7%{opacity:0;transform:scale(0)} 8%{opacity:.45;transform:scale(.5)} 11%{opacity:0;transform:scale(2.2)}
+    21%{opacity:0;transform:scale(0)} 22%{opacity:.45;transform:scale(.5)} 25%{opacity:0;transform:scale(2.2)}
+    34%{opacity:0;transform:scale(0)} 35%{opacity:.45;transform:scale(.5)} 38%{opacity:0;transform:scale(2.2)} 100%{opacity:0} }
+  @keyframes click2{ 0%,49%{opacity:0;transform:scale(0)} 50%{opacity:.45;transform:scale(.5)} 53%{opacity:0;transform:scale(2.2)} 100%{opacity:0} }
+  @keyframes click3{ 0%,64%{opacity:0;transform:scale(0)} 65%{opacity:.45;transform:scale(.5)} 68%{opacity:0;transform:scale(2.2)} 100%{opacity:0} }
+  @keyframes click4{ 0%,76%{opacity:0;transform:scale(0)} 77%{opacity:.45;transform:scale(.5)} 80%{opacity:0;transform:scale(2.2)} 100%{opacity:0} }
+  @keyframes click5{ 0%,91%{opacity:0;transform:scale(0)} 92%{opacity:.45;transform:scale(.5)} 95%{opacity:0;transform:scale(2.2)} 100%{opacity:0} }
+  @keyframes cur1{ 0%{opacity:0;left:82%;top:34px} 1.5%{opacity:1;left:82%;top:34px}
+    6%{left:50%;top:96px} 9%{left:50%;top:96px} 19%{left:32%;top:182px} 22.5%{left:32%;top:182px}
+    31%{left:62%;top:268px} 34.5%{left:62%;top:268px} 40%{opacity:1;left:62%;top:268px} 42%,100%{opacity:0;left:62%;top:268px} }
+  @keyframes cur2{ 0%,42%{opacity:0;left:30%;top:255px} 43.5%{opacity:1;left:30%;top:255px}
+    48%{left:91%;top:86px} 50.5%{left:91%;top:86px} 55.5%{opacity:1;left:91%;top:86px} 57%,100%{opacity:0;left:91%;top:86px} }
+  @keyframes cur3{ 0%,57%{opacity:0;left:18%;top:60px} 58.5%{opacity:1;left:18%;top:60px}
+    63%{left:50%;top:158px} 65.5%{left:50%;top:158px} 70.5%{opacity:1;left:50%;top:158px} 72%,100%{opacity:0;left:50%;top:158px} }
+  @keyframes cur4{ 0%,72%{opacity:0;left:80%;top:252px} 73.5%{opacity:1;left:80%;top:252px}
+    76%{left:13%;top:80px} 78%{left:13%;top:80px} 84.5%{opacity:1;left:13%;top:80px} 86%,100%{opacity:0;left:13%;top:80px} }
+  @keyframes cur5{ 0%,86%{opacity:0;left:24%;top:60px} 87.5%{opacity:1;left:24%;top:60px}
+    91%{left:67%;top:128px} 93%{left:67%;top:128px} 98.5%{opacity:1;left:67%;top:128px} 100%{opacity:0;left:67%;top:128px} }
 
-  .selA{animation:selA 20s infinite}
-  @keyframes selA{ 0%,12%{background:transparent; color:var(--muted); border-color:var(--border)}
-    13%,100%{background:var(--accent); color:#fff; border-color:var(--accent)} }
-  .starA{animation:starA 20s infinite; animation-delay:4s}
-  @keyframes starA{ 0%,12%{color:var(--border)} 13%,100%{color:var(--accent)} }
-  .mrowA{animation:mrowA 20s infinite; animation-delay:4s}
-  @keyframes mrowA{ 0%,12%{background:transparent; border-color:var(--border)}
-    13%,100%{background:var(--accent-tint); border-color:var(--accent)} }
-  .fadeA{animation:fadeA 20s infinite; animation-delay:8s}
-  @keyframes fadeA{ 0%,12%{opacity:1} 13%,100%{opacity:0} }
-  .fadeB{animation:fadeB 20s infinite; animation-delay:8s}
-  @keyframes fadeB{ 0%,12%{opacity:0} 13%,100%{opacity:1} }
-  .r1{animation:rin 20s infinite; animation-delay:12s}
-  .r2{animation:rin 20s infinite; animation-delay:12.4s}
-  .r3{animation:rin 20s infinite; animation-delay:12.8s}
-  @keyframes rin{ 0%,12.5%{opacity:0; transform:translateX(-16px)} 14.5%,100%{opacity:1; transform:none} }
-  .selB{animation:selA 20s infinite; animation-delay:16s}
-  .barA{animation:barA 20s infinite; animation-delay:16s}
-  @keyframes barA{ 0%,12.5%{width:0} 18%,100%{width:100%} }
-  .okB{animation:okB 20s infinite; animation-delay:16s}
-  @keyframes okB{ 0%,13%{opacity:0} 15%,100%{opacity:1} }
+  .s1a{animation:s1a 15s infinite}
+  @keyframes s1a{ 0%,8%{background:transparent;color:var(--muted);border-color:var(--border)} 8.5%,100%{background:var(--accent);color:#fff;border-color:var(--accent)} }
+  .s1b{animation:s1b 15s infinite}
+  @keyframes s1b{ 0%,22%{background:transparent;color:var(--muted);border-color:var(--border)} 22.5%,100%{background:var(--accent);color:#fff;border-color:var(--accent)} }
+  .s1c{animation:s1c 15s infinite}
+  @keyframes s1c{ 0%,35%{background:transparent;color:var(--muted);border-color:var(--border)} 35.5%,100%{background:var(--accent);color:#fff;border-color:var(--accent)} }
+  .s2star{animation:s2star 15s infinite}
+  @keyframes s2star{ 0%,50%{color:var(--border)} 50.5%,100%{color:var(--accent)} }
+  .s2row{animation:s2row 15s infinite}
+  @keyframes s2row{ 0%,50%{background:transparent;border-color:var(--border)} 50.5%,100%{background:var(--accent-tint);border-color:var(--accent)} }
+  .s3a{animation:s3a 15s infinite}
+  @keyframes s3a{ 0%,65%{opacity:1} 65.5%,100%{opacity:0} }
+  .s3b{animation:s3b 15s infinite}
+  @keyframes s3b{ 0%,65%{opacity:0} 65.5%,100%{opacity:1} }
+  .r1{animation:rin1 15s infinite} .r2{animation:rin2 15s infinite} .r3{animation:rin3 15s infinite}
+  @keyframes rin1{ 0%,78.5%{opacity:0;transform:translateX(-16px)} 80%,100%{opacity:1;transform:none} }
+  @keyframes rin2{ 0%,80%{opacity:0;transform:translateX(-16px)} 81.5%,100%{opacity:1;transform:none} }
+  @keyframes rin3{ 0%,81.5%{opacity:0;transform:translateX(-16px)} 83%,100%{opacity:1;transform:none} }
+  .s5sel{animation:s5sel 15s infinite}
+  @keyframes s5sel{ 0%,92%{background:transparent;color:var(--muted);border-color:var(--border)} 92.5%,100%{background:var(--accent);color:#fff;border-color:var(--accent)} }
+  .s5bar{animation:s5bar 15s infinite}
+  @keyframes s5bar{ 0%,92%{width:0} 98%,100%{width:100%} }
+  .s5ok{animation:s5ok 15s infinite}
+  @keyframes s5ok{ 0%,92.5%{opacity:0} 94%,100%{opacity:1} }
 
   @media (prefers-reduced-motion: reduce){
-    .scr,.cur,.ring,.selA,.selB,.starA,.mrowA,.fadeA,.fadeB,.r1,.r2,.r3,.barA,.okB{animation:none}
+    .scr,.cur,.ring,.s1a,.s1b,.s1c,.s2star,.s2row,.s3a,.s3b,.r1,.r2,.r3,.s5sel,.s5bar,.s5ok{animation:none}
     .scr:first-child{opacity:1} .cur{display:none}
   }
 
@@ -231,17 +242,22 @@
 
         <div class="scr">
           <span class="scr-h">Fragebogen</span>
-          <div class="qq" style="top:62px">Welche Sparte?</div>
-          <span class="chip" style="left:26px; top:106px">Musik</span>
-          <span class="chip selA" style="left:50%; top:106px; transform:translateX(-50%)">Darstellende Kunst</span>
-          <span class="chip" style="right:26px; top:106px">Bildende Kunst</span>
-          <div class="qq" style="top:172px; font-size:15px; font-weight:400; color:var(--muted)">Wohnsitz · Ort · Budget · Trägerschaft</div>
+          <div class="qq" style="top:48px; font-size:16px">1 · Welche Sparte?</div>
+          <span class="chip" style="left:26px; top:78px">Musik</span>
+          <span class="chip s1a" style="left:50%; top:78px; transform:translateX(-50%)">Darstellende Kunst</span>
+          <span class="chip" style="right:26px; top:78px">Bildende Kunst</span>
+          <div class="qq" style="top:136px; font-size:16px">2 · Wo findet es statt?</div>
+          <span class="chip s1b" style="left:32%; top:164px; transform:translateX(-50%)">Berlin</span>
+          <span class="chip" style="right:26px; top:164px">bundesweit</span>
+          <div class="qq" style="top:222px; font-size:16px">3 · Budgetgröße?</div>
+          <span class="chip" style="left:26px; top:250px">bis 5.000 €</span>
+          <span class="chip s1c" style="left:62%; top:250px; transform:translateX(-50%)">5.000–20.000 €</span>
           <div class="cur c1"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M2 2 L2 19 L7 14 L10.5 21 L13.5 19.5 L10 13 L17 12.5 Z" fill="#1b1d1b" stroke="#ffffff" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="ring"></span></div>
         </div>
 
         <div class="scr">
           <span class="scr-h">Merkliste</span>
-          <div class="mrow mrowA" style="top:60px"><span class="nm" style="width:46%"></span><span class="star starA"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.4l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.6 9.5l5.8-.8z"/></svg></span></div>
+          <div class="mrow s2row" style="top:60px"><span class="nm" style="width:46%"></span><span class="star s2star"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.4l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.6 9.5l5.8-.8z"/></svg></span></div>
           <div class="mrow" style="top:118px"><span class="nm" style="width:38%"></span><span class="star"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.4l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.6 9.5l5.8-.8z"/></svg></span></div>
           <div class="mrow" style="top:176px"><span class="nm" style="width:52%"></span><span class="star"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.4l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.6 9.5l5.8-.8z"/></svg></span></div>
           <div class="cur c2"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M2 2 L2 19 L7 14 L10.5 21 L13.5 19.5 L10 13 L17 12.5 Z" fill="#1b1d1b" stroke="#ffffff" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="ring"></span></div>
@@ -250,8 +266,8 @@
         <div class="scr">
           <span class="scr-h">Status umschalten</span>
           <div class="qq" style="top:74px; left:50%; transform:translateX(-50%); font-size:15px; font-weight:400; color:var(--muted)">Antrag · Musikfonds</div>
-          <span class="pill pill-a fadeA" style="top:140px">in Bearbeitung</span>
-          <span class="pill pill-b fadeB" style="top:140px">abgeschickt</span>
+          <span class="pill pill-a s3a" style="top:140px">in Bearbeitung</span>
+          <span class="pill pill-b s3b" style="top:140px">abgeschickt</span>
           <div class="cur c3"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M2 2 L2 19 L7 14 L10.5 21 L13.5 19.5 L10 13 L17 12.5 Z" fill="#1b1d1b" stroke="#ffffff" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="ring"></span></div>
         </div>
 
@@ -269,10 +285,10 @@
           <div class="rcpt" style="top:62px; left:26px; right:auto; width:43%; opacity:1"><span class="ri"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18l2-1 2 1 2-1 2 1 2-1 2 1V3l-2 1-2-1-2 1-2-1-2 1Z"/><path d="M9 8h6M9 12h4"/></svg></span><span class="rb" style="width:40%"></span><span class="ra">142,00 €</span></div>
           <div class="qq" style="top:114px; left:26px; font-size:13px; font-weight:400; color:var(--muted)">zuordnen zu</div>
           <span class="fund" style="left:57%; top:60px">Stadt Berlin</span>
-          <span class="fund selB" style="left:57%; top:108px">Fonds Darst. Künste</span>
+          <span class="fund s5sel" style="left:57%; top:108px">Fonds Darst. Künste</span>
           <span class="fund" style="left:57%; top:156px">Land</span>
-          <div class="abar" style="top:216px"><b class="barA"></b></div>
-          <span class="okA okB" style="left:26px; top:242px">✓ Beleg zugeordnet</span>
+          <div class="abar" style="top:216px"><b class="s5bar"></b></div>
+          <span class="okA s5ok" style="left:26px; top:242px">✓ Beleg zugeordnet</span>
           <div class="cur c5"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M2 2 L2 19 L7 14 L10.5 21 L13.5 19.5 L10 13 L17 12.5 Z" fill="#1b1d1b" stroke="#ffffff" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="ring"></span></div>
         </div>
 
