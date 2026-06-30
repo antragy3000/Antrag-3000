@@ -64,41 +64,93 @@
     background:var(--surface); border-bottom:1px solid var(--border)}
   .demo-bar i{width:11px; height:11px; border-radius:50%; background:var(--border)}
   .demo-bar .t{margin-left:8px; font-size:13px; color:var(--muted)}
-  .demo-stage{position:relative; height:300px}
-  .scr{position:absolute; inset:0; padding:26px 28px; opacity:0; animation:scrcycle 13.5s infinite}
-  .scr:nth-child(2){animation-delay:4.5s}
-  .scr:nth-child(3){animation-delay:9s}
+  .demo-stage{position:relative; height:320px; overflow:hidden}
+  .scr{position:absolute; inset:0; opacity:0; animation:scrcycle 20s infinite}
+  .scr:nth-child(2){animation-delay:4s}
+  .scr:nth-child(3){animation-delay:8s}
+  .scr:nth-child(4){animation-delay:12s}
+  .scr:nth-child(5){animation-delay:16s}
   @keyframes scrcycle{
-    0%{opacity:0; transform:translateY(12px)}
-    3%{opacity:1; transform:none}
-    30%{opacity:1; transform:none}
-    34%{opacity:0; transform:translateY(-12px)}
-    100%{opacity:0}
+    0%{opacity:0; transform:translateY(10px)} 2%{opacity:1; transform:none}
+    18%{opacity:1; transform:none} 20.5%{opacity:0; transform:translateY(-8px)} 100%{opacity:0}
   }
-  .scr-h{display:inline-block; font-size:13px; font-weight:600; color:var(--accent-on-tint);
-    background:var(--accent-tint); padding:4px 12px; border-radius:999px; margin-bottom:18px}
-  .q{font-size:18px; font-weight:600; margin-bottom:14px}
-  .chip{display:inline-block; padding:9px 15px; border:1px solid var(--border);
-    border-radius:999px; font-size:14px; color:var(--muted); margin:0 9px 10px 0}
-  .chip.on{background:var(--accent); color:var(--btn-text); border-color:var(--accent)}
-  .row{display:flex; align-items:center; gap:14px; padding:12px 15px;
-    border:1px solid var(--border); border-radius:12px; margin-bottom:11px}
-  .row.top{border-color:var(--accent); background:var(--accent-tint)}
-  .row .nm{flex:none; width:40%; height:11px; border-radius:6px; background:var(--muted); opacity:.5}
-  .row.top .nm{opacity:.75}
-  .track{flex:1; height:9px; border-radius:6px; background:var(--surface);
-    border:1px solid var(--border); overflow:hidden}
-  .fill{height:100%; background:var(--accent); border-radius:6px}
-  .pct{flex:none; width:40px; text-align:right; font-size:13px; font-weight:600; color:var(--accent-on-tint)}
-  .alloc{display:flex; height:16px; border-radius:8px; overflow:hidden;
-    margin:12px 0 16px; border:1px solid var(--border)}
-  .lines i{display:block; height:9px; border-radius:5px; background:var(--surface);
-    border:1px solid var(--border); margin-bottom:9px}
-  .docchip{display:inline-flex; align-items:center; gap:8px; padding:10px 15px;
-    border:1px solid var(--accent); color:var(--accent-on-tint); background:var(--accent-tint);
-    border-radius:10px; font-size:14px; font-weight:600}
+  .scr-h{position:absolute; left:26px; top:22px; font-size:13px; font-weight:600;
+    color:var(--accent-on-tint); background:var(--accent-tint); padding:4px 12px; border-radius:999px}
+  .qq{position:absolute; left:26px; font-size:18px; font-weight:600; color:var(--text)}
+  .chip{position:absolute; padding:9px 15px; border:1px solid var(--border); border-radius:999px;
+    font-size:14px; color:var(--muted); background:transparent; white-space:nowrap}
+  .mrow{position:absolute; left:26px; right:26px; height:46px; display:flex; align-items:center;
+    gap:12px; padding:0 15px; border:1px solid var(--border); border-radius:12px; background:transparent}
+  .mrow .nm{height:11px; border-radius:6px; background:var(--muted); opacity:.45}
+  .star{margin-left:auto; color:var(--border); display:flex}
+  .pill{position:absolute; left:50%; transform:translateX(-50%); padding:8px 16px;
+    border-radius:999px; font-size:14px; font-weight:600; white-space:nowrap}
+  .pill-a{background:#fff4e5; color:#a54800; border:1px solid #f0c36d}
+  .pill-b{background:var(--accent-tint); color:var(--accent-on-tint); border:1px solid var(--accent); opacity:0}
+  .btn-mini{position:absolute; display:inline-flex; align-items:center; gap:7px; padding:9px 14px;
+    border-radius:10px; font-size:14px; font-weight:600; background:var(--accent); color:#fff}
+  .rcpt{position:absolute; left:26px; right:26px; height:34px; display:flex; align-items:center;
+    gap:10px; padding:0 13px; border:1px solid var(--border); border-radius:10px;
+    background:var(--surface); opacity:0}
+  .rcpt .ri{color:var(--accent); display:flex}
+  .rcpt .rb{height:9px; border-radius:5px; background:var(--muted); opacity:.4}
+  .rcpt .ra{margin-left:auto; font-size:13px; font-weight:600; color:var(--text)}
+  .fund{position:absolute; display:inline-flex; align-items:center; gap:8px; padding:9px 13px;
+    border:1px solid var(--border); border-radius:10px; font-size:14px; color:var(--muted);
+    background:transparent; white-space:nowrap}
+  .abar{position:absolute; left:26px; right:26px; height:14px; border-radius:7px;
+    background:var(--surface); border:1px solid var(--border); overflow:hidden}
+  .abar > b{display:block; height:100%; width:0; background:var(--accent); border-radius:7px}
+  .okA{position:absolute; display:inline-flex; align-items:center; gap:6px; font-size:13px;
+    font-weight:600; color:var(--accent-on-tint); opacity:0}
+
+  .cur{position:absolute; width:24px; height:24px; z-index:6; opacity:0; pointer-events:none}
+  .cur svg{display:block; filter:drop-shadow(0 1px 1.5px rgba(0,0,0,.35))}
+  .ring{position:absolute; left:-4px; top:-4px; width:16px; height:16px; border-radius:50%;
+    background:var(--accent); opacity:0; transform:scale(0)}
+  .c1{animation:cur1 20s infinite} .c1 .ring{animation:click 20s infinite}
+  .c2{animation:cur2 20s infinite; animation-delay:4s} .c2 .ring{animation:click 20s infinite; animation-delay:4s}
+  .c3{animation:cur3 20s infinite; animation-delay:8s} .c3 .ring{animation:click 20s infinite; animation-delay:8s}
+  .c4{animation:cur4 20s infinite; animation-delay:12s} .c4 .ring{animation:click 20s infinite; animation-delay:12s}
+  .c5{animation:cur5 20s infinite; animation-delay:16s} .c5 .ring{animation:click 20s infinite; animation-delay:16s}
+  @keyframes click{ 0%,11%{opacity:0; transform:scale(0)} 12%{opacity:.45; transform:scale(.5)}
+    15.5%{opacity:0; transform:scale(2.3)} 100%{opacity:0; transform:scale(2.3)} }
+  @keyframes cur1{ 0%{opacity:0;left:80%;top:250px} 2%{opacity:1;left:80%;top:250px}
+    11%{left:50%;top:120px} 13.5%{left:50%;top:120px} 19%{opacity:1;left:50%;top:120px} 21%,100%{opacity:0;left:50%;top:120px} }
+  @keyframes cur2{ 0%{opacity:0;left:30%;top:255px} 2%{opacity:1;left:30%;top:255px}
+    11%{left:91%;top:90px} 13.5%{left:91%;top:90px} 19%{opacity:1;left:91%;top:90px} 21%,100%{opacity:0;left:91%;top:90px} }
+  @keyframes cur3{ 0%{opacity:0;left:18%;top:60px} 2%{opacity:1;left:18%;top:60px}
+    11%{left:50%;top:158px} 13.5%{left:50%;top:158px} 19%{opacity:1;left:50%;top:158px} 21%,100%{opacity:0;left:50%;top:158px} }
+  @keyframes cur4{ 0%{opacity:0;left:80%;top:252px} 2%{opacity:1;left:80%;top:252px}
+    10%{left:13%;top:80px} 12%{left:13%;top:80px} 19%{opacity:1;left:13%;top:80px} 21%,100%{opacity:0;left:13%;top:80px} }
+  @keyframes cur5{ 0%{opacity:0;left:24%;top:60px} 2%{opacity:1;left:24%;top:60px}
+    11%{left:67%;top:128px} 13.5%{left:67%;top:128px} 19%{opacity:1;left:67%;top:128px} 21%,100%{opacity:0;left:67%;top:128px} }
+
+  .selA{animation:selA 20s infinite}
+  @keyframes selA{ 0%,12%{background:transparent; color:var(--muted); border-color:var(--border)}
+    13%,100%{background:var(--accent); color:#fff; border-color:var(--accent)} }
+  .starA{animation:starA 20s infinite; animation-delay:4s}
+  @keyframes starA{ 0%,12%{color:var(--border)} 13%,100%{color:var(--accent)} }
+  .mrowA{animation:mrowA 20s infinite; animation-delay:4s}
+  @keyframes mrowA{ 0%,12%{background:transparent; border-color:var(--border)}
+    13%,100%{background:var(--accent-tint); border-color:var(--accent)} }
+  .fadeA{animation:fadeA 20s infinite; animation-delay:8s}
+  @keyframes fadeA{ 0%,12%{opacity:1} 13%,100%{opacity:0} }
+  .fadeB{animation:fadeB 20s infinite; animation-delay:8s}
+  @keyframes fadeB{ 0%,12%{opacity:0} 13%,100%{opacity:1} }
+  .r1{animation:rin 20s infinite; animation-delay:12s}
+  .r2{animation:rin 20s infinite; animation-delay:12.4s}
+  .r3{animation:rin 20s infinite; animation-delay:12.8s}
+  @keyframes rin{ 0%,12.5%{opacity:0; transform:translateX(-16px)} 14.5%,100%{opacity:1; transform:none} }
+  .selB{animation:selA 20s infinite; animation-delay:16s}
+  .barA{animation:barA 20s infinite; animation-delay:16s}
+  @keyframes barA{ 0%,12.5%{width:0} 18%,100%{width:100%} }
+  .okB{animation:okB 20s infinite; animation-delay:16s}
+  @keyframes okB{ 0%,13%{opacity:0} 15%,100%{opacity:1} }
+
   @media (prefers-reduced-motion: reduce){
-    .scr{animation:none} .scr:first-child{opacity:1}
+    .scr,.cur,.ring,.selA,.selB,.starA,.mrowA,.fadeA,.fadeB,.r1,.r2,.r3,.barA,.okB{animation:none}
+    .scr:first-child{opacity:1} .cur{display:none}
   }
 
   section{padding:8px 0}
@@ -138,8 +190,6 @@
     .hero h1{font-size:30px}
     .hero p.lead{font-size:17px}
     .nav-links{display:none}
-    .demo-stage{height:250px}
-    .scr{padding:20px 20px}
   }
 </style>
 </head>
@@ -175,66 +225,55 @@
       </div>
     </section>
 
-    <div class="demo" role="img" aria-label="Animierte Vorschau: Fragebogen, passende Förderungen und Abrechnung in Antrag 3000.">
+    <div class="demo" role="img" aria-label="Animierte Vorschau, wie Antrag 3000 bedient wird: Fragebogen ausfüllen, Förderung merken, Status umschalten, Belege einreichen und Förderer zuordnen.">
       <div class="demo-bar"><i></i><i></i><i></i><span class="t">Antrag 3000</span></div>
       <div class="demo-stage">
 
         <div class="scr">
           <span class="scr-h">Fragebogen</span>
-          <div class="q">Welche Sparte?</div>
-          <div>
-            <span class="chip">Musik</span>
-            <span class="chip on">Darstellende Kunst</span>
-            <span class="chip">Bildende Kunst</span>
-            <span class="chip">Literatur</span>
-          </div>
-          <div class="q" style="margin-top:18px">Wo findet es statt?</div>
-          <div>
-            <span class="chip on">Berlin</span>
-            <span class="chip">Hamburg</span>
-            <span class="chip">München</span>
-          </div>
+          <div class="qq" style="top:62px">Welche Sparte?</div>
+          <span class="chip" style="left:26px; top:106px">Musik</span>
+          <span class="chip selA" style="left:50%; top:106px; transform:translateX(-50%)">Darstellende Kunst</span>
+          <span class="chip" style="right:26px; top:106px">Bildende Kunst</span>
+          <div class="qq" style="top:172px; font-size:15px; font-weight:400; color:var(--muted)">Wohnsitz · Ort · Budget · Trägerschaft</div>
+          <div class="cur c1"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M2 2 L2 19 L7 14 L10.5 21 L13.5 19.5 L10 13 L17 12.5 Z" fill="#1b1d1b" stroke="#ffffff" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="ring"></span></div>
         </div>
 
         <div class="scr">
-          <span class="scr-h">Passende Förderungen</span>
-          <div class="row top">
-            <span class="nm"></span>
-            <div class="track"><div class="fill" style="width:92%"></div></div>
-            <span class="pct">92%</span>
-          </div>
-          <div class="row">
-            <span class="nm"></span>
-            <div class="track"><div class="fill" style="width:74%"></div></div>
-            <span class="pct">74%</span>
-          </div>
-          <div class="row">
-            <span class="nm"></span>
-            <div class="track"><div class="fill" style="width:58%"></div></div>
-            <span class="pct">58%</span>
-          </div>
-          <div class="row">
-            <span class="nm"></span>
-            <div class="track"><div class="fill" style="width:41%"></div></div>
-            <span class="pct">41%</span>
-          </div>
+          <span class="scr-h">Merkliste</span>
+          <div class="mrow mrowA" style="top:60px"><span class="nm" style="width:46%"></span><span class="star starA"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.4l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.6 9.5l5.8-.8z"/></svg></span></div>
+          <div class="mrow" style="top:118px"><span class="nm" style="width:38%"></span><span class="star"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.4l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.6 9.5l5.8-.8z"/></svg></span></div>
+          <div class="mrow" style="top:176px"><span class="nm" style="width:52%"></span><span class="star"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3.4l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.6 9.5l5.8-.8z"/></svg></span></div>
+          <div class="cur c2"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M2 2 L2 19 L7 14 L10.5 21 L13.5 19.5 L10 13 L17 12.5 Z" fill="#1b1d1b" stroke="#ffffff" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="ring"></span></div>
         </div>
 
         <div class="scr">
-          <span class="scr-h">Abrechnung · Verwendungsnachweis</span>
-          <div class="q" style="font-size:15px; color:var(--muted); font-weight:400">Ein Beleg, anteilig auf drei Geldquellen</div>
-          <div class="alloc">
-            <span style="width:52%; background:var(--accent)"></span>
-            <span style="width:31%; background:#7cc6bd"></span>
-            <span style="width:17%; background:var(--accent-tint)"></span>
-          </div>
-          <div class="lines"><i style="width:88%"></i><i style="width:64%"></i></div>
-          <div style="margin-top:16px">
-            <span class="docchip">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/><path d="m9 15 2 2 4-4"/></svg>
-              Verwendungsnachweis.pdf
-            </span>
-          </div>
+          <span class="scr-h">Status umschalten</span>
+          <div class="qq" style="top:74px; left:50%; transform:translateX(-50%); font-size:15px; font-weight:400; color:var(--muted)">Antrag · Musikfonds</div>
+          <span class="pill pill-a fadeA" style="top:140px">in Bearbeitung</span>
+          <span class="pill pill-b fadeB" style="top:140px">abgeschickt</span>
+          <div class="cur c3"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M2 2 L2 19 L7 14 L10.5 21 L13.5 19.5 L10 13 L17 12.5 Z" fill="#1b1d1b" stroke="#ffffff" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="ring"></span></div>
+        </div>
+
+        <div class="scr">
+          <span class="scr-h">Belege einreichen</span>
+          <span class="btn-mini" style="left:26px; top:62px">+ Beleg erfassen</span>
+          <div class="rcpt r1" style="top:116px"><span class="ri"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18l2-1 2 1 2-1 2 1 2-1 2 1V3l-2 1-2-1-2 1-2-1-2 1Z"/><path d="M9 8h6M9 12h4"/></svg></span><span class="rb" style="width:42%"></span><span class="ra">86,40 €</span></div>
+          <div class="rcpt r2" style="top:158px"><span class="ri"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18l2-1 2 1 2-1 2 1 2-1 2 1V3l-2 1-2-1-2 1-2-1-2 1Z"/><path d="M9 8h6M9 12h4"/></svg></span><span class="rb" style="width:55%"></span><span class="ra">142,00 €</span></div>
+          <div class="rcpt r3" style="top:200px"><span class="ri"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18l2-1 2 1 2-1 2 1 2-1 2 1V3l-2 1-2-1-2 1-2-1-2 1Z"/><path d="M9 8h6M9 12h4"/></svg></span><span class="rb" style="width:33%"></span><span class="ra">19,90 €</span></div>
+          <div class="cur c4"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M2 2 L2 19 L7 14 L10.5 21 L13.5 19.5 L10 13 L17 12.5 Z" fill="#1b1d1b" stroke="#ffffff" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="ring"></span></div>
+        </div>
+
+        <div class="scr">
+          <span class="scr-h">Förderer zuordnen</span>
+          <div class="rcpt" style="top:62px; left:26px; right:auto; width:43%; opacity:1"><span class="ri"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3v18l2-1 2 1 2-1 2 1 2-1 2 1V3l-2 1-2-1-2 1-2-1-2 1Z"/><path d="M9 8h6M9 12h4"/></svg></span><span class="rb" style="width:40%"></span><span class="ra">142,00 €</span></div>
+          <div class="qq" style="top:114px; left:26px; font-size:13px; font-weight:400; color:var(--muted)">zuordnen zu</div>
+          <span class="fund" style="left:57%; top:60px">Stadt Berlin</span>
+          <span class="fund selB" style="left:57%; top:108px">Fonds Darst. Künste</span>
+          <span class="fund" style="left:57%; top:156px">Land</span>
+          <div class="abar" style="top:216px"><b class="barA"></b></div>
+          <span class="okA okB" style="left:26px; top:242px">✓ Beleg zugeordnet</span>
+          <div class="cur c5"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M2 2 L2 19 L7 14 L10.5 21 L13.5 19.5 L10 13 L17 12.5 Z" fill="#1b1d1b" stroke="#ffffff" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="ring"></span></div>
         </div>
 
       </div>
