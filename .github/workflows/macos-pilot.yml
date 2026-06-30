@@ -13,16 +13,11 @@
 
 name: macOS-Pilot-Build
 
-# Ausloeser:
-#  - workflow_dispatch: per Hand ueber den "Run workflow"-Knopf.
-#  - push auf master, wenn diese Workflow-Datei ODER Programmcode sich
-#    aendert. So startet der Bau auch ohne Knopf zuverlaessig. (Spaeter
-#    kann man den push-Ausloeser wieder entfernen, wenn nur noch
-#    Hand-Starts gewuenscht sind.)
+# Ausloeser: NUR per Hand ueber den "Run workflow"-Knopf
+# (Reiter Actions -> macOS-Pilot-Build -> Run workflow). Bewusst KEIN
+# push-Trigger, damit nicht jeder Commit ~20 Min macOS-Build-Zeit verbraucht.
 on:
   workflow_dispatch:
-  push:
-    branches: [master]
 
 jobs:
   build:
