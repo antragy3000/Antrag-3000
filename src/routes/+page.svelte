@@ -20,6 +20,7 @@
   import KatalogUpdate from "$lib/komponenten/KatalogUpdate.svelte";
   import UpdatePruefung from "$lib/komponenten/UpdatePruefung.svelte";
   import { check as appUpdateCheck } from "@tauri-apps/plugin-updater";
+  import { getVersion } from "@tauri-apps/api/app";
   import { leeresFormular, formularWordBauen } from "$lib/antrag";
   import { antragsPdfBauen } from "$lib/antragsPdf";
   import { leererKfp, kfpExport, neuePostenId } from "$lib/kfp";
@@ -95,6 +96,8 @@
   let katalogOffen = $state(false);
   let updateOffen = $state(false);
   let updateGeprueft = false; // Auto-Prüfung nur einmal pro Sitzung.
+  // "Was ist neu?"-Meldung nach einem Update: { version, notes } oder null.
+  let wasIstNeu = $state(null);
 
   // Datenbank-Förderungen, die vom Team geteilten eigenen Förderer und
   // die eigenen Förderungen des aktiven Projekts – diese Liste löst
@@ -536,6 +539,8 @@
     ansicht = "offen";
     // Server-Erreichbarkeit einmal prüfen, damit der Status-Punkt stimmt.
     if (daten?.sync && online) verbindungPruefen().catch(() => {});
+    // Nach einem gerade installierten Update einmalig "Was ist neu?" zeigen.
+    await wasIstNeuPruefen();
     // Einmal still nach einer neuen App-Version schauen (Etappe 5).
     updateStillPruefen();
     // Und die Förder-Datenbank automatisch auf Aktualisierungen prüfen.
@@ -1197,6 +1202,29 @@
   // Etappe 5: stille Update-Prüfung beim Start. Bei einer gefundenen,
   // gültig signierten neuen Version öffnet sich der Update-Dialog; jeder
   // Fehler (z. B. Server nicht erreichbar) wird bewusst verschluckt.
+  // Vor dem Neustart (aus dem Update-Dialog) merken, was in der neuen Version
+  // neu ist. Wird verschlüsselt im Tresor abgelegt und beim nächsten Start
+  // einmalig angezeigt.
+  async function updateHinweisMerken(version, notes) {
+    if (!daten) return;
+    daten.updateHinweis = { version, notes: notes || "" };
+    await tresorSpeichern();
+  }
+
+  // Beim Öffnen: Gibt es einen gemerkten Update-Hinweis, der zur JETZT
+  // laufenden Version passt? Dann einmalig "Was ist neu?" zeigen. Danach
+  // (oder wenn veraltet) den Hinweis entfernen, damit er nicht wiederkehrt.
+  async function wasIstNeuPruefen() {
+    if (!daten?.updateHinweis) return;
+    let aktuell = "";
+    try { aktuell = await getVersion(); } catch { return; }
+    if (daten.updateHinweis.version === aktuell) {
+      wasIstNeu = { version: aktuell, notes: daten.updateHinweis.notes || "" };
+    }
+    delete daten.updateHinweis;
+    await tresorSpeichern();
+  }
+
   async function updateStillPruefen() {
     if (updateGeprueft) return;
     updateGeprueft = true;
@@ -2447,7 +2475,23 @@
     {/if}
 
     {#if updateOffen}
-      <UpdatePruefung schliessen={() => (updateOffen = false)} />
+      <UpdatePruefung schliessen={() => (updateOffen = false)} merkeUpdate={updateHinweisMerken} />
+    {/if}
+
+    {#if wasIstNeu}
+      <div class="schleier-neu" role="presentation" onclick={() => (wasIstNeu = null)}>
+        <div class="dialog-neu" role="presentation" onclick={(e) => e.stopPropagation()}>
+          <h2>🎉 Was ist neu in {wasIstNeu.version}?</h2>
+          {#if wasIstNeu.notes}
+            <div class="neu-notizen">{wasIstNeu.notes}</div>
+          {:else}
+            <p style="color:var(--text-muted)">Die App wurde auf Version {wasIstNeu.version} aktualisiert.</p>
+          {/if}
+          <div class="neu-fuss">
+            <button onclick={() => (wasIstNeu = null)}>Verstanden</button>
+          </div>
+        </div>
+      </div>
     {/if}
 
     {#if katalogOffen}
@@ -2936,6 +2980,22 @@
     height: 56px;
     width: auto;
   }
+  .schleier-neu {
+    position: fixed; inset: 0; background: var(--schatten-xl);
+    display: grid; place-items: center; padding: 24px; z-index: 60;
+  }
+  .dialog-neu {
+    background: var(--weiss); border-radius: 12px; padding: 28px 32px;
+    max-width: 460px; width: 100%; box-shadow: 0 12px 40px var(--schatten-lg);
+  }
+  .dialog-neu h2 { margin: 0 0 14px; font-size: 1.2rem; }
+  .neu-notizen { white-space: pre-wrap; line-height: 1.55; font-size: 0.95rem; color: var(--text); }
+  .neu-fuss { display: flex; justify-content: flex-end; margin-top: 20px; }
+  .neu-fuss button {
+    padding: 9px 18px; font-size: 0.92rem; font-weight: 600; font-family: inherit;
+    color: var(--weiss); background: var(--akzent); border: none; border-radius: 8px; cursor: pointer;
+  }
+  .neu-fuss button:hover { background: var(--akzent-d); }
   .app header button.leise {
     width: auto;
     margin: 0;

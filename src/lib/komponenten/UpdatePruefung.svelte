@@ -10,7 +10,9 @@
   import { relaunch } from "@tauri-apps/plugin-process";
   import { getVersion } from "@tauri-apps/api/app";
 
-  let { schliessen } = $props();
+  // merkeUpdate: optionaler Rückruf, um Version + Notizen VOR dem Neustart
+  // zu sichern, damit die App danach einmalig "Was ist neu?" zeigen kann.
+  let { schliessen, merkeUpdate } = $props();
 
   // 'pruefen' | 'aktuell' | 'verfuegbar' | 'laedt' | 'fertig' | 'fehler'
   let zustand = $state("pruefen");
@@ -61,6 +63,9 @@
         else if (ev.event === "Finished") zustand = "fertig";
       });
       zustand = "fertig";
+      // Notizen der neuen Version sichern, damit die App nach dem Neustart
+      // einmalig "Was ist neu?" zeigen kann (unkritisch, wenn es scheitert).
+      try { await merkeUpdate?.(info.version, info.body); } catch { /* egal */ }
       // Kurz den Hinweis zeigen, dann mit der neuen Version neu starten.
       await relaunch();
     } catch (e) {
