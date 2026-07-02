@@ -2481,7 +2481,7 @@
     {#if wasIstNeu}
       <div class="schleier-neu" role="presentation" onclick={() => (wasIstNeu = null)}>
         <div class="dialog-neu" role="presentation" onclick={(e) => e.stopPropagation()}>
-          <h2>🎉 Was ist neu in {wasIstNeu.version}?</h2>
+          <h2>Was ist neu in {wasIstNeu.version}?</h2>
           {#if wasIstNeu.notes}
             <div class="neu-notizen">{wasIstNeu.notes}</div>
           {:else}
