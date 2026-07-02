@@ -47,6 +47,14 @@ npm install
 npm run tauri build
 ```
 
+## Code-Signing
+
+Die Windows-Installer werden mit einem Zertifikat der SignPath Foundation
+signiert. Details in der [Code-Signing-Richtlinie](CODE_SIGNING.md).
+
+> Free code signing provided by [SignPath.io](https://signpath.io), certificate by
+> [SignPath Foundation](https://signpath.org).
+
 ## Lizenz
 
 [GPL-3.0-or-later](LICENSE) — GNU General Public License, Version 3 oder später.
