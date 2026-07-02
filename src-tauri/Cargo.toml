@@ -3,6 +3,7 @@ name = "antrag-3000"
 version = "0.4.3"
 description = "Recherche, Verwaltung und Vorbereitung von Fördermittel-Anträgen für Kunst- und Kulturprojekte"
 authors = ["Antrag 3000 Team"]
+license = "GPL-3.0-or-later"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
