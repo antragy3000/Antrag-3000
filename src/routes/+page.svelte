@@ -1944,7 +1944,24 @@
 {:else if ansicht === "einrichten"}
   <div class="buehne">
     <div class="karte">
-      <h1>Antrag 3000</h1>
+      <h1 class="logo-gross" aria-label="Antrag 3000">
+        <svg viewBox="0 0 470 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <svg x="6" y="10" width="100" height="100" viewBox="19.75 9.5 89.5 89.5">
+            <g fill="#17b6a6">
+              <rect x="30" y="88" width="62" height="7" rx="3" transform="rotate(0.5 61 91.5)"></rect>
+              <rect x="27" y="78.5" width="66" height="7" rx="3" transform="rotate(-1.5 60 82)" opacity="0.9"></rect>
+              <rect x="33" y="69" width="70" height="7" rx="3" transform="rotate(1 68 72.5)"></rect>
+              <rect x="31" y="59.5" width="58" height="7" rx="3" transform="rotate(2 60 63)" opacity="0.92"></rect>
+              <rect x="26" y="50" width="66" height="7" rx="3" transform="rotate(-1 59 53.5)"></rect>
+              <rect x="34" y="40.5" width="68" height="7" rx="3" transform="rotate(1.5 68 44)" opacity="0.9"></rect>
+              <rect x="30" y="31" width="56" height="7" rx="3" transform="rotate(-2.5 58 34.5)"></rect>
+              <rect x="29" y="22" width="62" height="7" rx="3" transform="rotate(1.5 60 25.5)" opacity="0.94"></rect>
+              <rect x="35" y="13.5" width="52" height="7" rx="3" transform="rotate(4 61 17)"></rect>
+            </g>
+          </svg>
+          <text x="122" y="82" font-family="'DM Serif Display', Georgia, 'Times New Roman', serif" font-size="60" fill="#123a5e">Antrag <tspan fill="#14b7a8">3000</tspan></text>
+        </svg>
+      </h1>
       <p class="untertitel">Willkommen! Lege zuerst dein Tresor-Passwort fest.</p>
 
       <form onsubmit={einrichten}>
@@ -1971,7 +1988,24 @@
 {:else if ansicht === "entsperren"}
   <div class="buehne">
     <div class="karte">
-      <h1>Antrag 3000</h1>
+      <h1 class="logo-gross" aria-label="Antrag 3000">
+        <svg viewBox="0 0 470 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <svg x="6" y="10" width="100" height="100" viewBox="19.75 9.5 89.5 89.5">
+            <g fill="#17b6a6">
+              <rect x="30" y="88" width="62" height="7" rx="3" transform="rotate(0.5 61 91.5)"></rect>
+              <rect x="27" y="78.5" width="66" height="7" rx="3" transform="rotate(-1.5 60 82)" opacity="0.9"></rect>
+              <rect x="33" y="69" width="70" height="7" rx="3" transform="rotate(1 68 72.5)"></rect>
+              <rect x="31" y="59.5" width="58" height="7" rx="3" transform="rotate(2 60 63)" opacity="0.92"></rect>
+              <rect x="26" y="50" width="66" height="7" rx="3" transform="rotate(-1 59 53.5)"></rect>
+              <rect x="34" y="40.5" width="68" height="7" rx="3" transform="rotate(1.5 68 44)" opacity="0.9"></rect>
+              <rect x="30" y="31" width="56" height="7" rx="3" transform="rotate(-2.5 58 34.5)"></rect>
+              <rect x="29" y="22" width="62" height="7" rx="3" transform="rotate(1.5 60 25.5)" opacity="0.94"></rect>
+              <rect x="35" y="13.5" width="52" height="7" rx="3" transform="rotate(4 61 17)"></rect>
+            </g>
+          </svg>
+          <text x="122" y="82" font-family="'DM Serif Display', Georgia, 'Times New Roman', serif" font-size="60" fill="#123a5e">Antrag <tspan fill="#14b7a8">3000</tspan></text>
+        </svg>
+      </h1>
       <p class="untertitel">Tresor entsperren</p>
 
       {#if merkenAktiv}
@@ -2892,6 +2926,15 @@
     height: 30px;
     width: auto;
     display: block;
+  }
+  .logo-gross {
+    display: flex;
+    justify-content: center;
+    margin: 0 0 6px;
+  }
+  .logo-gross > svg {
+    height: 56px;
+    width: auto;
   }
   .app header button.leise {
     width: auto;
