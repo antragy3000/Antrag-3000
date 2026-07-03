@@ -1,0 +1,4 @@
+# Abhängigkeiten und Build-Ergebnisse (werden erzeugt, nicht versioniert)
+node_modules
+/src-tauri/target
+/src-tauri/gen/schemas
