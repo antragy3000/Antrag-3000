@@ -115,6 +115,7 @@
       <button id="tab-org" class="aktiv" data-tab="org">Organisation</button>
       <button id="tab-prog" data-tab="prog">Förderprogramme</button>
     </nav>
+    <button class="primaer" id="exportBtn" style="margin-left:auto">Für Antrag 3000 exportieren</button>
   </header>
 
   <!-- ============ ANSICHT: ORGANISATION ============ -->
@@ -489,6 +490,29 @@
     $("abbrechenBtn").addEventListener("click", () => zeigeEditor(false));
     $("speichernProg").addEventListener("click", speichernProgramm);
     $("p-name").addEventListener("input", () => { $("p-name").classList.remove("fehlt"); $("fehler-p-name").classList.remove("zeigen"); });
+
+    // ================= Export (Weg A: Datei) =================
+    function exportObjekt() {
+      return { typ: "antrag3000-foerderer-export", version: 1, exportiert_am: new Date().toISOString(),
+        organisation: orgLaden(), programme: progLaden() };
+    }
+    async function exportieren() {
+      const org = orgLaden(), prog = progLaden();
+      if (!(org.org.name || "").trim() && !prog.length) {
+        alert("Es gibt noch nichts zu exportieren. Bitte zuerst Ihre Organisation und/oder Förderprogramme anlegen.");
+        return;
+      }
+      const tauri = window.__TAURI__;
+      if (!tauri || !tauri.core) { alert("Der Export funktioniert nur in der installierten App (nicht in der Browser-Vorschau)."); return; }
+      const sicher = ((org.org.name || "foerderer").replace(/[^A-Za-z0-9_-]+/g, "_")).slice(0, 40) || "foerderer";
+      const name = "antrag3000-foerderer-" + sicher + ".json";
+      const inhalt = JSON.stringify(exportObjekt(), null, 2);
+      try {
+        const pfad = await tauri.core.invoke("export_speichern", { vorschlagName: name, inhalt });
+        if (pfad) alert("Export gespeichert:\n" + pfad + "\n\nBitte schicken Sie diese Datei an Antrag 3000.");
+      } catch (e) { alert("Export nicht möglich: " + e); }
+    }
+    $("exportBtn").addEventListener("click", exportieren);
 
     // ================= Start =================
     const orgStart = orgLaden(); orgInFelder(orgStart); orgGespeichert = JSON.stringify(orgStart);
