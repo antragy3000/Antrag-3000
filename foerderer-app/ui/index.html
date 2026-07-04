@@ -230,6 +230,11 @@
         <div class="checks" id="chk-wohnsitz"></div>
         <label class="feld">Durchführungsort des Projekts</label>
         <div class="checks" id="chk-ort"></div>
+        <label class="feld">Sind studentische Projekte förderfähig?</label>
+        <div class="radio-gruppe" id="studentisch-gruppe">
+          <label class="radio"><input type="radio" name="studentisch" value="ja" checked /> Ja</label>
+          <label class="radio"><input type="radio" name="studentisch" value="nein" /> Nein, ausgeschlossen</label>
+        </div>
       </section>
 
       <section class="karte">
@@ -359,7 +364,7 @@
     function progSpeichern() { localStorage.setItem(K_PROG, JSON.stringify(programme)); }
     function neueId() { return "p-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,7); }
     function leeresProgramm() { return { id:neueId(), name:"", webseite:"", beschreibung:"",
-      harte_kriterien:{ wohnsitz:[], durchfuehrungsort:[], traegerschaft:[] },
+      harte_kriterien:{ wohnsitz:[], durchfuehrungsort:[], traegerschaft:[], studentisch_erlaubt:true },
       weiche_kriterien:{ sparten:[], projektarten:[], budget_min:null, budget_max:null, zeitpunkt:"laufend" },
       fristen:[], frist_hinweis:"", foerderhoehe_text:"", max_anteil_prozent:null, anteil_ausnahme:false, checkliste_vorschlag:[] }; }
 
@@ -438,6 +443,7 @@
       renderChecks("chk-traeger", TRAEGERSCHAFT, p.harte_kriterien.traegerschaft || []);
       renderChecks("chk-wohnsitz", LAENDER, p.harte_kriterien.wohnsitz || []);
       renderChecks("chk-ort", LAENDER, p.harte_kriterien.durchfuehrungsort || []);
+      { const st = (p.harte_kriterien.studentisch_erlaubt !== false) ? "ja" : "nein"; const r = document.querySelector('input[name="studentisch"][value="' + st + '"]'); if (r) r.checked = true; }
       renderChecks("chk-sparten", SPARTEN, p.weiche_kriterien.sparten || []);
       renderChecks("chk-projektarten", PROJEKTARTEN, p.weiche_kriterien.projektarten || []);
       editorDok = [...(p.checkliste_vorschlag || [])]; renderDok(); renderDokVorschlaege(); $("dok-neu").value = "";
@@ -458,7 +464,8 @@
       p.checkliste_vorschlag = [...editorDok];
       p.max_anteil_prozent = zahlOderNull($("p-anteil").value); p.anteil_ausnahme = $("p-anteil-ausnahme").checked;
       p.frist_hinweis = $("p-frist-hinweis").value.trim();
-      p.harte_kriterien = { traegerschaft: leseChecks("chk-traeger"), wohnsitz: leseChecks("chk-wohnsitz"), durchfuehrungsort: leseChecks("chk-ort") };
+      const stEl = document.querySelector('input[name="studentisch"]:checked');
+      p.harte_kriterien = { traegerschaft: leseChecks("chk-traeger"), wohnsitz: leseChecks("chk-wohnsitz"), durchfuehrungsort: leseChecks("chk-ort"), studentisch_erlaubt: stEl ? stEl.value === "ja" : true };
       p.weiche_kriterien = { sparten: leseChecks("chk-sparten"), projektarten: leseChecks("chk-projektarten"),
         budget_min: zahlOderNull($("p-budget-min").value), budget_max: zahlOderNull($("p-budget-max").value), zeitpunkt: zeitpunktWert() };
       const fristen = [];
