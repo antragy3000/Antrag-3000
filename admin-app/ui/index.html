@@ -195,6 +195,7 @@
           <button id="aktivierungBtn" disabled>Aktivierung erstellen …</button>
         </div>
         <div id="aktivierungMeldung"></div>
+        <div id="aktivierungsListe"></div>
       </div>
 
       <div id="tab-import" class="karte tab verborgen">
@@ -1308,12 +1309,43 @@
         if (p) {
           aktivMeldung("erfolg", "Aktivierung erstellt:\n" + p +
             "\n\nGeben Sie diese Datei dem Förderer – er lädt sie einmalig in die Förderer-App.");
+          const l = aktListeLaden();
+          l.unshift({ name, datum: new Date().toISOString(), pfad: p });
+          aktListeSpeichern(l);
+          aktListeRendern();
           $("foerdererNameFeld").value = "";
           caStatusAktualisieren();
         }
       } catch (e) { aktivMeldung("fehler", "⚠ " + e); }
     };
+
+    // Liste der aktivierten Förderer (lokal gemerkt).
+    function aktListeLaden() { try { return JSON.parse(localStorage.getItem("foerderer-aktivierungen")) || []; } catch { return []; } }
+    function aktListeSpeichern(l) { localStorage.setItem("foerderer-aktivierungen", JSON.stringify(l)); }
+    function aktListeRendern() {
+      const l = aktListeLaden(), el = $("aktivierungsListe");
+      if (!l.length) { el.innerHTML = ""; return; }
+      el.innerHTML =
+        '<h3 style="margin:22px 0 8px;font-size:1rem">Aktivierte Förderer</h3>' +
+        '<table style="width:100%;border-collapse:collapse;font-size:0.9rem">' +
+        l.map((e, i) =>
+          '<tr style="border-bottom:1px solid #e4e7e2">' +
+            '<td style="padding:8px 6px;font-weight:600">' + escape(e.name || "") + "</td>" +
+            '<td style="padding:8px 6px;color:#5e6c84">' + escape(zeit(e.datum)) + "</td>" +
+            '<td style="padding:8px 6px;text-align:right"><button class="zweit" data-entf="' + i + '" style="padding:4px 10px;font-size:0.78rem">aus Liste entfernen</button></td>' +
+          "</tr>").join("") +
+        "</table>";
+    }
+    $("aktivierungsListe").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-entf]");
+      if (!b) return;
+      const l = aktListeLaden();
+      l.splice(Number(b.dataset.entf), 1);
+      aktListeSpeichern(l);
+      aktListeRendern();
+    });
     caStatusAktualisieren();
+    aktListeRendern();
 
     // --- Förderer-Export prüfen (Import) ---
     $("importBtn").onclick = async () => {
