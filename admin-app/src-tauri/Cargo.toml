@@ -22,11 +22,16 @@ serde_json = "1"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 # Zugangs-Paket prüfen + Gerätenamen (CN) aus dem Zertifikat lesen.
 rustls-pemfile = "2"
-x509-parser = "0.16"
+# x509-parser "verify": prueft die Zertifikats-Kette (Foerderer-Cert von der
+# Foerderer-CA signiert) beim Import eines signierten Foerderer-Exports.
+x509-parser = { version = "0.16", features = ["verify"] }
 # rcgen: erzeugt die Foerderer-CA und die Foerderer-Zertifikate (Aktivierung).
 # Reines Rust, gleiche Abhaengigkeit/Version wie in der Nutzer-App. Feature
 # x509-parser fuer from_ca_cert_pem (CA aus Datei zum Signieren laden).
 rcgen = { version = "0.13", features = ["x509-parser"] }
+# p256/base64: prueft die ECDSA-Signatur eines Foerderer-Exports (Herkunft).
+p256 = { version = "0.13", features = ["ecdsa"] }
+base64 = "0.22"
 
 [profile.release]
 opt-level = "z"

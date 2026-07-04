@@ -616,6 +616,121 @@ fn foerderer_aktivierung_erstellen(
     Ok(Some(pfad.to_string_lossy().to_string()))
 }
 
+// --- Förderer-Export prüfen (Signatur-Herkunft, Import) ---
+
+#[derive(Serialize)]
+struct PruefErgebnis {
+    signiert: bool,
+    signatur_gueltig: bool,
+    ca_ok: bool,
+    foerderer_name: String,
+    hinweis: String,
+    nutzlast: serde_json::Value,
+}
+
+fn cert_der_aus_pem(pem: &str) -> Option<Vec<u8>> {
+    x509_parser::pem::parse_x509_pem(pem.as_bytes())
+        .ok()
+        .map(|(_, p)| p.contents)
+}
+
+/// Prüft die ECDSA-Signatur über die Nutzlast mit dem Pubkey aus dem Zertifikat.
+fn signatur_ok(cert_pem: &str, payload: &[u8], sig_der: &[u8]) -> bool {
+    use p256::ecdsa::signature::Verifier;
+    let Some(der) = cert_der_aus_pem(cert_pem) else { return false };
+    let Ok((_, cert)) = x509_parser::parse_x509_certificate(&der) else { return false };
+    let point = cert.public_key().subject_public_key.data.as_ref();
+    let Ok(vk) = p256::ecdsa::VerifyingKey::from_sec1_bytes(point) else { return false };
+    let Ok(sig) = p256::ecdsa::Signature::from_der(sig_der) else { return false };
+    vk.verify(payload, &sig).is_ok()
+}
+
+/// Prüft, ob das Förderer-Zertifikat von UNSERER hinterlegten Förderer-CA signiert ist.
+fn kette_ok(app: &tauri::AppHandle, cert_pem: &str) -> bool {
+    let Ok(ca) = ca_laden(app) else { return false };
+    let (Some(ca_der), Some(f_der)) =
+        (cert_der_aus_pem(&ca.cert_pem), cert_der_aus_pem(cert_pem))
+    else {
+        return false;
+    };
+    let Ok((_, ca_cert)) = x509_parser::parse_x509_certificate(&ca_der) else { return false };
+    let Ok((_, f_cert)) = x509_parser::parse_x509_certificate(&f_der) else { return false };
+    f_cert.verify_signature(Some(ca_cert.public_key())).is_ok()
+}
+
+/// Wählt einen Förderer-Export, prüft Signatur + Herkunft und gibt das Ergebnis
+/// samt (dekodierter) Nutzlast zurück.
+#[tauri::command]
+fn export_pruefen(app: tauri::AppHandle) -> Result<Option<PruefErgebnis>, String> {
+    use base64::Engine as _;
+    let datei = app
+        .dialog()
+        .file()
+        .add_filter("Förderer-Export", &["json"])
+        .blocking_pick_file();
+    let Some(fp) = datei else { return Ok(None) };
+    let pfad = fp.into_path().map_err(|e| format!("Pfad ungültig: {e}"))?;
+    let roh = std::fs::read_to_string(&pfad).map_err(|e| format!("Datei nicht lesbar: {e}"))?;
+    let v: serde_json::Value =
+        serde_json::from_str(&roh).map_err(|e| format!("Keine gültige Export-Datei: {e}"))?;
+    if v.get("typ").and_then(|x| x.as_str()) != Some("antrag3000-foerderer-export") {
+        return Err("Das ist keine Förderer-Export-Datei.".into());
+    }
+    let version = v.get("version").and_then(|x| x.as_u64()).unwrap_or(1);
+    if version < 2 {
+        let nutzlast = v.get("nutzlast").cloned().unwrap_or(serde_json::Value::Null);
+        return Ok(Some(PruefErgebnis {
+            signiert: false,
+            signatur_gueltig: false,
+            ca_ok: false,
+            foerderer_name: String::new(),
+            hinweis: "Diese Export-Datei ist NICHT signiert (die Förderer-App war nicht aktiviert). Herkunft nicht überprüfbar.".into(),
+            nutzlast,
+        }));
+    }
+    let sig = v.get("signatur").ok_or("Signatur fehlt.")?;
+    let wert_b64 = sig.get("wert").and_then(|x| x.as_str()).ok_or("Signaturwert fehlt.")?;
+    let cert_pem = sig
+        .get("foerderer_cert_pem")
+        .and_then(|x| x.as_str())
+        .ok_or("Förderer-Zertifikat fehlt.")?;
+    let foerderer_name = sig
+        .get("foerderer_name")
+        .and_then(|x| x.as_str())
+        .unwrap_or("")
+        .to_string();
+    let payload_b64 = v
+        .get("nutzlast_b64")
+        .and_then(|x| x.as_str())
+        .ok_or("Nutzlast fehlt.")?;
+    let payload = base64::engine::general_purpose::STANDARD
+        .decode(payload_b64)
+        .map_err(|e| format!("Nutzlast unlesbar: {e}"))?;
+    let nutzlast: serde_json::Value =
+        serde_json::from_slice(&payload).map_err(|e| format!("Nutzlast ungültig: {e}"))?;
+    let sig_der = base64::engine::general_purpose::STANDARD
+        .decode(wert_b64)
+        .map_err(|e| format!("Signatur unlesbar: {e}"))?;
+
+    let signatur_gueltig = signatur_ok(cert_pem, &payload, &sig_der);
+    let ca_ok = kette_ok(&app, cert_pem);
+    let hinweis = if signatur_gueltig && ca_ok {
+        format!("Echt: signiert von „{foerderer_name}\" und von Ihrer Förderer-CA bestätigt.")
+    } else if signatur_gueltig {
+        "Signatur passt zum Zertifikat, aber das Zertifikat stammt NICHT von Ihrer hinterlegten Förderer-CA (oder es ist keine CA hinterlegt). Herkunft nicht bestätigt.".into()
+    } else {
+        "WARNUNG: Signatur UNGÜLTIG – die Datei wurde evtl. verändert. Nicht übernehmen.".into()
+    };
+    Ok(Some(PruefErgebnis {
+        signiert: true,
+        signatur_gueltig,
+        ca_ok,
+        foerderer_name,
+        hinweis,
+        nutzlast,
+    }))
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -642,6 +757,7 @@ fn main() {
             foerderer_ca_waehlen,
             foerderer_ca_pfad,
             foerderer_aktivierung_erstellen,
+            export_pruefen,
         ])
         .run(tauri::generate_context!())
         .expect("Fehler beim Start der Admin-App");

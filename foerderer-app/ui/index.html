@@ -547,8 +547,12 @@
       let datei;
       try {
         if (aktiv) {
-          const signatur = await tauri.core.invoke("export_signieren", { inhalt: JSON.stringify(nutzlast) });
-          datei = { typ: "antrag3000-foerderer-export", version: 2, nutzlast, signatur };
+          const payloadStr = JSON.stringify(nutzlast);
+          const signatur = await tauri.core.invoke("export_signieren", { inhalt: payloadStr });
+          // Exakt die signierten Bytes verbatim transportieren (Base64, UTF-8-sicher),
+          // damit die Pruefung in der Admin-App bit-genau verifizieren kann.
+          const nutzlast_b64 = btoa(unescape(encodeURIComponent(payloadStr)));
+          datei = { typ: "antrag3000-foerderer-export", version: 2, nutzlast_b64, signatur };
         } else {
           datei = { typ: "antrag3000-foerderer-export", version: 1, nutzlast };
         }

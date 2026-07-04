@@ -172,6 +172,7 @@
         <button data-tab="foerderer">Geteilte Förderer</button>
         <button data-tab="katalog">Katalog hochladen</button>
         <button data-tab="aktivierung">Förderer aktivieren</button>
+        <button data-tab="import">Export prüfen</button>
       </nav>
 
       <div id="tab-aktivierung" class="karte tab verborgen">
@@ -194,6 +195,13 @@
           <button id="aktivierungBtn" disabled>Aktivierung erstellen …</button>
         </div>
         <div id="aktivierungMeldung"></div>
+      </div>
+
+      <div id="tab-import" class="karte tab verborgen">
+        <h2>Förderer-Export prüfen</h2>
+        <p class="dezent">Wählen Sie eine Export-Datei eines Förderers. Die Signatur wird geprüft – so sehen Sie, ob sie <strong>echt</strong> ist und von wem, bevor Sie die Förderungen übernehmen.</p>
+        <div class="knoepfe"><button id="importBtn" class="zweit">Export-Datei prüfen …</button></div>
+        <div id="importErgebnis"></div>
       </div>
 
       <div id="tab-vorschlaege" class="karte tab">
@@ -1306,6 +1314,32 @@
       } catch (e) { aktivMeldung("fehler", "⚠ " + e); }
     };
     caStatusAktualisieren();
+
+    // --- Förderer-Export prüfen (Import) ---
+    $("importBtn").onclick = async () => {
+      $("importErgebnis").innerHTML = "";
+      try {
+        const r = await invoke("export_pruefen");
+        if (!r) return;
+        importErgebnisZeigen(r);
+      } catch (e) { $("importErgebnis").innerHTML = '<div class="meld fehler" style="margin-top:12px">⚠ ' + escape(String(e)) + "</div>"; }
+    };
+    function importErgebnisZeigen(r) {
+      const org = (r.nutzlast && r.nutzlast.organisation && r.nutzlast.organisation.org) || {};
+      const anzahl = (r.nutzlast && Array.isArray(r.nutzlast.programme)) ? r.nutzlast.programme.length : 0;
+      let farbe, titel;
+      if (!r.signiert) { farbe = "#a5680a"; titel = "⚠ Nicht signiert"; }
+      else if (r.signatur_gueltig && r.ca_ok) { farbe = "#0a7d43"; titel = "✓ Echt – " + (r.foerderer_name || "Förderer"); }
+      else if (r.signatur_gueltig) { farbe = "#a5680a"; titel = "⚠ Signatur gültig, aber fremde/keine CA"; }
+      else { farbe = "#ca3521"; titel = "✕ Signatur ungültig"; }
+      $("importErgebnis").innerHTML =
+        '<div style="margin-top:14px;border:2px solid ' + farbe + ';border-radius:10px;padding:14px 16px">' +
+          '<div style="font-weight:700;color:' + farbe + '">' + escape(titel) + "</div>" +
+          '<p style="margin:6px 0 10px;color:#5e6c84;font-size:0.9rem">' + escape(r.hinweis) + "</p>" +
+          '<div style="font-size:0.9rem"><strong>Organisation:</strong> ' + escape(org.name || "(ohne Namen)") +
+            " · <strong>Programme:</strong> " + anzahl + "</div>" +
+        "</div>";
+    }
   </script>
 </body>
 </html>
