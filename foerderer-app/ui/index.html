@@ -11,47 +11,62 @@
       --weiss:#fff; --flaeche:#fafbfc; --bg:#f4f5f7; --ok:#0a7d43; --gefahr:#ca3521;
     }
     * { box-sizing: border-box; }
-    body {
-      margin: 0; font-family: "Segoe UI", system-ui, Arial, sans-serif;
-      color: var(--dunkel); background: var(--bg); font-size: 14px;
-    }
-    header {
-      background: var(--weiss); border-bottom: 1px solid var(--rand);
-      padding: 12px 22px; display: flex; align-items: center; gap: 12px;
-      position: sticky; top: 0; z-index: 5;
-    }
+    body { margin: 0; font-family: "Segoe UI", system-ui, Arial, sans-serif; color: var(--dunkel); background: var(--bg); font-size: 14px; }
+
+    header { background: var(--weiss); border-bottom: 1px solid var(--rand); padding: 10px 22px; display: flex; align-items: center; gap: 14px; position: sticky; top: 0; z-index: 5; }
     header img { height: 30px; width: 30px; display: block; }
     header h1 { font-size: 1.05rem; margin: 0; font-weight: 600; }
-    .kopf-rechts { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+    nav { display: flex; gap: 6px; margin-left: 18px; }
+    nav button { padding: 8px 16px; font-size: 0.9rem; font-weight: 600; font-family: inherit; color: var(--grau); background: transparent; border: none; border-radius: 8px; cursor: pointer; }
+    nav button:hover { background: var(--flaeche); }
+    nav button.aktiv { color: var(--gold-d); background: var(--gold-tint); }
+
+    main { padding: 24px 22px 72px; max-width: 1000px; margin: 0 auto; }
+    .intro { color: var(--grau); font-size: 0.95rem; line-height: 1.55; max-width: 640px; margin: 0 0 20px; }
+    .intro strong { color: var(--dunkel); }
+    .tag { display: inline-block; padding: 3px 10px; border-radius: 999px; background: var(--gold-tint); color: var(--gold-d); border: 1px solid var(--gold); font-weight: 600; }
+
+    .kopfzeile { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+    .kopfzeile h2 { margin: 0; font-size: 1.2rem; }
+    .speichern-bereich { display: flex; align-items: center; gap: 12px; }
     .ok { color: var(--ok); font-size: 0.85rem; font-weight: 600; display: none; }
     .ok.zeigen { display: inline; }
-    button.primaer {
-      padding: 10px 22px; font-size: 0.95rem; font-weight: 600; font-family: inherit;
-      color: var(--weiss); background: var(--gold); border: none; border-radius: 8px; cursor: pointer;
-    }
+
+    button.primaer { padding: 10px 20px; font-size: 0.93rem; font-weight: 600; font-family: inherit; color: var(--weiss); background: var(--gold); border: none; border-radius: 8px; cursor: pointer; }
     button.primaer:hover:not(:disabled) { background: var(--gold-d); }
     button.primaer:disabled { background: #d7dbe0; cursor: default; }
-
-    main { padding: 26px 22px 72px; max-width: 1000px; margin: 0 auto; }
-    .intro { color: var(--grau); font-size: 0.95rem; line-height: 1.55; max-width: 640px; margin: 0 0 22px; }
-    .intro strong { color: var(--dunkel); }
+    button.zweit { padding: 9px 16px; font-size: 0.9rem; font-weight: 600; font-family: inherit; color: var(--dunkel); background: var(--weiss); border: 2px solid var(--rand); border-radius: 8px; cursor: pointer; }
+    button.zweit:hover { border-color: var(--gold); }
+    button.mini { padding: 5px 11px; font-size: 0.8rem; font-weight: 600; font-family: inherit; border-radius: 7px; border: 2px solid var(--rand); background: var(--weiss); color: var(--dunkel); cursor: pointer; }
+    button.mini:hover { border-color: var(--gold); }
+    button.mini.gefahr { color: var(--gefahr); border-color: #f2c7c1; }
 
     .raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; align-items: start; }
-    .karte { background: var(--weiss); border: 1px solid var(--rand); border-radius: 12px; padding: 22px 24px; }
+    .karte { background: var(--weiss); border: 1px solid var(--rand); border-radius: 12px; padding: 22px 24px; margin-bottom: 16px; }
     .karte.voll { grid-column: 1 / -1; }
-    h2 { font-size: 1.05rem; margin: 0 0 4px; font-weight: 600; }
+    h3 { font-size: 1.02rem; margin: 0 0 4px; font-weight: 600; }
     .karte .hinweis { color: var(--leise); font-size: 0.85rem; margin: 0 0 6px; }
 
-    label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--grau); margin: 14px 0 5px; }
-    label .stern { color: var(--gold-d); }
-    input, select {
-      width: 100%; padding: 9px 12px; font-size: 0.95rem; font-family: inherit;
-      border: 2px solid var(--rand); border-radius: 8px; background: var(--flaeche); color: var(--dunkel);
+    label.feld { display: block; font-size: 0.82rem; font-weight: 600; color: var(--grau); margin: 14px 0 5px; }
+    label.feld .stern { color: var(--gold-d); }
+    input[type=text], input[type=email], input[type=number], input[type=date], textarea, select {
+      width: 100%; padding: 9px 12px; font-size: 0.95rem; font-family: inherit; color: var(--dunkel);
+      border: 2px solid var(--rand); border-radius: 8px; background: var(--flaeche);
     }
-    input:focus, select:focus { outline: none; border-color: var(--gold); background: var(--weiss); }
+    textarea { min-height: 90px; resize: vertical; }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--gold); background: var(--weiss); }
     input.fehlt { border-color: var(--gefahr); background: #fff6f5; }
     .feld-fehler { color: var(--gefahr); font-size: 0.8rem; margin: 5px 0 0; display: none; }
     .feld-fehler.zeigen { display: block; }
+    .zeile { display: flex; gap: 14px; flex-wrap: wrap; }
+    .zeile > div { flex: 1 1 150px; }
+
+    /* Häkchen-Gruppen */
+    .checks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+    label.chk { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border: 2px solid var(--rand); border-radius: 999px; font-size: 0.88rem; cursor: pointer; background: var(--weiss); user-select: none; }
+    label.chk:hover { border-color: var(--gold); }
+    label.chk input { accent-color: var(--gold); }
+    label.chk:has(input:checked) { border-color: var(--gold); background: var(--gold-tint); color: var(--gold-d); }
 
     /* Logo */
     .logo-zeile { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
@@ -64,39 +79,59 @@
     .logo-tipp { color: var(--leise); font-size: 0.8rem; }
     .warnung { color: var(--gefahr); font-size: 0.82rem; margin: 8px 0 0; }
 
+    /* Programm-Liste */
+    .p-karte { display: flex; align-items: center; gap: 14px; }
+    .p-karte .p-name { font-weight: 600; font-size: 1rem; }
+    .p-karte .p-meta { color: var(--leise); font-size: 0.83rem; margin-top: 2px; }
+    .p-karte .p-knoepfe { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+    .leer-hinweis { text-align: center; color: var(--grau); padding: 40px 20px; }
+
+    /* Fristen-Reihen */
+    .frist-reihe { display: flex; gap: 10px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+    .frist-reihe input[type=date] { flex: 0 0 170px; }
+    .frist-reihe input[type=text] { flex: 1 1 180px; }
+    .radio-gruppe { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+    label.radio { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border: 2px solid var(--rand); border-radius: 999px; font-size: 0.88rem; cursor: pointer; background: var(--weiss); }
+    label.radio:has(input:checked) { border-color: var(--gold); background: var(--gold-tint); color: var(--gold-d); }
+    label.radio input { accent-color: var(--gold); }
+
     footer { max-width: 1000px; margin: 0 auto; padding: 0 22px 40px; color: var(--leise); font-size: 0.8rem; }
-    .tag { display: inline-block; padding: 3px 10px; border-radius: 999px; background: var(--gold-tint); color: var(--gold-d); border: 1px solid var(--gold); font-weight: 600; }
+    [hidden] { display: none !important; }
   </style>
 </head>
 <body>
   <header>
     <img src="icon.svg" alt="" />
     <h1>Antrag 3000 – Förderer</h1>
-    <div class="kopf-rechts">
-      <span class="ok" id="okHinweis">✓ gespeichert</span>
-      <button class="primaer" id="speichernBtn" disabled>Speichern</button>
-    </div>
+    <nav>
+      <button id="tab-org" class="aktiv" data-tab="org">Organisation</button>
+      <button id="tab-prog" data-tab="prog">Förderprogramme</button>
+    </nav>
   </header>
 
-  <main>
-    <p class="intro">
-      Willkommen! Hier hinterlegen Sie <strong>einmalig</strong> die Angaben zu Ihrer
-      Organisation. Sie gelten anschließend automatisch für <strong>alle</strong> Ihre
-      Förderprogramme – Sie müssen sie also nie doppelt eingeben.
-      <span class="tag">Schritt 1: Ihre Organisation</span>
-    </p>
+  <!-- ============ ANSICHT: ORGANISATION ============ -->
+  <main id="view-org">
+    <div class="kopfzeile">
+      <p class="intro" style="margin:0">
+        Hier hinterlegen Sie <strong>einmalig</strong> die Angaben zu Ihrer Organisation –
+        sie gelten dann für <strong>alle</strong> Ihre Förderprogramme.
+        <span class="tag">Ihre Organisation</span>
+      </p>
+      <div class="speichern-bereich">
+        <span class="ok" id="okOrg">✓ gespeichert</span>
+        <button class="primaer" id="speichernOrg" disabled>Speichern</button>
+      </div>
+    </div>
 
     <section class="karte voll">
-      <h2>Logo (optional)</h2>
+      <h3>Logo (optional)</h3>
       <p class="hinweis">Erscheint später neben Ihren Förderprogrammen. PNG oder JPG, max. 1,5 MB.</p>
       <div class="logo-zeile">
         <img class="logo-vorschau" id="logoVorschau" alt="Logo" style="display:none" />
         <div class="logo-platzhalter" id="logoPlatzhalter">kein Logo</div>
         <div class="logo-knoepfe">
-          <label class="datei-knopf">
-            <span id="logoBtnText">Logo wählen …</span>
-            <input type="file" accept="image/png,image/jpeg" id="logoInput" hidden />
-          </label>
+          <label class="datei-knopf"><span id="logoBtnText">Logo wählen …</span>
+            <input type="file" accept="image/png,image/jpeg" id="logoInput" hidden /></label>
           <button type="button" class="entfernen" id="logoEntfernen" style="display:none">Entfernen</button>
           <span class="logo-tipp">Danach nicht vergessen: „Speichern".</span>
         </div>
@@ -106,15 +141,13 @@
 
     <div class="raster">
       <section class="karte">
-        <h2>Organisation</h2>
-        <label for="f-name">Name der Förderorganisation <span class="stern">*</span></label>
+        <h3>Organisation</h3>
+        <label class="feld" for="f-name">Name der Förderorganisation <span class="stern">*</span></label>
         <input type="text" id="f-name" placeholder="z. B. Kulturstiftung Musterland" />
         <p class="feld-fehler" id="fehler-f-name">Bitte den Namen Ihrer Organisation angeben.</p>
-
-        <label for="f-traeger">Träger / Abteilung (optional)</label>
+        <label class="feld" for="f-traeger">Träger / Abteilung (optional)</label>
         <input type="text" id="f-traeger" placeholder="z. B. Abteilung Kulturförderung" />
-
-        <label for="f-land">Land</label>
+        <label class="feld" for="f-land">Land</label>
         <select id="f-land">
           <option value="DE">Deutschland</option>
           <option value="AT">Österreich</option>
@@ -124,155 +157,300 @@
       </section>
 
       <section class="karte">
-        <h2>Kontakt &amp; Web</h2>
-        <label for="f-webseite">Webseite <span class="stern">*</span></label>
+        <h3>Kontakt &amp; Web</h3>
+        <label class="feld" for="f-webseite">Webseite <span class="stern">*</span></label>
         <input type="text" id="f-webseite" placeholder="https://…" />
         <p class="feld-fehler" id="fehler-f-webseite">Bitte die Webseite Ihrer Organisation angeben.</p>
-
-        <label for="f-email">Kontakt-E-Mail <span class="stern">*</span></label>
+        <label class="feld" for="f-email">Kontakt-E-Mail <span class="stern">*</span></label>
         <input type="email" id="f-email" placeholder="foerderung@…" />
         <p class="feld-fehler" id="fehler-f-email">Bitte eine Kontakt-E-Mail angeben.</p>
-
-        <label for="f-ansprechperson">Ansprechperson (optional)</label>
-        <input type="text" id="f-ansprechperson" placeholder="Vor- und Nachname" />
-
-        <label for="f-telefon">Telefon (optional)</label>
+        <label class="feld" for="f-ansprechperson">Ansprechperson (optional)</label>
+        <input type="text" id="f-ansprechperson" />
+        <label class="feld" for="f-telefon">Telefon (optional)</label>
         <input type="text" id="f-telefon" />
-
-        <label for="f-strasse">Straße und Hausnummer (optional)</label>
+        <label class="feld" for="f-strasse">Straße und Hausnummer (optional)</label>
         <input type="text" id="f-strasse" />
+        <div class="zeile">
+          <div><label class="feld" for="f-plz">PLZ (optional)</label><input type="text" id="f-plz" /></div>
+          <div><label class="feld" for="f-ort">Ort (optional)</label><input type="text" id="f-ort" /></div>
+        </div>
+      </section>
+    </div>
+  </main>
 
-        <label for="f-plz">PLZ (optional)</label>
-        <input type="text" id="f-plz" />
+  <!-- ============ ANSICHT: FÖRDERPROGRAMME ============ -->
+  <main id="view-prog" hidden>
+    <!-- Liste -->
+    <div id="prog-liste">
+      <div class="kopfzeile">
+        <div>
+          <h2>Meine Förderprogramme</h2>
+          <p class="intro" style="margin:4px 0 0">Legen Sie hier Ihre Förderprogramme an. Sie können jederzeit weiter bearbeiten.</p>
+        </div>
+        <button class="primaer" id="neuBtn">+ Neues Programm</button>
+      </div>
+      <div id="listeContainer"></div>
+    </div>
 
-        <label for="f-ort">Ort (optional)</label>
-        <input type="text" id="f-ort" />
+    <!-- Editor -->
+    <div id="prog-editor" hidden>
+      <div class="kopfzeile">
+        <h2 id="editorTitel">Neues Förderprogramm</h2>
+        <div class="speichern-bereich">
+          <button class="zweit" id="abbrechenBtn">Abbrechen</button>
+          <button class="primaer" id="speichernProg">Programm speichern</button>
+        </div>
+      </div>
+
+      <section class="karte">
+        <h3>Grunddaten</h3>
+        <label class="feld" for="p-name">Name des Förderprogramms <span class="stern">*</span></label>
+        <input type="text" id="p-name" placeholder="z. B. Projektförderung Freie Szene" />
+        <p class="feld-fehler" id="fehler-p-name">Bitte einen Namen für das Programm angeben.</p>
+        <label class="feld" for="p-webseite">Link zur Ausschreibung (optional)</label>
+        <input type="text" id="p-webseite" placeholder="https://…" />
+        <label class="feld" for="p-beschreibung">Kurzbeschreibung (optional)</label>
+        <textarea id="p-beschreibung" placeholder="Worum geht es? Was wird gefördert? Zwei, drei Sätze genügen."></textarea>
+      </section>
+
+      <section class="karte">
+        <h3>Wer kann sich bewerben?</h3>
+        <p class="hinweis">Mehrfachauswahl möglich. Nichts angehakt = keine Einschränkung.</p>
+        <label class="feld">Trägerschaft</label>
+        <div class="checks" id="chk-traeger"></div>
+        <label class="feld">Wohnsitz der Antragstellenden</label>
+        <div class="checks" id="chk-wohnsitz"></div>
+        <label class="feld">Durchführungsort des Projekts</label>
+        <div class="checks" id="chk-ort"></div>
+      </section>
+
+      <section class="karte">
+        <h3>Worum geht es?</h3>
+        <p class="hinweis">Wählen Sie alles Passende. Nichts angehakt = alle Sparten/Projektarten.</p>
+        <label class="feld">Sparten</label>
+        <div class="checks" id="chk-sparten"></div>
+        <label class="feld">Projektarten</label>
+        <div class="checks" id="chk-projektarten"></div>
+      </section>
+
+      <section class="karte">
+        <h3>Geld</h3>
+        <label class="feld" for="p-foerderhoehe">Förderhöhe (optional)</label>
+        <input type="text" id="p-foerderhoehe" placeholder="z. B. „bis 10.000 €" oder „2.000–15.000 €"" />
+        <div class="zeile">
+          <div><label class="feld" for="p-budget-min">Passt für Projekte ab … € (optional)</label><input type="number" id="p-budget-min" min="0" placeholder="z. B. 2000" /></div>
+          <div><label class="feld" for="p-budget-max">… bis … € (optional)</label><input type="number" id="p-budget-max" min="0" placeholder="z. B. 20000" /></div>
+        </div>
+        <label class="feld" for="p-anteil">Max. Anteil am Gesamtbudget in % (optional)</label>
+        <input type="number" id="p-anteil" min="0" max="100" placeholder="z. B. 80" />
+        <label class="chk" style="margin-top:10px"><input type="checkbox" id="p-anteil-ausnahme" /> höherer Anteil mit Begründung möglich</label>
+      </section>
+
+      <section class="karte">
+        <h3>Fristen</h3>
+        <div class="radio-gruppe" id="zeitpunkt-gruppe">
+          <label class="radio"><input type="radio" name="zeitpunkt" value="laufend" checked /> laufend einreichbar</label>
+          <label class="radio"><input type="radio" name="zeitpunkt" value="fristen" /> feste Frist(en)</label>
+          <label class="radio"><input type="radio" name="zeitpunkt" value="periodisch" /> wiederkehrend</label>
+        </div>
+        <div id="fristen-bereich" hidden>
+          <label class="feld">Einreichfristen</label>
+          <div id="fristenListe"></div>
+          <button type="button" class="mini" id="fristHinzu" style="margin-top:10px">+ Frist hinzufügen</button>
+        </div>
+        <label class="feld" for="p-frist-hinweis">Hinweis zu den Fristen (optional)</label>
+        <input type="text" id="p-frist-hinweis" placeholder="z. B. „mind. 3 Monate vor Projektstart"" />
       </section>
     </div>
   </main>
 
   <footer>
-    Ihre Angaben bleiben vorerst nur auf diesem Gerät. Das Einreichen an Antrag 3000
-    bauen wir in einem späteren Schritt – dann bestimmen Sie selbst, wann etwas übermittelt wird.
+    Ihre Angaben bleiben vorerst nur auf diesem Gerät. Das Einreichen an Antrag 3000 bauen wir in einem späteren Schritt.
   </footer>
 
   <script>
-    // --- Feld-Zuordnung: Element-ID -> Pfad im Datensatz -----------------
-    const FELDER = [
-      { id: "f-name",          gruppe: "org", key: "name",          pflicht: true },
-      { id: "f-traeger",       gruppe: "org", key: "traeger" },
-      { id: "f-land",          gruppe: "org", key: "land" },
-      { id: "f-webseite",      gruppe: "web", key: "webseite",      pflicht: true },
-      { id: "f-email",         gruppe: "web", key: "email",         pflicht: true },
-      { id: "f-ansprechperson",gruppe: "web", key: "ansprechperson" },
-      { id: "f-telefon",       gruppe: "web", key: "telefon" },
-      { id: "f-strasse",       gruppe: "web", key: "strasse" },
-      { id: "f-plz",           gruppe: "web", key: "plz" },
-      { id: "f-ort",           gruppe: "web", key: "ort" },
-    ];
-    const SPEICHER_SCHLUESSEL = "foerderer-stammdaten";
-
-    let logoData = "";
-    let gespeichertJSON = "";
+    // ================= Feste Begriffe (identisch zur Haupt-App) =================
+    const LAENDER = { DE: "Deutschland", AT: "Österreich", CH: "Schweiz", INT: "International" };
+    const SPARTEN = { musik:"Musik", theater:"Theater", tanz:"Tanz", performance:"Performance",
+      bildende_kunst:"Bildende Kunst", medienkunst:"Medienkunst", literatur:"Literatur", film:"Film", interdisziplinaer:"Interdisziplinär" };
+    const PROJEKTARTEN = { produktion:"Produktion", recherche_entwicklung:"Recherche & Entwicklung", residenz:"Residenz",
+      gastspiel_tournee:"Gastspiel / Tournee", festival:"Festival", veroeffentlichung:"Veröffentlichung", vermittlung:"Vermittlung", barrierefreiheit:"Barrierefreiheit" };
+    const TRAEGERSCHAFT = { einzelperson:"Einzelperson", gruppe:"Gruppe / GbR", organisation:"Verein / Organisation" };
 
     const $ = (id) => document.getElementById(id);
 
-    function leer() {
-      return { org: { name: "", traeger: "", land: "DE" },
-               web: { webseite: "", email: "", ansprechperson: "", telefon: "", strasse: "", plz: "", ort: "" },
-               logo: "" };
+    // ================= Tabs =================
+    function zeigeTab(name) {
+      $("view-org").hidden = name !== "org";
+      $("view-prog").hidden = name !== "prog";
+      $("tab-org").classList.toggle("aktiv", name === "org");
+      $("tab-prog").classList.toggle("aktiv", name === "prog");
+      if (name === "prog") { zeigeEditor(false); renderListe(); }
     }
+    $("tab-org").addEventListener("click", () => zeigeTab("org"));
+    $("tab-prog").addEventListener("click", () => zeigeTab("prog"));
 
-    function laden() {
-      try {
-        const roh = localStorage.getItem(SPEICHER_SCHLUESSEL);
-        if (!roh) return leer();
-        const d = JSON.parse(roh);
-        return { org: { ...leer().org, ...(d.org || {}) },
-                 web: { ...leer().web, ...(d.web || {}) },
-                 logo: typeof d.logo === "string" ? d.logo : "" };
-      } catch { return leer(); }
-    }
+    // ================= ORGANISATION (Stammdaten) =================
+    const ORG_FELDER = [
+      { id:"f-name", g:"org", k:"name", pflicht:true }, { id:"f-traeger", g:"org", k:"traeger" }, { id:"f-land", g:"org", k:"land" },
+      { id:"f-webseite", g:"web", k:"webseite", pflicht:true }, { id:"f-email", g:"web", k:"email", pflicht:true },
+      { id:"f-ansprechperson", g:"web", k:"ansprechperson" }, { id:"f-telefon", g:"web", k:"telefon" },
+      { id:"f-strasse", g:"web", k:"strasse" }, { id:"f-plz", g:"web", k:"plz" }, { id:"f-ort", g:"web", k:"ort" },
+    ];
+    const K_ORG = "foerderer-stammdaten";
+    let logoData = "", orgGespeichert = "";
 
-    function inFelder(d) {
-      for (const f of FELDER) $(f.id).value = (d[f.gruppe] && d[f.gruppe][f.key]) || "";
-      logoData = d.logo || "";
-      logoAnzeigen();
-    }
-
-    function ausFeldern() {
-      const d = leer();
-      for (const f of FELDER) d[f.gruppe][f.key] = $(f.id).value.trim();
-      d.logo = logoData;
-      return d;
-    }
-
-    function veraendertPruefen() {
-      const jetzt = JSON.stringify(ausFeldern());
-      const veraendert = jetzt !== gespeichertJSON;
-      $("speichernBtn").disabled = !veraendert;
-      if (veraendert) $("okHinweis").classList.remove("zeigen");
-    }
-
-    function speichern() {
-      // Sanfte Pflichtfeld-Prüfung: markieren, aber freundlich.
+    function orgLeer() { return { org:{name:"",traeger:"",land:"DE"}, web:{webseite:"",email:"",ansprechperson:"",telefon:"",strasse:"",plz:"",ort:""}, logo:"" }; }
+    function orgLaden() { try { const d = JSON.parse(localStorage.getItem(K_ORG)); if(!d) return orgLeer();
+      return { org:{...orgLeer().org,...(d.org||{})}, web:{...orgLeer().web,...(d.web||{})}, logo: typeof d.logo==="string"?d.logo:"" }; } catch { return orgLeer(); } }
+    function orgInFelder(d) { for (const f of ORG_FELDER) $(f.id).value = (d[f.g] && d[f.g][f.k]) || ""; logoData = d.logo||""; logoAnzeigen(); }
+    function orgAusFeldern() { const d = orgLeer(); for (const f of ORG_FELDER) d[f.g][f.k] = $(f.id).value.trim(); d.logo = logoData; return d; }
+    function orgPruefen() { const v = JSON.stringify(orgAusFeldern()) !== orgGespeichert; $("speichernOrg").disabled = !v; if (v) $("okOrg").classList.remove("zeigen"); }
+    function orgSpeichern() {
       let fehlt = false;
-      for (const f of FELDER) {
-        if (!f.pflicht) continue;
-        const el = $(f.id), fehlerEl = $("fehler-" + f.id);
-        const leerFeld = el.value.trim() === "";
-        el.classList.toggle("fehlt", leerFeld);
-        if (fehlerEl) fehlerEl.classList.toggle("zeigen", leerFeld);
-        if (leerFeld) fehlt = true;
-      }
-      if (fehlt) { $("f-name").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
-
-      const d = ausFeldern();
-      localStorage.setItem(SPEICHER_SCHLUESSEL, JSON.stringify(d));
-      gespeichertJSON = JSON.stringify(d);
-      $("speichernBtn").disabled = true;
-      $("okHinweis").classList.add("zeigen");
+      for (const f of ORG_FELDER) { if(!f.pflicht) continue; const el=$(f.id), fe=$("fehler-"+f.id), leer=el.value.trim()===""; el.classList.toggle("fehlt",leer); if(fe) fe.classList.toggle("zeigen",leer); if(leer) fehlt=true; }
+      if (fehlt) { $("f-name").scrollIntoView({behavior:"smooth",block:"center"}); return; }
+      const d = orgAusFeldern(); localStorage.setItem(K_ORG, JSON.stringify(d)); orgGespeichert = JSON.stringify(d);
+      $("speichernOrg").disabled = true; $("okOrg").classList.add("zeigen");
     }
 
-    // --- Logo ------------------------------------------------------------
+    // Logo
     const MAX_LOGO = 1_500_000;
-    function logoAnzeigen() {
-      const hat = !!logoData;
-      $("logoVorschau").style.display = hat ? "block" : "none";
-      if (hat) $("logoVorschau").src = logoData;
-      $("logoPlatzhalter").style.display = hat ? "none" : "grid";
-      $("logoEntfernen").style.display = hat ? "inline-block" : "none";
-      $("logoBtnText").textContent = hat ? "Logo ersetzen …" : "Logo wählen …";
-    }
+    function logoAnzeigen() { const hat = !!logoData;
+      $("logoVorschau").style.display = hat?"block":"none"; if(hat) $("logoVorschau").src = logoData;
+      $("logoPlatzhalter").style.display = hat?"none":"grid"; $("logoEntfernen").style.display = hat?"inline-block":"none";
+      $("logoBtnText").textContent = hat?"Logo ersetzen …":"Logo wählen …"; }
     $("logoInput").addEventListener("change", (e) => {
-      $("logoFehler").style.display = "none";
-      const f = e.target.files && e.target.files[0];
-      e.target.value = "";
+      $("logoFehler").style.display = "none"; const f = e.target.files && e.target.files[0]; e.target.value = "";
       if (!f) return;
-      if (!/^image\/(png|jpeg)$/.test(f.type)) { zeigeLogoFehler("Bitte ein PNG- oder JPG-Bild wählen."); return; }
-      if (f.size > MAX_LOGO) { zeigeLogoFehler("Das Bild ist zu groß (max. 1,5 MB)."); return; }
-      const leser = new FileReader();
-      leser.onload = () => { logoData = leser.result; logoAnzeigen(); veraendertPruefen(); };
-      leser.onerror = () => zeigeLogoFehler("Das Bild konnte nicht gelesen werden.");
-      leser.readAsDataURL(f);
+      if (!/^image\/(png|jpeg)$/.test(f.type)) return logoFehlerZeigen("Bitte ein PNG- oder JPG-Bild wählen.");
+      if (f.size > MAX_LOGO) return logoFehlerZeigen("Das Bild ist zu groß (max. 1,5 MB).");
+      const r = new FileReader(); r.onload = () => { logoData = r.result; logoAnzeigen(); orgPruefen(); };
+      r.onerror = () => logoFehlerZeigen("Das Bild konnte nicht gelesen werden."); r.readAsDataURL(f);
     });
-    function zeigeLogoFehler(t) { const el = $("logoFehler"); el.textContent = t; el.style.display = "block"; }
-    $("logoEntfernen").addEventListener("click", () => { logoData = ""; logoAnzeigen(); veraendertPruefen(); });
+    function logoFehlerZeigen(t) { const el = $("logoFehler"); el.textContent = t; el.style.display = "block"; }
+    $("logoEntfernen").addEventListener("click", () => { logoData = ""; logoAnzeigen(); orgPruefen(); });
 
-    // --- Start -----------------------------------------------------------
-    const start = laden();
-    inFelder(start);
-    gespeichertJSON = JSON.stringify(start);
-    for (const f of FELDER) {
-      $(f.id).addEventListener("input", () => {
-        $(f.id).classList.remove("fehlt");
-        const fehlerEl = $("fehler-" + f.id); if (fehlerEl) fehlerEl.classList.remove("zeigen");
-        veraendertPruefen();
-      });
-      $(f.id).addEventListener("change", veraendertPruefen);
+    // ================= FÖRDERPROGRAMME =================
+    const K_PROG = "foerderer-programme";
+    let programme = progLaden();
+    let editIndex = null;
+
+    function progLaden() { try { const a = JSON.parse(localStorage.getItem(K_PROG)); return Array.isArray(a)?a:[]; } catch { return []; } }
+    function progSpeichern() { localStorage.setItem(K_PROG, JSON.stringify(programme)); }
+    function neueId() { return "p-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,7); }
+    function leeresProgramm() { return { id:neueId(), name:"", webseite:"", beschreibung:"",
+      harte_kriterien:{ wohnsitz:[], durchfuehrungsort:[], traegerschaft:[] },
+      weiche_kriterien:{ sparten:[], projektarten:[], budget_min:null, budget_max:null, zeitpunkt:"laufend" },
+      fristen:[], frist_hinweis:"", foerderhoehe_text:"", max_anteil_prozent:null, anteil_ausnahme:false }; }
+
+    function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+    function renderListe() {
+      const c = $("listeContainer");
+      if (!programme.length) { c.innerHTML = '<div class="karte leer-hinweis">Noch keine Förderprogramme. Legen Sie mit „+ Neues Programm" das erste an.</div>'; return; }
+      c.innerHTML = programme.map((p, i) => {
+        const spar = (p.weiche_kriterien.sparten||[]).map(k => SPARTEN[k]).filter(Boolean).join(", ");
+        const meta = spar || "noch ohne Sparte";
+        return '<div class="karte p-karte">' +
+          '<div><div class="p-name">' + (escapeHtml(p.name) || "(ohne Namen)") + '</div><div class="p-meta">' + escapeHtml(meta) + '</div></div>' +
+          '<div class="p-knoepfe">' +
+            '<button class="mini" data-akt="bearbeiten" data-i="' + i + '">Bearbeiten</button>' +
+            '<button class="mini" data-akt="duplizieren" data-i="' + i + '">Duplizieren</button>' +
+            '<button class="mini gefahr" data-akt="loeschen" data-i="' + i + '">Löschen</button>' +
+          '</div></div>';
+      }).join("");
     }
-    $("speichernBtn").addEventListener("click", speichern);
-    veraendertPruefen();
+    $("listeContainer").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-akt]"); if (!b) return;
+      const i = Number(b.dataset.i), akt = b.dataset.akt;
+      if (akt === "bearbeiten") oeffneEditor(i);
+      else if (akt === "duplizieren") { const kopie = structuredClone(programme[i]); kopie.id = neueId(); kopie.name = (kopie.name||"") + " (Kopie)"; programme.splice(i+1,0,kopie); progSpeichern(); renderListe(); }
+      else if (akt === "loeschen") { if (confirm("Dieses Förderprogramm wirklich löschen?")) { programme.splice(i,1); progSpeichern(); renderListe(); } }
+    });
+
+    // Häkchen-Gruppen rendern / lesen
+    function renderChecks(containerId, vocab, selected) {
+      $(containerId).innerHTML = Object.entries(vocab).map(([k,v]) =>
+        '<label class="chk"><input type="checkbox" value="' + k + '"' + (selected.includes(k)?" checked":"") + " /> " + v + "</label>").join("");
+    }
+    function leseChecks(containerId) { return [...$(containerId).querySelectorAll("input:checked")].map(i => i.value); }
+
+    // Fristen-Liste
+    function fristReihe(datum, hinweis) {
+      const div = document.createElement("div"); div.className = "frist-reihe";
+      div.innerHTML = '<input type="date" value="' + (datum||"") + '" /><input type="text" placeholder="Hinweis (optional), z. B. „1. Halbjahr"" value="' + escapeHtml(hinweis||"") + '" /><button type="button" class="mini gefahr">Entfernen</button>';
+      div.querySelector("button").addEventListener("click", () => div.remove());
+      return div;
+    }
+    $("fristHinzu").addEventListener("click", () => $("fristenListe").appendChild(fristReihe("","")));
+    $("zeitpunkt-gruppe").addEventListener("change", () => { $("fristen-bereich").hidden = zeitpunktWert() === "laufend"; });
+    function zeitpunktWert() { const el = document.querySelector('input[name="zeitpunkt"]:checked'); return el ? el.value : "laufend"; }
+
+    function oeffneEditor(index) {
+      editIndex = index;
+      const p = index == null ? leeresProgramm() : structuredClone(programme[index]);
+      $("editorTitel").textContent = index == null ? "Neues Förderprogramm" : "Förderprogramm bearbeiten";
+      $("p-name").value = p.name || ""; $("p-name").classList.remove("fehlt"); $("fehler-p-name").classList.remove("zeigen");
+      $("p-webseite").value = p.webseite || ""; $("p-beschreibung").value = p.beschreibung || "";
+      $("p-foerderhoehe").value = p.foerderhoehe_text || "";
+      $("p-budget-min").value = p.weiche_kriterien.budget_min ?? "";
+      $("p-budget-max").value = p.weiche_kriterien.budget_max ?? "";
+      $("p-anteil").value = p.max_anteil_prozent ?? "";
+      $("p-anteil-ausnahme").checked = !!p.anteil_ausnahme;
+      $("p-frist-hinweis").value = p.frist_hinweis || "";
+      renderChecks("chk-traeger", TRAEGERSCHAFT, p.harte_kriterien.traegerschaft || []);
+      renderChecks("chk-wohnsitz", LAENDER, p.harte_kriterien.wohnsitz || []);
+      renderChecks("chk-ort", LAENDER, p.harte_kriterien.durchfuehrungsort || []);
+      renderChecks("chk-sparten", SPARTEN, p.weiche_kriterien.sparten || []);
+      renderChecks("chk-projektarten", PROJEKTARTEN, p.weiche_kriterien.projektarten || []);
+      const z = p.weiche_kriterien.zeitpunkt || "laufend";
+      const zr = document.querySelector('input[name="zeitpunkt"][value="' + z + '"]'); if (zr) zr.checked = true;
+      $("fristen-bereich").hidden = z === "laufend";
+      $("fristenListe").innerHTML = ""; (p.fristen || []).forEach(f => { const n = (f && typeof f === "object") ? f : { datum: String(f||""), hinweis:"" }; $("fristenListe").appendChild(fristReihe(n.datum, n.hinweis)); });
+      zeigeEditor(true);
+    }
+    function zeigeEditor(an) { $("prog-editor").hidden = !an; $("prog-liste").hidden = an; if (an) window.scrollTo(0,0); }
+
+    function zahlOderNull(v) { const s = String(v).trim(); if (s === "") return null; const n = Number(s); return isNaN(n) ? null : n; }
+
+    function sammleProgramm() {
+      const p = editIndex == null ? leeresProgramm() : structuredClone(programme[editIndex]);
+      p.name = $("p-name").value.trim(); p.webseite = $("p-webseite").value.trim(); p.beschreibung = $("p-beschreibung").value.trim();
+      p.foerderhoehe_text = $("p-foerderhoehe").value.trim();
+      p.max_anteil_prozent = zahlOderNull($("p-anteil").value); p.anteil_ausnahme = $("p-anteil-ausnahme").checked;
+      p.frist_hinweis = $("p-frist-hinweis").value.trim();
+      p.harte_kriterien = { traegerschaft: leseChecks("chk-traeger"), wohnsitz: leseChecks("chk-wohnsitz"), durchfuehrungsort: leseChecks("chk-ort") };
+      p.weiche_kriterien = { sparten: leseChecks("chk-sparten"), projektarten: leseChecks("chk-projektarten"),
+        budget_min: zahlOderNull($("p-budget-min").value), budget_max: zahlOderNull($("p-budget-max").value), zeitpunkt: zeitpunktWert() };
+      const fristen = [];
+      if (zeitpunktWert() !== "laufend") {
+        $("fristenListe").querySelectorAll(".frist-reihe").forEach(r => {
+          const datum = r.querySelector('input[type=date]').value.trim();
+          const hinweis = r.querySelector('input[type=text]').value.trim();
+          if (datum) fristen.push({ datum, hinweis });
+        });
+      }
+      p.fristen = fristen;
+      return p;
+    }
+    function speichernProgramm() {
+      if ($("p-name").value.trim() === "") { $("p-name").classList.add("fehlt"); $("fehler-p-name").classList.add("zeigen"); $("p-name").scrollIntoView({behavior:"smooth",block:"center"}); return; }
+      const p = sammleProgramm();
+      if (editIndex == null) programme.push(p); else programme[editIndex] = p;
+      progSpeichern(); zeigeEditor(false); renderListe();
+    }
+    $("neuBtn").addEventListener("click", () => oeffneEditor(null));
+    $("abbrechenBtn").addEventListener("click", () => zeigeEditor(false));
+    $("speichernProg").addEventListener("click", speichernProgramm);
+    $("p-name").addEventListener("input", () => { $("p-name").classList.remove("fehlt"); $("fehler-p-name").classList.remove("zeigen"); });
+
+    // ================= Start =================
+    const orgStart = orgLaden(); orgInFelder(orgStart); orgGespeichert = JSON.stringify(orgStart);
+    for (const f of ORG_FELDER) { $(f.id).addEventListener("input", () => { $(f.id).classList.remove("fehlt"); const fe=$("fehler-"+f.id); if(fe) fe.classList.remove("zeigen"); orgPruefen(); }); $(f.id).addEventListener("change", orgPruefen); }
+    $("speichernOrg").addEventListener("click", orgSpeichern);
+    orgPruefen();
+    renderListe();
   </script>
 </body>
 </html>
