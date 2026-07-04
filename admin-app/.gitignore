@@ -2,3 +2,7 @@
 node_modules/
 src-tauri/target/
 src-tauri/gen/
+
+# Vom Veröffentlichungs-Skript erzeugtes Update-Manifest (wird auf die NAS
+# hochgeladen, gehört nicht ins Repo).
+release/latest.json
