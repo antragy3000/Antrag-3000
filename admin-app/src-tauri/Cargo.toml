@@ -16,6 +16,9 @@ tauri-plugin-dialog = "2"
 # Meldung/eines Vorschlags). Offizielles Tauri-Plugin wie in der Nutzer-App,
 # keine eigene Krypto/Prozess-Logik.
 tauri-plugin-opener = "2"
+# Signiertes Selbstupdate (wie die Nutzer-App): prueft den Updater-Endpoint und
+# installiert nur Pakete mit gueltiger minisign-Signatur.
+tauri-plugin-updater = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # mTLS-HTTP-Client (wie in der Nutzer-App): reqwest mit rustls.

@@ -20,6 +20,7 @@
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
 use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_updater::UpdaterExt;
 use tauri_plugin_opener::OpenerExt;
 
 // --- Zugangs-Paket (.a3kpaket) lesen -----------------------------------
@@ -731,10 +732,36 @@ fn export_pruefen(app: tauri::AppHandle) -> Result<Option<PruefErgebnis>, String
     }))
 }
 
+// --- Signiertes Selbstupdate (wie die Nutzer-App) ---
+
+/// Prüft den Updater-Endpoint. Rückgabe: neue Version, oder None wenn aktuell.
+#[tauri::command]
+async fn nach_update_suchen(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    let upd = app.updater().map_err(|e| e.to_string())?;
+    match upd.check().await.map_err(|e| e.to_string())? {
+        Some(u) => Ok(Some(u.version)),
+        None => Ok(None),
+    }
+}
+
+/// Lädt das (minisign-verifizierte) Update, installiert es und startet neu.
+#[tauri::command]
+async fn update_installieren(app: tauri::AppHandle) -> Result<(), String> {
+    let upd = app.updater().map_err(|e| e.to_string())?;
+    if let Some(u) = upd.check().await.map_err(|e| e.to_string())? {
+        u.download_and_install(|_, _| {}, || {})
+            .await
+            .map_err(|e| e.to_string())?;
+        app.restart();
+    }
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             paket_waehlen,
             paket_laden,
@@ -758,6 +785,8 @@ fn main() {
             foerderer_ca_pfad,
             foerderer_aktivierung_erstellen,
             export_pruefen,
+            nach_update_suchen,
+            update_installieren,
         ])
         .run(tauri::generate_context!())
         .expect("Fehler beim Start der Admin-App");

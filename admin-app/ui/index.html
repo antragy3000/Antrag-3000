@@ -136,6 +136,7 @@
   <header>
     <h1>Antrag 3000 – Admin</h1>
     <span class="geraet" id="geraetLabel"></span>
+    <button id="updateBtn" class="zweit" style="padding:6px 12px;font-size:0.8rem">Auf Updates prüfen</button>
   </header>
 
   <main>
@@ -1372,6 +1373,21 @@
             " · <strong>Programme:</strong> " + anzahl + "</div>" +
         "</div>";
     }
+
+    // --- Signiertes Selbstupdate ---
+    $("updateBtn").onclick = async () => {
+      const btn = $("updateBtn"), orig = btn.textContent;
+      btn.disabled = true; btn.textContent = "Suche …";
+      try {
+        const v = await invoke("nach_update_suchen");
+        if (!v) { alert("Sie haben bereits die neueste Version."); }
+        else if (confirm("Update auf Version " + v + " verfügbar.\nJetzt installieren? Die App startet danach neu.")) {
+          btn.textContent = "Installiere …";
+          await invoke("update_installieren");
+        }
+      } catch (e) { alert("Update-Prüfung fehlgeschlagen:\n" + e); }
+      finally { btn.disabled = false; btn.textContent = orig; }
+    };
   </script>
 </body>
 </html>
