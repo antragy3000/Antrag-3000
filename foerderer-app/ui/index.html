@@ -120,6 +120,16 @@
 
   <!-- ============ ANSICHT: ORGANISATION ============ -->
   <main id="view-org">
+    <section class="karte voll">
+      <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap">
+        <div>
+          <h3 style="margin:0 0 3px">Aktivierung</h3>
+          <p class="hinweis" id="aktStatusText" style="margin:0">…</p>
+        </div>
+        <button class="zweit" id="aktLadenBtn" style="margin-left:auto">Aktivierung laden …</button>
+      </div>
+    </section>
+
     <div class="kopfzeile">
       <p class="intro" style="margin:0">
         Hier hinterlegen Sie <strong>einmalig</strong> die Angaben zu Ihrer Organisation –
@@ -491,10 +501,39 @@
     $("speichernProg").addEventListener("click", speichernProgramm);
     $("p-name").addEventListener("input", () => { $("p-name").classList.remove("fehlt"); $("fehler-p-name").classList.remove("zeigen"); });
 
+    // ================= Aktivierung (Signatur-Herkunft) =================
+    let aktiv = false, aktName = "";
+    function setAktText() {
+      const el = $("aktStatusText");
+      if (aktiv) {
+        el.textContent = "Aktiviert als: " + aktName + " – Ihre Exporte werden signiert.";
+        el.style.color = "var(--ok)";
+        $("aktLadenBtn").textContent = "Aktivierung ändern …";
+      } else {
+        el.textContent = "Noch nicht aktiviert. Laden Sie Ihre Aktivierungs-Datei von Antrag 3000, damit Ihre Exporte fälschungssicher (signiert) werden.";
+        el.style.color = "var(--grau)";
+        $("aktLadenBtn").textContent = "Aktivierung laden …";
+      }
+    }
+    async function aktStatusLaden() {
+      const t = window.__TAURI__;
+      if (!t || !t.core) { aktiv = false; aktName = ""; $("aktStatusText").textContent = "Aktivierung ist nur in der installierten App verfügbar (nicht in der Browser-Vorschau)."; return; }
+      try { const s = await t.core.invoke("aktivierung_status"); aktiv = !!s.aktiv; aktName = s.foerderer_name || ""; } catch { aktiv = false; aktName = ""; }
+      setAktText();
+    }
+    $("aktLadenBtn").addEventListener("click", async () => {
+      const t = window.__TAURI__;
+      if (!t || !t.core) { alert("Nur in der installierten App verfügbar."); return; }
+      try {
+        const s = await t.core.invoke("aktivierung_waehlen");
+        if (s) { aktiv = !!s.aktiv; aktName = s.foerderer_name || ""; setAktText();
+          alert("Aktivierung geladen: " + (aktName || "(ohne Namen)") + "\nIhre Exporte werden jetzt signiert."); }
+      } catch (e) { alert("Aktivierung nicht ladbar: " + e); }
+    });
+
     // ================= Export (Weg A: Datei) =================
-    function exportObjekt() {
-      return { typ: "antrag3000-foerderer-export", version: 1, exportiert_am: new Date().toISOString(),
-        organisation: orgLaden(), programme: progLaden() };
+    function nutzlastObjekt() {
+      return { exportiert_am: new Date().toISOString(), organisation: orgLaden(), programme: progLaden() };
     }
     async function exportieren() {
       const org = orgLaden(), prog = progLaden();
@@ -504,15 +543,26 @@
       }
       const tauri = window.__TAURI__;
       if (!tauri || !tauri.core) { alert("Der Export funktioniert nur in der installierten App (nicht in der Browser-Vorschau)."); return; }
+      const nutzlast = nutzlastObjekt();
+      let datei;
+      try {
+        if (aktiv) {
+          const signatur = await tauri.core.invoke("export_signieren", { inhalt: JSON.stringify(nutzlast) });
+          datei = { typ: "antrag3000-foerderer-export", version: 2, nutzlast, signatur };
+        } else {
+          datei = { typ: "antrag3000-foerderer-export", version: 1, nutzlast };
+        }
+      } catch (e) { alert("Signieren nicht möglich: " + e); return; }
       const sicher = ((org.org.name || "foerderer").replace(/[^A-Za-z0-9_-]+/g, "_")).slice(0, 40) || "foerderer";
       const name = "antrag3000-foerderer-" + sicher + ".json";
-      const inhalt = JSON.stringify(exportObjekt(), null, 2);
+      const inhalt = JSON.stringify(datei, null, 2);
       try {
         const pfad = await tauri.core.invoke("export_speichern", { vorschlagName: name, inhalt });
-        if (pfad) alert("Export gespeichert:\n" + pfad + "\n\nBitte schicken Sie diese Datei an Antrag 3000.");
+        if (pfad) alert("Export gespeichert" + (aktiv ? " (signiert)" : " (NICHT signiert – App nicht aktiviert)") + ":\n" + pfad + "\n\nBitte schicken Sie diese Datei an Antrag 3000.");
       } catch (e) { alert("Export nicht möglich: " + e); }
     }
     $("exportBtn").addEventListener("click", exportieren);
+    aktStatusLaden();
 
     // ================= Start =================
     const orgStart = orgLaden(); orgInFelder(orgStart); orgGespeichert = JSON.stringify(orgStart);

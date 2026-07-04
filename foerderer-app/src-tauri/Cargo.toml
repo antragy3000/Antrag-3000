@@ -17,6 +17,10 @@ tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# Signatur-Herkunft: signiert jeden Export mit dem Foerderer-Schluessel
+# (ECDSA P-256, RustCrypto) -> jede Foerderung ist dem Foerderer zuordenbar.
+p256 = { version = "0.13", features = ["ecdsa", "pem", "pkcs8"] }
+base64 = "0.22"
 
 [profile.release]
 opt-level = "z"
