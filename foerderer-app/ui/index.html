@@ -5,44 +5,274 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Antrag 3000 – Förderer</title>
   <style>
-    :root { --gold:#f5a623; --gold-d:#d98c0f; --rand:#dfe1e6; --grau:#5e6c84; --dunkel:#172b4d; }
+    :root {
+      --gold:#f5a623; --gold-d:#d98c0f; --gold-tint:#fff7e9;
+      --rand:#dfe1e6; --grau:#5e6c84; --leise:#8993a4; --dunkel:#172b4d;
+      --weiss:#fff; --flaeche:#fafbfc; --bg:#f4f5f7; --ok:#0a7d43; --gefahr:#ca3521;
+    }
     * { box-sizing: border-box; }
     body {
       margin: 0; font-family: "Segoe UI", system-ui, Arial, sans-serif;
-      color: var(--dunkel); background: #f4f5f7; font-size: 14px;
+      color: var(--dunkel); background: var(--bg); font-size: 14px;
     }
     header {
-      background: #fff; border-bottom: 1px solid var(--rand);
-      padding: 12px 20px; display: flex; align-items: center; gap: 12px;
+      background: var(--weiss); border-bottom: 1px solid var(--rand);
+      padding: 12px 22px; display: flex; align-items: center; gap: 12px;
+      position: sticky; top: 0; z-index: 5;
     }
-    header img { height: 28px; width: 28px; display: block; }
-    header h1 { font-size: 1.05rem; margin: 0; }
-    main { padding: 48px 20px; max-width: 720px; margin: 0 auto; text-align: center; }
-    .karte {
-      background: #fff; border: 1px solid var(--rand); border-radius: 12px;
-      padding: 44px 28px;
+    header img { height: 30px; width: 30px; display: block; }
+    header h1 { font-size: 1.05rem; margin: 0; font-weight: 600; }
+    .kopf-rechts { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+    .ok { color: var(--ok); font-size: 0.85rem; font-weight: 600; display: none; }
+    .ok.zeigen { display: inline; }
+    button.primaer {
+      padding: 10px 22px; font-size: 0.95rem; font-weight: 600; font-family: inherit;
+      color: var(--weiss); background: var(--gold); border: none; border-radius: 8px; cursor: pointer;
     }
-    .karte img { width: 96px; height: 96px; }
-    h2 { margin: 20px 0 8px; font-size: 1.2rem; }
-    p { color: var(--grau); margin: 6px 0; }
-    .tag { display:inline-block; margin-top:14px; padding:4px 12px; border-radius:999px;
-      background:#fff7e9; color:var(--gold-d); border:1px solid var(--gold);
-      font-size:0.8rem; font-weight:600; }
+    button.primaer:hover:not(:disabled) { background: var(--gold-d); }
+    button.primaer:disabled { background: #d7dbe0; cursor: default; }
+
+    main { padding: 26px 22px 72px; max-width: 1000px; margin: 0 auto; }
+    .intro { color: var(--grau); font-size: 0.95rem; line-height: 1.55; max-width: 640px; margin: 0 0 22px; }
+    .intro strong { color: var(--dunkel); }
+
+    .raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; align-items: start; }
+    .karte { background: var(--weiss); border: 1px solid var(--rand); border-radius: 12px; padding: 22px 24px; }
+    .karte.voll { grid-column: 1 / -1; }
+    h2 { font-size: 1.05rem; margin: 0 0 4px; font-weight: 600; }
+    .karte .hinweis { color: var(--leise); font-size: 0.85rem; margin: 0 0 6px; }
+
+    label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--grau); margin: 14px 0 5px; }
+    label .stern { color: var(--gold-d); }
+    input, select {
+      width: 100%; padding: 9px 12px; font-size: 0.95rem; font-family: inherit;
+      border: 2px solid var(--rand); border-radius: 8px; background: var(--flaeche); color: var(--dunkel);
+    }
+    input:focus, select:focus { outline: none; border-color: var(--gold); background: var(--weiss); }
+    input.fehlt { border-color: var(--gefahr); background: #fff6f5; }
+    .feld-fehler { color: var(--gefahr); font-size: 0.8rem; margin: 5px 0 0; display: none; }
+    .feld-fehler.zeigen { display: block; }
+
+    /* Logo */
+    .logo-zeile { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+    .logo-vorschau { max-width: 220px; max-height: 84px; object-fit: contain; border: 1px solid var(--rand); border-radius: 8px; padding: 8px; background: var(--weiss); }
+    .logo-platzhalter { width: 200px; height: 84px; display: grid; place-items: center; border: 2px dashed var(--rand); border-radius: 8px; color: var(--leise); font-size: 0.85rem; }
+    .logo-knoepfe { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+    .datei-knopf { display: inline-block; padding: 9px 16px; font-size: 0.9rem; font-weight: 600; color: var(--dunkel); background: var(--weiss); border: 2px solid var(--rand); border-radius: 8px; cursor: pointer; }
+    .datei-knopf:hover { border-color: var(--gold); }
+    .entfernen { padding: 7px 14px; font-size: 0.85rem; background: var(--weiss); color: var(--gefahr); border: 2px solid #f2c7c1; border-radius: 8px; cursor: pointer; }
+    .logo-tipp { color: var(--leise); font-size: 0.8rem; }
+    .warnung { color: var(--gefahr); font-size: 0.82rem; margin: 8px 0 0; }
+
+    footer { max-width: 1000px; margin: 0 auto; padding: 0 22px 40px; color: var(--leise); font-size: 0.8rem; }
+    .tag { display: inline-block; padding: 3px 10px; border-radius: 999px; background: var(--gold-tint); color: var(--gold-d); border: 1px solid var(--gold); font-weight: 600; }
   </style>
 </head>
 <body>
   <header>
     <img src="icon.svg" alt="" />
     <h1>Antrag 3000 – Förderer</h1>
+    <div class="kopf-rechts">
+      <span class="ok" id="okHinweis">✓ gespeichert</span>
+      <button class="primaer" id="speichernBtn" disabled>Speichern</button>
+    </div>
   </header>
+
   <main>
-    <div class="karte">
-      <img src="icon.svg" alt="Förderer-App" />
-      <h2>Förderer-App</h2>
-      <p>Grundgerüst – lauffähiges, noch leeres Fenster.</p>
-      <p>Die Funktionen folgen in den nächsten Schritten.</p>
-      <span class="tag">Version 0.1.0</span>
+    <p class="intro">
+      Willkommen! Hier hinterlegen Sie <strong>einmalig</strong> die Angaben zu Ihrer
+      Organisation. Sie gelten anschließend automatisch für <strong>alle</strong> Ihre
+      Förderprogramme – Sie müssen sie also nie doppelt eingeben.
+      <span class="tag">Schritt 1: Ihre Organisation</span>
+    </p>
+
+    <section class="karte voll">
+      <h2>Logo (optional)</h2>
+      <p class="hinweis">Erscheint später neben Ihren Förderprogrammen. PNG oder JPG, max. 1,5 MB.</p>
+      <div class="logo-zeile">
+        <img class="logo-vorschau" id="logoVorschau" alt="Logo" style="display:none" />
+        <div class="logo-platzhalter" id="logoPlatzhalter">kein Logo</div>
+        <div class="logo-knoepfe">
+          <label class="datei-knopf">
+            <span id="logoBtnText">Logo wählen …</span>
+            <input type="file" accept="image/png,image/jpeg" id="logoInput" hidden />
+          </label>
+          <button type="button" class="entfernen" id="logoEntfernen" style="display:none">Entfernen</button>
+          <span class="logo-tipp">Danach nicht vergessen: „Speichern".</span>
+        </div>
+      </div>
+      <p class="warnung" id="logoFehler" style="display:none"></p>
+    </section>
+
+    <div class="raster">
+      <section class="karte">
+        <h2>Organisation</h2>
+        <label for="f-name">Name der Förderorganisation <span class="stern">*</span></label>
+        <input type="text" id="f-name" placeholder="z. B. Kulturstiftung Musterland" />
+        <p class="feld-fehler" id="fehler-f-name">Bitte den Namen Ihrer Organisation angeben.</p>
+
+        <label for="f-traeger">Träger / Abteilung (optional)</label>
+        <input type="text" id="f-traeger" placeholder="z. B. Abteilung Kulturförderung" />
+
+        <label for="f-land">Land</label>
+        <select id="f-land">
+          <option value="DE">Deutschland</option>
+          <option value="AT">Österreich</option>
+          <option value="CH">Schweiz</option>
+          <option value="andere">anderes Land</option>
+        </select>
+      </section>
+
+      <section class="karte">
+        <h2>Kontakt &amp; Web</h2>
+        <label for="f-webseite">Webseite <span class="stern">*</span></label>
+        <input type="text" id="f-webseite" placeholder="https://…" />
+        <p class="feld-fehler" id="fehler-f-webseite">Bitte die Webseite Ihrer Organisation angeben.</p>
+
+        <label for="f-email">Kontakt-E-Mail <span class="stern">*</span></label>
+        <input type="email" id="f-email" placeholder="foerderung@…" />
+        <p class="feld-fehler" id="fehler-f-email">Bitte eine Kontakt-E-Mail angeben.</p>
+
+        <label for="f-ansprechperson">Ansprechperson (optional)</label>
+        <input type="text" id="f-ansprechperson" placeholder="Vor- und Nachname" />
+
+        <label for="f-telefon">Telefon (optional)</label>
+        <input type="text" id="f-telefon" />
+
+        <label for="f-strasse">Straße und Hausnummer (optional)</label>
+        <input type="text" id="f-strasse" />
+
+        <label for="f-plz">PLZ (optional)</label>
+        <input type="text" id="f-plz" />
+
+        <label for="f-ort">Ort (optional)</label>
+        <input type="text" id="f-ort" />
+      </section>
     </div>
   </main>
+
+  <footer>
+    Ihre Angaben bleiben vorerst nur auf diesem Gerät. Das Einreichen an Antrag 3000
+    bauen wir in einem späteren Schritt – dann bestimmen Sie selbst, wann etwas übermittelt wird.
+  </footer>
+
+  <script>
+    // --- Feld-Zuordnung: Element-ID -> Pfad im Datensatz -----------------
+    const FELDER = [
+      { id: "f-name",          gruppe: "org", key: "name",          pflicht: true },
+      { id: "f-traeger",       gruppe: "org", key: "traeger" },
+      { id: "f-land",          gruppe: "org", key: "land" },
+      { id: "f-webseite",      gruppe: "web", key: "webseite",      pflicht: true },
+      { id: "f-email",         gruppe: "web", key: "email",         pflicht: true },
+      { id: "f-ansprechperson",gruppe: "web", key: "ansprechperson" },
+      { id: "f-telefon",       gruppe: "web", key: "telefon" },
+      { id: "f-strasse",       gruppe: "web", key: "strasse" },
+      { id: "f-plz",           gruppe: "web", key: "plz" },
+      { id: "f-ort",           gruppe: "web", key: "ort" },
+    ];
+    const SPEICHER_SCHLUESSEL = "foerderer-stammdaten";
+
+    let logoData = "";
+    let gespeichertJSON = "";
+
+    const $ = (id) => document.getElementById(id);
+
+    function leer() {
+      return { org: { name: "", traeger: "", land: "DE" },
+               web: { webseite: "", email: "", ansprechperson: "", telefon: "", strasse: "", plz: "", ort: "" },
+               logo: "" };
+    }
+
+    function laden() {
+      try {
+        const roh = localStorage.getItem(SPEICHER_SCHLUESSEL);
+        if (!roh) return leer();
+        const d = JSON.parse(roh);
+        return { org: { ...leer().org, ...(d.org || {}) },
+                 web: { ...leer().web, ...(d.web || {}) },
+                 logo: typeof d.logo === "string" ? d.logo : "" };
+      } catch { return leer(); }
+    }
+
+    function inFelder(d) {
+      for (const f of FELDER) $(f.id).value = (d[f.gruppe] && d[f.gruppe][f.key]) || "";
+      logoData = d.logo || "";
+      logoAnzeigen();
+    }
+
+    function ausFeldern() {
+      const d = leer();
+      for (const f of FELDER) d[f.gruppe][f.key] = $(f.id).value.trim();
+      d.logo = logoData;
+      return d;
+    }
+
+    function veraendertPruefen() {
+      const jetzt = JSON.stringify(ausFeldern());
+      const veraendert = jetzt !== gespeichertJSON;
+      $("speichernBtn").disabled = !veraendert;
+      if (veraendert) $("okHinweis").classList.remove("zeigen");
+    }
+
+    function speichern() {
+      // Sanfte Pflichtfeld-Prüfung: markieren, aber freundlich.
+      let fehlt = false;
+      for (const f of FELDER) {
+        if (!f.pflicht) continue;
+        const el = $(f.id), fehlerEl = $("fehler-" + f.id);
+        const leerFeld = el.value.trim() === "";
+        el.classList.toggle("fehlt", leerFeld);
+        if (fehlerEl) fehlerEl.classList.toggle("zeigen", leerFeld);
+        if (leerFeld) fehlt = true;
+      }
+      if (fehlt) { $("f-name").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+
+      const d = ausFeldern();
+      localStorage.setItem(SPEICHER_SCHLUESSEL, JSON.stringify(d));
+      gespeichertJSON = JSON.stringify(d);
+      $("speichernBtn").disabled = true;
+      $("okHinweis").classList.add("zeigen");
+    }
+
+    // --- Logo ------------------------------------------------------------
+    const MAX_LOGO = 1_500_000;
+    function logoAnzeigen() {
+      const hat = !!logoData;
+      $("logoVorschau").style.display = hat ? "block" : "none";
+      if (hat) $("logoVorschau").src = logoData;
+      $("logoPlatzhalter").style.display = hat ? "none" : "grid";
+      $("logoEntfernen").style.display = hat ? "inline-block" : "none";
+      $("logoBtnText").textContent = hat ? "Logo ersetzen …" : "Logo wählen …";
+    }
+    $("logoInput").addEventListener("change", (e) => {
+      $("logoFehler").style.display = "none";
+      const f = e.target.files && e.target.files[0];
+      e.target.value = "";
+      if (!f) return;
+      if (!/^image\/(png|jpeg)$/.test(f.type)) { zeigeLogoFehler("Bitte ein PNG- oder JPG-Bild wählen."); return; }
+      if (f.size > MAX_LOGO) { zeigeLogoFehler("Das Bild ist zu groß (max. 1,5 MB)."); return; }
+      const leser = new FileReader();
+      leser.onload = () => { logoData = leser.result; logoAnzeigen(); veraendertPruefen(); };
+      leser.onerror = () => zeigeLogoFehler("Das Bild konnte nicht gelesen werden.");
+      leser.readAsDataURL(f);
+    });
+    function zeigeLogoFehler(t) { const el = $("logoFehler"); el.textContent = t; el.style.display = "block"; }
+    $("logoEntfernen").addEventListener("click", () => { logoData = ""; logoAnzeigen(); veraendertPruefen(); });
+
+    // --- Start -----------------------------------------------------------
+    const start = laden();
+    inFelder(start);
+    gespeichertJSON = JSON.stringify(start);
+    for (const f of FELDER) {
+      $(f.id).addEventListener("input", () => {
+        $(f.id).classList.remove("fehlt");
+        const fehlerEl = $("fehler-" + f.id); if (fehlerEl) fehlerEl.classList.remove("zeigen");
+        veraendertPruefen();
+      });
+      $(f.id).addEventListener("change", veraendertPruefen);
+    }
+    $("speichernBtn").addEventListener("click", speichern);
+    veraendertPruefen();
+  </script>
 </body>
 </html>
