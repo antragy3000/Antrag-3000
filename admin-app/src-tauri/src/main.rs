@@ -424,6 +424,198 @@ async fn admin_katalog_hochladen(
     r.text().await.map_err(|e| format!("Antwort nicht lesbar: {e}"))
 }
 
+// ============================================================
+// Förderer-Aktivierung (Signatur-Herkunft) – Ausstellen.
+//
+// Die Admin-App führt eine EIGENE "Förderer-CA" (getrennt von der Team-CA).
+// Damit stellt sie pro Förderer eine Aktivierungs-Datei aus: Schlüsselpaar +
+// ein von der Förderer-CA signiertes Zertifikat (CN = Förderername). Die
+// Förderer-App signiert damit später ihre Exporte -> jede Förderung ist
+// fälschungssicher diesem Förderer zuordenbar.
+//
+// Der CA-Privatschlüssel bleibt in einer Datei (vom Admin sicher verwahrt) und
+// verlässt den Rust-Teil NIE Richtung Weboberfläche; die App merkt sich nur
+// den PFAD zur CA-Datei (im Konfig-Ordner).
+// ============================================================
+
+#[derive(Serialize, Deserialize)]
+struct FoerdererCa {
+    #[serde(default)]
+    typ: String,
+    cert_pem: String,
+    key_pem: String,
+}
+
+fn epoch_sekunden() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+/// Kleine Merk-Datei: speichert NUR den Pfad zur Förderer-CA-Datei.
+fn ca_merk_datei(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    let dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| format!("Konfig-Ordner nicht ermittelbar: {e}"))?;
+    std::fs::create_dir_all(&dir).map_err(|e| format!("Konfig-Ordner nicht anlegbar: {e}"))?;
+    Ok(dir.join("foerderer_ca_pfad.txt"))
+}
+
+/// Liest die Förderer-CA aus der gemerkten Datei.
+fn ca_laden(app: &tauri::AppHandle) -> Result<FoerdererCa, String> {
+    let merk = ca_merk_datei(app)?;
+    let pfad = std::fs::read_to_string(&merk)
+        .map_err(|_| "Es ist noch keine Förderer-CA hinterlegt.".to_string())?;
+    let pfad = pfad.trim();
+    if pfad.is_empty() {
+        return Err("Es ist noch keine Förderer-CA hinterlegt.".into());
+    }
+    let roh = std::fs::read_to_string(pfad).map_err(|e| format!("CA-Datei nicht lesbar: {e}"))?;
+    let ca: FoerdererCa = serde_json::from_str(&roh).map_err(|e| format!("CA-Datei ungültig: {e}"))?;
+    if ca.cert_pem.is_empty() || ca.key_pem.is_empty() {
+        return Err("CA-Datei unvollständig.".into());
+    }
+    Ok(ca)
+}
+
+/// Erstellt eine neue Förderer-CA und speichert sie über einen Dialog.
+#[tauri::command]
+fn foerderer_ca_erstellen(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    let key = rcgen::KeyPair::generate().map_err(|e| format!("Schlüssel nicht erzeugbar: {e}"))?;
+    let mut p = rcgen::CertificateParams::new(Vec::<String>::new())
+        .map_err(|e| format!("CA-Parameter fehlerhaft: {e}"))?;
+    p.distinguished_name
+        .push(rcgen::DnType::OrganizationName, "Antrag 3000 Team");
+    p.distinguished_name
+        .push(rcgen::DnType::CommonName, "Antrag 3000 Förderer-CA");
+    p.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Constrained(0));
+    p.key_usages = vec![
+        rcgen::KeyUsagePurpose::KeyCertSign,
+        rcgen::KeyUsagePurpose::CrlSign,
+    ];
+    p.not_before = rcgen::date_time_ymd(2024, 1, 1);
+    p.not_after = rcgen::date_time_ymd(2035, 1, 1);
+    let cert = p.self_signed(&key).map_err(|e| format!("CA nicht signierbar: {e}"))?;
+    let ca = FoerdererCa {
+        typ: "antrag3000-foerderer-ca".into(),
+        cert_pem: cert.pem(),
+        key_pem: key.serialize_pem(),
+    };
+    let inhalt =
+        serde_json::to_string_pretty(&ca).map_err(|e| format!("CA nicht serialisierbar: {e}"))?;
+
+    let datei = app
+        .dialog()
+        .file()
+        .set_file_name("antrag3000-foerderer-ca.json")
+        .add_filter("Förderer-CA", &["json"])
+        .blocking_save_file();
+    let Some(fp) = datei else { return Ok(None) };
+    let pfad = fp.into_path().map_err(|e| format!("Pfad ungültig: {e}"))?;
+    std::fs::write(&pfad, inhalt).map_err(|e| format!("CA nicht speicherbar: {e}"))?;
+    let s = pfad.to_string_lossy().to_string();
+    let _ = std::fs::write(ca_merk_datei(&app)?, &s);
+    Ok(Some(s))
+}
+
+/// Wählt eine bestehende Förderer-CA-Datei und merkt sich den Pfad.
+#[tauri::command]
+fn foerderer_ca_waehlen(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    let datei = app
+        .dialog()
+        .file()
+        .add_filter("Förderer-CA", &["json"])
+        .blocking_pick_file();
+    let Some(fp) = datei else { return Ok(None) };
+    let pfad = fp.into_path().map_err(|e| format!("Pfad ungültig: {e}"))?;
+    let roh = std::fs::read_to_string(&pfad).map_err(|e| format!("Datei nicht lesbar: {e}"))?;
+    let ca: FoerdererCa =
+        serde_json::from_str(&roh).map_err(|e| format!("Keine gültige CA-Datei: {e}"))?;
+    if ca.cert_pem.is_empty() || ca.key_pem.is_empty() {
+        return Err("CA-Datei unvollständig.".into());
+    }
+    let s = pfad.to_string_lossy().to_string();
+    let _ = std::fs::write(ca_merk_datei(&app)?, &s);
+    Ok(Some(s))
+}
+
+/// Gibt den gemerkten CA-Pfad zurück ("" wenn keiner/ungültig).
+#[tauri::command]
+fn foerderer_ca_pfad(app: tauri::AppHandle) -> String {
+    ca_merk_datei(&app)
+        .ok()
+        .and_then(|f| std::fs::read_to_string(f).ok())
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty() && std::path::Path::new(s).exists())
+        .unwrap_or_default()
+}
+
+/// Stellt eine Aktivierungs-Datei für einen Förderer aus (von der Förderer-CA
+/// signiertes Zertifikat + Schlüsselpaar).
+#[tauri::command]
+fn foerderer_aktivierung_erstellen(
+    app: tauri::AppHandle,
+    foerderer_name: String,
+) -> Result<Option<String>, String> {
+    let name = foerderer_name.trim().to_string();
+    if name.is_empty() {
+        return Err("Bitte einen Förderer-Namen angeben.".into());
+    }
+    let ca = ca_laden(&app)?;
+
+    let ca_key =
+        rcgen::KeyPair::from_pem(&ca.key_pem).map_err(|e| format!("CA-Schlüssel unlesbar: {e}"))?;
+    let ca_cert = rcgen::CertificateParams::from_ca_cert_pem(&ca.cert_pem)
+        .map_err(|e| format!("CA-Zertifikat unlesbar: {e}"))?
+        .self_signed(&ca_key)
+        .map_err(|e| format!("CA nicht rekonstruierbar: {e}"))?;
+
+    let f_key = rcgen::KeyPair::generate().map_err(|e| format!("Schlüssel nicht erzeugbar: {e}"))?;
+    let mut p = rcgen::CertificateParams::new(Vec::<String>::new())
+        .map_err(|e| format!("Parameter fehlerhaft: {e}"))?;
+    p.distinguished_name
+        .push(rcgen::DnType::OrganizationName, "Antrag 3000 Förderer");
+    p.distinguished_name
+        .push(rcgen::DnType::CommonName, name.as_str());
+    p.is_ca = rcgen::IsCa::NoCa;
+    p.key_usages = vec![rcgen::KeyUsagePurpose::DigitalSignature];
+    p.not_before = rcgen::date_time_ymd(2024, 1, 1);
+    p.not_after = rcgen::date_time_ymd(2035, 1, 1);
+    let f_cert = p
+        .signed_by(&f_key, &ca_cert, &ca_key)
+        .map_err(|e| format!("Zertifikat nicht signierbar: {e}"))?;
+
+    let paket = serde_json::json!({
+        "typ": "antrag3000-foerderer-aktivierung",
+        "version": 1,
+        "foerderer_name": name,
+        "ausgestellt_am": epoch_sekunden(),
+        "foerderer_key_pem": f_key.serialize_pem(),
+        "foerderer_cert_pem": f_cert.pem(),
+        "ca_cert_pem": ca.cert_pem,
+    });
+    let inhalt =
+        serde_json::to_string_pretty(&paket).map_err(|e| format!("Nicht serialisierbar: {e}"))?;
+
+    let sicher: String = name
+        .chars()
+        .map(|c| if c.is_alphanumeric() { c } else { '_' })
+        .collect();
+    let vorschlag = format!("antrag3000-aktivierung-{sicher}.json");
+    let datei = app
+        .dialog()
+        .file()
+        .set_file_name(&vorschlag)
+        .add_filter("Förderer-Aktivierung", &["json"])
+        .blocking_save_file();
+    let Some(fp) = datei else { return Ok(None) };
+    let pfad = fp.into_path().map_err(|e| format!("Pfad ungültig: {e}"))?;
+    std::fs::write(&pfad, inhalt).map_err(|e| format!("Datei nicht speicherbar: {e}"))?;
+    Ok(Some(pfad.to_string_lossy().to_string()))
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -446,6 +638,10 @@ fn main() {
             admin_vorschlag_freigeben,
             admin_vorschlag_verwerfen,
             admin_katalog_hochladen,
+            foerderer_ca_erstellen,
+            foerderer_ca_waehlen,
+            foerderer_ca_pfad,
+            foerderer_aktivierung_erstellen,
         ])
         .run(tauri::generate_context!())
         .expect("Fehler beim Start der Admin-App");

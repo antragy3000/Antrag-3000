@@ -162,6 +162,29 @@
       <div id="verbindenMeldung"></div>
     </section>
 
+    <!-- Förderer aktivieren (lokal, ohne Login/Server) -->
+    <section id="foerderer-aktivierung" class="karte">
+      <h2>Förderer aktivieren</h2>
+      <p class="dezent">
+        Einmalig eine <strong>Förderer-Signaturstelle</strong> erstellen, dann pro Förderer eine
+        <strong>Aktivierungs-Datei</strong> ausstellen. Damit signiert die Förderer-App ihre Exporte –
+        jede Förderung ist so fälschungssicher diesem Förderer zuordenbar.
+      </p>
+      <div class="knoepfe">
+        <button id="caErstellenBtn">Förderer-CA erstellen …</button>
+        <button id="caWaehlenBtn" class="zweit">Bestehende CA wählen …</button>
+      </div>
+      <p id="caStatus" class="dezent"></p>
+
+      <label for="foerdererNameFeld">Name des Förderers</label>
+      <input type="text" id="foerdererNameFeld" placeholder="z. B. Kulturstiftung Musterland"
+             style="letter-spacing:normal;font-size:1rem" />
+      <div class="knoepfe">
+        <button id="aktivierungBtn" disabled>Aktivierung erstellen …</button>
+      </div>
+      <div id="aktivierungMeldung"></div>
+    </section>
+
     <!-- 2) Angemeldet: Funktionen -->
     <section id="app" class="verborgen">
       <nav>
@@ -1238,6 +1261,51 @@
         ladeFoerderer();
       } catch (err) { alert("⚠ " + err); b.disabled = false; }
     };
+    // ============ Förderer aktivieren (lokal, kein Login/Server nötig) ============
+    function aktivMeldung(art, text) {
+      const el = $("aktivierungMeldung");
+      el.textContent = text;
+      el.style.whiteSpace = "pre-line";
+      el.style.marginTop = "10px";
+      el.style.fontSize = "0.88rem";
+      el.style.color = art === "fehler" ? "#ca3521" : (art === "erfolg" ? "#0a7d43" : "#5e6c84");
+    }
+    async function caStatusAktualisieren() {
+      let pfad = "";
+      try { pfad = await invoke("foerderer_ca_pfad"); } catch {}
+      const hat = !!pfad;
+      $("caStatus").textContent = hat
+        ? ("Signaturstelle aktiv – Datei: " + pfad)
+        : "Noch keine Förderer-CA hinterlegt. Bitte zuerst eine erstellen (oder eine bestehende wählen).";
+      $("aktivierungBtn").disabled = !hat || $("foerdererNameFeld").value.trim() === "";
+    }
+    $("caErstellenBtn").onclick = async () => {
+      try {
+        const p = await invoke("foerderer_ca_erstellen");
+        if (p) { await caStatusAktualisieren(); aktivMeldung("erfolg",
+          "Förderer-CA erstellt und gespeichert:\n" + p +
+          "\n\nWICHTIG: Diese Datei enthält den geheimen Signatur-Schlüssel – sicher aufbewahren, nicht weitergeben."); }
+      } catch (e) { aktivMeldung("fehler", "⚠ " + e); }
+    };
+    $("caWaehlenBtn").onclick = async () => {
+      try { const p = await invoke("foerderer_ca_waehlen"); if (p) { await caStatusAktualisieren(); aktivMeldung("info", "Förderer-CA geladen."); } }
+      catch (e) { aktivMeldung("fehler", "⚠ " + e); }
+    };
+    $("foerdererNameFeld").addEventListener("input", caStatusAktualisieren);
+    $("aktivierungBtn").onclick = async () => {
+      const name = $("foerdererNameFeld").value.trim();
+      if (!name) return;
+      try {
+        const p = await invoke("foerderer_aktivierung_erstellen", { foerdererName: name });
+        if (p) {
+          aktivMeldung("erfolg", "Aktivierung erstellt:\n" + p +
+            "\n\nGeben Sie diese Datei dem Förderer – er lädt sie einmalig in die Förderer-App.");
+          $("foerdererNameFeld").value = "";
+          caStatusAktualisieren();
+        }
+      } catch (e) { aktivMeldung("fehler", "⚠ " + e); }
+    };
+    caStatusAktualisieren();
   </script>
 </body>
 </html>
