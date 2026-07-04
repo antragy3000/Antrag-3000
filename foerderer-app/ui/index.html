@@ -67,6 +67,14 @@
     label.chk:hover { border-color: var(--gold); }
     label.chk input { accent-color: var(--gold); }
     label.chk:has(input:checked) { border-color: var(--gold); background: var(--gold-tint); color: var(--gold-d); }
+    button.chip-vor { padding: 7px 12px; border: 2px dashed var(--rand); border-radius: 999px; font-size: 0.88rem; background: var(--weiss); color: var(--grau); cursor: pointer; font-family: inherit; }
+    button.chip-vor:hover:not(:disabled) { border-color: var(--gold); color: var(--gold-d); }
+    button.chip-vor:disabled { opacity: 0.4; cursor: default; }
+    .dok-liste { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
+    .chip-dok { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border: 2px solid var(--gold); background: var(--gold-tint); color: var(--gold-d); border-radius: 999px; font-size: 0.88rem; }
+    .chip-dok button { border: none; background: none; color: var(--gold-d); cursor: pointer; font-size: 0.95rem; line-height: 1; padding: 0; }
+    .dok-add { display: flex; gap: 8px; margin-top: 8px; }
+    .dok-add input { flex: 1; }
 
     /* Logo */
     .logo-zeile { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
@@ -234,6 +242,17 @@
       </section>
 
       <section class="karte">
+        <h3>Benötigte Unterlagen</h3>
+        <p class="hinweis">Welche Dokumente müssen Antragstellende einreichen? Vorschläge anklicken oder eigene hinzufügen.</p>
+        <div class="checks" id="dok-vorschlaege"></div>
+        <div class="dok-liste" id="dok-liste"></div>
+        <div class="dok-add">
+          <input type="text" id="dok-neu" placeholder="z. B. Projektbeschreibung" />
+          <button type="button" class="zweit" id="dok-add-btn">+ Dokument</button>
+        </div>
+      </section>
+
+      <section class="karte">
         <h3>Geld</h3>
         <label class="feld" for="p-foerderhoehe">Förderhöhe (optional)</label>
         <input type="text" id="p-foerderhoehe" placeholder="z. B. „bis 10.000 €" oder „2.000–15.000 €"" />
@@ -342,7 +361,7 @@
     function leeresProgramm() { return { id:neueId(), name:"", webseite:"", beschreibung:"",
       harte_kriterien:{ wohnsitz:[], durchfuehrungsort:[], traegerschaft:[] },
       weiche_kriterien:{ sparten:[], projektarten:[], budget_min:null, budget_max:null, zeitpunkt:"laufend" },
-      fristen:[], frist_hinweis:"", foerderhoehe_text:"", max_anteil_prozent:null, anteil_ausnahme:false }; }
+      fristen:[], frist_hinweis:"", foerderhoehe_text:"", max_anteil_prozent:null, anteil_ausnahme:false, checkliste_vorschlag:[] }; }
 
     function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
@@ -376,6 +395,23 @@
     }
     function leseChecks(containerId) { return [...$(containerId).querySelectorAll("input:checked")].map(i => i.value); }
 
+    // Benötigte Unterlagen (checkliste_vorschlag)
+    const DOK_VORSCHLAEGE = ["Projektbeschreibung","Kosten- und Finanzierungsplan","Künstlerische Vita","Arbeitsproben / Portfolio","Antragsformular","Lebenslauf","Zeitplan","Projektkonzept"];
+    let editorDok = [];
+    function renderDok() {
+      $("dok-liste").innerHTML = editorDok.map((d, i) =>
+        '<span class="chip-dok">' + escapeHtml(d) + '<button type="button" title="Entfernen" data-i="' + i + '">✕</button></span>').join("");
+    }
+    function renderDokVorschlaege() {
+      $("dok-vorschlaege").innerHTML = DOK_VORSCHLAEGE.map(d =>
+        '<button type="button" class="chip-vor" data-dok="' + escapeHtml(d) + '"' + (editorDok.includes(d) ? " disabled" : "") + ">+ " + escapeHtml(d) + "</button>").join("");
+    }
+    function dokHinzu(t) { t = (t || "").trim(); if (t && !editorDok.includes(t)) { editorDok.push(t); renderDok(); renderDokVorschlaege(); } }
+    $("dok-vorschlaege").addEventListener("click", (e) => { const b = e.target.closest("button[data-dok]"); if (b) dokHinzu(b.dataset.dok); });
+    $("dok-liste").addEventListener("click", (e) => { const b = e.target.closest("button[data-i]"); if (b) { editorDok.splice(Number(b.dataset.i), 1); renderDok(); renderDokVorschlaege(); } });
+    $("dok-add-btn").addEventListener("click", () => { dokHinzu($("dok-neu").value); $("dok-neu").value = ""; });
+    $("dok-neu").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); dokHinzu($("dok-neu").value); $("dok-neu").value = ""; } });
+
     // Fristen-Liste
     function fristReihe(datum, hinweis) {
       const div = document.createElement("div"); div.className = "frist-reihe";
@@ -404,6 +440,7 @@
       renderChecks("chk-ort", LAENDER, p.harte_kriterien.durchfuehrungsort || []);
       renderChecks("chk-sparten", SPARTEN, p.weiche_kriterien.sparten || []);
       renderChecks("chk-projektarten", PROJEKTARTEN, p.weiche_kriterien.projektarten || []);
+      editorDok = [...(p.checkliste_vorschlag || [])]; renderDok(); renderDokVorschlaege(); $("dok-neu").value = "";
       const z = p.weiche_kriterien.zeitpunkt || "laufend";
       const zr = document.querySelector('input[name="zeitpunkt"][value="' + z + '"]'); if (zr) zr.checked = true;
       $("fristen-bereich").hidden = z === "laufend";
@@ -418,6 +455,7 @@
       const p = editIndex == null ? leeresProgramm() : structuredClone(programme[editIndex]);
       p.name = $("p-name").value.trim(); p.webseite = $("p-webseite").value.trim(); p.beschreibung = $("p-beschreibung").value.trim();
       p.foerderhoehe_text = $("p-foerderhoehe").value.trim();
+      p.checkliste_vorschlag = [...editorDok];
       p.max_anteil_prozent = zahlOderNull($("p-anteil").value); p.anteil_ausnahme = $("p-anteil-ausnahme").checked;
       p.frist_hinweis = $("p-frist-hinweis").value.trim();
       p.harte_kriterien = { traegerschaft: leseChecks("chk-traeger"), wohnsitz: leseChecks("chk-wohnsitz"), durchfuehrungsort: leseChecks("chk-ort") };
