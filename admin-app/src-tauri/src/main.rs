@@ -425,6 +425,37 @@ async fn admin_katalog_hochladen(
     r.text().await.map_err(|e| format!("Antwort nicht lesbar: {e}"))
 }
 
+/// Lädt das volle Förderer-Logo hoch (PUT /api/admin/logos/{id}).
+/// Body = Data-URL (data:image/...;base64,...). logo_id ist ein Slug
+/// (URL-sicher), daher ohne Kodierung direkt in den Pfad.
+#[tauri::command]
+async fn admin_logo_hochladen(
+    adresse: String,
+    ausweis_pem: String,
+    ca_pem: String,
+    token: String,
+    logo_id: String,
+    daten_url: String,
+) -> Result<(), String> {
+    let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
+    let url = format!("{}/api/admin/logos/{}", basis_url(&adresse), logo_id);
+    let r = client
+        .put(&url)
+        .header("x-admin-token", &token)
+        .header("content-type", "text/plain")
+        .body(daten_url)
+        .send()
+        .await
+        .map_err(|e| format!("Logo-Upload fehlgeschlagen: {}", fehler_kette(&e)))?;
+    match r.status().as_u16() {
+        401 => Err("Sitzung abgelaufen – bitte neu anmelden.".into()),
+        400 => Err("Logo ungültig (nur Bilder).".into()),
+        413 => Err("Logo ist zu groß.".into()),
+        s if !(200..300).contains(&s) => Err(format!("Server antwortete mit {s}.")),
+        _ => Ok(()),
+    }
+}
+
 // ============================================================
 // Förderer-Aktivierung (Signatur-Herkunft) – Ausstellen.
 //
@@ -839,6 +870,7 @@ fn main() {
             admin_vorschlag_freigeben,
             admin_vorschlag_verwerfen,
             admin_katalog_hochladen,
+            admin_logo_hochladen,
             foerderer_ca_erstellen,
             foerderer_ca_waehlen,
             foerderer_ca_pfad,

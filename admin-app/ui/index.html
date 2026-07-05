@@ -1535,6 +1535,7 @@
       // für die Förder-Kachel in der Nutzer-App. Das VOLLE Logo kommt später als
       // separate NAS-Datei dazu (Etappe 3c-2), damit der Katalog schlank bleibt.
       const orgLogo = (r.nutzlast && r.nutzlast.organisation && r.nutzlast.organisation.logo) || "";
+      const logoId = importSlug(org.name || r.foerderer_name) || "org";
       let logoThumb = "";
       if (orgLogo) {
         try { logoThumb = await logoThumbnail(orgLogo, 96); }
@@ -1542,7 +1543,8 @@
       }
       const eintraege = gewaehlt.map((p) => {
         const e = programmZuKatalog(p, org, web, r);
-        if (logoThumb) e.logo_thumb = logoThumb;
+        if (logoThumb) e.logo_thumb = logoThumb; // kleine Vorschau (Kachel)
+        if (orgLogo) e.logo_id = logoId;         // Verweis auf das volle Logo (NAS)
         return e;
       });
 
@@ -1562,6 +1564,14 @@
       if (btn) btn.disabled = true;
       meldung("importMeldung", "info", "Übernehme und lade hoch …");
       try {
+        // Volles Logo separat auf die NAS (für die Danksagung/Credits). Fehler
+        // hier bricht die Übernahme NICHT ab – die Kachel-Vorschau steckt schon
+        // im Eintrag.
+        let logoHinweis = "";
+        if (orgLogo) {
+          try { await invoke("admin_logo_hochladen", { ...basisArgs(), logoId, datenUrl: orgLogo }); }
+          catch (e) { logoHinweis = " (Hinweis: volles Logo nicht hochgeladen: " + e + ")"; }
+        }
         for (const e of eintraege) {
           const i = katalog.foerderungen.findIndex((x) => x.id === e.id);
           if (i >= 0) katalog.foerderungen[i] = e; else katalog.foerderungen.push(e);
@@ -1570,7 +1580,7 @@
         const roh = await katalogSpeichern();
         let info = "";
         try { const a = JSON.parse(roh); info = ` Gesamt ${a.anzahl}, Stand ${a.stand ?? "?"}.`; } catch {}
-        meldung("importMeldung", "ok", `✓ Übernommen: ${neu} neu, ${akt} aktualisiert.${info}`);
+        meldung("importMeldung", "ok", `✓ Übernommen: ${neu} neu, ${akt} aktualisiert.${info}${logoHinweis}`);
       } catch (e) {
         meldung("importMeldung", "fehler", "⚠ " + e);
         if (btn) btn.disabled = false;
