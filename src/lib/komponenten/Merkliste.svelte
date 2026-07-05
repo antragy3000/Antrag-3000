@@ -35,6 +35,7 @@
     hinweisVerwerfen = null,
     standFuer = null,
     neuFelderFuer = null,
+    logoHerunterladen = null,
   } = $props();
 
   let ausgewaehlt = $state(null);
@@ -365,6 +366,7 @@
     antragAendern={antragSpeichern}
     stand={standFuer ? standFuer(ausgewaehlt.id) : null}
     geaenderteFelder={neuFelderFuer ? neuFelderFuer(ausgewaehlt.id) : []}
+    {logoHerunterladen}
     schliessen={() => {
       ausgewaehlt = null;
       aktuellerAntrag = null;

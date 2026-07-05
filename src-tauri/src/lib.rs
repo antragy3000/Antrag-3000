@@ -7,6 +7,7 @@ mod beleg;
 mod dokument;
 mod excel;
 mod katalog;
+mod logo;
 mod ordner;
 mod pdf;
 mod sync;
@@ -57,6 +58,7 @@ pub fn run() {
             sync::katalog_oeffentlich_holen,
             sync::sync_logo_holen,
             sync::logo_oeffentlich_holen,
+            logo::logo_herunterladen,
             sync::sync_meldung_senden,
             sync::sync_foerderer_holen,
             sync::sync_foerderer_senden,

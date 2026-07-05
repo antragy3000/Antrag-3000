@@ -1595,6 +1595,42 @@
   }
 
   // Update vom Team-Server holen (mTLS) – Etappe 3. Braucht ein
+  // Lädt das VOLLE Förderer-Logo von der NAS (über denselben Weg wie der
+  // Katalog: Team = mTLS, Einzelplatz = offener Kanal) und speichert es per
+  // Dialog als Bilddatei. Die kleine Kachel-Vorschau steckt schon im Katalog.
+  async function logoHerunterladen(f) {
+    if (!f?.logo_id) return;
+    try {
+      let datenUrl = null;
+      if (daten.modus === "team" && daten.sync) {
+        datenUrl = await invoke("sync_logo_holen", {
+          adresse: daten.sync.adresse,
+          ausweisPem: daten.sync.ausweisPem,
+          caPem: daten.sync.caPem ?? "",
+          logoId: f.logo_id,
+        });
+      } else if (daten.einzelServer) {
+        datenUrl = await invoke("logo_oeffentlich_holen", {
+          adresse: daten.einzelServer,
+          logoId: f.logo_id,
+        });
+      } else {
+        alert("Kein Server eingerichtet, um das Logo zu laden.");
+        return;
+      }
+      if (!datenUrl) {
+        alert("Für diesen Förderer ist (noch) kein Logo hinterlegt.");
+        return;
+      }
+      await invoke("logo_herunterladen", {
+        datenUrl,
+        vorschlagName: "Logo " + (f.foerdergeber || f.name || "Foerderer"),
+      });
+    } catch (e) {
+      alert("Logo konnte nicht geladen werden:\n" + e);
+    }
+  }
+
   // eingerichtetes Gerät (Zugangs-Paket geladen).
   async function katalogUpdateVomServer() {
     let roh;
@@ -2236,6 +2272,7 @@
             oeffneKatalog={() => (katalogOffen = true)}
             standFuer={katalogStandFuer}
             neuFelderFuer={katalogNeuFelder}
+            {logoHerunterladen}
           />
         {:else if !aktivesProjekt}
           <div class="leer-projekt">
@@ -2258,6 +2295,7 @@
               oeffneKatalog={() => (katalogOffen = true)}
               standFuer={katalogStandFuer}
               neuFelderFuer={katalogNeuFelder}
+              {logoHerunterladen}
             />
           {/key}
         {/if}
@@ -2446,6 +2484,7 @@
           teamBoard={daten.sync?.teamBoard ?? null}
           {meineProjektIds}
           foerderungLabel={boardFoerderungLabel}
+          {logoHerunterladen}
         />
       {:else}
         <Merkliste
@@ -2466,6 +2505,7 @@
           hinweisVerwerfen={katalogHinweisVerwerfen}
           standFuer={katalogStandFuer}
           neuFelderFuer={katalogNeuFelder}
+          {logoHerunterladen}
         />
       {/if}
     </main>

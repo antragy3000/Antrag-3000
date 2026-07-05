@@ -30,6 +30,7 @@
     teamBoard = null,
     meineProjektIds = [],
     foerderungLabel = null,
+    logoHerunterladen = null,
   } = $props();
 
   let ausgewaehlt = $state(null);
@@ -425,6 +426,7 @@
     hochladen={dokumentHochladen ? (art) => dokumentHochladen(ausgewaehlt.name, art) : null}
     pdfVorschau={antragsPdfVorschau ? () => antragsPdfVorschau(ausgewaehlt) : null}
     pdfSpeichern={antragsPdfSpeichern ? () => antragsPdfSpeichern(ausgewaehlt) : null}
+    {logoHerunterladen}
     antrag={aktuellerAntrag}
     antragAendern={antragSpeichern}
     schliessen={() => {

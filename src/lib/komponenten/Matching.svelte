@@ -9,7 +9,7 @@
   import FoerderKarte from "./FoerderKarte.svelte";
   import FoerderDetail from "./FoerderDetail.svelte";
 
-  let { antworten = null, speichern, merkliste = [], umschalten = null, oeffneKatalog = null, standFuer = null, neuFelderFuer = null } = $props();
+  let { antworten = null, speichern, merkliste = [], umschalten = null, oeffneKatalog = null, standFuer = null, neuFelderFuer = null, logoHerunterladen = null } = $props();
 
   let bearbeiten = $state(false);
   let ausgewaehlt = $state(null);
@@ -105,6 +105,7 @@
     schliessen={() => (ausgewaehlt = null)}
     stand={standFuer ? standFuer(ausgewaehlt.id) : null}
     geaenderteFelder={neuFelderFuer ? neuFelderFuer(ausgewaehlt.id) : []}
+    {logoHerunterladen}
   />
 {/if}
 

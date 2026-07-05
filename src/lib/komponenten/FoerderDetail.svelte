@@ -17,6 +17,7 @@
     hochladen = null,
     pdfVorschau = null,
     pdfSpeichern = null,
+    logoHerunterladen = null,
     antrag = null,
     antragAendern = null,
     stand = null,
@@ -58,6 +59,14 @@
         {/if}
         <p class="geber">{f.foerdergeber}{#if neu("foerdergeber")}<span class="neu-feld">NEU</span>{/if}</p>
         {#if stand}<p class="stand">zuletzt aktualisiert: {stand}</p>{/if}
+        {#if f.logo_id && logoHerunterladen}
+          <div class="foerder-logo">
+            {#if f.logo_thumb}<img src={f.logo_thumb} alt="Logo {f.foerdergeber}" />{/if}
+            <button class="logo-dl" onclick={() => logoHerunterladen(f)}>
+              Logo herunterladen
+            </button>
+          </div>
+        {/if}
       </div>
       <button class="schliessen" onclick={schliessen} aria-label="Schließen">✕</button>
     </header>
@@ -241,6 +250,32 @@
     margin: 4px 0 0;
     font-size: 0.78rem;
     color: var(--grau-5);
+  }
+  .foerder-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0 0;
+  }
+  .foerder-logo img {
+    height: 34px;
+    width: auto;
+    max-width: 90px;
+    object-fit: contain;
+    border-radius: 4px;
+  }
+  .logo-dl {
+    padding: 6px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--link);
+    background: var(--akzent-bg3);
+    border: 1px solid var(--akzent-rand);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .logo-dl:hover {
+    background: var(--akzent-bg2);
   }
 
   .land {

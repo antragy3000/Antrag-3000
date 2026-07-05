@@ -11,7 +11,7 @@
   let foerderungen = $derived(katalog.daten.foerderungen.filter((f) => f.aktiv !== false));
 
   // merkliste = null bedeutet: kein aktives Projekt, Sterne ausblenden.
-  let { merkliste = null, umschalten = null, oeffneKatalog = null, standFuer = null, neuFelderFuer = null } = $props();
+  let { merkliste = null, umschalten = null, oeffneKatalog = null, standFuer = null, neuFelderFuer = null, logoHerunterladen = null } = $props();
 
   let suche = $state("");
   let ausgewaehlt = $state(null);
@@ -77,6 +77,7 @@
     schliessen={() => (ausgewaehlt = null)}
     stand={standFuer ? standFuer(ausgewaehlt.id) : null}
     geaenderteFelder={neuFelderFuer ? neuFelderFuer(ausgewaehlt.id) : []}
+    {logoHerunterladen}
   />
 {/if}
 
