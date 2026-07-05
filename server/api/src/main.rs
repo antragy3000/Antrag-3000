@@ -78,6 +78,9 @@ const FOERDERER_MAX_BYTES: usize = 8192;
 const BOARD_MAX_BYTES: usize = 262_144;
 /// Größenlimit für den hochgeladenen Gesamt-Katalog (JSON, Bytes).
 const KATALOG_MAX_BYTES: usize = 2_000_000;
+/// Größenlimit für ein einzelnes Förderer-Logo (Data-URL, Bytes). Ein Bild bis
+/// ~1,5 MB wird als base64-Data-URL rund 2 MB groß; 2,5 MB lässt etwas Luft.
+const LOGO_MAX_BYTES: usize = 2_500_000;
 /// Gültigkeitsdauer einer Admin-Sitzung (Sekunden).
 const SITZUNG_TTL_S: u64 = 1800;
 /// Längenlimit für kurze Felder (id, Name, Art).
@@ -231,6 +234,10 @@ async fn main() {
         // ueber den offenen :8445-Kanal (Caddy) ausgeliefert. Der Katalog
         // ist unkritisch (oeffentliche Foerder-Daten), daher ohne Zertifikat.
         .route("/api/katalog-oeffentlich", get(katalog_oeffentlich))
+        // Förderer-Logos (Etappe 3c): Abruf per mTLS-Team + öffentlich (Caddy
+        // :8445). Upload nur durch den Admin.
+        .route("/api/logos/:logo_id", get(logo_lesen))
+        .route("/api/logos-oeffentlich/:logo_id", get(logo_oeffentlich))
         .route("/api/meldung/:meldung_id", put(meldung_schreiben))
         .route("/api/foerderer", get(foerderer_lesen))
         .route("/api/foerderer/:foerderer_id", put(foerderer_schreiben).delete(foerderer_loeschen))
@@ -244,6 +251,7 @@ async fn main() {
         .route("/api/admin/geraete", get(admin_geraete))
         .route("/api/admin/geraete/:geraet_id", put(admin_geraet_status))
         .route("/api/admin/katalog", put(admin_katalog_hochladen))
+        .route("/api/admin/logos/:logo_id", put(admin_logo_hochladen))
         .route("/api/admin/vorschlaege", get(admin_vorschlaege))
         .route("/api/admin/vorschlaege/:vid/freigeben", post(admin_vorschlag_freigeben))
         .route("/api/admin/vorschlaege/:vid/verwerfen", post(admin_vorschlag_verwerfen))
@@ -325,6 +333,19 @@ async fn schema_anlegen(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             schema_version INTEGER,
             geaendert_am TEXT NOT NULL DEFAULT (datetime('now')),
             geaendert_von_geraet INTEGER REFERENCES geraet(id)
+        )",
+        // Förderer-Logos (Etappe 3c): der Admin lädt das VOLLE Logo eines
+        // verifizierten Förderers hoch (getrennt vom Katalog, damit der von
+        // allen geladene Katalog schlank bleibt – nur eine kleine Vorschau
+        // steckt im Katalog). inhalt = Data-URL (data:image/...;base64,...).
+        // Unkritische, öffentliche Förderer-Marke.
+        "CREATE TABLE IF NOT EXISTS logo (
+            konto_id INTEGER NOT NULL REFERENCES konto(id),
+            logo_id TEXT NOT NULL,
+            inhalt TEXT NOT NULL,
+            geaendert_am TEXT NOT NULL DEFAULT (datetime('now')),
+            geaendert_von_geraet INTEGER REFERENCES geraet(id),
+            PRIMARY KEY (konto_id, logo_id)
         )",
         // Sammler-Vorschläge (Etappe 4 Teil 3): der Sammler schlägt neue/
         // geänderte Förderungen vor; der Admin gibt sie frei oder verwirft
@@ -714,6 +735,86 @@ async fn katalog_version(
         stand: v.get("stand").and_then(|x| x.as_str()).map(|s| s.to_string()),
         schema_version: v.get("schema_version").and_then(|x| x.as_i64()),
     }))
+}
+
+// ============================================================
+// Förderer-Logos (Etappe 3c): das VOLLE Logo eines verifizierten Förderers,
+// getrennt vom Katalog gespeichert (der Katalog trägt nur eine kleine
+// Vorschau). Upload nur durch den Admin; Abruf für Team-Geräte (mTLS) und –
+// im Einzelplatz-Modus – öffentlich (Konto 1). Unkritische Förderer-Marke.
+// ============================================================
+
+/// Holt das gespeicherte Logo (Data-URL) eines Kontos.
+async fn logo_text(pool: &SqlitePool, konto_id: i64, logo_id: &str) -> Option<String> {
+    sqlx::query_as::<_, (String,)>("SELECT inhalt FROM logo WHERE konto_id = ? AND logo_id = ?")
+        .bind(konto_id)
+        .bind(logo_id)
+        .fetch_optional(pool)
+        .await
+        .ok()
+        .flatten()
+        .map(|(s,)| s)
+}
+
+/// Liefert ein Förderer-Logo als Data-URL (mTLS-Team-Abruf).
+async fn logo_lesen(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    Path(logo_id): Path<String>,
+) -> Result<(StatusCode, [(axum::http::HeaderName, &'static str); 1], String), StatusCode> {
+    let (konto_id, _) = konto_und_geraet(&st.pool, &headers).await?;
+    let text = logo_text(&st.pool, konto_id, &logo_id)
+        .await
+        .ok_or(StatusCode::NOT_FOUND)?;
+    Ok((StatusCode::OK, [(axum::http::header::CONTENT_TYPE, "text/plain")], text))
+}
+
+/// Öffentlicher Logo-Abruf (Einzelplatz-Modus, ohne Zertifikat), Konto 1.
+async fn logo_oeffentlich(
+    State(st): State<AppState>,
+    Path(logo_id): Path<String>,
+) -> Result<(StatusCode, [(axum::http::HeaderName, &'static str); 1], String), StatusCode> {
+    let text = logo_text(&st.pool, 1, &logo_id)
+        .await
+        .ok_or(StatusCode::NOT_FOUND)?;
+    Ok((StatusCode::OK, [(axum::http::header::CONTENT_TYPE, "text/plain")], text))
+}
+
+/// Admin lädt/aktualisiert ein Förderer-Logo (PUT /api/admin/logos/{id}).
+/// Body = Data-URL (data:image/...;base64,...). Upsert per (konto_id, logo_id).
+async fn admin_logo_hochladen(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    Path(logo_id): Path<String>,
+    body: String,
+) -> Result<StatusCode, StatusCode> {
+    let (konto_id, geraet_id) = admin_pruefen(&st, &headers).await?;
+    if logo_id.is_empty() || logo_id.len() > FELD_MAX {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    if body.len() > LOGO_MAX_BYTES {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+    // Nur Bild-Data-URLs zulassen (kein beliebiger Inhalt).
+    if !body.starts_with("data:image/") {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    sqlx::query(
+        "INSERT INTO logo (konto_id, logo_id, inhalt, geaendert_am, geaendert_von_geraet)
+         VALUES (?, ?, ?, datetime('now'), ?)
+         ON CONFLICT(konto_id, logo_id) DO UPDATE SET
+            inhalt = excluded.inhalt,
+            geaendert_am = excluded.geaendert_am,
+            geaendert_von_geraet = excluded.geaendert_von_geraet",
+    )
+    .bind(konto_id)
+    .bind(&logo_id)
+    .bind(&body)
+    .bind(geraet_id)
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 // ============================================================
