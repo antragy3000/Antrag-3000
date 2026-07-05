@@ -308,6 +308,65 @@ pub async fn katalog_oeffentlich_holen(adresse: String) -> Result<String, String
     r.text().await.map_err(|e| format!("Antwort nicht lesbar: {e}"))
 }
 
+/// Holt ein volles Förderer-Logo (Data-URL) vom Team-Server (mTLS GET
+/// /api/logos/{id}). Ok(None), wenn (noch) kein Logo hinterlegt ist (404).
+/// Genutzt für die Danksagung/Credits; die kleine Kachel-Vorschau steckt schon
+/// im Katalog.
+#[tauri::command]
+pub async fn sync_logo_holen(
+    adresse: String,
+    ausweis_pem: String,
+    ca_pem: String,
+    logo_id: String,
+) -> Result<Option<String>, String> {
+    let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
+    let url = format!("{}/api/logos/{}", basis_url(&adresse), logo_id);
+    let r = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Abruf fehlgeschlagen: {}", fehler_kette(&e)))?;
+    match r.status().as_u16() {
+        404 => Ok(None),
+        s if !(200..300).contains(&s) => Err(format!("Server antwortete mit {s}")),
+        _ => Ok(Some(
+            r.text().await.map_err(|e| format!("Antwort nicht lesbar: {e}"))?,
+        )),
+    }
+}
+
+/// Einzelplatz-Modus: volles Förderer-Logo OHNE Zertifikat holen
+/// (GET <basis>/logos/{id}, i. d. R. http://<nas>:8445/logos/{id}).
+#[tauri::command]
+pub async fn logo_oeffentlich_holen(
+    adresse: String,
+    logo_id: String,
+) -> Result<Option<String>, String> {
+    let a = adresse.trim().trim_end_matches('/');
+    let basis = if a.starts_with("http://") || a.starts_with("https://") {
+        a.to_string()
+    } else {
+        format!("http://{a}")
+    };
+    let url = format!("{basis}/logos/{logo_id}");
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| format!("Client-Fehler: {e}"))?;
+    let r = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Abruf fehlgeschlagen: {e}"))?;
+    match r.status().as_u16() {
+        404 => Ok(None),
+        s if !(200..300).contains(&s) => Err(format!("Server antwortete mit {s}")),
+        _ => Ok(Some(
+            r.text().await.map_err(|e| format!("Antwort nicht lesbar: {e}"))?,
+        )),
+    }
+}
+
 /// Sendet EINE Katalog-Meldung an den Team-Server (mTLS PUT
 /// /api/meldung/{id}). Der Server macht Upsert per id; der Body
 /// (foerderungId/Name/Art/Text) wird vom Frontend gebaut. Bei einer

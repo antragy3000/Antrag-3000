@@ -55,6 +55,8 @@ pub fn run() {
             sync::sync_trockenlauf,
             sync::sync_katalog_holen,
             sync::katalog_oeffentlich_holen,
+            sync::sync_logo_holen,
+            sync::logo_oeffentlich_holen,
             sync::sync_meldung_senden,
             sync::sync_foerderer_holen,
             sync::sync_foerderer_senden,
