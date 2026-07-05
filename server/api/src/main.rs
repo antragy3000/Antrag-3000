@@ -237,6 +237,7 @@ async fn main() {
         // Förderer-Logos (Etappe 3c): Abruf per mTLS-Team + öffentlich (Caddy
         // :8445). Upload nur durch den Admin.
         .route("/api/logos/:logo_id", get(logo_lesen))
+        .route("/api/logos/:logo_id/hash", get(logo_hash))
         .route("/api/logos-oeffentlich/:logo_id", get(logo_oeffentlich))
         .route("/api/meldung/:meldung_id", put(meldung_schreiben))
         .route("/api/foerderer", get(foerderer_lesen))
@@ -778,6 +779,25 @@ async fn logo_oeffentlich(
         .await
         .ok_or(StatusCode::NOT_FOUND)?;
     Ok((StatusCode::OK, [(axum::http::header::CONTENT_TYPE, "text/plain")], text))
+}
+
+/// Liefert den SHA-256 (Hex) des gespeicherten Logos – eine winzige Abfrage,
+/// damit der Admin VOR dem Hochladen prüfen kann, ob genau dieses Logo schon
+/// (und unverändert) auf dem Server liegt, und einen doppelten Upload spart.
+/// 404, wenn (noch) kein Logo hinterlegt ist.
+async fn logo_hash(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    Path(logo_id): Path<String>,
+) -> Result<(StatusCode, [(axum::http::HeaderName, &'static str); 1], String), StatusCode> {
+    let (konto_id, _) = konto_und_geraet(&st.pool, &headers).await?;
+    let text = logo_text(&st.pool, konto_id, &logo_id)
+        .await
+        .ok_or(StatusCode::NOT_FOUND)?;
+    let mut h = Sha256::new();
+    h.update(text.as_bytes());
+    let hex = hex::encode(h.finalize());
+    Ok((StatusCode::OK, [(axum::http::header::CONTENT_TYPE, "text/plain")], hex))
 }
 
 /// Admin lädt/aktualisiert ein Förderer-Logo (PUT /api/admin/logos/{id}).

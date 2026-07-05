@@ -425,19 +425,49 @@ async fn admin_katalog_hochladen(
     r.text().await.map_err(|e| format!("Antwort nicht lesbar: {e}"))
 }
 
-/// Lädt das volle Förderer-Logo hoch (PUT /api/admin/logos/{id}).
-/// Body = Data-URL (data:image/...;base64,...). logo_id ist ein Slug
+/// Stellt sicher, dass das volle Förderer-Logo auf dem Server liegt – lädt es
+/// aber NUR hoch, wenn dort noch keins ODER ein anderer Inhalt liegt. Dazu
+/// fragt die App zuerst den SHA-256 des gespeicherten Logos ab (winzige
+/// Antwort) und vergleicht ihn mit dem lokal berechneten. So wird dasselbe,
+/// unveränderte Logo NICHT doppelt hochgeladen – auch von einem anderen
+/// Rechner aus (der Server ist die gemeinsame Wahrheit). logo_id ist ein Slug
 /// (URL-sicher), daher ohne Kodierung direkt in den Pfad.
+/// Rückgabe: "unveraendert" oder "hochgeladen".
 #[tauri::command]
-async fn admin_logo_hochladen(
+async fn admin_logo_sicherstellen(
     adresse: String,
     ausweis_pem: String,
     ca_pem: String,
     token: String,
     logo_id: String,
     daten_url: String,
-) -> Result<(), String> {
+) -> Result<String, String> {
+    use sha2::{Digest, Sha256};
+    // Lokalen Prüf-Wert bilden (gleiches Verfahren wie der Server: SHA-256 über
+    // die Data-URL, Hex, klein geschrieben).
+    let lokal: String = Sha256::digest(daten_url.as_bytes())
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
+
     let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
+
+    // 1) Server nach dem Hash des vorhandenen Logos fragen (mTLS-Team-Route).
+    let hash_url = format!("{}/api/logos/{}/hash", basis_url(&adresse), logo_id);
+    let r = client
+        .get(&hash_url)
+        .send()
+        .await
+        .map_err(|e| format!("Hash-Abfrage fehlgeschlagen: {}", fehler_kette(&e)))?;
+    if r.status().as_u16() == 200 {
+        let server_hash = r.text().await.unwrap_or_default();
+        if server_hash.trim() == lokal {
+            // Identisches Logo liegt schon auf dem Server -> nichts tun.
+            return Ok("unveraendert".into());
+        }
+    }
+
+    // 2) Neu oder geändert -> hochladen (PUT /api/admin/logos/{id}).
     let url = format!("{}/api/admin/logos/{}", basis_url(&adresse), logo_id);
     let r = client
         .put(&url)
@@ -452,7 +482,7 @@ async fn admin_logo_hochladen(
         400 => Err("Logo ungültig (nur Bilder).".into()),
         413 => Err("Logo ist zu groß.".into()),
         s if !(200..300).contains(&s) => Err(format!("Server antwortete mit {s}.")),
-        _ => Ok(()),
+        _ => Ok("hochgeladen".into()),
     }
 }
 
@@ -870,7 +900,7 @@ fn main() {
             admin_vorschlag_freigeben,
             admin_vorschlag_verwerfen,
             admin_katalog_hochladen,
-            admin_logo_hochladen,
+            admin_logo_sicherstellen,
             foerderer_ca_erstellen,
             foerderer_ca_waehlen,
             foerderer_ca_pfad,
