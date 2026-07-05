@@ -464,8 +464,39 @@ fn ca_merk_datei(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     Ok(dir.join("foerderer_ca_pfad.txt"))
 }
 
-/// Liest die Förderer-CA aus der gemerkten Datei.
+/// Datei im Konfig-Ordner, in der die Förderer-CA als INHALT gemerkt wird
+/// (Zertifikat + Schlüssel). So bleibt die CA immer verfügbar – auch wenn die
+/// vom Nutzer gewählte Original-Datei später verschoben oder gelöscht wird.
+/// Enthält den geheimen CA-Schlüssel; liegt nur lokal im App-Ordner DIESES
+/// Rechners (gleiche Maschine/gleicher Nutzer wie die Original-Datei).
+fn ca_inhalt_datei(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    let dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|e| format!("Konfig-Ordner nicht ermittelbar: {e}"))?;
+    std::fs::create_dir_all(&dir).map_err(|e| format!("Konfig-Ordner nicht anlegbar: {e}"))?;
+    Ok(dir.join("foerderer_ca.json"))
+}
+
+/// Merkt die CA (Inhalt) im Konfig-Ordner.
+fn ca_inhalt_speichern(app: &tauri::AppHandle, ca: &FoerdererCa) -> Result<(), String> {
+    let s = serde_json::to_string_pretty(ca).map_err(|e| format!("CA nicht serialisierbar: {e}"))?;
+    std::fs::write(ca_inhalt_datei(app)?, s).map_err(|e| format!("CA nicht merkbar: {e}"))
+}
+
+/// Liest die gemerkte Förderer-CA. Bevorzugt die im Programm gemerkte CA
+/// (Inhalt im Konfig-Ordner); findet sich dort nichts, wird EINMALIG der alte
+/// Stand (nur Pfad-Merkdatei) übernommen und danach als Inhalt gemerkt.
 fn ca_laden(app: &tauri::AppHandle) -> Result<FoerdererCa, String> {
+    // 1) Bevorzugt: im Programm gemerkte CA (Inhalt).
+    if let Ok(roh) = std::fs::read_to_string(ca_inhalt_datei(app)?) {
+        if let Ok(ca) = serde_json::from_str::<FoerdererCa>(&roh) {
+            if !ca.cert_pem.is_empty() && !ca.key_pem.is_empty() {
+                return Ok(ca);
+            }
+        }
+    }
+    // 2) Übergang vom alten Stand: alte Merk-Datei enthielt nur den PFAD.
     let merk = ca_merk_datei(app)?;
     let pfad = std::fs::read_to_string(&merk)
         .map_err(|_| "Es ist noch keine Förderer-CA hinterlegt.".to_string())?;
@@ -478,6 +509,7 @@ fn ca_laden(app: &tauri::AppHandle) -> Result<FoerdererCa, String> {
     if ca.cert_pem.is_empty() || ca.key_pem.is_empty() {
         return Err("CA-Datei unvollständig.".into());
     }
+    let _ = ca_inhalt_speichern(app, &ca); // ab jetzt als Inhalt gemerkt
     Ok(ca)
 }
 
@@ -516,12 +548,15 @@ fn foerderer_ca_erstellen(app: tauri::AppHandle) -> Result<Option<String>, Strin
     let Some(fp) = datei else { return Ok(None) };
     let pfad = fp.into_path().map_err(|e| format!("Pfad ungültig: {e}"))?;
     std::fs::write(&pfad, inhalt).map_err(|e| format!("CA nicht speicherbar: {e}"))?;
+    // Im Programm merken (Inhalt) – bleibt erhalten, auch wenn die eben
+    // gespeicherte Datei später verschoben/gelöscht wird.
+    ca_inhalt_speichern(&app, &ca)?;
     let s = pfad.to_string_lossy().to_string();
     let _ = std::fs::write(ca_merk_datei(&app)?, &s);
     Ok(Some(s))
 }
 
-/// Wählt eine bestehende Förderer-CA-Datei und merkt sich den Pfad.
+/// Wählt eine bestehende Förderer-CA-Datei und merkt sie (Inhalt).
 #[tauri::command]
 fn foerderer_ca_waehlen(app: tauri::AppHandle) -> Result<Option<String>, String> {
     let datei = app
@@ -537,20 +572,23 @@ fn foerderer_ca_waehlen(app: tauri::AppHandle) -> Result<Option<String>, String>
     if ca.cert_pem.is_empty() || ca.key_pem.is_empty() {
         return Err("CA-Datei unvollständig.".into());
     }
+    // Im Programm merken (Inhalt), nicht nur den Pfad.
+    ca_inhalt_speichern(&app, &ca)?;
     let s = pfad.to_string_lossy().to_string();
     let _ = std::fs::write(ca_merk_datei(&app)?, &s);
     Ok(Some(s))
 }
 
-/// Gibt den gemerkten CA-Pfad zurück ("" wenn keiner/ungültig).
+/// Status der gemerkten Förderer-CA: "" = keine hinterlegt, sonst ein
+/// nicht-leerer Hinweis. Die CA wird im Programm als Inhalt gemerkt, ist also
+/// unabhängig davon verfügbar, ob die Original-Datei noch am selben Ort liegt.
 #[tauri::command]
 fn foerderer_ca_pfad(app: tauri::AppHandle) -> String {
-    ca_merk_datei(&app)
-        .ok()
-        .and_then(|f| std::fs::read_to_string(f).ok())
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty() && std::path::Path::new(s).exists())
-        .unwrap_or_default()
+    if ca_laden(&app).is_ok() {
+        "gemerkt".into()
+    } else {
+        String::new()
+    }
 }
 
 /// Stellt eine Aktivierungs-Datei für einen Förderer aus (von der Förderer-CA

@@ -1311,11 +1311,11 @@
       el.style.color = art === "fehler" ? "#ca3521" : (art === "erfolg" ? "#0a7d43" : "#5e6c84");
     }
     async function caStatusAktualisieren() {
-      let pfad = "";
-      try { pfad = await invoke("foerderer_ca_pfad"); } catch {}
-      const hat = !!pfad;
+      let status = "";
+      try { status = await invoke("foerderer_ca_pfad"); } catch {}
+      const hat = !!status;
       $("caStatus").textContent = hat
-        ? ("Signaturstelle aktiv – Datei: " + pfad)
+        ? "Signaturstelle aktiv – im Programm gemerkt (unabhängig vom Speicherort der CA-Datei)."
         : "Noch keine Förderer-CA hinterlegt. Bitte zuerst eine erstellen (oder eine bestehende wählen).";
       $("aktivierungBtn").disabled = !hat || $("foerdererNameFeld").value.trim() === "";
     }
@@ -1323,8 +1323,9 @@
       try {
         const p = await invoke("foerderer_ca_erstellen");
         if (p) { await caStatusAktualisieren(); aktivMeldung("erfolg",
-          "Förderer-CA erstellt und gespeichert:\n" + p +
-          "\n\nWICHTIG: Diese Datei enthält den geheimen Signatur-Schlüssel – sicher aufbewahren, nicht weitergeben."); }
+          "Förderer-CA erstellt, gespeichert und im Programm gemerkt:\n" + p +
+          "\n\nWICHTIG: Diese Datei enthält den geheimen Signatur-Schlüssel – sicher aufbewahren, nicht weitergeben. " +
+          "Als Sicherung, um die CA auf einen anderen Rechner zu übernehmen."); }
       } catch (e) { aktivMeldung("fehler", "⚠ " + e); }
     };
     $("caWaehlenBtn").onclick = async () => {
