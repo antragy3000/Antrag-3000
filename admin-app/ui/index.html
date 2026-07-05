@@ -1493,6 +1493,29 @@
       };
     }
 
+    // Verkleinert eine Bild-Data-URL auf max. maxPx Kantenlänge (Seitenverhältnis
+    // bleibt) und gibt eine PNG-Data-URL zurück. So bleibt die im Katalog
+    // eingebettete Vorschau winzig (die Kachel braucht nur ein kleines Bild).
+    function logoThumbnail(dataUrl, maxPx = 96) {
+      return new Promise((resolve, reject) => {
+        if (!dataUrl) { resolve(""); return; }
+        const img = new Image();
+        img.onload = () => {
+          const w = img.naturalWidth, h = img.naturalHeight;
+          if (!w || !h) { resolve(""); return; }
+          const skala = Math.min(1, maxPx / Math.max(w, h));
+          const zw = Math.max(1, Math.round(w * skala));
+          const zh = Math.max(1, Math.round(h * skala));
+          const c = document.createElement("canvas");
+          c.width = zw; c.height = zh;
+          c.getContext("2d").drawImage(img, 0, 0, zw, zh);
+          try { resolve(c.toDataURL("image/png")); } catch (e) { reject(e); }
+        };
+        img.onerror = () => reject(new Error("Logo konnte nicht gelesen werden."));
+        img.src = dataUrl;
+      });
+    }
+
     async function importUebernehmen() {
       const r = letzterImport;
       if (!r || !(r.signiert && r.signatur_gueltig && r.ca_ok)) return;
@@ -1502,7 +1525,21 @@
       const gewaehlt = [...document.querySelectorAll("#importFreigabe input[type=checkbox]:checked")]
         .map((c) => programme[Number(c.dataset.i)]).filter(Boolean);
       if (!gewaehlt.length) { alert("Keine Programme ausgewählt."); return; }
-      const eintraege = gewaehlt.map((p) => programmZuKatalog(p, org, web, r));
+
+      // Mini-Vorschau (Thumbnail) des Förderer-Logos in jeden Eintrag einbetten –
+      // für die Förder-Kachel in der Nutzer-App. Das VOLLE Logo kommt später als
+      // separate NAS-Datei dazu (Etappe 3c-2), damit der Katalog schlank bleibt.
+      const orgLogo = (r.nutzlast && r.nutzlast.organisation && r.nutzlast.organisation.logo) || "";
+      let logoThumb = "";
+      if (orgLogo) {
+        try { logoThumb = await logoThumbnail(orgLogo, 96); }
+        catch { /* Logo unlesbar → ohne Vorschau übernehmen */ }
+      }
+      const eintraege = gewaehlt.map((p) => {
+        const e = programmZuKatalog(p, org, web, r);
+        if (logoThumb) e.logo_thumb = logoThumb;
+        return e;
+      });
 
       meldung("importMeldung", "info", "Lade aktuellen Katalog …");
       try { await ladeKatalog(); }

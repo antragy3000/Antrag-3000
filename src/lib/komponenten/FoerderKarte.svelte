@@ -64,8 +64,20 @@
     <span class="herkunft selbst">✎ selbst eingetragen</span>
   {:else if f.geteilt}
     <span class="herkunft geteilt">👥 vom Team geteilt</span>
+  {:else if f.herkunft && f.herkunft.typ === "foerderer-signiert"}
+    <span
+      class="herkunft foerderer"
+      title={f.herkunft.foerderer_name
+        ? "Vom Förderer eingetragen und verifiziert: " + f.herkunft.foerderer_name
+        : "Vom Förderer eingetragen und verifiziert"}
+    >✓ vom Förderer</span>
   {/if}
-  <p class="geber">{f.foerdergeber}{#if neu("foerdergeber")}<span class="neu-feld">NEU</span>{/if}</p>
+  <p class="geber">
+    {#if f.logo_thumb}
+      <img class="geber-logo" src={f.logo_thumb} alt="" />
+    {/if}
+    {f.foerdergeber}{#if neu("foerdergeber")}<span class="neu-feld">NEU</span>{/if}
+  </p>
   <p class="hoehe">
     {f.foerderhoehe_text}
     {#if neu("foerderhoehe_text")}<span class="neu-feld">NEU</span>{/if}
@@ -173,6 +185,7 @@
   }
   .herkunft.selbst { background: var(--akzent-bg); color: var(--akzent-d4); }
   .herkunft.geteilt { background: var(--akzent-bg5); color: var(--link-d3); }
+  .herkunft.foerderer { background: var(--erfolg-bg); color: var(--erfolg-text); }
   .herkunft.weg { background: var(--gefahr-bg); color: var(--gefahr-text); }
   .neu-feld {
     display: inline-block;
@@ -191,6 +204,17 @@
     margin: 0;
     color: var(--text-muted);
     font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .geber-logo {
+    height: 22px;
+    width: auto;
+    max-width: 52px;
+    object-fit: contain;
+    border-radius: 3px;
+    flex: none;
   }
   .hoehe {
     margin: 4px 0 0;
