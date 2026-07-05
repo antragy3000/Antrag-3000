@@ -317,6 +317,7 @@
     let zugang = null;       // { adresse, geraet_name, ausweis_pem, ca_pem }
     let token = null;        // Sitzungs-Token nach Anmeldung
     let katalogText = null;  // Inhalt der gewählten Katalog-Datei (Tab „hochladen")
+    let letzterImport = null; // letztes geprüftes Förderer-Export-Ergebnis (Tab „Export prüfen")
 
     // Der aktuell verteilte Katalog (vom Server geholt) – Grundlage für
     // Diff (Vorschläge), Bearbeiten und Übernehmen. katalogIndex: id→Eintrag.
@@ -1387,20 +1388,151 @@
       } catch (e) { $("importErgebnis").innerHTML = '<div class="meld fehler" style="margin-top:12px">⚠ ' + escape(String(e)) + "</div>"; }
     };
     function importErgebnisZeigen(r) {
+      letzterImport = r;
       const org = (r.nutzlast && r.nutzlast.organisation && r.nutzlast.organisation.org) || {};
-      const anzahl = (r.nutzlast && Array.isArray(r.nutzlast.programme)) ? r.nutzlast.programme.length : 0;
+      const programme = (r.nutzlast && Array.isArray(r.nutzlast.programme)) ? r.nutzlast.programme : [];
+      const echt = r.signiert && r.signatur_gueltig && r.ca_ok;
       let farbe, titel;
       if (!r.signiert) { farbe = "#a5680a"; titel = "⚠ Nicht signiert"; }
-      else if (r.signatur_gueltig && r.ca_ok) { farbe = "#0a7d43"; titel = "✓ Echt – " + (r.foerderer_name || "Förderer"); }
+      else if (echt) { farbe = "#0a7d43"; titel = "✓ Echt – " + (r.foerderer_name || "Förderer"); }
       else if (r.signatur_gueltig) { farbe = "#a5680a"; titel = "⚠ Signatur gültig, aber fremde/keine CA"; }
       else { farbe = "#ca3521"; titel = "✕ Signatur ungültig"; }
-      $("importErgebnis").innerHTML =
+
+      let html =
         '<div style="margin-top:14px;border:2px solid ' + farbe + ';border-radius:10px;padding:14px 16px">' +
           '<div style="font-weight:700;color:' + farbe + '">' + escape(titel) + "</div>" +
           '<p style="margin:6px 0 10px;color:#5e6c84;font-size:0.9rem">' + escape(r.hinweis) + "</p>" +
           '<div style="font-size:0.9rem"><strong>Organisation:</strong> ' + escape(org.name || "(ohne Namen)") +
-            " · <strong>Programme:</strong> " + anzahl + "</div>" +
+            " · <strong>Programme:</strong> " + programme.length + "</div>";
+      if (r.zertifikat_fingerabdruck) {
+        html += '<div class="dezent" style="font-size:0.78rem;margin-top:6px;word-break:break-all">Fingerabdruck: ' +
+          escape(r.zertifikat_fingerabdruck) + "</div>";
+      }
+      html += "</div>";
+
+      if (echt && programme.length) {
+        html += '<div id="importFreigabe" style="margin-top:14px;border:1px solid var(--rand);border-radius:10px;padding:14px 16px">' +
+          "<h3 style=\"margin:0 0 4px\">Programme freigeben</h3>" +
+          '<p class="dezent" style="margin:0 0 10px">Wählen Sie, was in den verteilten Katalog übernommen werden soll. ' +
+            'Jeder Eintrag wird fälschungssicher „' + escape(r.foerderer_name || "Förderer") + '" zugeordnet ' +
+            "(Herkunft + Fingerabdruck). Gleiche Förderung wird beim erneuten Übernehmen aktualisiert.</p>" +
+          '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">';
+        programme.forEach((p, i) => {
+          const wk = p.weiche_kriterien || {};
+          const zusatz = [
+            (wk.sparten || []).length + " Sparte(n)",
+            (wk.projektarten || []).length + " Projektart(en)",
+            wk.zeitpunkt || "laufend",
+          ].join(" · ");
+          html += '<label class="check" style="align-items:flex-start">' +
+            '<input type="checkbox" data-i="' + i + '" checked /> ' +
+            "<span><strong>" + escape(p.name || "(ohne Namen)") + "</strong>" +
+            '<br><span class="dezent" style="font-size:0.82rem">' + escape(zusatz) + "</span></span></label>";
+        });
+        html += "</div>" +
+          '<div class="knoepfe"><button id="importUebernehmenBtn">Ausgewählte in den Katalog übernehmen</button></div>' +
+          '<div id="importMeldung" style="margin-top:10px"></div>' +
         "</div>";
+      }
+      $("importErgebnis").innerHTML = html;
+      const btn = $("importUebernehmenBtn");
+      if (btn) btn.onclick = importUebernehmen;
+    }
+
+    // Baut aus einem Förderer-Programm einen Katalog-Eintrag im Katalog-Format.
+    // Die id ist aus Geber + Programmname abgeleitet, damit ein erneutes
+    // Übernehmen denselben Eintrag aktualisiert statt zu duplizieren.
+    function importSlug(s) {
+      return String(s || "").toLowerCase()
+        .normalize("NFKD").replace(/[̀-ͯ]/g, "")
+        .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+    }
+    function programmZuKatalog(p, org, web, r) {
+      const geber = org.name || r.foerderer_name || "Förderer";
+      const hk = p.harte_kriterien || {};
+      const wk = p.weiche_kriterien || {};
+      const land = (org.land && org.land !== "andere") ? String(org.land).toUpperCase()
+        : (Array.isArray(hk.durchfuehrungsort) && hk.durchfuehrungsort[0]) ? String(hk.durchfuehrungsort[0]).toUpperCase()
+        : "";
+      const namenTeil = importSlug(p.name || p.id) || Math.random().toString(36).slice(2, 8);
+      return {
+        id: "foerderer-" + (importSlug(geber) || "org") + "-" + namenTeil,
+        name: p.name || "(ohne Namen)",
+        foerdergeber: geber,
+        land,
+        beschreibung: p.beschreibung || "",
+        webseite: p.webseite || web.webseite || "",
+        harte_kriterien: {
+          wohnsitz: hk.wohnsitz || [],
+          durchfuehrungsort: hk.durchfuehrungsort || [],
+          traegerschaft: hk.traegerschaft || [],
+          studentisch_erlaubt: hk.studentisch_erlaubt !== false,
+        },
+        weiche_kriterien: {
+          sparten: wk.sparten || [],
+          projektarten: wk.projektarten || [],
+          budget_min: wk.budget_min ?? null,
+          budget_max: wk.budget_max ?? null,
+          waehrung: wk.waehrung || "EUR",
+          zeitpunkt: wk.zeitpunkt || "laufend",
+        },
+        fristen: p.fristen || [],
+        foerderhoehe_text: p.foerderhoehe_text || "—",
+        unvertraeglich_mit: [],
+        checkliste_vorschlag: p.checkliste_vorschlag || [],
+        recherchiert: false,
+        // Herkunft/Provenienz: fälschungssicher einem verifizierten Förderer
+        // zugeordnet (Signatur in der Admin-App geprüft).
+        herkunft: {
+          typ: "foerderer-signiert",
+          foerderer_name: r.foerderer_name || geber,
+          verifiziert_am: new Date().toISOString().slice(0, 10),
+          zertifikat_fingerabdruck: r.zertifikat_fingerabdruck || "",
+          exportiert_am: (r.nutzlast && r.nutzlast.exportiert_am) || "",
+        },
+      };
+    }
+
+    async function importUebernehmen() {
+      const r = letzterImport;
+      if (!r || !(r.signiert && r.signatur_gueltig && r.ca_ok)) return;
+      const org = (r.nutzlast && r.nutzlast.organisation && r.nutzlast.organisation.org) || {};
+      const web = (r.nutzlast && r.nutzlast.organisation && r.nutzlast.organisation.web) || {};
+      const programme = (r.nutzlast && Array.isArray(r.nutzlast.programme)) ? r.nutzlast.programme : [];
+      const gewaehlt = [...document.querySelectorAll("#importFreigabe input[type=checkbox]:checked")]
+        .map((c) => programme[Number(c.dataset.i)]).filter(Boolean);
+      if (!gewaehlt.length) { alert("Keine Programme ausgewählt."); return; }
+      const eintraege = gewaehlt.map((p) => programmZuKatalog(p, org, web, r));
+
+      meldung("importMeldung", "info", "Lade aktuellen Katalog …");
+      try { await ladeKatalog(); }
+      catch (e) { meldung("importMeldung", "fehler", "⚠ Aktueller Katalog nicht ladbar: " + e); return; }
+
+      let neu = 0, akt = 0;
+      for (const e of eintraege) { if (katalogIndex[e.id]) akt++; else neu++; }
+      const frage =
+        "In den Katalog übernehmen:\n" +
+        `• ${neu} neu, ${akt} aktualisieren\n` +
+        `• alle gekennzeichnet als „${r.foerderer_name}"\n\nFortfahren?`;
+      if (!confirm(frage)) { meldung("importMeldung", "info", "Abgebrochen."); return; }
+
+      const btn = $("importUebernehmenBtn");
+      if (btn) btn.disabled = true;
+      meldung("importMeldung", "info", "Übernehme und lade hoch …");
+      try {
+        for (const e of eintraege) {
+          const i = katalog.foerderungen.findIndex((x) => x.id === e.id);
+          if (i >= 0) katalog.foerderungen[i] = e; else katalog.foerderungen.push(e);
+          katalogIndex[e.id] = e;
+        }
+        const roh = await katalogSpeichern();
+        let info = "";
+        try { const a = JSON.parse(roh); info = ` Gesamt ${a.anzahl}, Stand ${a.stand ?? "?"}.`; } catch {}
+        meldung("importMeldung", "ok", `✓ Übernommen: ${neu} neu, ${akt} aktualisiert.${info}`);
+      } catch (e) {
+        meldung("importMeldung", "fehler", "⚠ " + e);
+        if (btn) btn.disabled = false;
+      }
     }
 
     // --- Signiertes Selbstupdate ---

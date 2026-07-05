@@ -627,6 +627,24 @@ struct PruefErgebnis {
     foerderer_name: String,
     hinweis: String,
     nutzlast: serde_json::Value,
+    /// SHA-256 des Foerderer-Zertifikats (Hex, mit Doppelpunkten). Dient als
+    /// stabiler Herkunfts-„Fingerabdruck", der an uebernommene Katalog-Eintraege
+    /// geschrieben wird. Leer, wenn nicht signiert/kein Zertifikat.
+    zertifikat_fingerabdruck: String,
+}
+
+/// Bildet den SHA-256-Fingerabdruck ueber die DER-Bytes des Zertifikats
+/// (Hex, gross, Doppelpunkt-getrennt – wie in Browsern/Tools ueblich).
+fn zert_fingerabdruck(cert_pem: &str) -> String {
+    use sha2::{Digest, Sha256};
+    let Some(der) = cert_der_aus_pem(cert_pem) else {
+        return String::new();
+    };
+    Sha256::digest(&der)
+        .iter()
+        .map(|b| format!("{b:02X}"))
+        .collect::<Vec<_>>()
+        .join(":")
 }
 
 fn cert_der_aus_pem(pem: &str) -> Option<Vec<u8>> {
@@ -687,6 +705,7 @@ fn export_pruefen(app: tauri::AppHandle) -> Result<Option<PruefErgebnis>, String
             foerderer_name: String::new(),
             hinweis: "Diese Export-Datei ist NICHT signiert (die Förderer-App war nicht aktiviert). Herkunft nicht überprüfbar.".into(),
             nutzlast,
+            zertifikat_fingerabdruck: String::new(),
         }));
     }
     let sig = v.get("signatur").ok_or("Signatur fehlt.")?;
@@ -722,6 +741,7 @@ fn export_pruefen(app: tauri::AppHandle) -> Result<Option<PruefErgebnis>, String
     } else {
         "WARNUNG: Signatur UNGÜLTIG – die Datei wurde evtl. verändert. Nicht übernehmen.".into()
     };
+    let zertifikat_fingerabdruck = zert_fingerabdruck(cert_pem);
     Ok(Some(PruefErgebnis {
         signiert: true,
         signatur_gueltig,
@@ -729,6 +749,7 @@ fn export_pruefen(app: tauri::AppHandle) -> Result<Option<PruefErgebnis>, String
         foerderer_name,
         hinweis,
         nutzlast,
+        zertifikat_fingerabdruck,
     }))
 }
 

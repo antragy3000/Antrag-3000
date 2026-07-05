@@ -35,6 +35,10 @@ rcgen = { version = "0.13", features = ["x509-parser"] }
 # p256/base64: prueft die ECDSA-Signatur eines Foerderer-Exports (Herkunft).
 p256 = { version = "0.13", features = ["ecdsa"] }
 base64 = "0.22"
+# sha2: erzeugt den Zertifikats-Fingerabdruck (SHA-256) des Foerderers, der als
+# Herkunfts-Nachweis an jeden uebernommenen Katalog-Eintrag geschrieben wird.
+# Gleiche Krypto-Familie (RustCrypto) wie p256; keine Eigenbau-Krypto.
+sha2 = "0.10"
 
 [profile.release]
 opt-level = "z"
