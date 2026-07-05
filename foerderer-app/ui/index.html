@@ -83,6 +83,21 @@
     .chip-dok button { border: none; background: none; color: var(--gold-d); cursor: pointer; font-size: 0.95rem; line-height: 1; padding: 0; }
     .dok-add { display: flex; gap: 8px; margin-top: 8px; }
     .dok-add input { flex: 1; }
+    /* Regionale/städtische Eingrenzung (optional) */
+    .eingrenzung { margin: 8px 0 4px; padding: 4px 0 6px 14px; border-left: 3px solid var(--gold-tint); }
+    .eingrenzung-titel { margin: 2px 0 2px; font-size: 0.8rem; color: var(--leise); }
+    label.feld.feld-klein { font-size: 0.78rem; font-weight: 600; margin: 10px 0 4px; text-transform: none; }
+    .checks.kompakt label.chk { padding: 5px 10px; font-size: 0.82rem; }
+    .region-gruppe { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; margin-bottom: 4px; }
+    .region-land { width: 100%; font-size: 0.74rem; font-weight: 700; color: var(--grau); text-transform: uppercase; letter-spacing: 0.03em; }
+    .stadt-wahl { margin-top: 4px; }
+    .stadt-wahl input { width: 100%; max-width: 340px; }
+    .stadt-treffer { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .stadt-treffer-btn { padding: 5px 10px; border: 2px dashed var(--rand); border-radius: 999px; font-size: 0.82rem; background: var(--weiss); color: var(--grau); cursor: pointer; font-family: inherit; }
+    .stadt-treffer-btn:hover { border-color: var(--gold); color: var(--gold-d); }
+    .chips-liste { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .stadt-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 2px solid var(--gold); background: var(--gold-tint); color: var(--gold-d); border-radius: 999px; font-size: 0.84rem; }
+    .stadt-chip button { border: none; background: none; color: var(--gold-d); cursor: pointer; font-size: 0.95rem; line-height: 1; padding: 0; }
 
     /* Logo */
     .logo-zeile { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
@@ -266,8 +281,30 @@
         <div class="checks" id="chk-traeger"></div>
         <label class="feld">Wohnsitz der Antragstellenden</label>
         <div class="checks" id="chk-wohnsitz"></div>
+        <div class="eingrenzung" id="eingrenzung-wohnsitz" hidden>
+          <p class="eingrenzung-titel">Genauer eingrenzen (optional) – nichts wählen = ganzes Land</p>
+          <label class="feld feld-klein">Bundesland / Kanton</label>
+          <div class="checks kompakt" id="chk-wohnsitz-regionen"></div>
+          <label class="feld feld-klein">Stadt</label>
+          <div class="stadt-wahl">
+            <input type="text" id="wohnsitz-stadt-suche" placeholder="Stadt suchen und anklicken …" autocomplete="off" />
+            <div class="stadt-treffer" id="wohnsitz-stadt-treffer"></div>
+            <div class="chips-liste" id="wohnsitz-stadt-liste"></div>
+          </div>
+        </div>
         <label class="feld">Durchführungsort des Projekts</label>
         <div class="checks" id="chk-ort"></div>
+        <div class="eingrenzung" id="eingrenzung-ort" hidden>
+          <p class="eingrenzung-titel">Genauer eingrenzen (optional) – nichts wählen = ganzes Land</p>
+          <label class="feld feld-klein">Bundesland / Kanton</label>
+          <div class="checks kompakt" id="chk-ort-regionen"></div>
+          <label class="feld feld-klein">Stadt</label>
+          <div class="stadt-wahl">
+            <input type="text" id="ort-stadt-suche" placeholder="Stadt suchen und anklicken …" autocomplete="off" />
+            <div class="stadt-treffer" id="ort-stadt-treffer"></div>
+            <div class="chips-liste" id="ort-stadt-liste"></div>
+          </div>
+        </div>
         <label class="feld">Sind studentische Projekte förderfähig?</label>
         <div class="radio-gruppe" id="studentisch-gruppe">
           <label class="radio"><input type="radio" name="studentisch" value="ja" checked /> Ja</label>
@@ -339,6 +376,49 @@
       gastspiel_tournee:"Gastspiel / Tournee", festival:"Festival", veroeffentlichung:"Veröffentlichung", vermittlung:"Vermittlung", barrierefreiheit:"Barrierefreiheit" };
     const TRAEGERSCHAFT = { einzelperson:"Einzelperson", gruppe:"Gruppe / GbR", organisation:"Verein / Organisation" };
 
+    // ===== Orte: Bundesländer/Kantone + Städte (Spiegel von src/lib/daten/orte.js) =====
+    const REGIONEN = {
+      DE: [ {code:"BW",name:"Baden-Württemberg"},{code:"BY",name:"Bayern"},{code:"BE",name:"Berlin"},{code:"BB",name:"Brandenburg"},{code:"HB",name:"Bremen"},{code:"HH",name:"Hamburg"},{code:"HE",name:"Hessen"},{code:"MV",name:"Mecklenburg-Vorpommern"},{code:"NI",name:"Niedersachsen"},{code:"NW",name:"Nordrhein-Westfalen"},{code:"RP",name:"Rheinland-Pfalz"},{code:"SL",name:"Saarland"},{code:"SN",name:"Sachsen"},{code:"ST",name:"Sachsen-Anhalt"},{code:"SH",name:"Schleswig-Holstein"},{code:"TH",name:"Thüringen"} ],
+      AT: [ {code:"BGL",name:"Burgenland"},{code:"KTN",name:"Kärnten"},{code:"NOE",name:"Niederösterreich"},{code:"OOE",name:"Oberösterreich"},{code:"SBG",name:"Salzburg"},{code:"STMK",name:"Steiermark"},{code:"TIR",name:"Tirol"},{code:"VBG",name:"Vorarlberg"},{code:"WIEN",name:"Wien"} ],
+      CH: [ {code:"AG",name:"Aargau"},{code:"AI",name:"Appenzell Innerrhoden"},{code:"AR",name:"Appenzell Ausserrhoden"},{code:"BE",name:"Bern"},{code:"BL",name:"Basel-Landschaft"},{code:"BS",name:"Basel-Stadt"},{code:"FR",name:"Freiburg"},{code:"GE",name:"Genf"},{code:"GL",name:"Glarus"},{code:"GR",name:"Graubünden"},{code:"JU",name:"Jura"},{code:"LU",name:"Luzern"},{code:"NE",name:"Neuenburg"},{code:"NW",name:"Nidwalden"},{code:"OW",name:"Obwalden"},{code:"SG",name:"St. Gallen"},{code:"SH",name:"Schaffhausen"},{code:"SO",name:"Solothurn"},{code:"SZ",name:"Schwyz"},{code:"TG",name:"Thurgau"},{code:"TI",name:"Tessin"},{code:"UR",name:"Uri"},{code:"VD",name:"Waadt"},{code:"VS",name:"Wallis"},{code:"ZG",name:"Zug"},{code:"ZH",name:"Zürich"} ],
+    };
+    const _ST_DE = {
+      BW:["Stuttgart","Mannheim","Karlsruhe","Freiburg im Breisgau","Heidelberg","Heilbronn","Ulm","Pforzheim","Reutlingen","Esslingen am Neckar","Ludwigsburg","Tübingen","Villingen-Schwenningen","Konstanz","Sindelfingen","Aalen","Friedrichshafen","Offenburg","Göppingen","Schwäbisch Gmünd"],
+      BY:["München","Nürnberg","Augsburg","Regensburg","Ingolstadt","Würzburg","Fürth","Erlangen","Bamberg","Bayreuth","Landshut","Aschaffenburg","Kempten (Allgäu)","Rosenheim","Schweinfurt","Neu-Ulm","Passau"],
+      BE:["Berlin"], BB:["Potsdam","Cottbus","Brandenburg an der Havel"], HB:["Bremen","Bremerhaven"], HH:["Hamburg"],
+      HE:["Frankfurt am Main","Wiesbaden","Kassel","Darmstadt","Offenbach am Main","Hanau","Gießen","Marburg","Fulda","Rüsselsheim am Main","Wetzlar"],
+      MV:["Rostock","Schwerin","Neubrandenburg","Stralsund","Greifswald"],
+      NI:["Hannover","Braunschweig","Oldenburg","Osnabrück","Wolfsburg","Göttingen","Salzgitter","Hildesheim","Delmenhorst","Wilhelmshaven","Lüneburg","Celle","Hameln"],
+      NW:["Köln","Düsseldorf","Dortmund","Essen","Duisburg","Bochum","Wuppertal","Bielefeld","Bonn","Münster","Mönchengladbach","Gelsenkirchen","Aachen","Krefeld","Oberhausen","Hagen","Hamm","Mülheim an der Ruhr","Leverkusen","Solingen","Herne","Neuss","Paderborn","Bottrop","Recklinghausen","Bergisch Gladbach","Remscheid","Moers","Siegen","Gütersloh","Witten","Iserlohn","Düren","Ratingen","Lünen","Marl","Velbert","Minden","Dorsten","Castrop-Rauxel","Gladbeck","Bocholt","Detmold","Lüdenscheid"],
+      RP:["Mainz","Ludwigshafen am Rhein","Koblenz","Trier","Kaiserslautern","Worms","Neuwied"],
+      SL:["Saarbrücken","Neunkirchen"], SN:["Leipzig","Dresden","Chemnitz","Zwickau","Plauen","Görlitz"],
+      ST:["Halle (Saale)","Magdeburg","Dessau-Roßlau","Wittenberg","Halberstadt"],
+      SH:["Kiel","Lübeck","Flensburg","Neumünster","Norderstedt","Elmshorn"], TH:["Erfurt","Jena","Gera","Weimar","Gotha","Nordhausen"],
+    };
+    const _ST_AT = {
+      WIEN:["Wien"], STMK:["Graz","Leoben"], OOE:["Linz","Wels","Steyr"], SBG:["Salzburg"], TIR:["Innsbruck"],
+      KTN:["Klagenfurt am Wörthersee","Villach"], VBG:["Dornbirn","Feldkirch","Bregenz"],
+      NOE:["St. Pölten","Wiener Neustadt","Krems an der Donau","Baden"], BGL:["Eisenstadt"],
+    };
+    const _ST_CH = {
+      ZH:["Zürich","Winterthur","Uster","Dübendorf"], GE:["Genf"], BS:["Basel"], VD:["Lausanne","Yverdon-les-Bains","Montreux"],
+      BE:["Bern","Biel/Bienne","Thun","Köniz"], LU:["Luzern","Emmen"], SG:["St. Gallen","Rapperswil-Jona"],
+      TI:["Lugano","Bellinzona","Locarno"], AG:["Aarau","Wettingen","Baden"], SO:["Olten","Solothurn"], ZG:["Zug"],
+      FR:["Freiburg","Bulle"], NE:["Neuenburg","La Chaux-de-Fonds"], TG:["Frauenfeld","Kreuzlingen"], VS:["Sitten","Siders"],
+      SH:["Schaffhausen"], GR:["Chur"],
+    };
+    const STAEDTE = [];
+    for (const [tab, land] of [[_ST_DE,"DE"],[_ST_AT,"AT"],[_ST_CH,"CH"]])
+      for (const [region, namen] of Object.entries(tab))
+        for (const name of namen) STAEDTE.push({ name, land, region });
+    function _norm(s){ return (s??"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,""); }
+    function regionName(land, code){ return (REGIONEN[land]||[]).find(r=>r.code===code)?.name || code || ""; }
+    function sucheStaedte(laender, regionen, text, grenze=8){
+      const t=_norm(text); const ls=new Set(laender), rs=new Set(regionen);
+      return STAEDTE.filter(s => (!ls.size||ls.has(s.land)) && (!rs.size||rs.has(s.region)) && (!t||_norm(s.name).includes(t)))
+        .sort((a,b)=>a.name.localeCompare(b.name,"de")).slice(0,grenze);
+    }
+
     const $ = (id) => document.getElementById(id);
 
     // ================= Tabs =================
@@ -402,7 +482,7 @@
     function progSpeichern() { localStorage.setItem(K_PROG, JSON.stringify(programme)); }
     function neueId() { return "p-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,7); }
     function leeresProgramm() { return { id:neueId(), name:"", webseite:"", beschreibung:"",
-      harte_kriterien:{ wohnsitz:[], durchfuehrungsort:[], traegerschaft:[], studentisch_erlaubt:true },
+      harte_kriterien:{ wohnsitz:[], wohnsitz_regionen:[], wohnsitz_staedte:[], durchfuehrungsort:[], durchfuehrungsort_regionen:[], durchfuehrungsort_staedte:[], traegerschaft:[], studentisch_erlaubt:true },
       weiche_kriterien:{ sparten:[], projektarten:[], budget_min:null, budget_max:null, zeitpunkt:"laufend" },
       fristen:[], frist_hinweis:"", foerderhoehe_text:"", max_anteil_prozent:null, anteil_ausnahme:false, checkliste_vorschlag:[] }; }
 
@@ -437,6 +517,79 @@
         '<label class="chk"><input type="checkbox" value="' + k + '"' + (selected.includes(k)?" checked":"") + " /> " + v + "</label>").join("");
     }
     function leseChecks(containerId) { return [...$(containerId).querySelectorAll("input:checked")].map(i => i.value); }
+
+    // --- Regionale/städtische Eingrenzung (optional) ---
+    // Gewählte Städte je Bereich ("wohnsitz" | "ort"). Regionen werden direkt
+    // aus den Häkchen gelesen.
+    let stadtWahl = { wohnsitz: [], ort: [] };
+    function laenderCont(prefix) { return prefix === "wohnsitz" ? "chk-wohnsitz" : "chk-ort"; }
+    // Baut die Bundesland/Kanton-Häkchen passend zu den gewählten Ländern neu auf.
+    // vorgabe = vorab zu setzende Region-Codes (beim Öffnen); sonst bleiben die
+    // aktuell gewählten erhalten.
+    function regionenAktualisieren(prefix, vorgabe) {
+      const laenderAlle = leseChecks(laenderCont(prefix));
+      const dachLaender = laenderAlle.filter(l => REGIONEN[l]);
+      const gewaehlt = new Set(vorgabe || leseChecks("chk-" + prefix + "-regionen"));
+      // Städte entfernen, deren Land nicht (mehr) gewählt ist.
+      const landSet = new Set(laenderAlle);
+      stadtWahl[prefix] = stadtWahl[prefix].filter(name => {
+        const st = STAEDTE.find(s => s.name === name);
+        return !st || landSet.has(st.land);
+      });
+      const wrap = $("eingrenzung-" + prefix), cont = $("chk-" + prefix + "-regionen");
+      if (!dachLaender.length) { wrap.hidden = true; cont.innerHTML = ""; renderStadtListe(prefix); stadtTrefferLeeren(prefix); return; }
+      wrap.hidden = false;
+      let html = "";
+      for (const land of dachLaender) {
+        html += '<div class="region-gruppe"><span class="region-land">' + escapeHtml(LAENDER[land]) + "</span>";
+        for (const r of REGIONEN[land]) {
+          html += '<label class="chk"><input type="checkbox" value="' + r.code + '"' + (gewaehlt.has(r.code) ? " checked" : "") + " /> " + escapeHtml(r.name) + "</label>";
+        }
+        html += "</div>";
+      }
+      cont.innerHTML = html;
+      renderStadtListe(prefix);
+      stadtSucheAktualisieren(prefix);
+    }
+    function stadtTrefferLeeren(prefix) { $(prefix + "-stadt-treffer").innerHTML = ""; }
+    function stadtSucheAktualisieren(prefix) {
+      const laender = leseChecks(laenderCont(prefix)).filter(l => REGIONEN[l]);
+      const regionen = leseChecks("chk-" + prefix + "-regionen");
+      const text = $(prefix + "-stadt-suche").value.trim();
+      if (!laender.length || !text) { stadtTrefferLeeren(prefix); return; }
+      const treffer = sucheStaedte(laender, regionen, text, 8).filter(s => !stadtWahl[prefix].includes(s.name));
+      $(prefix + "-stadt-treffer").innerHTML = treffer.map(s =>
+        '<button type="button" class="stadt-treffer-btn" data-name="' + escapeHtml(s.name) + '">' +
+        escapeHtml(s.name) + ' <span class="dezent">' + s.land + "</span></button>").join("");
+    }
+    function stadtHinzu(prefix, name) {
+      if (name && !stadtWahl[prefix].includes(name)) stadtWahl[prefix].push(name);
+      $(prefix + "-stadt-suche").value = "";
+      stadtTrefferLeeren(prefix); renderStadtListe(prefix);
+    }
+    function stadtEntfernen(prefix, name) {
+      stadtWahl[prefix] = stadtWahl[prefix].filter(n => n !== name);
+      renderStadtListe(prefix); stadtSucheAktualisieren(prefix);
+    }
+    function renderStadtListe(prefix) {
+      $(prefix + "-stadt-liste").innerHTML = stadtWahl[prefix].map(n =>
+        '<span class="stadt-chip">' + escapeHtml(n) +
+        ' <button type="button" data-entf="' + escapeHtml(n) + '" aria-label="Entfernen">×</button></span>').join("");
+    }
+    // Verdrahtung der Eingrenzung für einen Bereich.
+    function eingrenzungVerdrahten(prefix) {
+      $(laenderCont(prefix)).addEventListener("change", () => regionenAktualisieren(prefix));
+      $("chk-" + prefix + "-regionen").addEventListener("change", () => stadtSucheAktualisieren(prefix));
+      $(prefix + "-stadt-suche").addEventListener("input", () => stadtSucheAktualisieren(prefix));
+      $(prefix + "-stadt-treffer").addEventListener("click", (e) => {
+        const b = e.target.closest(".stadt-treffer-btn"); if (b) stadtHinzu(prefix, b.dataset.name);
+      });
+      $(prefix + "-stadt-liste").addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-entf]"); if (b) stadtEntfernen(prefix, b.dataset.entf);
+      });
+    }
+    eingrenzungVerdrahten("wohnsitz");
+    eingrenzungVerdrahten("ort");
 
     // Benötigte Unterlagen (checkliste_vorschlag)
     const DOK_VORSCHLAEGE = ["Projektbeschreibung","Kosten- und Finanzierungsplan","Künstlerische Vita","Arbeitsproben / Portfolio","Antragsformular","Lebenslauf","Zeitplan","Projektkonzept"];
@@ -481,6 +634,10 @@
       renderChecks("chk-traeger", TRAEGERSCHAFT, p.harte_kriterien.traegerschaft || []);
       renderChecks("chk-wohnsitz", LAENDER, p.harte_kriterien.wohnsitz || []);
       renderChecks("chk-ort", LAENDER, p.harte_kriterien.durchfuehrungsort || []);
+      stadtWahl.wohnsitz = [...(p.harte_kriterien.wohnsitz_staedte || [])];
+      stadtWahl.ort = [...(p.harte_kriterien.durchfuehrungsort_staedte || [])];
+      regionenAktualisieren("wohnsitz", p.harte_kriterien.wohnsitz_regionen || []);
+      regionenAktualisieren("ort", p.harte_kriterien.durchfuehrungsort_regionen || []);
       { const st = (p.harte_kriterien.studentisch_erlaubt !== false) ? "ja" : "nein"; const r = document.querySelector('input[name="studentisch"][value="' + st + '"]'); if (r) r.checked = true; }
       renderChecks("chk-sparten", SPARTEN, p.weiche_kriterien.sparten || []);
       renderChecks("chk-projektarten", PROJEKTARTEN, p.weiche_kriterien.projektarten || []);
@@ -503,7 +660,16 @@
       p.max_anteil_prozent = zahlOderNull($("p-anteil").value); p.anteil_ausnahme = $("p-anteil-ausnahme").checked;
       p.frist_hinweis = $("p-frist-hinweis").value.trim();
       const stEl = document.querySelector('input[name="studentisch"]:checked');
-      p.harte_kriterien = { traegerschaft: leseChecks("chk-traeger"), wohnsitz: leseChecks("chk-wohnsitz"), durchfuehrungsort: leseChecks("chk-ort"), studentisch_erlaubt: stEl ? stEl.value === "ja" : true };
+      p.harte_kriterien = {
+        traegerschaft: leseChecks("chk-traeger"),
+        wohnsitz: leseChecks("chk-wohnsitz"),
+        wohnsitz_regionen: leseChecks("chk-wohnsitz-regionen"),
+        wohnsitz_staedte: [...stadtWahl.wohnsitz],
+        durchfuehrungsort: leseChecks("chk-ort"),
+        durchfuehrungsort_regionen: leseChecks("chk-ort-regionen"),
+        durchfuehrungsort_staedte: [...stadtWahl.ort],
+        studentisch_erlaubt: stEl ? stEl.value === "ja" : true,
+      };
       p.weiche_kriterien = { sparten: leseChecks("chk-sparten"), projektarten: leseChecks("chk-projektarten"),
         budget_min: zahlOderNull($("p-budget-min").value), budget_max: zahlOderNull($("p-budget-max").value), zeitpunkt: zeitpunktWert() };
       const fristen = [];
