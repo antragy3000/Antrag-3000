@@ -1521,6 +1521,29 @@
       });
     }
 
+    // Kurzer, schneller Prüf-Wert (Hash) über die Logo-Data-URL – NUR zur
+    // Änderungserkennung, keine Krypto. Damit merkt sich die App, welches Logo
+    // je Förderer schon hochgeladen wurde, und lädt ein UNVERÄNDERTES Logo bei
+    // weiteren Importen desselben Förderers NICHT erneut hoch.
+    function logoHash(s) {
+      let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+      for (let i = 0; i < s.length; i++) {
+        const ch = s.charCodeAt(i);
+        h1 = Math.imul(h1 ^ ch, 2654435761);
+        h2 = Math.imul(h2 ^ ch, 1597334677);
+      }
+      h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+      h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+      return (h2 >>> 0).toString(16).padStart(8, "0") + (h1 >>> 0).toString(16).padStart(8, "0");
+    }
+    function logoUploadsLaden() {
+      try { return JSON.parse(localStorage.getItem("foerderer-logo-uploads")) || {}; }
+      catch { return {}; }
+    }
+    function logoUploadsSpeichern(m) {
+      localStorage.setItem("foerderer-logo-uploads", JSON.stringify(m));
+    }
+
     async function importUebernehmen() {
       const r = letzterImport;
       if (!r || !(r.signiert && r.signatur_gueltig && r.ca_ok)) return;
@@ -1564,13 +1587,25 @@
       if (btn) btn.disabled = true;
       meldung("importMeldung", "info", "Übernehme und lade hoch …");
       try {
-        // Volles Logo separat auf die NAS (für die Danksagung/Credits). Fehler
-        // hier bricht die Übernahme NICHT ab – die Kachel-Vorschau steckt schon
-        // im Eintrag.
+        // Volles Logo separat auf die NAS (für die Danksagung/Credits). Nur
+        // EINMAL pro Import und nur, wenn es NEU oder GEÄNDERT ist – so wird
+        // dasselbe Logo bei weiteren Programmen/Importen desselben Förderers
+        // nicht unnötig erneut hochgeladen. Fehler bricht die Übernahme NICHT ab.
         let logoHinweis = "";
         if (orgLogo) {
-          try { await invoke("admin_logo_hochladen", { ...basisArgs(), logoId, datenUrl: orgLogo }); }
-          catch (e) { logoHinweis = " (Hinweis: volles Logo nicht hochgeladen: " + e + ")"; }
+          const h = logoHash(orgLogo);
+          const uploads = logoUploadsLaden();
+          if (uploads[logoId] === h) {
+            logoHinweis = " (Logo unverändert – kein erneuter Upload)";
+          } else {
+            try {
+              await invoke("admin_logo_hochladen", { ...basisArgs(), logoId, datenUrl: orgLogo });
+              uploads[logoId] = h;
+              logoUploadsSpeichern(uploads);
+            } catch (e) {
+              logoHinweis = " (Hinweis: volles Logo nicht hochgeladen: " + e + ")";
+            }
+          }
         }
         for (const e of eintraege) {
           const i = katalog.foerderungen.findIndex((x) => x.id === e.id);
