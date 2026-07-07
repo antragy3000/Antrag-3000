@@ -1411,27 +1411,35 @@
       }
       html += "</div>";
 
-      if (echt && programme.length) {
-        html += '<div id="importFreigabe" style="margin-top:14px;border:1px solid var(--rand);border-radius:10px;padding:14px 16px">' +
-          "<h3 style=\"margin:0 0 4px\">Programme freigeben</h3>" +
-          '<p class="dezent" style="margin:0 0 10px">Wählen Sie, was in den verteilten Katalog übernommen werden soll. ' +
-            'Jeder Eintrag wird fälschungssicher „' + escape(r.foerderer_name || "Förderer") + '" zugeordnet ' +
-            "(Herkunft + Fingerabdruck). Gleiche Förderung wird beim erneuten Übernehmen aktualisiert.</p>" +
-          '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">';
-        programme.forEach((p, i) => {
-          const wk = p.weiche_kriterien || {};
-          const zusatz = [
-            (wk.sparten || []).length + " Sparte(n)",
-            (wk.projektarten || []).length + " Projektart(en)",
-            wk.zeitpunkt || "laufend",
-          ].join(" · ");
-          html += '<label class="check" style="align-items:flex-start">' +
-            '<input type="checkbox" data-i="' + i + '" checked /> ' +
-            "<span><strong>" + escape(p.name || "(ohne Namen)") + "</strong>" +
-            '<br><span class="dezent" style="font-size:0.82rem">' + escape(zusatz) + "</span></span></label>";
-        });
-        html += "</div>" +
-          '<div class="knoepfe"><button id="importUebernehmenBtn">Ausgewählte in den Katalog übernehmen</button></div>' +
+      if (echt) {
+        html += '<div id="importFreigabe" style="margin-top:14px;border:1px solid var(--rand);border-radius:10px;padding:14px 16px">';
+        if (programme.length) {
+          html += "<h3 style=\"margin:0 0 4px\">Programme freigeben</h3>" +
+            '<p class="dezent" style="margin:0 0 10px">Wählen Sie, was in den verteilten Katalog übernommen werden soll. ' +
+              'Jeder Eintrag wird fälschungssicher „' + escape(r.foerderer_name || "Förderer") + '" zugeordnet ' +
+              "(Herkunft + Fingerabdruck). Gleiche Förderung wird beim erneuten Übernehmen aktualisiert. " +
+              "Programme, die dieser Förderer nicht mehr exportiert, werden aus dem Katalog entfernt.</p>" +
+            '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">';
+          programme.forEach((p, i) => {
+            const wk = p.weiche_kriterien || {};
+            const zusatz = [
+              (wk.sparten || []).length + " Sparte(n)",
+              (wk.projektarten || []).length + " Projektart(en)",
+              wk.zeitpunkt || "laufend",
+            ].join(" · ");
+            html += '<label class="check" style="align-items:flex-start">' +
+              '<input type="checkbox" data-i="' + i + '" checked /> ' +
+              "<span><strong>" + escape(p.name || "(ohne Namen)") + "</strong>" +
+              '<br><span class="dezent" style="font-size:0.82rem">' + escape(zusatz) + "</span></span></label>";
+          });
+          html += "</div>";
+        } else {
+          html += "<h3 style=\"margin:0 0 4px\">Keine Programme mehr</h3>" +
+            '<p class="dezent" style="margin:0 0 10px">Dieser Förderer hat aktuell <strong>keine</strong> Programme im Export. ' +
+            "Beim Übernehmen werden frühere Einträge dieses Förderers aus dem Katalog entfernt.</p>";
+        }
+        html += '<div class="knoepfe"><button id="importUebernehmenBtn">' +
+            (programme.length ? "Ausgewählte in den Katalog übernehmen" : "Katalog mit diesem Förderer abgleichen") + "</button></div>" +
           '<div id="importMeldung" style="margin-top:10px"></div>' +
         "</div>";
       }
@@ -1574,7 +1582,9 @@
       const programme = (r.nutzlast && Array.isArray(r.nutzlast.programme)) ? r.nutzlast.programme : [];
       const gewaehlt = [...document.querySelectorAll("#importFreigabe input[type=checkbox]:checked")]
         .map((c) => programme[Number(c.dataset.i)]).filter(Boolean);
-      if (!gewaehlt.length) { alert("Keine Programme ausgewählt."); return; }
+      // 0 gewählt ist NUR ok, wenn der Förderer gar keine Programme mehr hat
+      // (Leer-Export) – dann geht es allein ums Entfernen früherer Einträge.
+      if (!gewaehlt.length && programme.length > 0) { alert("Keine Programme ausgewählt."); return; }
 
       // Mini-Vorschau (Thumbnail) des Förderer-Logos in jeden Eintrag einbetten –
       // für die Förder-Kachel in der Nutzer-App. Das VOLLE Logo kommt später als
@@ -1598,6 +1608,9 @@
         if (orgLogo) e.logo_id = logoId;         // Verweis auf das volle Logo (NAS)
         return e;
       });
+      // Vollständige Id-Menge des Exports (ALLE Programme des Förderers, nicht nur
+      // die angehakten) – Grundlage, um vom Förderer GELÖSCHTE Programme zu erkennen.
+      const alleExportIds = new Set(programme.map((p) => programmZuKatalog(p, org, web, r).id));
 
       meldung("importMeldung", "info", "Lade aktuellen Katalog …");
       try { await ladeKatalog(); }
@@ -1605,9 +1618,25 @@
 
       let neu = 0, akt = 0;
       for (const e of eintraege) { if (katalogIndex[e.id]) akt++; else neu++; }
+
+      // Vom Förderer GELÖSCHTE Programme: Katalog-Einträge DIESES Förderers, die
+      // nicht mehr im Export vorkommen. Streng über den Zertifikats-Fingerabdruck
+      // zugeordnet – ein Förderer kann also nur SEINE eigenen Einträge entfernen.
+      const fp = r.zertifikat_fingerabdruck || "";
+      const gehoertZuFoerderer = (e) => e && e.herkunft && e.herkunft.typ === "foerderer-signiert" &&
+        ((fp && e.herkunft.zertifikat_fingerabdruck === fp) ||
+         (!e.herkunft.zertifikat_fingerabdruck && e.herkunft.foerderer_name === r.foerderer_name));
+      const zuLoeschen = katalog.foerderungen.filter((e) => gehoertZuFoerderer(e) && !alleExportIds.has(e.id));
+
+      if (!eintraege.length && !zuLoeschen.length) {
+        meldung("importMeldung", "info", "Für diesen Förderer gibt es nichts zu übernehmen oder zu entfernen.");
+        return;
+      }
+
       const frage =
         "In den Katalog übernehmen:\n" +
         `• ${neu} neu, ${akt} aktualisieren\n` +
+        (zuLoeschen.length ? `• ${zuLoeschen.length} entfernen (vom Förderer gelöscht)\n` : "") +
         `• alle gekennzeichnet als „${r.foerderer_name}"\n\nFortfahren?`;
       if (!confirm(frage)) { meldung("importMeldung", "info", "Abgebrochen."); return; }
 
@@ -1634,10 +1663,17 @@
           if (i >= 0) katalog.foerderungen[i] = e; else katalog.foerderungen.push(e);
           katalogIndex[e.id] = e;
         }
+        // Vom Förderer gelöschte Programme aus dem Katalog entfernen.
+        if (zuLoeschen.length) {
+          const weg = new Set(zuLoeschen.map((e) => e.id));
+          katalog.foerderungen = katalog.foerderungen.filter((e) => !weg.has(e.id));
+          for (const id of weg) delete katalogIndex[id];
+        }
         const roh = await katalogSpeichern();
         let info = "";
         try { const a = JSON.parse(roh); info = ` Gesamt ${a.anzahl}, Stand ${a.stand ?? "?"}.`; } catch {}
-        meldung("importMeldung", "ok", `✓ Übernommen: ${neu} neu, ${akt} aktualisiert.${info}${logoHinweis}`);
+        const loeschTxt = zuLoeschen.length ? `, ${zuLoeschen.length} entfernt` : "";
+        meldung("importMeldung", "ok", `✓ Übernommen: ${neu} neu, ${akt} aktualisiert${loeschTxt}.${info}${logoHinweis}`);
       } catch (e) {
         meldung("importMeldung", "fehler", "⚠ " + e);
         if (btn) btn.disabled = false;
