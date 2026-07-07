@@ -1521,6 +1521,51 @@
       });
     }
 
+    // ===== Strikte SVG-Bereinigung (Allowlist) – Verteil-Gate =====
+    // Ein signierter Export kann ein SVG-Logo enthalten (auch von Hand gebaut).
+    // Bevor es auf die NAS geht und an ALLE verteilt wird, wird es hier streng
+    // bereinigt: nur bekannte, ungefährliche SVG-Elemente/Attribute bleiben,
+    // Skripte/on…-Handler/externe Verweise/Animationen/CSS-url() fliegen raus.
+    // Identisch zur Bereinigung in der Förderer-App (Defense in depth).
+    const SVG_OK_TAGS = new Set(["svg","g","path","rect","circle","ellipse","line","polyline","polygon","defs","lineargradient","radialgradient","stop","clippath","mask","use","title","desc","tspan","text","symbol","pattern","style"]);
+    const SVG_OK_ATTRS = new Set(["id","class","d","x","y","width","height","cx","cy","r","rx","ry","points","x1","y1","x2","y2","transform","viewbox","preserveaspectratio","fill","stroke","stroke-width","opacity","fill-opacity","stroke-opacity","stroke-linecap","stroke-linejoin","stroke-dasharray","stroke-dashoffset","stroke-miterlimit","fill-rule","clip-rule","clip-path","color","stop-color","stop-opacity","offset","gradientunits","gradienttransform","spreadmethod","clippathunits","maskunits","maskcontentunits","patternunits","patterncontentunits","patterntransform","text-anchor","font-family","font-size","font-weight","letter-spacing","xmlns","xmlns:xlink","version"]);
+    const SVG_CSS_GEFAHR = /url\s*\(|@import|expression\s*\(|javascript:|<\/?\w/i;
+    function svgBereinigen(dataUrl) {
+      let text;
+      try {
+        const m = /^data:image\/svg\+xml(;[^,]*)?,([\s\S]*)$/i.exec(dataUrl || "");
+        if (!m) return null;
+        const base64 = /;base64/i.test(m[1] || "");
+        text = base64 ? decodeURIComponent(escape(atob(m[2]))) : decodeURIComponent(m[2]);
+      } catch { return null; }
+      let doc;
+      try { doc = new DOMParser().parseFromString(text, "image/svg+xml"); } catch { return null; }
+      if (!doc || doc.getElementsByTagName("parsererror").length) return null;
+      const svg = doc.documentElement;
+      if (!svg || svg.tagName.toLowerCase() !== "svg") return null;
+      (function saeubere(el) {
+        [...el.children].forEach((kind) => {
+          if (!SVG_OK_TAGS.has(kind.tagName.toLowerCase())) { kind.remove(); return; }
+          saeubere(kind);
+        });
+        if (el.tagName.toLowerCase() === "style" && SVG_CSS_GEFAHR.test(el.textContent || "")) el.textContent = "";
+        [...el.attributes].forEach((a) => {
+          const name = a.name.toLowerCase();
+          if (name.startsWith("on")) { el.removeAttribute(a.name); return; }
+          if (name === "href" || name === "xlink:href") { if (!/^\s*#/.test(a.value)) el.removeAttribute(a.name); return; }
+          if (name === "style") { if (SVG_CSS_GEFAHR.test(a.value)) el.removeAttribute(a.name); return; }
+          if (!SVG_OK_ATTRS.has(name)) el.removeAttribute(a.name);
+        });
+      })(svg);
+      if (!svg.getAttribute("width") || !svg.getAttribute("height")) {
+        const vb = (svg.getAttribute("viewBox") || "").split(/[\s,]+/).map(Number);
+        if (vb.length === 4 && vb[2] > 0 && vb[3] > 0) { svg.setAttribute("width", String(vb[2])); svg.setAttribute("height", String(vb[3])); }
+      }
+      if (!svg.getAttribute("xmlns")) svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      const clean = new XMLSerializer().serializeToString(svg);
+      return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(clean)));
+    }
+
     async function importUebernehmen() {
       const r = letzterImport;
       if (!r || !(r.signiert && r.signatur_gueltig && r.ca_ok)) return;
@@ -1534,7 +1579,13 @@
       // Mini-Vorschau (Thumbnail) des Förderer-Logos in jeden Eintrag einbetten –
       // für die Förder-Kachel in der Nutzer-App. Das VOLLE Logo kommt später als
       // separate NAS-Datei dazu (Etappe 3c-2), damit der Katalog schlank bleibt.
-      const orgLogo = (r.nutzlast && r.nutzlast.organisation && r.nutzlast.organisation.logo) || "";
+      let orgLogo = (r.nutzlast && r.nutzlast.organisation && r.nutzlast.organisation.logo) || "";
+      // SVG-Logos VOR Vorschau/Upload strikt bereinigen (Verteil-Gate). Scheitert
+      // die Bereinigung, wird das Logo verworfen – lieber KEIN Logo verteilen als
+      // ein potenziell unsicheres.
+      if (/^data:image\/svg\+xml/i.test(orgLogo)) {
+        orgLogo = svgBereinigen(orgLogo) || "";
+      }
       const logoId = importSlug(org.name || r.foerderer_name) || "org";
       let logoThumb = "";
       if (orgLogo) {

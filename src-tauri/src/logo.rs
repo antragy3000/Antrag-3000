@@ -16,6 +16,8 @@ fn endung_aus_dataurl(daten: &str) -> &'static str {
     let anfang = daten.get(..32).unwrap_or(daten).to_ascii_lowercase();
     if anfang.starts_with("data:image/jpeg") || anfang.starts_with("data:image/jpg") {
         "jpg"
+    } else if anfang.starts_with("data:image/svg") {
+        "svg"
     } else if anfang.starts_with("data:image/webp") {
         "webp"
     } else if anfang.starts_with("data:image/gif") {

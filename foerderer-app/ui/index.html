@@ -186,13 +186,13 @@
 
     <section class="karte voll">
       <h3>Logo (optional)</h3>
-      <p class="hinweis">Erscheint später neben Ihren Förderprogrammen. PNG oder JPG, max. 1,5 MB.</p>
+      <p class="hinweis">Erscheint später neben Ihren Förderprogrammen. PNG, JPG oder SVG, max. 1,5 MB.</p>
       <div class="logo-zeile">
         <img class="logo-vorschau" id="logoVorschau" alt="Logo" style="display:none" />
         <div class="logo-platzhalter" id="logoPlatzhalter">kein Logo</div>
         <div class="logo-knoepfe">
           <label class="datei-knopf"><span id="logoBtnText">Logo wählen …</span>
-            <input type="file" accept="image/png,image/jpeg" id="logoInput" hidden /></label>
+            <input type="file" accept="image/png,image/jpeg,image/svg+xml" id="logoInput" hidden /></label>
           <button type="button" class="entfernen" id="logoEntfernen" style="display:none">Entfernen</button>
           <span class="logo-tipp">Danach nicht vergessen: „Speichern".</span>
         </div>
@@ -458,6 +458,54 @@
 
     // Logo
     const MAX_LOGO = 1_500_000;
+
+    // ===== Strikte SVG-Bereinigung (Allowlist) =====
+    // Ein Förderer-Logo wird an ALLE Nutzer:innen verteilt; ein SVG kann Skripte
+    // enthalten. Deshalb: SVG parsen und NUR bekannte, ungefährliche Elemente/
+    // Attribute behalten – Skripte, on…-Handler, externe/js-Verweise, Animationen
+    // und CSS-url()/@import werden entfernt. Angezeigt wird SVG ohnehin nur als
+    // <img>/rasterisierte Vorschau (kein Skript läuft je). Gibt eine bereinigte
+    // data:image/svg+xml;base64-URL zurück – oder null, wenn kein gültiges SVG.
+    const SVG_OK_TAGS = new Set(["svg","g","path","rect","circle","ellipse","line","polyline","polygon","defs","lineargradient","radialgradient","stop","clippath","mask","use","title","desc","tspan","text","symbol","pattern","style"]);
+    const SVG_OK_ATTRS = new Set(["id","class","d","x","y","width","height","cx","cy","r","rx","ry","points","x1","y1","x2","y2","transform","viewbox","preserveaspectratio","fill","stroke","stroke-width","opacity","fill-opacity","stroke-opacity","stroke-linecap","stroke-linejoin","stroke-dasharray","stroke-dashoffset","stroke-miterlimit","fill-rule","clip-rule","clip-path","color","stop-color","stop-opacity","offset","gradientunits","gradienttransform","spreadmethod","clippathunits","maskunits","maskcontentunits","patternunits","patterncontentunits","patterntransform","text-anchor","font-family","font-size","font-weight","letter-spacing","xmlns","xmlns:xlink","version"]);
+    const SVG_CSS_GEFAHR = /url\s*\(|@import|expression\s*\(|javascript:|<\/?\w/i;
+    function svgBereinigen(dataUrl) {
+      let text;
+      try {
+        const m = /^data:image\/svg\+xml(;[^,]*)?,([\s\S]*)$/i.exec(dataUrl || "");
+        if (!m) return null;
+        const base64 = /;base64/i.test(m[1] || "");
+        text = base64 ? decodeURIComponent(escape(atob(m[2]))) : decodeURIComponent(m[2]);
+      } catch { return null; }
+      let doc;
+      try { doc = new DOMParser().parseFromString(text, "image/svg+xml"); } catch { return null; }
+      if (!doc || doc.getElementsByTagName("parsererror").length) return null;
+      const svg = doc.documentElement;
+      if (!svg || svg.tagName.toLowerCase() !== "svg") return null;
+      (function saeubere(el) {
+        [...el.children].forEach((kind) => {
+          if (!SVG_OK_TAGS.has(kind.tagName.toLowerCase())) { kind.remove(); return; }
+          saeubere(kind);
+        });
+        if (el.tagName.toLowerCase() === "style" && SVG_CSS_GEFAHR.test(el.textContent || "")) el.textContent = "";
+        [...el.attributes].forEach((a) => {
+          const name = a.name.toLowerCase();
+          if (name.startsWith("on")) { el.removeAttribute(a.name); return; }
+          if (name === "href" || name === "xlink:href") { if (!/^\s*#/.test(a.value)) el.removeAttribute(a.name); return; }
+          if (name === "style") { if (SVG_CSS_GEFAHR.test(a.value)) el.removeAttribute(a.name); return; }
+          if (!SVG_OK_ATTRS.has(name)) el.removeAttribute(a.name);
+        });
+      })(svg);
+      // Für zuverlässige Rasterung (Thumbnail): width/height aus viewBox ergänzen.
+      if (!svg.getAttribute("width") || !svg.getAttribute("height")) {
+        const vb = (svg.getAttribute("viewBox") || "").split(/[\s,]+/).map(Number);
+        if (vb.length === 4 && vb[2] > 0 && vb[3] > 0) { svg.setAttribute("width", String(vb[2])); svg.setAttribute("height", String(vb[3])); }
+      }
+      if (!svg.getAttribute("xmlns")) svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      const clean = new XMLSerializer().serializeToString(svg);
+      return "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(clean)));
+    }
+
     function logoAnzeigen() { const hat = !!logoData;
       $("logoVorschau").style.display = hat?"block":"none"; if(hat) $("logoVorschau").src = logoData;
       $("logoPlatzhalter").style.display = hat?"none":"grid"; $("logoEntfernen").style.display = hat?"inline-block":"none";
@@ -465,9 +513,23 @@
     $("logoInput").addEventListener("change", (e) => {
       $("logoFehler").style.display = "none"; const f = e.target.files && e.target.files[0]; e.target.value = "";
       if (!f) return;
-      if (!/^image\/(png|jpeg)$/.test(f.type)) return logoFehlerZeigen("Bitte ein PNG- oder JPG-Bild wählen.");
+      const istSvg = /svg/i.test(f.type) || /\.svg$/i.test(f.name);
+      if (!/^image\/(png|jpeg)$/.test(f.type) && !istSvg)
+        return logoFehlerZeigen("Bitte ein PNG-, JPG- oder SVG-Bild wählen.");
       if (f.size > MAX_LOGO) return logoFehlerZeigen("Das Bild ist zu groß (max. 1,5 MB).");
-      const r = new FileReader(); r.onload = () => { logoData = r.result; logoAnzeigen(); orgPruefen(); };
+      const r = new FileReader();
+      r.onload = () => {
+        if (istSvg) {
+          // SVG wird STRIKT bereinigt (Skripte/Handler/externe Verweise raus),
+          // bevor es gespeichert/verteilt wird.
+          const sauber = svgBereinigen(r.result);
+          if (!sauber) return logoFehlerZeigen("Diese SVG-Datei konnte nicht sicher verarbeitet werden. Bitte ein PNG/JPG verwenden.");
+          logoData = sauber;
+        } else {
+          logoData = r.result;
+        }
+        logoAnzeigen(); orgPruefen();
+      };
       r.onerror = () => logoFehlerZeigen("Das Bild konnte nicht gelesen werden."); r.readAsDataURL(f);
     });
     function logoFehlerZeigen(t) { const el = $("logoFehler"); el.textContent = t; el.style.display = "block"; }
