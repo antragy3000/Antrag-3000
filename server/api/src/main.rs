@@ -23,9 +23,13 @@
 // `X-Client-Cert-DER`.
 // ============================================================
 
+mod service_ca;
+use service_ca::ServiceCa;
+
 use std::collections::HashMap;
 use std::env;
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -52,6 +56,12 @@ struct AppState {
     // gültigem TOTP-Code) und laufen nach SITZUNG_TTL_S ab. Im Speicher;
     // nach Neustart muss sich der Admin neu anmelden.
     sitzungen: Arc<Mutex<HashMap<String, AdminSitzung>>>,
+    // Service-CA (gehostetes Modell): signiert Geräte-Ausweise. None, wenn sie
+    // beim Start nicht geladen/erzeugt werden konnte – dann läuft der bisherige
+    // Team-CA-Sync unbeirrt weiter, nur die (noch ungenutzte) Auto-Signierung
+    // ist aus. Die Enrollment-Endpunkte (Schritt 3) lesen dieses Feld.
+    #[allow(dead_code)] // wird in Schritt 3 (Enrollment-Endpunkte) gelesen
+    service_ca: Arc<Option<ServiceCa>>,
 }
 
 /// Eine offene Admin-Sitzung (an ein Gerät gebunden, mit Ablaufzeit).
@@ -224,6 +234,26 @@ async fn main() {
         .await
         .expect("Schema konnte nicht angelegt werden");
 
+    // Service-CA (gehostetes Modell, Schritt 2): einmal erzeugen und danach
+    // nur noch laden. Ordner per ENV SERVICE_CA_DIR (Docker: eigenes
+    // beschreibbares Volume, damit Caddy das öffentliche service-ca.crt
+    // mounten kann); ohne ENV neben der DB-Datei. Schlägt es fehl (z. B.
+    // Ordner nicht beschreibbar), läuft der Server trotzdem weiter – der
+    // bisherige Team-CA-Sync ist davon nicht betroffen.
+    let service_ca = match ServiceCa::laden_oder_erzeugen(&service_ca_dir(&db_pfad)) {
+        Ok(ca) => {
+            println!(
+                "Service-CA aktiv (Fingerabdruck {}…).",
+                &ca.fingerprint()[..ca.fingerprint().len().min(16)]
+            );
+            Some(ca)
+        }
+        Err(e) => {
+            eprintln!("WARNUNG: Service-CA nicht verfügbar ({e}). Team-CA-Sync läuft weiter.");
+            None
+        }
+    };
+
     let app = Router::new()
         .route("/api/health", get(health))
         .route("/api/board", get(board_lesen))
@@ -260,6 +290,7 @@ async fn main() {
             pool,
             schreib: Arc::new(Mutex::new(HashMap::new())),
             sitzungen: Arc::new(Mutex::new(HashMap::new())),
+            service_ca: Arc::new(service_ca),
         });
 
     let addr: SocketAddr = lausch.parse().expect("LAUSCH ist keine gültige Adresse");
@@ -468,6 +499,24 @@ fn auto_enroll_erlaubt() -> bool {
         Ok(v) => !matches!(v.trim().to_lowercase().as_str(), "0" | "false" | "nein" | "off"),
         Err(_) => true,
     }
+}
+
+/// Ordner für die Service-CA-Dateien (service-ca.crt/.key). Per ENV
+/// `SERVICE_CA_DIR`; sonst der Ordner der DB-Datei (fällt auf "." zurück,
+/// wenn die DB keinen Ordner-Anteil hat). So liegt die CA im Docker neben
+/// einem beschreibbaren Volume, das Caddy für das öffentliche Zertifikat
+/// mounten kann.
+fn service_ca_dir(db_pfad: &str) -> PathBuf {
+    if let Ok(d) = env::var("SERVICE_CA_DIR") {
+        if !d.trim().is_empty() {
+            return PathBuf::from(d.trim());
+        }
+    }
+    PathBuf::from(db_pfad)
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| PathBuf::from("."))
 }
 
 /// Abo-Haken (gehostetes Modell, Schritt 1): Darf dieses Konto schreibende

@@ -11,6 +11,17 @@
 #   docker compose -f docker-compose.netcup.yml up -d --build
 # Nur den Dienst neu bauen (nach Code-Update per git pull):
 #   docker compose -f docker-compose.netcup.yml up -d --build api
+#
+# Update auf Schritt 2 (Service-CA) OHNE den laufenden Sync zu brechen –
+# Reihenfolge einhalten, weil Caddy das service-ca.crt mountet:
+#   1) git pull
+#   2) docker compose -f docker-compose.netcup.yml up -d --build api
+#      -> die api erzeugt ./service-ca/service-ca.crt (+ .key). Caddy läuft
+#         noch mit der alten Konfiguration weiter, Sync unverändert.
+#   3) ls -l ./service-ca/service-ca.crt   (muss existieren!)
+#   4) docker compose -f docker-compose.netcup.yml up -d
+#      -> Caddy übernimmt den Dual-Trust (Team-CA + Service-CA). Bestehende
+#         Geräte (Team-CA) bleiben gültig.
 
 services:
   caddy:
@@ -26,6 +37,9 @@ services:
     volumes:
       - ./Caddyfile.netcup:/etc/caddy/Caddyfile:ro
       - ./ca/team-ca.crt:/etc/caddy/ca/team-ca.crt:ro
+      # Öffentliches Service-CA-Zertifikat (erzeugt die api ins ./service-ca-
+      # Volume). Nur lesend – der geheime Schlüssel wird NIE gemountet.
+      - ./service-ca/service-ca.crt:/etc/caddy/ca/service-ca.crt:ro
       - ./server.crt:/etc/caddy/server.crt:ro
       - ./server.key:/etc/caddy/server.key:ro
       - ./updates:/srv/updates:ro
@@ -55,9 +69,17 @@ services:
       - KATALOG_PFAD=/srv/foerderungen.json
       - CERT_HEADER_MODE=caddy
       - ADMIN_TOTP_SECRET=${ADMIN_TOTP_SECRET:-}
+      # Ordner der Service-CA (gehostetes Modell, Schritt 2). Die api erzeugt
+      # dort service-ca.crt (öffentlich, von Caddy gemountet) + service-ca.key
+      # (geheim, bleibt im Volume).
+      - SERVICE_CA_DIR=/service-ca
     volumes:
       - api_data:/data
       - ./katalog:/srv:ro
+      # Beschreibbares Host-Volume für die Service-CA (trotz read_only-Container
+      # beschreibbar, weil eigener Bind-Mount). Enthält den GEHEIMEN CA-Schlüssel
+      # – Ordnerrechte auf dem Host eng halten (z. B. chmod 700 ./service-ca).
+      - ./service-ca:/service-ca
     networks:
       - intern
     # KEIN "ports:" – nur intern, über Caddy erreichbar.

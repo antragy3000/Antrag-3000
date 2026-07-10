@@ -19,8 +19,15 @@
 	tls /etc/caddy/server.crt /etc/caddy/server.key {
 		client_auth {
 			mode require_and_verify
+			# Zwei vertraute Wurzeln nebeneinander (gehostetes Modell,
+			# Schritt 2): die bisherige Team-CA (bestehende Ausweise bleiben
+			# gültig) UND die neue Service-CA (auto-signierte Geräte-Ausweise).
+			# So bricht der laufende Sync nicht; die Team-CA kann später
+			# entfallen, wenn alle Geräte über die Service-CA laufen.
+			# Hinweis: BEIDE Dateien müssen existieren, sonst lädt Caddy nicht –
+			# darum erst die api starten (erzeugt service-ca.crt), dann caddy.
 			trust_pool file {
-				pem_file /etc/caddy/ca/team-ca.crt
+				pem_file /etc/caddy/ca/team-ca.crt /etc/caddy/ca/service-ca.crt
 			}
 		}
 	}

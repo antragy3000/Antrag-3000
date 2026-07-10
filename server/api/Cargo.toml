@@ -27,6 +27,17 @@ totp-rs = { version = "5", features = ["gen_secret", "otpauth"] }
 # qrcode: zeigt die otpauth-URL als QR-Code direkt im Terminal an
 # (offline), damit man sie mit der Authenticator-App scannen kann.
 qrcode = "0.14"
+# rcgen: erzeugt und haelt die Service-CA (gehostetes Modell) und signiert
+# daraus Geraete-Ausweise. Reines Rust, gleiche Bibliothek/Version wie die
+# Admin-App (keine Eigenbau-Krypto). Feature x509-parser liefert
+# SubjectPublicKeyInfo::from_pem (nur der oeffentliche Geraete-Schluessel wird
+# eingelesen -> kopiersicher) und from_ca_cert_pem (CA aus PEM rekonstruieren).
+rcgen = { version = "0.13", features = ["x509-parser"] }
+
+[dev-dependencies]
+# x509-parser: nur fuer den Test der Service-CA (prueft kryptografisch, dass
+# ein ausgestellter Ausweis wirklich von der Service-CA signiert ist).
+x509-parser = { version = "0.16", features = ["verify"] }
 
 [profile.release]
 opt-level = "z"

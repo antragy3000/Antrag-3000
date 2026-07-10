@@ -7,6 +7,9 @@ ca/*.p12
 ca/*.pem
 # Geräte-Ausweise (enthalten private Schlüssel!) – nie versionieren:
 geraete/
+# Service-CA (gehostetes Modell): enthält den GEHEIMEN CA-Schlüssel – nie
+# versionieren (der Server erzeugt den Ordner beim Start selbst):
+service-ca/
 *.sqlite
 *.sqlite-*
 api/target/
