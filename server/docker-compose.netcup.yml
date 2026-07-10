@@ -1,0 +1,72 @@
+# Variante "Netcup-VPS" (öffentlich erreichbar, kein Tailscale).
+#
+# Vorher in den server/-Ordner legen (nicht versioniert – siehe .gitignore):
+#   ./ca/team-ca.crt   (Team-CA-Zertifikat aus der App)
+#   ./server.crt       (Server-Zertifikat aus der App, SAN team.antrag3000.de)
+#   ./server.key       (zugehöriger Schlüssel)
+#   ./katalog/foerderungen.json
+#   ./.env             (SYNC_DOMAIN, ACME_EMAIL, ADMIN_TOTP_SECRET)
+#
+# Start (im server/-Ordner):
+#   docker compose -f docker-compose.netcup.yml up -d --build
+# Nur den Dienst neu bauen (nach Code-Update per git pull):
+#   docker compose -f docker-compose.netcup.yml up -d --build api
+
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"      # Let's-Encrypt-Prüfung
+      - "443:443"    # öffentlicher Pfad (Updates/Katalog/Logos)
+      - "8443:8443"  # Team-Sync (mTLS)
+    environment:
+      - SYNC_DOMAIN=${SYNC_DOMAIN}
+      - ACME_EMAIL=${ACME_EMAIL}
+    volumes:
+      - ./Caddyfile.netcup:/etc/caddy/Caddyfile:ro
+      - ./ca/team-ca.crt:/etc/caddy/ca/team-ca.crt:ro
+      - ./server.crt:/etc/caddy/server.crt:ro
+      - ./server.key:/etc/caddy/server.key:ro
+      - ./updates:/srv/updates:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - intern
+    depends_on:
+      - api
+
+  api:
+    build: ./api
+    restart: unless-stopped
+    # Härtung: keine Capabilities, keine Rechte-Eskalation, read-only
+    # Dateisystem; nur /data (Volume) und /tmp sind beschreibbar.
+    user: "0:0"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    environment:
+      - DB_PFAD=/data/antrag3000.sqlite
+      - LAUSCH=0.0.0.0:8080
+      - KATALOG_PFAD=/srv/foerderungen.json
+      - CERT_HEADER_MODE=caddy
+      - ADMIN_TOTP_SECRET=${ADMIN_TOTP_SECRET:-}
+    volumes:
+      - api_data:/data
+      - ./katalog:/srv:ro
+    networks:
+      - intern
+    # KEIN "ports:" – nur intern, über Caddy erreichbar.
+
+networks:
+  intern:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:
+  api_data:

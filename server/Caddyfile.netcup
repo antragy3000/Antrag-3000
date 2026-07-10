@@ -1,0 +1,59 @@
+# Caddy 2.8 – Variante "Netcup-VPS" (öffentlich erreichbar, kein Tailscale).
+#
+# Zwei getrennte Eingänge auf demselben Server:
+#  :8443  Team-Sync  – Server-Zertifikat der Team-CA (server.crt) + mTLS.
+#                      Die App vertraut NUR dieser CA (sync.rs, Audit E1).
+#                      Das server.crt lautet auf einen EIGENEN Namen
+#                      (team.antrag3000.de), damit es das Let's-Encrypt-Zert
+#                      auf 443 nicht überdeckt (ein Name = ein Zertifikatstyp).
+#  :443   öffentlich – Updates/Katalog/Logos, Let's-Encrypt-Zertifikat für
+#                      {$SYNC_DOMAIN} (der Tauri-Updater traut nur öffentlichen
+#                      Wurzeln, daher echtes HTTPS).
+
+{
+	email {$ACME_EMAIL}
+}
+
+# --- Team-Sync (Port 8443): eigenes Zertifikat der Team-CA + mTLS ---
+:8443 {
+	tls /etc/caddy/server.crt /etc/caddy/server.key {
+		client_auth {
+			mode require_and_verify
+			trust_pool file {
+				pem_file /etc/caddy/ca/team-ca.crt
+			}
+		}
+	}
+	reverse_proxy api:8080 {
+		# Zuerst ALLE mitgeschickten Zertifikat-Header entfernen, damit niemand
+		# einen fremden Fingerabdruck vortäuscht. Erst danach setzt Caddy die
+		# ECHTEN Werte aus der mTLS-Prüfung.
+		header_up -Cf-Client-Cert-Sha256
+		header_up -Cf-Client-Cert-Der-Base64
+		header_up -Cf-Client-Cert-Der
+		header_up X-Client-Cert-DER {http.request.tls.client.certificate_der_base64}
+		header_up X-Client-Cert-Subject {http.request.tls.client.subject}
+	}
+}
+
+# --- Öffentlich (Port 443): signierte App-Pakete, Katalog, Logos ---
+{$SYNC_DOMAIN} {
+	# Signierte App-Pakete + latest.json (nur Ausliefern, read-only).
+	handle_path /updates/* {
+		root * /srv/updates
+		file_server
+	}
+	# Einzelplatz-Modus: öffentlicher Katalog-Abruf (nur Lesen, unkritisch).
+	handle /katalog {
+		rewrite * /api/katalog-oeffentlich
+		reverse_proxy api:8080
+	}
+	# Förderer-Logos: /logos/<id> -> /api/logos-oeffentlich/<id>.
+	handle /logos/* {
+		uri replace /logos/ /api/logos-oeffentlich/
+		reverse_proxy api:8080
+	}
+	handle {
+		respond "Antrag 3000" 200
+	}
+}
