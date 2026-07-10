@@ -1942,7 +1942,7 @@
                   type="text"
                   bind:value={daten.einzelServer}
                   onchange={tresorSpeichern}
-                  placeholder="nas-yh.tail73a506.ts.net:8445"
+                  placeholder="https://sync.antrag3000.de"
                 />
                 <div class="einzel-knoepfe">
                   <button class="primaer" onclick={einzelKatalogHolen}>

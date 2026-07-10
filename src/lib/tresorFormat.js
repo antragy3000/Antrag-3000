@@ -75,7 +75,7 @@ export function frischerTresor() {
     projekte: [],
     aktivesProjektId: null,
     modus: "einzel", // "einzel" (ohne Team) oder "team"
-    einzelServer: "nas-yh.tail73a506.ts.net:8445", // Update-/Katalog-Server (Einzelplatz)
+    einzelServer: "https://sync.antrag3000.de", // Update-/Katalog-Server (Einzelplatz)
     sync: null,
     teamCa: null,
     katalogMeldungen: [],
@@ -319,7 +319,7 @@ export function normalisieren(d) {
     veraendert = true;
   }
   if (typeof d.einzelServer !== "string") {
-    d.einzelServer = "nas-yh.tail73a506.ts.net:8445";
+    d.einzelServer = "https://sync.antrag3000.de";
     veraendert = true;
   }
   if (!Array.isArray(d.katalogMeldungen)) {

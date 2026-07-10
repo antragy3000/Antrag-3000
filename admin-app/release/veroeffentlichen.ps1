@@ -30,13 +30,13 @@ param(
   [Parameter(Mandatory = $true, Position = 0)]
   [string]$Notes,
 
-  [string]$SshUser     = "admin",
-  [string]$NasHost     = "nas-yh.tail73a506.ts.net",
+  [string]$SshUser     = "antrag",
+  [string]$NasHost     = "sync.antrag3000.de",
   # Admin-Updates liegen im UNTERORDNER "admin" (getrennt von der Nutzer-App).
-  [string]$UpdatesPfad = "/volume1/docker/antrag3000/updates/admin",
+  [string]$UpdatesPfad = "/home/antrag/Antrag-3000/server/updates/admin",
   [string]$KeyDatei    = "$HOME\.tauri\antrag3000.key",
   # Endpoint nur zur Schluss-Pruefung (muss zu tauri.conf.json passen).
-  [string]$PruefUrl    = "http://nas-yh.tail73a506.ts.net:8445/updates/admin/latest.json"
+  [string]$PruefUrl    = "https://sync.antrag3000.de/updates/admin/latest.json"
 )
 
 $ErrorActionPreference = "Stop"
@@ -114,9 +114,9 @@ Write-Host "  -> $($setup.Name)"
 Write-Host "  -> $($setup.Name).sha256"
 Write-Host "  -> latest.json"
 # scp ueberschreibt vorhandene Dateien. Beide Quellen in EINEM Aufruf, damit
-# nur EINE Verbindung noetig ist. -O erzwingt das klassische SCP-Protokoll
-# (Synology-SSH hat das SFTP-Subsystem oft nicht aktiviert).
-& scp -O $setup.FullName $sumDatei $latest "${SshUser}@${NasHost}:${UpdatesPfad}/"
+# nur EINE Verbindung noetig ist. Der VPS (Debian) hat das SFTP-Subsystem
+# aktiv, daher kein -O noetig; mit eingerichtetem SSH-Schluessel passwortfrei.
+& scp $setup.FullName $sumDatei $latest "${SshUser}@${NasHost}:${UpdatesPfad}/"
 if ($LASTEXITCODE -ne 0) {
   Write-Host "`nUpload fehlgeschlagen." -ForegroundColor Red
   Write-Host "Falls 'Permission denied': der SSH-Benutzer darf nicht in" -ForegroundColor Yellow

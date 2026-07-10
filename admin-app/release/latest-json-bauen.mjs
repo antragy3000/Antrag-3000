@@ -16,10 +16,10 @@ import { fileURLToPath } from "node:url";
 const hier = path.dirname(fileURLToPath(import.meta.url));
 const wurzel = path.join(hier, "..");
 
-// Update-Adresse der NAS (muss zum Endpoint in tauri.conf.json passen).
+// Update-Adresse des Servers (muss zum Endpoint in tauri.conf.json passen).
 // WICHTIG: Admin-Updates liegen im UNTERORDNER "admin", damit sie sich nicht
 // mit den Updates der Nutzer-App vermischen.
-const ENDPOINT_BASIS = "http://nas-yh.tail73a506.ts.net:8445/updates/admin";
+const ENDPOINT_BASIS = "https://sync.antrag3000.de/updates/admin";
 
 const conf = JSON.parse(
   fs.readFileSync(path.join(wurzel, "src-tauri", "tauri.conf.json"), "utf8"),

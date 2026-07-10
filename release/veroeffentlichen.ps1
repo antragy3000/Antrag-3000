@@ -24,12 +24,12 @@ param(
   [Parameter(Mandatory = $true, Position = 0)]
   [string]$Notes,
 
-  [string]$SshUser     = "admin",
-  [string]$NasHost     = "nas-yh.tail73a506.ts.net",
-  [string]$UpdatesPfad = "/volume1/docker/antrag3000/updates",
+  [string]$SshUser     = "antrag",
+  [string]$NasHost     = "sync.antrag3000.de",
+  [string]$UpdatesPfad = "/home/antrag/Antrag-3000/server/updates",
   [string]$KeyDatei    = "$HOME\.tauri\antrag3000.key",
   # Endpoint nur zur Schluss-Pruefung (muss zu tauri.conf.json passen).
-  [string]$PruefUrl    = "http://nas-yh.tail73a506.ts.net:8445/updates/latest.json",
+  [string]$PruefUrl    = "https://sync.antrag3000.de/updates/latest.json",
   # Frisch gebautes Handbuch wird zusaetzlich hierhin kopiert (Desktop).
   [string]$DesktopKopie = "$HOME\Desktop\Benutzerhandbuch Antrag 3000.pdf",
   # Setzen, falls das Handbuch-PDF NICHT neu erzeugt werden soll
@@ -128,11 +128,9 @@ Write-Host "  -> $($setup.Name)"
 Write-Host "  -> $($setup.Name).sha256"
 Write-Host "  -> latest.json"
 # scp ueberschreibt vorhandene Dateien. Beide Quellen in EINEM Aufruf, damit
-# nur EINE Verbindung (= ein Passwort) noetig ist.
-# -O erzwingt das klassische SCP-Protokoll: Synology-SSH hat das von neueren
-# scp-Versionen genutzte SFTP-Subsystem oft NICHT aktiviert ("subsystem
-# request failed"). Mit -O laeuft der Upload trotzdem.
-& scp -O $setup.FullName $sumDatei $latest "${SshUser}@${NasHost}:${UpdatesPfad}/"
+# nur EINE Verbindung noetig ist. Der VPS (Debian) hat das SFTP-Subsystem
+# aktiv, daher kein -O noetig; mit eingerichtetem SSH-Schluessel passwortfrei.
+& scp $setup.FullName $sumDatei $latest "${SshUser}@${NasHost}:${UpdatesPfad}/"
 if ($LASTEXITCODE -ne 0) {
   Write-Host "`nUpload fehlgeschlagen." -ForegroundColor Red
   Write-Host "Falls 'Permission denied': der SSH-Benutzer darf nicht direkt in" -ForegroundColor Yellow
