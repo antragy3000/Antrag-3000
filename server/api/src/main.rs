@@ -58,9 +58,7 @@ struct AppState {
     sitzungen: Arc<Mutex<HashMap<String, AdminSitzung>>>,
     // Service-CA (gehostetes Modell): signiert Geräte-Ausweise. None, wenn sie
     // beim Start nicht geladen/erzeugt werden konnte – dann läuft der bisherige
-    // Team-CA-Sync unbeirrt weiter, nur die (noch ungenutzte) Auto-Signierung
-    // ist aus. Die Enrollment-Endpunkte (Schritt 3) lesen dieses Feld.
-    #[allow(dead_code)] // wird in Schritt 3 (Enrollment-Endpunkte) gelesen
+    // Team-CA-Sync unbeirrt weiter, nur die Auto-Signierung (Enrollment) ist aus.
     service_ca: Arc<Option<ServiceCa>>,
 }
 
@@ -97,6 +95,11 @@ const SITZUNG_TTL_S: u64 = 1800;
 const FELD_MAX: usize = 200;
 /// Längenlimit für die freie Anmerkung einer Meldung.
 const TEXT_MAX: usize = 1000;
+/// Gültigkeitsdauer einer Einmal-Einladung (Sekunden). 24 h = genug Zeit, den
+/// Token zu übermitteln, aber kurz genug, dass er nicht lange „herumliegt".
+const EINLADUNG_TTL_S: i64 = 86_400;
+/// Größenlimit für den mitgeschickten öffentlichen Geräteschlüssel (PEM).
+const PUBKEY_MAX_BYTES: usize = 4096;
 
 /// Bildet aus dem aktuellen Katalog und Sammler-Kandidaten die Vorschläge:
 /// NEU (id fehlt im Katalog) oder GEÄNDERT (id vorhanden, Inhalt anders).
@@ -272,6 +275,12 @@ async fn main() {
         .route("/api/meldung/:meldung_id", put(meldung_schreiben))
         .route("/api/foerderer", get(foerderer_lesen))
         .route("/api/foerderer/:foerderer_id", put(foerderer_schreiben).delete(foerderer_loeschen))
+        // Enrollment (gehostetes Modell, Schritt 3):
+        //  - Einladung erstellen: nur ein Eigentümer-Gerät per mTLS (:8443).
+        //  - Verbinden/Ausweis: OHNE Zertifikat, per Einmal-Token; wird über den
+        //    öffentlichen :443-Kanal freigegeben (das neue Gerät hat noch kein Zert).
+        .route("/api/einladung", post(einladung_erstellen))
+        .route("/api/enroll", post(enroll))
         // Admin (Etappe 4): Zwei-Faktor (Admin-Gerät + Passwort).
         .route("/api/admin/anmelden", post(admin_anmelden))
         .route("/api/admin/meldungen", get(admin_meldungen))
@@ -409,6 +418,22 @@ async fn schema_anlegen(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             inhalt_json TEXT NOT NULL,
             geaendert_am TEXT NOT NULL DEFAULT (datetime('now')),
             PRIMARY KEY (konto_id, id)
+        )",
+        // Einmal-Einladungen (gehostetes Modell, Schritt 3). Der Eigentümer
+        // erzeugt einen kurzlebigen Token; ein neues Gerät löst ihn EINMAL ein
+        // (Token gilt als Auth, weil das Gerät noch kein Zertifikat hat).
+        // Nach dem Einlösen bleiben Ausweis + Schlüssel-Fingerabdruck stehen,
+        // damit ein Gerät bei verlorener Antwort denselben Ausweis idempotent
+        // erneut abholen kann (sonst wäre die Einladung verbrannt).
+        "CREATE TABLE IF NOT EXISTS einladung (
+            token TEXT PRIMARY KEY,
+            konto_id INTEGER NOT NULL REFERENCES konto(id),
+            bezeichnung TEXT,
+            ablauf TEXT NOT NULL,
+            benutzt INTEGER NOT NULL DEFAULT 0,
+            ausweis_pem TEXT,
+            pubkey_fingerprint TEXT,
+            erstellt_am TEXT NOT NULL DEFAULT (datetime('now'))
         )",
         // MVP: ein gemeinsames Team-Konto + Team-Nutzer.
         "INSERT OR IGNORE INTO konto (id, name) VALUES (1, 'Team')",
@@ -1154,6 +1179,255 @@ async fn foerderer_loeschen(
 }
 
 // ============================================================
+// Enrollment (gehostetes Modell, Schritt 3): die vier Verben „aktivieren"
+// (Einladung) und „verbinden" (Ausweis holen). Der Dienst ist der
+// Vertrauensanker: die Service-CA signiert den Ausweis automatisch, sobald
+// Einladung + Abo stimmen. Der private Geräteschlüssel bleibt lokal.
+// ============================================================
+
+/// Erzeugt einen zufälligen Einladungs-Token (160-Bit, base32) – dieselbe
+/// unratbare Geheimnis-Quelle wie die Admin-Sitzungs-Token.
+fn neuer_token() -> String {
+    match Secret::generate_secret().to_encoded() {
+        Secret::Encoded(s) => s,
+        Secret::Raw(b) => Secret::Raw(b).to_encoded().to_string(),
+    }
+}
+
+/// SHA-256-Hex eines (getrimmten) öffentlichen Schlüssels – bindet eine
+/// eingelöste Einladung an genau diesen Schlüssel (idempotentes Abholen).
+fn pubkey_fingerprint(pubkey_pem: &str) -> String {
+    let mut h = Sha256::new();
+    h.update(pubkey_pem.trim().as_bytes());
+    hex::encode(h.finalize())
+}
+
+#[derive(Deserialize)]
+struct EinladungBody {
+    /// Optionaler Namens-Hinweis fürs einzuladende Gerät (nur Information).
+    name: Option<String>,
+}
+
+#[derive(Serialize)]
+struct EinladungAntwort {
+    token: String,
+    ablauf: String,
+    /// Trust-Anker des gehosteten Modells (Service-CA-Zertifikat), damit der
+    /// Eigentümer daraus ein vollständiges Zugangs-Paket bauen kann.
+    service_ca_pem: String,
+}
+
+/// Einladung erstellen (POST /api/einladung). Nur ein EIGENTÜMER-Gerät (per
+/// mTLS erkannt) darf einladen, und nur bei gültigem Abo (Einladen = die
+/// bezahlte Team-Funktion). Läuft über den mTLS-Kanal (:8443).
+async fn einladung_erstellen(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<EinladungBody>,
+) -> Result<Json<EinladungAntwort>, StatusCode> {
+    let (konto_id, geraet_id) = konto_und_geraet(&st.pool, &headers).await?;
+
+    // Nur der Team-Eigentümer darf einladen.
+    let ist_eig: i64 = sqlx::query_scalar(
+        "SELECT n.ist_eigentuemer FROM geraet g JOIN nutzer n ON n.id = g.nutzer_id WHERE g.id = ?",
+    )
+    .bind(geraet_id)
+    .fetch_one(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if ist_eig == 0 {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    // Abo aktiv? (Einladen ist die Team-/Abo-Funktion.)
+    if !abo_erlaubt(&st.pool, konto_id).await {
+        return Err(StatusCode::PAYMENT_REQUIRED);
+    }
+    if !tempo_ok(&st, geraet_id) {
+        return Err(StatusCode::TOO_MANY_REQUESTS);
+    }
+
+    // Service-CA muss verfügbar sein, sonst könnte niemand den Token einlösen.
+    let service_ca: &Option<ServiceCa> = &st.service_ca;
+    let ca = service_ca.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+
+    let name = body.name.as_deref().unwrap_or("").trim();
+    if name.len() > FELD_MAX {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+    let name_opt = if name.is_empty() { None } else { Some(name) };
+
+    let token = neuer_token();
+    sqlx::query(
+        "INSERT INTO einladung (token, konto_id, bezeichnung, ablauf)
+         VALUES (?, ?, ?, datetime('now', ?))",
+    )
+    .bind(&token)
+    .bind(konto_id)
+    .bind(name_opt)
+    .bind(format!("+{EINLADUNG_TTL_S} seconds"))
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let (ablauf,): (String,) = sqlx::query_as("SELECT ablauf FROM einladung WHERE token = ?")
+        .bind(&token)
+        .fetch_one(&st.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(EinladungAntwort {
+        token,
+        ablauf,
+        service_ca_pem: ca.cert_pem.clone(),
+    }))
+}
+
+#[derive(Deserialize)]
+struct EnrollBody {
+    token: String,
+    /// Der ÖFFENTLICHE Geräteschlüssel (SubjectPublicKeyInfo-PEM). Der private
+    /// Teil bleibt auf dem Gerät und wird nie gesendet.
+    #[serde(rename = "pubkeyPem", alias = "pubkey_pem")]
+    pubkey_pem: String,
+    name: Option<String>,
+}
+
+#[derive(Serialize, Debug)]
+struct EnrollAntwort {
+    /// Der frisch signierte Geräte-Ausweis (Zertifikat-PEM).
+    ausweis_pem: String,
+    /// Service-CA-Zertifikat (Trust-Anker des Modells).
+    ///
+    /// SCHRITT-4-NAHT: Womit der Client den SERVER prüft, wird erst in Schritt 4
+    /// verdrahtet. Der :8443-Server-Cert ist derzeit Team-CA-signiert; damit ein
+    /// rein Service-CA-Gerät den Server validiert, muss der Server-Cert später
+    /// unter die Service-CA (oder der Client die passende Server-Wurzel erhalten).
+    service_ca_pem: String,
+}
+
+/// Verbinden (POST /api/enroll): ein neues Gerät löst seinen Einmal-Token ein
+/// und erhält einen von der Service-CA signierten Ausweis. OHNE Zertifikat –
+/// der Token ist die Berechtigung. Läuft über den öffentlichen :443-Kanal.
+///
+/// Idempotent: derselbe Token + derselbe Schlüssel geben denselben Ausweis
+/// zurück (robust gegen verlorene Antworten); ein anderer Schlüssel nach dem
+/// Einlösen wird abgewiesen (409). Antworten: 401 Token unbekannt,
+/// 410 abgelaufen, 402 Abo, 409 schon anders eingelöst / Wettlauf verloren,
+/// 503 keine CA, 400 ungültiger Schlüssel.
+async fn enroll(
+    State(st): State<AppState>,
+    Json(body): Json<EnrollBody>,
+) -> Result<Json<EnrollAntwort>, StatusCode> {
+    let service_ca: &Option<ServiceCa> = &st.service_ca;
+    let ca = service_ca.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+
+    let token = body.token.trim();
+    if token.is_empty() || token.len() > FELD_MAX {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    if body.pubkey_pem.len() > PUBKEY_MAX_BYTES {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+    let name = body.name.as_deref().unwrap_or("").trim();
+    let name = if name.is_empty() { "Team-Gerät" } else { name };
+    if name.len() > FELD_MAX {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+    let pk_fp = pubkey_fingerprint(&body.pubkey_pem);
+
+    // Einladung nachschlagen.
+    let row: Option<(i64, String, i64, Option<String>, Option<String>)> = sqlx::query_as(
+        "SELECT konto_id, ablauf, benutzt, ausweis_pem, pubkey_fingerprint
+         FROM einladung WHERE token = ?",
+    )
+    .bind(token)
+    .fetch_optional(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let Some((konto_id, ablauf, benutzt, ausweis_gesp, pk_gesp)) = row else {
+        return Err(StatusCode::UNAUTHORIZED);
+    };
+
+    // Schon eingelöst? Nur derselbe Schlüssel darf den Ausweis erneut abholen.
+    if benutzt != 0 {
+        return match (ausweis_gesp, pk_gesp) {
+            (Some(ausweis), Some(p)) if p == pk_fp => Ok(Json(EnrollAntwort {
+                ausweis_pem: ausweis,
+                service_ca_pem: ca.cert_pem.clone(),
+            })),
+            _ => Err(StatusCode::CONFLICT),
+        };
+    }
+
+    // Abgelaufen? (ISO-Zeitstrings vergleichen sich chronologisch korrekt.)
+    let (jetzt,): (String,) = sqlx::query_as("SELECT datetime('now')")
+        .fetch_one(&st.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if ablauf <= jetzt {
+        return Err(StatusCode::GONE);
+    }
+
+    // Abo aktiv?
+    if !abo_erlaubt(&st.pool, konto_id).await {
+        return Err(StatusCode::PAYMENT_REQUIRED);
+    }
+
+    // Kopiersicher signieren (nur der öffentliche Schlüssel geht ein).
+    let ausweis_pem = ca
+        .signiere_geraet(&body.pubkey_pem, name)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    let cert_fp = service_ca::fingerprint_von_pem(&ausweis_pem)
+        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Token ATOMAR beanspruchen (WHERE benutzt = 0) – verhindert, dass zwei
+    // gleichzeitige Einlösungen beide ein Gerät anlegen. Wer hier 0 Zeilen
+    // trifft, hat den Wettlauf verloren.
+    let claim = sqlx::query(
+        "UPDATE einladung SET benutzt = 1, ausweis_pem = ?, pubkey_fingerprint = ?
+         WHERE token = ? AND benutzt = 0",
+    )
+    .bind(&ausweis_pem)
+    .bind(&pk_fp)
+    .bind(token)
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if claim.rows_affected() == 0 {
+        return Err(StatusCode::CONFLICT);
+    }
+
+    // Erst nach gewonnenem Anspruch: Mitglied-Nutzer + Gerät anlegen. Der
+    // Fingerabdruck ist der des ausgestellten Zertifikats – genau den weist das
+    // Gerät später über Caddy vor, sodass konto_und_geraet es wiedererkennt.
+    let nutzer = sqlx::query(
+        "INSERT INTO nutzer (konto_id, anzeigename, rolle, ist_eigentuemer)
+         VALUES (?, ?, 'mitglied', 0)",
+    )
+    .bind(konto_id)
+    .bind(name)
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    sqlx::query(
+        "INSERT INTO geraet (nutzer_id, bezeichnung, cert_fingerprint, status)
+         VALUES (?, ?, ?, 'aktiv')",
+    )
+    .bind(nutzer.last_insert_rowid())
+    .bind(name)
+    .bind(&cert_fp)
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(EnrollAntwort {
+        ausweis_pem,
+        service_ca_pem: ca.cert_pem.clone(),
+    }))
+}
+
+// ============================================================
 // Admin (Phase 3 / Etappe 4): zentrale Pflege der Förder-Datenbank.
 //
 // Zwei-Faktor-Schutz, weil ein Admin viel bewegen kann:
@@ -1777,6 +2051,150 @@ async fn admin_vorschlag_verwerfen(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::str::FromStr;
+
+    /// Baut einen frischen In-Memory-Server-Zustand (eigene DB + Service-CA)
+    /// für die Enrollment-Tests.
+    async fn test_state() -> AppState {
+        let opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1) // dieselbe In-Memory-DB über alle Abfragen
+            .connect_with(opts)
+            .await
+            .unwrap();
+        schema_anlegen(&pool).await.unwrap();
+        let dir = std::env::temp_dir().join(format!("a3k-enroll-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let ca = ServiceCa::laden_oder_erzeugen(&dir).unwrap();
+        AppState {
+            pool,
+            schreib: Arc::new(Mutex::new(HashMap::new())),
+            sitzungen: Arc::new(Mutex::new(HashMap::new())),
+            service_ca: Arc::new(Some(ca)),
+        }
+    }
+
+    /// Ein gültiger Token wird EINMAL eingelöst → signierter Ausweis + Gerät
+    /// angelegt. Derselbe Token + Schlüssel holt idempotent denselben Ausweis;
+    /// ein ANDERER Schlüssel nach dem Einlösen wird abgewiesen (409). Es
+    /// entsteht dabei nur ein einziges Gerät.
+    #[tokio::test]
+    async fn enroll_einmal_und_idempotent() {
+        let st = test_state().await;
+        sqlx::query(
+            "INSERT INTO einladung (token, konto_id, ablauf) VALUES ('tok1', 1, datetime('now', '+1 hour'))",
+        )
+        .execute(&st.pool)
+        .await
+        .unwrap();
+
+        // Geräteseite: Schlüsselpaar lokal, nur der öffentliche Teil wird gesendet.
+        let geraet_key = rcgen::KeyPair::generate().unwrap();
+        let pubkey_pem = geraet_key.public_key_pem();
+
+        let antwort = enroll(
+            State(st.clone()),
+            Json(EnrollBody {
+                token: "tok1".into(),
+                pubkey_pem: pubkey_pem.clone(),
+                name: Some("Laptop".into()),
+            }),
+        )
+        .await
+        .expect("Einlösung muss klappen");
+        assert!(antwort.0.ausweis_pem.contains("BEGIN CERTIFICATE"));
+
+        // Genau ein Gerät, mit dem Fingerabdruck des ausgestellten Ausweises.
+        let erwartet_fp = service_ca::fingerprint_von_pem(&antwort.0.ausweis_pem).unwrap();
+        let (anzahl, fp): (i64, String) =
+            sqlx::query_as("SELECT COUNT(*), MAX(cert_fingerprint) FROM geraet")
+                .fetch_one(&st.pool)
+                .await
+                .unwrap();
+        assert_eq!(anzahl, 1);
+        assert_eq!(fp, erwartet_fp);
+
+        // Idempotent: gleicher Token + Schlüssel → gleicher Ausweis, kein 2. Gerät.
+        let wieder = enroll(
+            State(st.clone()),
+            Json(EnrollBody {
+                token: "tok1".into(),
+                pubkey_pem: pubkey_pem.clone(),
+                name: Some("Laptop".into()),
+            }),
+        )
+        .await
+        .expect("idempotentes Abholen muss klappen");
+        assert_eq!(wieder.0.ausweis_pem, antwort.0.ausweis_pem);
+        let anzahl2: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM geraet")
+            .fetch_one(&st.pool)
+            .await
+            .unwrap();
+        assert_eq!(anzahl2, 1, "kein zweites Gerät bei idempotentem Abholen");
+
+        // Anderer Schlüssel nach dem Einlösen → 409.
+        let anderer = rcgen::KeyPair::generate().unwrap();
+        let err = enroll(
+            State(st.clone()),
+            Json(EnrollBody {
+                token: "tok1".into(),
+                pubkey_pem: anderer.public_key_pem(),
+                name: None,
+            }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(err, StatusCode::CONFLICT);
+    }
+
+    /// Ein abgelaufener Token wird abgewiesen (410) und legt kein Gerät an.
+    #[tokio::test]
+    async fn enroll_abgelaufen() {
+        let st = test_state().await;
+        sqlx::query(
+            "INSERT INTO einladung (token, konto_id, ablauf) VALUES ('alt', 1, datetime('now', '-1 hour'))",
+        )
+        .execute(&st.pool)
+        .await
+        .unwrap();
+
+        let geraet_key = rcgen::KeyPair::generate().unwrap();
+        let err = enroll(
+            State(st.clone()),
+            Json(EnrollBody {
+                token: "alt".into(),
+                pubkey_pem: geraet_key.public_key_pem(),
+                name: None,
+            }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(err, StatusCode::GONE);
+
+        let anzahl: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM geraet")
+            .fetch_one(&st.pool)
+            .await
+            .unwrap();
+        assert_eq!(anzahl, 0);
+    }
+
+    /// Ein unbekannter Token → 401.
+    #[tokio::test]
+    async fn enroll_unbekannter_token() {
+        let st = test_state().await;
+        let geraet_key = rcgen::KeyPair::generate().unwrap();
+        let err = enroll(
+            State(st.clone()),
+            Json(EnrollBody {
+                token: "gibtsnicht".into(),
+                pubkey_pem: geraet_key.public_key_pem(),
+                name: None,
+            }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(err, StatusCode::UNAUTHORIZED);
+    }
 
     /// Erzeugt ein Geheimnis wie der `totp`-Hilfsmodus, bildet den aktuell
     /// gültigen Code und prüft, dass totp_ok ihn akzeptiert und falsche

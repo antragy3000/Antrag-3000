@@ -99,20 +99,12 @@ impl ServiceCa {
     /// SHA-256-Fingerabdruck (Hex) des CA-Zertifikats – nur zum Loggen/Prüfen,
     /// damit man beim Start sieht, welche CA aktiv ist.
     pub fn fingerprint(&self) -> String {
-        // Aus dem PEM den DER-Rumpf lösen und hashen. Bei Fehlern (sollte nicht
-        // vorkommen) den PEM-Text hashen, damit die Funktion nie paniced.
-        match pem_zu_der(&self.cert_pem) {
-            Some(der) => {
-                let mut h = Sha256::new();
-                h.update(&der);
-                hex::encode(h.finalize())
-            }
-            None => {
-                let mut h = Sha256::new();
-                h.update(self.cert_pem.as_bytes());
-                hex::encode(h.finalize())
-            }
-        }
+        // Bei (unmöglichem) PEM-Fehler den PEM-Text hashen, nie paniquen.
+        fingerprint_von_pem(&self.cert_pem).unwrap_or_else(|| {
+            let mut h = Sha256::new();
+            h.update(self.cert_pem.as_bytes());
+            hex::encode(h.finalize())
+        })
     }
 
     /// Signiert einen GERÄTE-Ausweis aus dem mitgeschickten öffentlichen
@@ -121,8 +113,7 @@ impl ServiceCa {
     /// genau das macht den Ausweis kopiersicher.
     ///
     /// `cn` ist der Anzeigename/Common-Name des Geräts. Rückgabe: das
-    /// Ausweis-Zertifikat als PEM. (Aufrufer: Enrollment-Endpunkte, Schritt 3.)
-    #[allow(dead_code)] // wird in Schritt 3 (Enrollment-Endpunkte) verdrahtet
+    /// Ausweis-Zertifikat als PEM. (Aufrufer: Enrollment-Endpunkte.)
     pub fn signiere_geraet(&self, geraete_pubkey_pem: &str, cn: &str) -> Result<String, String> {
         // CA aus dem gespeicherten PEM rekonstruieren (Schlüssel + Zertifikat).
         let ca_key = rcgen::KeyPair::from_pem(&self.key_pem)
@@ -158,6 +149,17 @@ impl ServiceCa {
             .map_err(|e| format!("Ausweis nicht signierbar: {e}"))?;
         Ok(cert.pem())
     }
+}
+
+/// SHA-256-Fingerabdruck (Hex) EINES Zertifikat-PEMs. Genau der Wert, den der
+/// Server aus dem von Caddy durchgereichten Zertifikat (DER) bildet – so
+/// stimmt der bei der Ausstellung eingetragene Geräte-Fingerabdruck später mit
+/// dem überein, den das verbundene Gerät vorweist.
+pub fn fingerprint_von_pem(cert_pem: &str) -> Option<String> {
+    let der = pem_zu_der(cert_pem)?;
+    let mut h = Sha256::new();
+    h.update(&der);
+    Some(hex::encode(h.finalize()))
 }
 
 /// Wandelt ein einzelnes PEM-Objekt in seine DER-Bytes. Ohne Extra-Crate:

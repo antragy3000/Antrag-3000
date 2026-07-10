@@ -60,6 +60,14 @@
 		uri replace /logos/ /api/logos-oeffentlich/
 		reverse_proxy api:8080
 	}
+	# Enrollment (gehostetes Modell, Schritt 3): ein NEUES Gerät hat noch kein
+	# Zertifikat und kann daher nicht über den mTLS-Kanal (:8443) kommen. Es
+	# löst hier per Einmal-Token seinen Ausweis ein (der Token IST die
+	# Berechtigung; die Server-Logik prüft ihn und das Abo). Nur diese eine
+	# Route – Einladungen erstellt weiterhin nur der Eigentümer über :8443.
+	handle /api/enroll {
+		reverse_proxy api:8080
+	}
 	handle {
 		respond "Antrag 3000" 200
 	}
