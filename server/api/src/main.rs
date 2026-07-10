@@ -279,6 +279,9 @@ async fn schema_anlegen(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             id INTEGER PRIMARY KEY,
             name TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'aktiv',
+            -- Abo-Status des Teams (gehostetes Modell): frei | testphase | aktiv | abgelaufen.
+            -- Default 'aktiv' = bestehende (self-hosted) Konten bleiben ungated.
+            abo_status TEXT NOT NULL DEFAULT 'aktiv',
             erstellt_am TEXT NOT NULL DEFAULT (datetime('now'))
         )",
         "CREATE TABLE IF NOT EXISTS nutzer (
@@ -287,6 +290,8 @@ async fn schema_anlegen(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             anzeigename TEXT NOT NULL,
             rolle TEXT NOT NULL DEFAULT 'mitglied',
             status TEXT NOT NULL DEFAULT 'aktiv',
+            -- Team-Eigentümer (gehostetes Modell): verwaltet Mitglieder + Abo.
+            ist_eigentuemer INTEGER NOT NULL DEFAULT 0,
             passwort_hash TEXT,
             erstellt_am TEXT NOT NULL DEFAULT (datetime('now'))
         )",
@@ -387,6 +392,19 @@ async fn schema_anlegen(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     let _ = sqlx::query("ALTER TABLE geraet ADD COLUMN ist_admin INTEGER NOT NULL DEFAULT 0")
         .execute(pool)
         .await;
+    // Gehostetes Modell, Schritt 1: Abo-Status je Konto + Team-Eigentümer je
+    // Nutzer per ALTER nachziehen (bestehende DBs). Vorhandene Spalte → ALTER
+    // schlägt fehl, wird bewusst ignoriert.
+    let _ = sqlx::query("ALTER TABLE konto ADD COLUMN abo_status TEXT NOT NULL DEFAULT 'aktiv'")
+        .execute(pool)
+        .await;
+    let _ = sqlx::query("ALTER TABLE nutzer ADD COLUMN ist_eigentuemer INTEGER NOT NULL DEFAULT 0")
+        .execute(pool)
+        .await;
+    // Der bestehende Team-Login (Nutzer 1) ist der Eigentümer.
+    let _ = sqlx::query("UPDATE nutzer SET ist_eigentuemer = 1 WHERE id = 1")
+        .execute(pool)
+        .await;
     Ok(())
 }
 
@@ -449,6 +467,25 @@ fn auto_enroll_erlaubt() -> bool {
     match env::var("AUTO_ENROLL") {
         Ok(v) => !matches!(v.trim().to_lowercase().as_str(), "0" | "false" | "nein" | "off"),
         Err(_) => true,
+    }
+}
+
+/// Abo-Haken (gehostetes Modell, Schritt 1): Darf dieses Konto schreibende
+/// Team-Sync-Aktionen ausführen? Aktuell **permissiv** – blockt nur ein
+/// ausdrücklich `abgelaufen`-es Abo. Freistufe (`frei`), Testphase und aktives
+/// Abo sind erlaubt; bestehende (self-hosted) Konten stehen auf `aktiv` und
+/// sind damit nie betroffen. Die genauen Grenzen (z. B. Abo ab dem 2. Gerät)
+/// kommen in Schritt 5 ("Abo-Gating scharf schalten") hinzu.
+async fn abo_erlaubt(pool: &SqlitePool, konto_id: i64) -> bool {
+    let status: Option<(String,)> = sqlx::query_as("SELECT abo_status FROM konto WHERE id = ?")
+        .bind(konto_id)
+        .fetch_optional(pool)
+        .await
+        .ok()
+        .flatten();
+    match status {
+        Some((s,)) => s != "abgelaufen",
+        None => false,
     }
 }
 
@@ -574,6 +611,12 @@ async fn board_schreiben(
     Json(body): Json<BoardSchreiben>,
 ) -> Result<Json<SchreibAntwort>, StatusCode> {
     let (konto_id, geraet_id) = konto_und_geraet(&st.pool, &headers).await?;
+
+    // Abo-Haken (gehostetes Modell, Schritt 1): schreibende Team-Sync-Aktion
+    // nur bei gültigem Abo. Für bestehende ('aktiv') Konten ohne Effekt.
+    if !abo_erlaubt(&st.pool, konto_id).await {
+        return Err(StatusCode::PAYMENT_REQUIRED);
+    }
 
     // Tempo-Bremse + Längenlimits (wie bei Meldungen/Förderern). Das Board
     // war bisher ungebremst und ohne Größenlimit beschreibbar.
