@@ -463,6 +463,223 @@ pub async fn sync_foerderer_loeschen(
     Ok(())
 }
 
+// ============================================================
+// Gehostetes Modell (Schritt 4): kopiersicheres Enrollment, Client-Seite.
+//
+// Anders als das alte Datei-Paket (das den privaten Schlüssel MITSCHICKTE)
+// erzeugt das neue Gerät sein Schlüsselpaar hier LOKAL und sendet nur den
+// öffentlichen Teil an den Server. Der Server signiert (Service-CA) und gibt
+// nur das Zertifikat zurück; erst hier setzen wir Schlüssel + Zertifikat zum
+// vollen Ausweis zusammen. Der private Schlüssel verlässt das Gerät nie.
+//
+// Server-Trust-Naht: Welche CA das neue Gerät dem SERVER-Zertifikat glaubt,
+// steht in der Einladung (`ca_pem`) – der Einladende kennt sie bereits. So
+// braucht es dafür keine Server-Änderung, und die bestehende (self-hosted)
+// Installation bleibt unberührt.
+// ============================================================
+
+/// HTTP-Client für den ÖFFENTLICHEN Enroll-Kanal (das neue Gerät hat noch
+/// keinen Ausweis). Vertraut den öffentlichen Wurzeln (Let's Encrypt) UND –
+/// falls mitgegeben – zusätzlich der Einladungs-CA (für self-hosted Server mit
+/// eigener Wurzel). Kein Client-Zertifikat: der Token ist die Berechtigung.
+fn client_oeffentlich(ca_pem: &str) -> Result<reqwest::Client, String> {
+    let mut builder = reqwest::Client::builder().timeout(std::time::Duration::from_secs(15));
+    let ca = ca_pem.trim();
+    if !ca.is_empty() {
+        if let Ok(root) = reqwest::Certificate::from_pem(ca.as_bytes()) {
+            builder = builder.add_root_certificate(root);
+        }
+    }
+    builder
+        .build()
+        .map_err(|e| format!("Verbindungs-Client nicht erstellbar: {e}"))
+}
+
+/// Nimmt eine Einladung an: erzeugt das Schlüsselpaar lokal, löst den Token am
+/// öffentlichen Enroll-Kanal ein und gibt einen fertigen Zugang zurück (den das
+/// Frontend wie ein Zugangs-Paket verschlüsselt in den Tresor legt).
+#[tauri::command]
+pub async fn enroll_annehmen(
+    enroll_url: String,
+    sync_adresse: String,
+    ca_pem: String,
+    token: String,
+    geraet_name: String,
+) -> Result<ZugangsInfo, String> {
+    let name = geraet_name.trim();
+    if name.is_empty() {
+        return Err("Bitte einen Geraetenamen angeben.".into());
+    }
+    if token.trim().is_empty() {
+        return Err("Es fehlt der Einladungs-Code.".into());
+    }
+
+    // Schlüsselpaar LOKAL erzeugen – nur der öffentliche Teil wird gesendet.
+    let key = rcgen::KeyPair::generate().map_err(|e| format!("Schluessel nicht erzeugbar: {e}"))?;
+    let pubkey_pem = key.public_key_pem();
+
+    let client = client_oeffentlich(&ca_pem)?;
+    let url = format!("{}/api/enroll", basis_url(&enroll_url));
+    let body = serde_json::json!({
+        "token": token.trim(),
+        "pubkeyPem": pubkey_pem,
+        "name": name,
+    })
+    .to_string();
+    let r = client
+        .post(&url)
+        .header("content-type", "application/json")
+        .body(body)
+        .send()
+        .await
+        .map_err(|e| format!("Verbinden fehlgeschlagen: {}", fehler_kette(&e)))?;
+    let status = r.status();
+    if !status.is_success() {
+        return Err(match status.as_u16() {
+            401 => "Der Einladungs-Code ist ungueltig.".to_string(),
+            402 => "Fuer dieses Team ist kein aktives Abo hinterlegt.".to_string(),
+            409 => "Diese Einladung wurde bereits mit einem anderen Geraet eingeloest.".to_string(),
+            410 => "Der Einladungs-Code ist abgelaufen.".to_string(),
+            503 => "Der Server kann derzeit keine Ausweise ausstellen.".to_string(),
+            s => format!("Server antwortete mit {s}"),
+        });
+    }
+
+    #[derive(Deserialize)]
+    struct EnrollAntwort {
+        #[serde(default)]
+        ausweis_pem: String,
+    }
+    let antwort: EnrollAntwort = r
+        .json()
+        .await
+        .map_err(|e| format!("Antwort nicht lesbar: {e}"))?;
+    if !antwort.ausweis_pem.contains("CERTIFICATE") {
+        return Err("Der Server hat keinen gueltigen Ausweis geliefert.".into());
+    }
+
+    // Lokalen Schlüssel + ausgestelltes Zertifikat zum vollen Ausweis fügen.
+    let ausweis_pem = format!("{}{}", key.serialize_pem(), antwort.ausweis_pem);
+    let geraet_name = geraet_name_aus_pem(&ausweis_pem).unwrap_or_else(|_| name.to_string());
+
+    Ok(ZugangsInfo {
+        adresse: sync_adresse.trim().to_string(),
+        geraet_name,
+        ausweis_pem,
+        ca_pem,
+    })
+}
+
+#[derive(Serialize)]
+pub struct EinladungErgebnis {
+    pub token: String,
+    pub ablauf: String,
+    /// Fertiges Einladungs-Paket (JSON) zum Weitergeben an das neue Gerät.
+    pub paket_json: String,
+}
+
+/// Erstellt eine Einladung (nur der Eigentümer, per mTLS): fragt am Server einen
+/// Einmal-Token an und baut daraus ein Einladungs-Paket, das die Server-Adressen
+/// und die Server-Trust-CA mitführt.
+#[tauri::command]
+pub async fn einladung_erstellen(
+    sync_adresse: String,
+    ausweis_pem: String,
+    ca_pem: String,
+    enroll_url: String,
+    geraet_name: String,
+) -> Result<EinladungErgebnis, String> {
+    let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
+    let url = format!("{}/api/einladung", basis_url(&sync_adresse));
+    let body = serde_json::json!({ "name": geraet_name.trim() }).to_string();
+    let r = client
+        .post(&url)
+        .header("content-type", "application/json")
+        .body(body)
+        .send()
+        .await
+        .map_err(|e| format!("Einladung fehlgeschlagen: {}", fehler_kette(&e)))?;
+    let status = r.status();
+    if !status.is_success() {
+        return Err(match status.as_u16() {
+            401 | 403 => "Nur der Team-Eigentuemer darf einladen.".to_string(),
+            402 => "Zum Einladen ist ein aktives Abo noetig.".to_string(),
+            503 => "Der Server kann derzeit keine Einladungen ausstellen.".to_string(),
+            s => format!("Server antwortete mit {s}"),
+        });
+    }
+
+    #[derive(Deserialize)]
+    struct Ant {
+        #[serde(default)]
+        token: String,
+        #[serde(default)]
+        ablauf: String,
+    }
+    let a: Ant = r
+        .json()
+        .await
+        .map_err(|e| format!("Antwort nicht lesbar: {e}"))?;
+    if a.token.trim().is_empty() {
+        return Err("Der Server lieferte keinen Einladungs-Code.".into());
+    }
+
+    let paket_json = serde_json::to_string_pretty(&serde_json::json!({
+        "typ": "antrag3000-einladung",
+        "version": 1,
+        "enroll_url": enroll_url.trim(),
+        "sync_adresse": sync_adresse.trim(),
+        "token": a.token,
+        "ablauf": a.ablauf,
+        // Server-Trust-CA fürs neue Gerät (Schritt-4-Naht): der Einladende kennt sie.
+        "ca_pem": ca_pem,
+    }))
+    .unwrap_or_default();
+
+    Ok(EinladungErgebnis {
+        token: a.token,
+        ablauf: a.ablauf,
+        paket_json,
+    })
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct EinladungInhalt {
+    #[serde(default)]
+    pub typ: String,
+    #[serde(default)]
+    pub enroll_url: String,
+    #[serde(default)]
+    pub sync_adresse: String,
+    #[serde(default)]
+    pub token: String,
+    #[serde(default)]
+    pub ablauf: String,
+    #[serde(default)]
+    pub ca_pem: String,
+}
+
+/// Liest ein Einladungs-Paket (.a3keinladung / JSON) und gibt seine Felder
+/// zurück; das Frontend ruft danach `enroll_annehmen` auf.
+#[tauri::command]
+pub fn einladung_lesen(pfad: String) -> Result<EinladungInhalt, String> {
+    if let Ok(meta) = std::fs::metadata(&pfad) {
+        if meta.len() > 256 * 1024 {
+            return Err("Die Datei ist zu groß für eine Einladung.".into());
+        }
+    }
+    let roh = std::fs::read_to_string(&pfad).map_err(|e| format!("Datei nicht lesbar: {e}"))?;
+    let inhalt: EinladungInhalt =
+        serde_json::from_str(&roh).map_err(|_| "Das ist keine gueltige Einladung.".to_string())?;
+    if inhalt.typ != "antrag3000-einladung" {
+        return Err("Das ist keine Antrag-3000-Einladung.".into());
+    }
+    if inhalt.token.trim().is_empty() {
+        return Err("In der Einladung fehlt der Code.".into());
+    }
+    Ok(inhalt)
+}
+
 // --- Zertifikate erzeugen (Admin / Verwalter:in), reines Rust ----------
 
 #[derive(Serialize)]
@@ -711,5 +928,59 @@ mod tests {
         let geprueft = zugangspaket_pruefen(pfad.to_string_lossy().to_string()).unwrap();
         assert_eq!(geprueft.geraet_name, "Tablet-X");
         let _ = std::fs::remove_file(&pfad);
+    }
+
+    /// Kopiersicheres Enrollment (Client-Seite): ein lokal erzeugter Schlüssel
+    /// + das (hier ersatzweise selbstsignierte) Zertifikat ergeben zusammen
+    /// einen Ausweis, den der mTLS-Client annimmt – genau die Zusammensetzung,
+    /// die `enroll_annehmen` nach der Server-Antwort vornimmt.
+    #[test]
+    fn lokaler_schluessel_plus_zertifikat_ergibt_ausweis() {
+        let key = rcgen::KeyPair::generate().unwrap();
+        // Nur der öffentliche Teil würde an den Server gehen.
+        assert!(key.public_key_pem().contains("PUBLIC KEY"));
+
+        // Server-Ersatz: ein Zertifikat für genau diesen Schlüssel.
+        let mut p = rcgen::CertificateParams::new(Vec::<String>::new()).unwrap();
+        p.distinguished_name
+            .push(rcgen::DnType::CommonName, "Neues-Geraet");
+        let cert_pem = p.self_signed(&key).unwrap().pem();
+
+        // Wie in enroll_annehmen: lokaler Schlüssel + Zertifikat.
+        let ausweis_pem = format!("{}{}", key.serialize_pem(), cert_pem);
+        assert_eq!(geraet_name_aus_pem(&ausweis_pem).unwrap(), "Neues-Geraet");
+        client_mit_ausweis(&ausweis_pem, "")
+            .expect("zusammengesetzter Ausweis muss vom mTLS-Client angenommen werden");
+    }
+
+    /// Ein Einladungs-Paket (wie es `einladung_erstellen` baut) wird von
+    /// `einladung_lesen` mit allen Feldern wieder eingelesen; falscher Typ und
+    /// fehlender Code werden abgewiesen.
+    #[test]
+    fn einladung_rundlauf() {
+        let paket = serde_json::json!({
+            "typ": "antrag3000-einladung",
+            "version": 1,
+            "enroll_url": "sync.example",
+            "sync_adresse": "team.example:8443",
+            "token": "ABC123",
+            "ablauf": "2026-07-12 10:00:00",
+            "ca_pem": "-----BEGIN CERTIFICATE-----\nX\n-----END CERTIFICATE-----\n",
+        });
+        let pfad = std::env::temp_dir().join("a3000-einladung-test.a3keinladung");
+        std::fs::write(&pfad, paket.to_string()).unwrap();
+
+        let gelesen = einladung_lesen(pfad.to_string_lossy().to_string()).unwrap();
+        assert_eq!(gelesen.token, "ABC123");
+        assert_eq!(gelesen.sync_adresse, "team.example:8443");
+        assert_eq!(gelesen.enroll_url, "sync.example");
+        assert!(gelesen.ca_pem.contains("BEGIN CERTIFICATE"));
+        let _ = std::fs::remove_file(&pfad);
+
+        // Falscher Typ → Fehler.
+        let falsch = std::env::temp_dir().join("a3000-einladung-falsch.json");
+        std::fs::write(&falsch, r#"{"typ":"etwas-anderes","token":"x"}"#).unwrap();
+        assert!(einladung_lesen(falsch.to_string_lossy().to_string()).is_err());
+        let _ = std::fs::remove_file(&falsch);
     }
 }

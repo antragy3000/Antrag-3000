@@ -68,6 +68,10 @@ pub fn run() {
             sync::geraet_paket_direkt,
             sync::team_ca_cert_exportieren,
             sync::server_zertifikat_speichern,
+            // Gehostetes Modell (Schritt 4): kopiersicheres Enrollment.
+            sync::enroll_annehmen,
+            sync::einladung_erstellen,
+            sync::einladung_lesen,
             excel::kfp_excel_schreiben,
             katalog::katalog_laden,
             katalog::katalog_speichern,
