@@ -688,6 +688,59 @@ pub fn einladung_lesen(pfad: String) -> Result<EinladungInhalt, String> {
     Ok(inhalt)
 }
 
+/// Holt die Geräte-Liste des eigenen Teams (mTLS GET /api/mitglieder). Nur der
+/// Eigentümer erhält sie; die rohe JSON-Liste wertet das Frontend aus.
+#[tauri::command]
+pub async fn mitglieder_holen(
+    sync_adresse: String,
+    ausweis_pem: String,
+    ca_pem: String,
+) -> Result<String, String> {
+    let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
+    let url = format!("{}/api/mitglieder", basis_url(&sync_adresse));
+    let r = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Abruf fehlgeschlagen: {}", fehler_kette(&e)))?;
+    if r.status().as_u16() == 403 {
+        return Err("Nur der Team-Eigentuemer sieht die Mitglieder.".into());
+    }
+    if !r.status().is_success() {
+        return Err(format!("Server antwortete mit {}", r.status()));
+    }
+    r.text().await.map_err(|e| format!("Antwort nicht lesbar: {e}"))
+}
+
+/// Sperrt/entsperrt ein Team-Gerät (mTLS PUT /api/mitglieder/{id}). Nur der
+/// Eigentümer; das eigene Gerät lässt sich nicht sperren.
+#[tauri::command]
+pub async fn mitglied_status_setzen(
+    sync_adresse: String,
+    ausweis_pem: String,
+    ca_pem: String,
+    geraet_id: i64,
+    status: String,
+) -> Result<(), String> {
+    let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
+    let url = format!("{}/api/mitglieder/{}", basis_url(&sync_adresse), geraet_id);
+    let body = serde_json::json!({ "status": status }).to_string();
+    let r = client
+        .put(&url)
+        .header("content-type", "application/json")
+        .body(body)
+        .send()
+        .await
+        .map_err(|e| format!("Aenderung fehlgeschlagen: {}", fehler_kette(&e)))?;
+    match r.status().as_u16() {
+        409 => Err("Du kannst dieses Geraet nicht selbst sperren.".into()),
+        403 => Err("Nur der Team-Eigentuemer darf das.".into()),
+        404 => Err("Geraet nicht gefunden.".into()),
+        s if (200..300).contains(&s) => Ok(()),
+        s => Err(format!("Server antwortete mit {s}")),
+    }
+}
+
 // --- Zertifikate erzeugen (Admin / Verwalter:in), reines Rust ----------
 
 #[derive(Serialize)]

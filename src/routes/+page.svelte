@@ -734,6 +734,38 @@
     }
   }
 
+  // Eigentümer: die Team-Geräte auflisten bzw. sperren/entsperren.
+  async function mitgliederHolen() {
+    if (!daten.sync) return null;
+    try {
+      const roh = await invoke("mitglieder_holen", {
+        syncAdresse: daten.sync.adresse,
+        ausweisPem: daten.sync.ausweisPem,
+        caPem: daten.sync.caPem ?? "",
+      });
+      return JSON.parse(roh);
+    } catch (e) {
+      alert("Die Mitglieder konnten nicht geladen werden.\n" + e);
+      return null;
+    }
+  }
+  async function mitgliedStatusSetzen(geraetId, status) {
+    if (!daten.sync) return false;
+    try {
+      await invoke("mitglied_status_setzen", {
+        syncAdresse: daten.sync.adresse,
+        ausweisPem: daten.sync.ausweisPem,
+        caPem: daten.sync.caPem ?? "",
+        geraetId,
+        status,
+      });
+      return true;
+    } catch (e) {
+      alert("Die Änderung war nicht möglich.\n" + e);
+      return false;
+    }
+  }
+
   // --- Team verwalten (Admin): CA + Zugangs-Pakete in der App erzeugen ---
   async function teamCaErstellen(adresse) {
     try {
@@ -2039,6 +2071,8 @@
               adresseAendern={teamAdresseAendern}
               einladungAnnehmen={einladungAnnehmen}
               mitgliedEinladen={mitgliedEinladen}
+              mitgliederHolen={mitgliederHolen}
+              mitgliedStatusSetzen={mitgliedStatusSetzen}
               standardEnrollUrl={daten.einzelServer ?? ""}
               caErstellen={teamCaErstellen}
               caExportieren={teamCaExportieren}

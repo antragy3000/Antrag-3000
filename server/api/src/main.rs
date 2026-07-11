@@ -281,6 +281,10 @@ async fn main() {
         //    öffentlichen :443-Kanal freigegeben (das neue Gerät hat noch kein Zert).
         .route("/api/einladung", post(einladung_erstellen))
         .route("/api/enroll", post(enroll))
+        // Mitglieder verwalten (Eigentümer, per mTLS – ohne Vendor-Admin-TOTP):
+        // Team-Geräte auflisten und sperren/entsperren.
+        .route("/api/mitglieder", get(mitglieder_liste))
+        .route("/api/mitglieder/:geraet_id", put(mitglied_status))
         // Admin (Etappe 4): Zwei-Faktor (Admin-Gerät + Passwort).
         .route("/api/admin/anmelden", post(admin_anmelden))
         .route("/api/admin/meldungen", get(admin_meldungen))
@@ -620,6 +624,28 @@ async fn konto_und_geraet(
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok((1, res.last_insert_rowid()))
+}
+
+/// Prüft, dass der Aufrufer ein **Eigentümer-Gerät** ist (gültiges mTLS-Gerät,
+/// dessen Nutzer `ist_eigentuemer = 1` hat). Gibt (konto_id, geraet_id) zurück.
+/// Basis für die Eigentümer-Aktionen (einladen, Mitglieder verwalten) – ohne
+/// den Vendor-Admin-TOTP.
+async fn eigentuemer_pruefen(
+    pool: &SqlitePool,
+    headers: &HeaderMap,
+) -> Result<(i64, i64), StatusCode> {
+    let (konto_id, geraet_id) = konto_und_geraet(pool, headers).await?;
+    let ist_eig: i64 = sqlx::query_scalar(
+        "SELECT n.ist_eigentuemer FROM geraet g JOIN nutzer n ON n.id = g.nutzer_id WHERE g.id = ?",
+    )
+    .bind(geraet_id)
+    .fetch_one(pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if ist_eig == 0 {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    Ok((konto_id, geraet_id))
 }
 
 async fn health() -> &'static str {
@@ -1225,19 +1251,8 @@ async fn einladung_erstellen(
     headers: HeaderMap,
     Json(body): Json<EinladungBody>,
 ) -> Result<Json<EinladungAntwort>, StatusCode> {
-    let (konto_id, geraet_id) = konto_und_geraet(&st.pool, &headers).await?;
-
     // Nur der Team-Eigentümer darf einladen.
-    let ist_eig: i64 = sqlx::query_scalar(
-        "SELECT n.ist_eigentuemer FROM geraet g JOIN nutzer n ON n.id = g.nutzer_id WHERE g.id = ?",
-    )
-    .bind(geraet_id)
-    .fetch_one(&st.pool)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    if ist_eig == 0 {
-        return Err(StatusCode::FORBIDDEN);
-    }
+    let (konto_id, geraet_id) = eigentuemer_pruefen(&st.pool, &headers).await?;
 
     // Abo aktiv? (Einladen ist die Team-/Abo-Funktion.)
     if !abo_erlaubt(&st.pool, konto_id).await {
@@ -1425,6 +1440,81 @@ async fn enroll(
         ausweis_pem,
         service_ca_pem: ca.cert_pem.clone(),
     }))
+}
+
+#[derive(Serialize, Debug)]
+struct MitgliedZeile {
+    id: i64,
+    bezeichnung: String,
+    status: String,
+    zuletzt_gesehen: Option<String>,
+    erstellt_am: String,
+    ist_eigentuemer: bool,
+    /// Ist das das aufrufende Gerät? (Damit die App „sich selbst" nicht sperrt.)
+    dieses_geraet: bool,
+}
+
+/// Alle Geräte des eigenen Teams (GET /api/mitglieder). Nur der Eigentümer.
+async fn mitglieder_liste(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<MitgliedZeile>>, StatusCode> {
+    let (konto_id, mein_geraet) = eigentuemer_pruefen(&st.pool, &headers).await?;
+    let rows = sqlx::query_as::<_, (i64, String, String, Option<String>, String, i64)>(
+        "SELECT g.id, g.bezeichnung, g.status, g.zuletzt_gesehen, g.erstellt_am, n.ist_eigentuemer
+         FROM geraet g JOIN nutzer n ON n.id = g.nutzer_id
+         WHERE n.konto_id = ? ORDER BY g.erstellt_am",
+    )
+    .bind(konto_id)
+    .fetch_all(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let liste = rows
+        .into_iter()
+        .map(|(id, bezeichnung, status, zuletzt_gesehen, erstellt_am, eig)| MitgliedZeile {
+            id,
+            bezeichnung,
+            status,
+            zuletzt_gesehen,
+            erstellt_am,
+            ist_eigentuemer: eig != 0,
+            dieses_geraet: id == mein_geraet,
+        })
+        .collect();
+    Ok(Json(liste))
+}
+
+/// Setzt den Status eines Team-Geräts (PUT /api/mitglieder/{id}): aktiv |
+/// gesperrt. Nur der Eigentümer, nur im eigenen Konto. Das aufrufende Gerät
+/// kann sich nicht selbst sperren (kein Aussperren).
+async fn mitglied_status(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    Path(geraet_id): Path<i64>,
+    Json(body): Json<StatusBody>,
+) -> Result<StatusCode, StatusCode> {
+    let (konto_id, mein_geraet) = eigentuemer_pruefen(&st.pool, &headers).await?;
+    if !["aktiv", "gesperrt"].contains(&body.status.as_str()) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    if geraet_id == mein_geraet && body.status == "gesperrt" {
+        return Err(StatusCode::CONFLICT);
+    }
+    let res = sqlx::query(
+        "UPDATE geraet SET status = ?
+         WHERE id = ? AND nutzer_id IN (SELECT id FROM nutzer WHERE konto_id = ?)",
+    )
+    .bind(&body.status)
+    .bind(geraet_id)
+    .bind(konto_id)
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if res.rows_affected() == 0 {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    Ok(StatusCode::NO_CONTENT)
 }
 
 // ============================================================
@@ -2194,6 +2284,158 @@ mod tests {
         .await
         .unwrap_err();
         assert_eq!(err, StatusCode::UNAUTHORIZED);
+    }
+
+    // --- Mitglieder verwalten (Eigentümer) ---
+
+    /// SHA-256-Hex roher DER-Bytes (wie der Server aus dem Zertifikat-Header).
+    fn fp_von(der: &[u8]) -> String {
+        let mut h = Sha256::new();
+        h.update(der);
+        hex::encode(h.finalize())
+    }
+
+    /// Baut einen Request-Header mit dem (base64-kodierten) Client-Zertifikat,
+    /// wie Caddy ihn setzt.
+    fn hdr(der: &[u8]) -> HeaderMap {
+        use base64::Engine as _;
+        let mut h = HeaderMap::new();
+        let b64 = base64::engine::general_purpose::STANDARD.encode(der);
+        h.insert("x-client-cert-der", b64.parse().unwrap());
+        h
+    }
+
+    /// Konto 1 mit Eigentümer-Gerät + einem Mitglied-Gerät. Gibt (State, DER des
+    /// Eigentümer-Geräts, DER des Mitglied-Geräts, Mitglied-geraet_id) zurück.
+    async fn setup_team() -> (AppState, Vec<u8>, Vec<u8>, i64) {
+        let st = test_state().await;
+        let der_owner = b"owner-cert".to_vec();
+        sqlx::query(
+            "INSERT INTO geraet (nutzer_id, bezeichnung, cert_fingerprint, status)
+             VALUES (1, 'Owner-Laptop', ?, 'aktiv')",
+        )
+        .bind(fp_von(&der_owner))
+        .execute(&st.pool)
+        .await
+        .unwrap();
+
+        let mitglied = sqlx::query(
+            "INSERT INTO nutzer (konto_id, anzeigename, rolle, ist_eigentuemer)
+             VALUES (1, 'Mitglied', 'mitglied', 0)",
+        )
+        .execute(&st.pool)
+        .await
+        .unwrap();
+        let der_member = b"member-cert".to_vec();
+        let g = sqlx::query(
+            "INSERT INTO geraet (nutzer_id, bezeichnung, cert_fingerprint, status)
+             VALUES (?, 'Mitglied-Tablet', ?, 'aktiv')",
+        )
+        .bind(mitglied.last_insert_rowid())
+        .bind(fp_von(&der_member))
+        .execute(&st.pool)
+        .await
+        .unwrap();
+        (st, der_owner, der_member, g.last_insert_rowid())
+    }
+
+    /// Der Eigentümer sieht beide Geräte (mit „dieses Gerät"/Eigentümer-Flags)
+    /// und kann ein Mitglied-Gerät sperren.
+    #[tokio::test]
+    async fn mitglieder_liste_und_sperren() {
+        let (st, der_owner, _der_member, member_id) = setup_team().await;
+
+        let liste = mitglieder_liste(State(st.clone()), hdr(&der_owner))
+            .await
+            .expect("Liste")
+            .0;
+        assert_eq!(liste.len(), 2);
+        let selbst = liste.iter().find(|m| m.dieses_geraet).unwrap();
+        assert!(selbst.ist_eigentuemer);
+        let member = liste.iter().find(|m| !m.ist_eigentuemer).unwrap();
+        assert_eq!(member.id, member_id);
+        assert_eq!(member.status, "aktiv");
+
+        mitglied_status(
+            State(st.clone()),
+            hdr(&der_owner),
+            Path(member_id),
+            Json(StatusBody { status: "gesperrt".into() }),
+        )
+        .await
+        .expect("sperren muss klappen");
+        let (s,): (String,) = sqlx::query_as("SELECT status FROM geraet WHERE id = ?")
+            .bind(member_id)
+            .fetch_one(&st.pool)
+            .await
+            .unwrap();
+        assert_eq!(s, "gesperrt");
+    }
+
+    /// Der Eigentümer kann sich nicht selbst aussperren (409).
+    #[tokio::test]
+    async fn eigentuemer_kann_sich_nicht_selbst_sperren() {
+        let (st, der_owner, _m, _id) = setup_team().await;
+        let liste = mitglieder_liste(State(st.clone()), hdr(&der_owner))
+            .await
+            .unwrap()
+            .0;
+        let self_id = liste.iter().find(|m| m.dieses_geraet).unwrap().id;
+        let err = mitglied_status(
+            State(st.clone()),
+            hdr(&der_owner),
+            Path(self_id),
+            Json(StatusBody { status: "gesperrt".into() }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(err, StatusCode::CONFLICT);
+    }
+
+    /// Ein Nicht-Eigentümer (Mitglied-Gerät) sieht die Mitglieder nicht (403).
+    #[tokio::test]
+    async fn nur_eigentuemer_sieht_mitglieder() {
+        let (st, _o, der_member, _id) = setup_team().await;
+        let err = mitglieder_liste(State(st.clone()), hdr(&der_member))
+            .await
+            .unwrap_err();
+        assert_eq!(err, StatusCode::FORBIDDEN);
+    }
+
+    /// Der Eigentümer eines Kontos kann kein Gerät eines FREMDEN Kontos sperren.
+    #[tokio::test]
+    async fn fremdes_konto_bleibt_unberuehrt() {
+        let (st, der_owner, _m, _id) = setup_team().await;
+        sqlx::query("INSERT INTO konto (id, name) VALUES (2, 'Anderes')")
+            .execute(&st.pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            "INSERT INTO nutzer (id, konto_id, anzeigename, rolle, ist_eigentuemer)
+             VALUES (99, 2, 'X', 'mitglied', 0)",
+        )
+        .execute(&st.pool)
+        .await
+        .unwrap();
+        let der_fremd = b"fremd-cert".to_vec();
+        let g = sqlx::query(
+            "INSERT INTO geraet (nutzer_id, bezeichnung, cert_fingerprint, status)
+             VALUES (99, 'Fremd', ?, 'aktiv')",
+        )
+        .bind(fp_von(&der_fremd))
+        .execute(&st.pool)
+        .await
+        .unwrap();
+
+        let err = mitglied_status(
+            State(st.clone()),
+            hdr(&der_owner),
+            Path(g.last_insert_rowid()),
+            Json(StatusBody { status: "gesperrt".into() }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(err, StatusCode::NOT_FOUND);
     }
 
     /// Erzeugt ein Geheimnis wie der `totp`-Hilfsmodus, bildet den aktuell

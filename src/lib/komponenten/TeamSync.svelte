@@ -17,6 +17,8 @@
     adresseAendern,
     einladungAnnehmen,
     mitgliedEinladen,
+    mitgliederHolen,
+    mitgliedStatusSetzen,
     standardEnrollUrl = "",
     caErstellen,
     caExportieren,
@@ -145,6 +147,35 @@
     try {
       await mitgliedEinladen(enrollUrl.trim(), einladenName.trim());
       einladenName = "";
+      if (mitgliederOffen) mitglieder = await mitgliederHolen();
+    } finally {
+      beschaeftigt = false;
+    }
+  }
+
+  // Mitglieder verwalten (Eigentümer): Geräte auflisten + sperren/entsperren.
+  let mitgliederOffen = $state(false);
+  let mitglieder = $state(null);
+  let mitgliederLaedt = $state(false);
+  async function mitgliederUmschalten() {
+    mitgliederOffen = !mitgliederOffen;
+    if (mitgliederOffen && mitglieder === null) await mitgliederLaden();
+  }
+  async function mitgliederLaden() {
+    mitgliederLaedt = true;
+    try {
+      mitglieder = await mitgliederHolen();
+    } finally {
+      mitgliederLaedt = false;
+    }
+  }
+  async function geraetSperreUmschalten(m) {
+    const neu = m.status === "gesperrt" ? "aktiv" : "gesperrt";
+    if (neu === "gesperrt" && !confirm(`Gerät „${m.bezeichnung}" sperren? Es kann dann nicht mehr synchronisieren.`)) return;
+    beschaeftigt = true;
+    try {
+      const ok = await mitgliedStatusSetzen(m.id, neu);
+      if (ok) await mitgliederLaden();
     } finally {
       beschaeftigt = false;
     }
@@ -396,6 +427,51 @@
             </button>
           </div>
         </div>
+      </div>
+    {/if}
+
+    <button class="verwaltung-toggle" onclick={mitgliederUmschalten}>
+      {mitgliederOffen ? "▾" : "▸"} Mitglieder verwalten
+      <span class="dezent">(Geräte im Team sperren)</span>
+    </button>
+
+    {#if mitgliederOffen}
+      <div class="karte verwaltung">
+        {#if mitgliederLaedt && mitglieder === null}
+          <p class="dezent">Lädt …</p>
+        {:else if !mitglieder}
+          <p class="fehler">Konnte nicht geladen werden. Nur der Team-Eigentümer sieht die Mitglieder.</p>
+          <button class="zweit" disabled={beschaeftigt} onclick={mitgliederLaden}>Erneut versuchen</button>
+        {:else if mitglieder.length === 0}
+          <p class="dezent">Noch keine Geräte.</p>
+        {:else}
+          <ul class="mitglieder">
+            {#each mitglieder as m (m.id)}
+              <li class="mitglied">
+                <div class="m-info">
+                  <span class="m-name">{m.bezeichnung}</span>
+                  {#if m.ist_eigentuemer}<span class="badge eigen">Eigentümer</span>{/if}
+                  {#if m.dieses_geraet}<span class="badge selbst">dieses Gerät</span>{/if}
+                  <span class="chip {m.status === 'gesperrt' ? 'rot' : 'gruen'}">
+                    {m.status === "gesperrt" ? "gesperrt" : "aktiv"}
+                  </span>
+                </div>
+                <div class="m-zeile2">
+                  <span class="dezent klein">zuletzt gesehen: {zeitText(m.zuletzt_gesehen)}</span>
+                  {#if !m.dieses_geraet}
+                    <button
+                      class={m.status === "gesperrt" ? "zweit" : "leise sperren"}
+                      disabled={beschaeftigt}
+                      onclick={() => geraetSperreUmschalten(m)}
+                    >
+                      {m.status === "gesperrt" ? "Entsperren" : "Sperren"}
+                    </button>
+                  {/if}
+                </div>
+              </li>
+            {/each}
+          </ul>
+        {/if}
       </div>
     {/if}
 
@@ -725,6 +801,55 @@
     background: var(--akzent-bg3);
     border-radius: 10px;
     padding: 1px 8px;
+  }
+  .badge.selbst {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--flaeche-2b);
+    border-radius: 10px;
+    padding: 1px 8px;
+  }
+  .mitglieder {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .mitglied {
+    padding: 12px 0;
+    border-top: 1px solid var(--flaeche-2b);
+  }
+  .mitglied:first-child {
+    border-top: none;
+  }
+  .m-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .m-name {
+    font-weight: 600;
+    color: var(--text);
+  }
+  .m-info .chip {
+    margin-left: auto;
+  }
+  .m-zeile2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+  }
+  .m-zeile2 .dezent {
+    margin-right: auto;
+  }
+  .leise.sperren {
+    color: var(--gefahr-text);
+    font-weight: 600;
   }
   .nichts {
     margin: 4px 0 0;
