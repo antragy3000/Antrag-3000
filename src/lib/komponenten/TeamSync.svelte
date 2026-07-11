@@ -15,6 +15,9 @@
     testen,
     entfernen,
     adresseAendern,
+    einladungAnnehmen,
+    mitgliedEinladen,
+    standardEnrollUrl = "",
     caErstellen,
     caExportieren,
     serverZert,
@@ -117,6 +120,36 @@
     }
   }
 
+  // Gehostetes Modell (4b): Einladung annehmen / Mitglied einladen.
+  let annehmenName = $state("");
+  let einladenOffen = $state(false);
+  let einladenName = $state("");
+  let enrollUrl = $state(standardEnrollUrl);
+
+  async function einladungAnnehmenKlick() {
+    if (!annehmenName.trim()) return;
+    beschaeftigt = true;
+    status = null;
+    try {
+      const info = await einladungAnnehmen(annehmenName.trim());
+      if (info) {
+        annehmenName = "";
+        status = await testen();
+      }
+    } finally {
+      beschaeftigt = false;
+    }
+  }
+  async function mitgliedEinladenKlick() {
+    beschaeftigt = true;
+    try {
+      await mitgliedEinladen(enrollUrl.trim(), einladenName.trim());
+      einladenName = "";
+    } finally {
+      beschaeftigt = false;
+    }
+  }
+
   let adresseOffen = $state(false);
   let neueAdresse = $state("");
   async function adresseAendernKlick() {
@@ -189,14 +222,36 @@
   <h3 class="abschnitt">Mein Gerät</h3>
   {#if !sync}
     <div class="karte leer">
-      <p>
-        Noch kein Gerät eingerichtet. Lade dein <strong>Zugangs-Paket</strong>
-        (Datei <code>.a3kpaket</code>) von deiner Verwalter:in – es enthält
-        deinen Ausweis und die Team-Adresse.
-      </p>
-      <button class="primaer" disabled={beschaeftigt} onclick={paketWaehlen}>
-        {beschaeftigt ? "Wird geladen …" : "📥 Zugangs-Paket wählen …"}
-      </button>
+      <div class="block block-erste">
+        <span class="block-titel">Mit einer Einladung verbinden</span>
+        <p class="dezent">
+          Du hast eine <strong>Einladung</strong> (Datei
+          <code>.a3keinladung</code>) bekommen? Gib diesem Gerät einen Namen und
+          verbinde dich. Dein Geräteschlüssel entsteht dabei nur auf diesem
+          Gerät und verlässt es nie.
+        </p>
+        <div class="reihe">
+          <input
+            type="text"
+            placeholder="Name dieses Geräts, z. B. Laptop-Anna"
+            bind:value={annehmenName}
+            onkeydown={(e) => { if (e.key === 'Enter' && annehmenName.trim()) einladungAnnehmenKlick(); }}
+          />
+          <button class="primaer" disabled={!annehmenName.trim() || beschaeftigt} onclick={einladungAnnehmenKlick}>
+            {beschaeftigt ? "Verbindet …" : "Einladung annehmen …"}
+          </button>
+        </div>
+      </div>
+      <div class="block">
+        <span class="block-titel">Oder: Zugangs-Paket</span>
+        <p class="dezent">
+          Von einer Verwalter:in ein <strong>Zugangs-Paket</strong> (Datei
+          <code>.a3kpaket</code>) erhalten? Lade es hier.
+        </p>
+        <button class="zweit" disabled={beschaeftigt} onclick={paketWaehlen}>
+          {beschaeftigt ? "Wird geladen …" : "📥 Zugangs-Paket wählen …"}
+        </button>
+      </div>
     </div>
   {:else}
     <div class="karte">
@@ -315,6 +370,34 @@
         </ul>
       {/if}
     </div>
+
+    <button class="verwaltung-toggle" onclick={() => (einladenOffen = !einladenOffen)}>
+      {einladenOffen ? "▾" : "▸"} Mitglied einladen
+      <span class="dezent">(weiteres Gerät verbinden)</span>
+    </button>
+
+    {#if einladenOffen}
+      <div class="karte verwaltung">
+        <p>
+          Erstellt eine <strong>Einladung</strong> (Datei
+          <code>.a3keinladung</code>) für ein weiteres Gerät. Sie ist nur
+          <strong>einmal</strong> nutzbar – gib sie offline weiter (der Code
+          darin ist wie ein Schlüssel). Nur der Team-Eigentümer kann einladen.
+        </p>
+        <label for="enroll-url">Öffentliche Verbindungs-Adresse</label>
+        <input id="enroll-url" type="text" placeholder="https://sync.antrag3000.de" bind:value={enrollUrl} />
+        <div class="block">
+          <span class="block-titel">Neues Gerät</span>
+          <p class="dezent">Optionaler Name, damit du die Einladung zuordnen kannst.</p>
+          <div class="reihe">
+            <input type="text" placeholder="z. B. Tablet-Ben" bind:value={einladenName} />
+            <button class="zweit" disabled={!enrollUrl.trim() || beschaeftigt} onclick={mitgliedEinladenKlick}>
+              {beschaeftigt ? "Erstellt …" : "Einladung erstellen …"}
+            </button>
+          </div>
+        </div>
+      </div>
+    {/if}
 
     <button class="verwaltung-toggle" onclick={() => (pruefenOffen = !pruefenOffen)}>
       {pruefenOffen ? "▾" : "▸"} Prüfen &amp; Protokoll
@@ -750,6 +833,10 @@
   .block {
     padding: 14px 0;
     border-top: 1px solid var(--flaeche-2b);
+  }
+  .block.block-erste {
+    border-top: none;
+    padding-top: 0;
   }
   .block-titel {
     font-weight: 700;

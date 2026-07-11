@@ -660,6 +660,80 @@
     return true;
   }
 
+  // --- Gehostetes Modell (Schritt 4b): Einladung annehmen / Mitglied einladen ---
+  // Neues Gerät: Einladungs-Datei wählen und kopiersicher verbinden. Der
+  // Geräteschlüssel entsteht dabei LOKAL (in Rust) und verlässt das Gerät nie;
+  // gesendet wird nur der öffentliche Teil, zurück kommt der signierte Ausweis.
+  async function einladungAnnehmen(geraetName) {
+    const name = (geraetName || "").trim();
+    if (!name) return null;
+    const pfad = await dateiWaehlen({
+      title: "Einladung wählen",
+      multiple: false,
+      filters: [{ name: "Einladung", extensions: ["a3keinladung", "json"] }],
+    });
+    if (!pfad) return null;
+    try {
+      const einl = await invoke("einladung_lesen", { pfad });
+      const info = await invoke("enroll_annehmen", {
+        enrollUrl: einl.enroll_url,
+        syncAdresse: einl.sync_adresse,
+        caPem: einl.ca_pem ?? "",
+        token: einl.token,
+        geraetName: name,
+      });
+      daten.sync = {
+        adresse: info.adresse,
+        geraetName: info.geraet_name,
+        ausweisPem: info.ausweis_pem,
+        caPem: info.ca_pem ?? "",
+        letzterAbgleich: null,
+      };
+      await tresorSpeichern();
+      return info;
+    } catch (e) {
+      alert("Die Einladung konnte nicht angenommen werden.\n" + e);
+      return null;
+    }
+  }
+
+  // Eigentümer: eine Einladung für ein weiteres Gerät erstellen und als Datei
+  // speichern (offline weitergeben – der Einmal-Code ist wie ein Schlüssel).
+  async function mitgliedEinladen(enrollUrl, geraetName) {
+    if (!daten.sync) return null;
+    const url = (enrollUrl || "").trim();
+    if (!url) {
+      alert("Bitte die öffentliche Verbindungs-Adresse angeben (z. B. https://sync.antrag3000.de).");
+      return null;
+    }
+    const sicher = ((geraetName || "").trim().replace(/[^A-Za-z0-9_.-]/g, "_")) || "einladung";
+    const ziel = await dateiSpeichern({
+      title: "Einladung speichern",
+      defaultPath: sicher + ".a3keinladung",
+      filters: [{ name: "Einladung", extensions: ["a3keinladung"] }],
+    });
+    if (!ziel) return null;
+    try {
+      const erg = await invoke("einladung_erstellen", {
+        syncAdresse: daten.sync.adresse,
+        ausweisPem: daten.sync.ausweisPem,
+        caPem: daten.sync.caPem ?? "",
+        enrollUrl: url,
+        geraetName: (geraetName || "").trim(),
+        ziel,
+      });
+      alert(
+        "Einladung gespeichert:\n" + ziel +
+        "\n\nGib die Datei offline an das neue Gerät weiter (z. B. USB) – nicht per Mail." +
+        "\nSie ist nur EINMAL nutzbar" + (erg?.ablauf ? " und läuft am " + erg.ablauf + " ab." : "."),
+      );
+      return erg;
+    } catch (e) {
+      alert("Die Einladung konnte nicht erstellt werden.\n" + e);
+      return null;
+    }
+  }
+
   // --- Team verwalten (Admin): CA + Zugangs-Pakete in der App erzeugen ---
   async function teamCaErstellen(adresse) {
     try {
@@ -1963,6 +2037,9 @@
               testen={verbindungPruefen}
               entfernen={zugangspaketEntfernen}
               adresseAendern={teamAdresseAendern}
+              einladungAnnehmen={einladungAnnehmen}
+              mitgliedEinladen={mitgliedEinladen}
+              standardEnrollUrl={daten.einzelServer ?? ""}
               caErstellen={teamCaErstellen}
               caExportieren={teamCaExportieren}
               serverZert={serverZertErstellen}

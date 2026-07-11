@@ -580,7 +580,8 @@ pub struct EinladungErgebnis {
 
 /// Erstellt eine Einladung (nur der Eigentümer, per mTLS): fragt am Server einen
 /// Einmal-Token an und baut daraus ein Einladungs-Paket, das die Server-Adressen
-/// und die Server-Trust-CA mitführt.
+/// und die Server-Trust-CA mitführt. Ist `ziel` gesetzt, wird das Paket dort als
+/// Datei gespeichert (offline weiterzugeben).
 #[tauri::command]
 pub async fn einladung_erstellen(
     sync_adresse: String,
@@ -588,6 +589,7 @@ pub async fn einladung_erstellen(
     ca_pem: String,
     enroll_url: String,
     geraet_name: String,
+    ziel: Option<String>,
 ) -> Result<EinladungErgebnis, String> {
     let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
     let url = format!("{}/api/einladung", basis_url(&sync_adresse));
@@ -635,6 +637,12 @@ pub async fn einladung_erstellen(
         "ca_pem": ca_pem,
     }))
     .unwrap_or_default();
+
+    // Optional als Datei speichern (offline weitergeben).
+    if let Some(pfad) = ziel.as_deref().map(str::trim).filter(|p| !p.is_empty()) {
+        std::fs::write(pfad, &paket_json)
+            .map_err(|e| format!("Einladung nicht speicherbar: {e}"))?;
+    }
 
     Ok(EinladungErgebnis {
         token: a.token,
