@@ -30,6 +30,11 @@ vite.config.ts.timestamp-*
 *.pfx
 *.p12
 *.a3kpaket
+# Einladungs-Dateien (enthalten einen Einmal-Token) – nicht versionieren:
+*.a3keinladung
+# Interne Strategie-/Monetarisierungs-Unterlagen (gehoeren NICHT ins
+# oeffentliche Repo; liegen nur lokal):
+docs-intern/
 # Build-/Release-Artefakte (werden erzeugt, gehoeren nicht ins Repo):
 *-setup.exe
 *-setup.exe.sig
