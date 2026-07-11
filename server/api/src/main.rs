@@ -548,23 +548,65 @@ fn service_ca_dir(db_pfad: &str) -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("."))
 }
 
-/// Abo-Haken (gehostetes Modell, Schritt 1): Darf dieses Konto schreibende
-/// Team-Sync-Aktionen ausführen? Aktuell **permissiv** – blockt nur ein
-/// ausdrücklich `abgelaufen`-es Abo. Freistufe (`frei`), Testphase und aktives
-/// Abo sind erlaubt; bestehende (self-hosted) Konten stehen auf `aktiv` und
-/// sind damit nie betroffen. Die genauen Grenzen (z. B. Abo ab dem 2. Gerät)
-/// kommen in Schritt 5 ("Abo-Gating scharf schalten") hinzu.
-async fn abo_erlaubt(pool: &SqlitePool, konto_id: i64) -> bool {
-    let status: Option<(String,)> = sqlx::query_as("SELECT abo_status FROM konto WHERE id = ?")
+/// Ist das Abo-Gating (Schritt 5) SCHARF geschaltet? Per ENV `ABO_GATING`.
+/// **Standard: AUS.** Solange aus, ist jede Team-Aktion erlaubt – es gibt kein
+/// sichtbares Abo-Modell, der Betrieb ist unverändert. Die vollständige Logik
+/// ist trotzdem gebaut und getestet und lässt sich später mit `ABO_GATING=1`
+/// aktivieren.
+fn abo_gating_an() -> bool {
+    matches!(
+        env::var("ABO_GATING").ok().as_deref().map(str::trim),
+        Some("1") | Some("true") | Some("ja") | Some("on")
+    )
+}
+
+/// Liest den Abo-Status eines Kontos (None, wenn es das Konto nicht gibt).
+async fn abo_status(pool: &SqlitePool, konto_id: i64) -> Option<String> {
+    sqlx::query_as::<_, (String,)>("SELECT abo_status FROM konto WHERE id = ?")
         .bind(konto_id)
         .fetch_optional(pool)
         .await
         .ok()
-        .flatten();
-    match status {
-        Some((s,)) => s != "abgelaufen",
-        None => false,
+        .flatten()
+        .map(|(s,)| s)
+}
+
+/// Zahl der Geräte eines Kontos (für die „ab dem 2. Gerät"-Grenze).
+async fn geraete_zahl(pool: &SqlitePool, konto_id: i64) -> i64 {
+    sqlx::query_scalar::<_, i64>(
+        "SELECT COUNT(*) FROM geraet g JOIN nutzer n ON n.id = g.nutzer_id WHERE n.konto_id = ?",
+    )
+    .bind(konto_id)
+    .fetch_one(pool)
+    .await
+    .unwrap_or(0)
+}
+
+/// REINE Gate-Entscheidung (ohne DB/Umgebung – dadurch gut testbar):
+/// - Gating aus → immer erlaubt.
+/// - gültiges Abo (`aktiv`/`testphase`/`frei`) → erlaubt.
+/// - sonst nur **Einzelplatz** (≤ 1 Gerät) frei; ab dem 2. Gerät gesperrt.
+fn abo_gate_entscheiden(gating_an: bool, status: Option<&str>, geraete_gesamt: i64) -> bool {
+    if !gating_an {
+        return true;
     }
+    if matches!(status, Some("aktiv") | Some("testphase") | Some("frei")) {
+        return true;
+    }
+    geraete_gesamt <= 1
+}
+
+/// Abo-Gate (Schritt 5): Darf dieses Konto eine (schreibende/erweiternde)
+/// Team-Aktion ausführen? `zusatz_geraet` zählt ein gerade entstehendes Gerät
+/// mit (beim Enroll = das neue Gerät; beim Einladen = das eingeladene). Solange
+/// `ABO_GATING` aus ist, immer `true` (kein sichtbares Abo).
+async fn abo_gate_ok(pool: &SqlitePool, konto_id: i64, zusatz_geraet: i64) -> bool {
+    if !abo_gating_an() {
+        return true;
+    }
+    let status = abo_status(pool, konto_id).await;
+    let geraete = geraete_zahl(pool, konto_id).await + zusatz_geraet;
+    abo_gate_entscheiden(true, status.as_deref(), geraete)
 }
 
 /// Ermittelt zu einem Request das Konto (und die Geräte-id). Unbekannte,
@@ -712,9 +754,9 @@ async fn board_schreiben(
 ) -> Result<Json<SchreibAntwort>, StatusCode> {
     let (konto_id, geraet_id) = konto_und_geraet(&st.pool, &headers).await?;
 
-    // Abo-Haken (gehostetes Modell, Schritt 1): schreibende Team-Sync-Aktion
-    // nur bei gültigem Abo. Für bestehende ('aktiv') Konten ohne Effekt.
-    if !abo_erlaubt(&st.pool, konto_id).await {
+    // Abo-Gate (Schritt 5): schreibende Team-Sync-Aktion. Solange ABO_GATING
+    // aus ist, immer erlaubt; scharf: ab dem 2. Gerät nur mit gültigem Abo.
+    if !abo_gate_ok(&st.pool, konto_id, 0).await {
         return Err(StatusCode::PAYMENT_REQUIRED);
     }
 
@@ -1254,8 +1296,10 @@ async fn einladung_erstellen(
     // Nur der Team-Eigentümer darf einladen.
     let (konto_id, geraet_id) = eigentuemer_pruefen(&st.pool, &headers).await?;
 
-    // Abo aktiv? (Einladen ist die Team-/Abo-Funktion.)
-    if !abo_erlaubt(&st.pool, konto_id).await {
+    // Abo-Gate (Schritt 5): Einladen zielt auf ein weiteres Gerät (zusatz = 1),
+    // ist also die Aktion, die ein Konto zum „Team" macht. Solange ABO_GATING
+    // aus ist, immer erlaubt.
+    if !abo_gate_ok(&st.pool, konto_id, 1).await {
         return Err(StatusCode::PAYMENT_REQUIRED);
     }
     if !tempo_ok(&st, geraet_id) {
@@ -1384,8 +1428,10 @@ async fn enroll(
         return Err(StatusCode::GONE);
     }
 
-    // Abo aktiv?
-    if !abo_erlaubt(&st.pool, konto_id).await {
+    // Abo-Gate (Schritt 5): das neue Gerät zählt mit (zusatz = 1). Das erste
+    // Gerät (Einzelplatz) bleibt frei; ab dem 2. braucht das Konto ein Abo.
+    // Solange ABO_GATING aus ist, immer erlaubt.
+    if !abo_gate_ok(&st.pool, konto_id, 1).await {
         return Err(StatusCode::PAYMENT_REQUIRED);
     }
 
@@ -2153,7 +2199,15 @@ mod tests {
             .await
             .unwrap();
         schema_anlegen(&pool).await.unwrap();
-        let dir = std::env::temp_dir().join(format!("a3k-enroll-test-{}", std::process::id()));
+        // Eindeutiger CA-Ordner je Aufruf – sonst kollidieren parallele Tests
+        // (gleicher Ordner: einer löscht, während ein anderer hineinschreibt).
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static NR: AtomicU64 = AtomicU64::new(0);
+        let dir = std::env::temp_dir().join(format!(
+            "a3k-test-ca-{}-{}",
+            std::process::id(),
+            NR.fetch_add(1, Ordering::Relaxed)
+        ));
         let _ = std::fs::remove_dir_all(&dir);
         let ca = ServiceCa::laden_oder_erzeugen(&dir).unwrap();
         AppState {
@@ -2436,6 +2490,26 @@ mod tests {
         .await
         .unwrap_err();
         assert_eq!(err, StatusCode::NOT_FOUND);
+    }
+
+    /// Abo-Gate-Logik (Schritt 5): aus = immer frei; scharf = Einzelplatz frei,
+    /// ab dem 2. Gerät nur mit gültigem Abo.
+    #[test]
+    fn abo_gate_logik() {
+        // Gating AUS: immer erlaubt, egal was.
+        assert!(abo_gate_entscheiden(false, Some("abgelaufen"), 9));
+        assert!(abo_gate_entscheiden(false, None, 9));
+
+        // Gating AN, gültiges Abo: immer erlaubt.
+        assert!(abo_gate_entscheiden(true, Some("aktiv"), 9));
+        assert!(abo_gate_entscheiden(true, Some("testphase"), 5));
+        assert!(abo_gate_entscheiden(true, Some("frei"), 3));
+
+        // Gating AN, kein gültiges Abo: nur Einzelplatz (≤ 1 Gerät) frei.
+        assert!(abo_gate_entscheiden(true, Some("abgelaufen"), 1));
+        assert!(abo_gate_entscheiden(true, Some("abgelaufen"), 0));
+        assert!(!abo_gate_entscheiden(true, Some("abgelaufen"), 2));
+        assert!(!abo_gate_entscheiden(true, None, 2));
     }
 
     /// Erzeugt ein Geheimnis wie der `totp`-Hilfsmodus, bildet den aktuell

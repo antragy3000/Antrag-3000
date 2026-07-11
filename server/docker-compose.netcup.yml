@@ -73,6 +73,10 @@ services:
       # dort service-ca.crt (öffentlich, von Caddy gemountet) + service-ca.key
       # (geheim, bleibt im Volume).
       - SERVICE_CA_DIR=/service-ca
+      # Abo-Gating (Schritt 5) ist gebaut, aber standardmäßig AUS – kein
+      # sichtbares Abo. Erst wenn das Abo-Modell starten soll, hier scharf
+      # schalten (dann braucht ein Konto ab dem 2. Gerät ein gültiges Abo):
+      # - ABO_GATING=1
     volumes:
       - api_data:/data
       - ./katalog:/srv:ro
