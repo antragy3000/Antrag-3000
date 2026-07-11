@@ -281,6 +281,10 @@ async fn main() {
         //    öffentlichen :443-Kanal freigegeben (das neue Gerät hat noch kein Zert).
         .route("/api/einladung", post(einladung_erstellen))
         .route("/api/enroll", post(enroll))
+        // Team erstellen (gehostet, ohne Konto/E-Mail): bootstrappt ein neues
+        // Konto + Eigentümer-Gerät. Ohne Zertifikat (das erste Gerät hat noch
+        // keins) – über den öffentlichen :443-Kanal, mit Missbrauchs-Bremse.
+        .route("/api/team", post(team_erstellen))
         // Mitglieder verwalten (Eigentümer, per mTLS – ohne Vendor-Admin-TOTP):
         // Team-Geräte auflisten und sperren/entsperren.
         .route("/api/mitglieder", get(mitglieder_liste))
@@ -1488,6 +1492,95 @@ async fn enroll(
     }))
 }
 
+#[derive(Deserialize)]
+struct TeamErstellenBody {
+    /// Öffentlicher Geräteschlüssel (SPKI-PEM). Der private Teil bleibt lokal.
+    #[serde(rename = "pubkeyPem", alias = "pubkey_pem")]
+    pubkey_pem: String,
+    /// Name des ersten (Eigentümer-)Geräts.
+    name: Option<String>,
+    /// Anzeigename des Teams.
+    team_name: Option<String>,
+}
+
+#[derive(Serialize, Debug)]
+struct TeamErstellenAntwort {
+    ausweis_pem: String,
+    service_ca_pem: String,
+    konto_id: i64,
+}
+
+/// Team erstellen (POST /api/team): legt ein NEUES Konto an, macht das
+/// aufrufende Gerät zum Eigentümer und stellt ihm kopiersicher einen Ausweis
+/// aus. OHNE Zertifikat/Token – der öffentliche Selbstbedienungs-Weg, darum mit
+/// Missbrauchs-Bremse. Kein Konto/keine E-Mail nötig (anonymes Konto, allein
+/// über den Ausweis identifiziert – E-Mail/Wiederherstellung kommt später).
+async fn team_erstellen(
+    State(st): State<AppState>,
+    Json(body): Json<TeamErstellenBody>,
+) -> Result<Json<TeamErstellenAntwort>, StatusCode> {
+    let service_ca: &Option<ServiceCa> = &st.service_ca;
+    let ca = service_ca.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+
+    // Missbrauchs-Bremse (global): Sentinel-Geräte-id -1 (kein echtes Gerät hat
+    // eine negative id). Begrenzt neue Teams pro Zeitfenster.
+    if !tempo_ok(&st, -1) {
+        return Err(StatusCode::TOO_MANY_REQUESTS);
+    }
+    if body.pubkey_pem.len() > PUBKEY_MAX_BYTES {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+    let geraet_name = body.name.as_deref().unwrap_or("").trim();
+    let geraet_name = if geraet_name.is_empty() { "Team-Gerät" } else { geraet_name };
+    let team_name = body.team_name.as_deref().unwrap_or("").trim();
+    let team_name = if team_name.is_empty() { "Team" } else { team_name };
+    if geraet_name.len() > FELD_MAX || team_name.len() > FELD_MAX {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+
+    // Kopiersicher signieren (nur der öffentliche Schlüssel geht ein).
+    let ausweis_pem = ca
+        .signiere_geraet(&body.pubkey_pem, geraet_name)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    let cert_fp = service_ca::fingerprint_von_pem(&ausweis_pem)
+        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Neues (anonymes) Konto + Eigentümer-Nutzer + Gerät. Der abo_status bleibt
+    // auf dem Spalten-Standard – die genaue Anfangsstufe ist eine spätere
+    // Monetarisierungs-Entscheidung (Gating ist derzeit ohnehin aus).
+    let konto = sqlx::query("INSERT INTO konto (name) VALUES (?)")
+        .bind(team_name)
+        .execute(&st.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let konto_id = konto.last_insert_rowid();
+    let nutzer = sqlx::query(
+        "INSERT INTO nutzer (konto_id, anzeigename, rolle, ist_eigentuemer)
+         VALUES (?, ?, 'eigentuemer', 1)",
+    )
+    .bind(konto_id)
+    .bind(geraet_name)
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    sqlx::query(
+        "INSERT INTO geraet (nutzer_id, bezeichnung, cert_fingerprint, status)
+         VALUES (?, ?, ?, 'aktiv')",
+    )
+    .bind(nutzer.last_insert_rowid())
+    .bind(geraet_name)
+    .bind(&cert_fp)
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(TeamErstellenAntwort {
+        ausweis_pem,
+        service_ca_pem: ca.cert_pem.clone(),
+        konto_id,
+    }))
+}
+
 #[derive(Serialize, Debug)]
 struct MitgliedZeile {
     id: i64,
@@ -2490,6 +2583,57 @@ mod tests {
         .await
         .unwrap_err();
         assert_eq!(err, StatusCode::NOT_FOUND);
+    }
+
+    /// Team erstellen: legt ein neues Konto an, macht das erste Gerät zum
+    /// Eigentümer (kopiersicher signiert), und zwei Aufrufe ergeben zwei Konten.
+    #[tokio::test]
+    async fn team_erstellen_bootstrappt_eigentuemer() {
+        let st = test_state().await;
+        let key = rcgen::KeyPair::generate().unwrap();
+        let antw = team_erstellen(
+            State(st.clone()),
+            Json(TeamErstellenBody {
+                pubkey_pem: key.public_key_pem(),
+                name: Some("Mein-Laptop".into()),
+                team_name: Some("Ateliers".into()),
+            }),
+        )
+        .await
+        .expect("Team erstellen muss klappen")
+        .0;
+        assert!(antw.ausweis_pem.contains("BEGIN CERTIFICATE"));
+        assert!(antw.konto_id >= 2, "neues Konto, nicht das geseedete Konto 1");
+
+        let (eig,): (i64,) = sqlx::query_as("SELECT ist_eigentuemer FROM nutzer WHERE konto_id = ?")
+            .bind(antw.konto_id)
+            .fetch_one(&st.pool)
+            .await
+            .unwrap();
+        assert_eq!(eig, 1, "erstes Gerät ist Eigentümer");
+
+        let fp = service_ca::fingerprint_von_pem(&antw.ausweis_pem).unwrap();
+        let (cnt,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM geraet WHERE cert_fingerprint = ?")
+            .bind(&fp)
+            .fetch_one(&st.pool)
+            .await
+            .unwrap();
+        assert_eq!(cnt, 1);
+
+        // Zweites Team → eigenes, anderes Konto.
+        let key2 = rcgen::KeyPair::generate().unwrap();
+        let antw2 = team_erstellen(
+            State(st.clone()),
+            Json(TeamErstellenBody {
+                pubkey_pem: key2.public_key_pem(),
+                name: None,
+                team_name: None,
+            }),
+        )
+        .await
+        .unwrap()
+        .0;
+        assert_ne!(antw.konto_id, antw2.konto_id);
     }
 
     /// Abo-Gate-Logik (Schritt 5): aus = immer frei; scharf = Einzelplatz frei,

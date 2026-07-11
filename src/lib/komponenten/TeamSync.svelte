@@ -19,6 +19,7 @@
     mitgliedEinladen,
     mitgliederHolen,
     mitgliedStatusSetzen,
+    teamErstellen,
     standardEnrollUrl = "",
     caErstellen,
     caExportieren,
@@ -119,6 +120,30 @@
     if (confirm("Geräte-Ausweis entfernen? Die Synchronisation ist dann gestoppt.")) {
       await entfernen();
       status = null;
+    }
+  }
+
+  // Gehostetes Modell: eigenes Team erstellen (ohne Konto/E-Mail).
+  let teamErstellenOffen = $state(false);
+  let teamDienstUrl = $state(standardEnrollUrl);
+  let teamSyncAdresse = $state("");
+  let teamName = $state("");
+  let teamGeraetName = $state("");
+  async function teamErstellenKlick() {
+    if (!teamGeraetName.trim() || !teamDienstUrl.trim() || !teamSyncAdresse.trim()) return;
+    beschaeftigt = true;
+    status = null;
+    try {
+      const info = await teamErstellen(
+        teamDienstUrl.trim(),
+        teamSyncAdresse.trim(),
+        "",
+        teamName.trim(),
+        teamGeraetName.trim(),
+      );
+      if (info) status = await testen();
+    } finally {
+      beschaeftigt = false;
     }
   }
 
@@ -282,6 +307,34 @@
         <button class="zweit" disabled={beschaeftigt} onclick={paketWaehlen}>
           {beschaeftigt ? "Wird geladen …" : "📥 Zugangs-Paket wählen …"}
         </button>
+      </div>
+      <div class="block">
+        <button class="verwaltung-toggle klein-toggle" onclick={() => (teamErstellenOffen = !teamErstellenOffen)}>
+          {teamErstellenOffen ? "▾" : "▸"} Oder: eigenes Team erstellen
+          <span class="dezent">(gehostet, ohne Konto)</span>
+        </button>
+        {#if teamErstellenOffen}
+          <p class="dezent">
+            Legt ein <strong>neues Team</strong> auf dem Dienst an; dieses Gerät
+            wird Eigentümer. Der Schlüssel entsteht lokal. Kein Konto/keine
+            E-Mail nötig – die Wiederherstellung per E-Mail kommt später.
+          </p>
+          <label for="team-dienst">Dienst-Adresse (öffentlich)</label>
+          <input id="team-dienst" type="text" placeholder="https://sync.antrag3000.de" bind:value={teamDienstUrl} />
+          <label for="team-sync">Sync-Adresse (mTLS)</label>
+          <input id="team-sync" type="text" placeholder="team.antrag3000.de:8443" bind:value={teamSyncAdresse} />
+          <label for="team-name">Team-Name</label>
+          <input id="team-name" type="text" placeholder="z. B. Atelier-Kollektiv" bind:value={teamName} />
+          <label for="team-geraet">Name dieses Geräts</label>
+          <input id="team-geraet" type="text" placeholder="z. B. Laptop-Anna" bind:value={teamGeraetName} />
+          <button
+            class="primaer team-erstell-knopf"
+            disabled={beschaeftigt || !teamGeraetName.trim() || !teamDienstUrl.trim() || !teamSyncAdresse.trim()}
+            onclick={teamErstellenKlick}
+          >
+            {beschaeftigt ? "Erstellt …" : "Team erstellen"}
+          </button>
+        {/if}
       </div>
     </div>
   {:else}
@@ -948,6 +1001,13 @@
   }
   .verwaltung {
     margin-top: 8px;
+  }
+  .klein-toggle {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+  .team-erstell-knopf {
+    margin-top: 12px;
   }
   .verwaltung > p {
     margin: 0 0 14px;

@@ -734,6 +734,32 @@
     }
   }
 
+  // Eigenes Team erstellen (gehostet, ohne Konto/E-Mail): erzeugt lokal den
+  // Schlüssel, bootstrappt am Server ein neues Konto und wird dessen Eigentümer.
+  async function teamErstellen(teamUrl, syncAdresse, caPem, teamName, geraetName) {
+    try {
+      const info = await invoke("team_erstellen", {
+        teamUrl,
+        syncAdresse,
+        caPem: caPem ?? "",
+        teamName,
+        geraetName,
+      });
+      daten.sync = {
+        adresse: info.adresse,
+        geraetName: info.geraet_name,
+        ausweisPem: info.ausweis_pem,
+        caPem: info.ca_pem ?? "",
+        letzterAbgleich: null,
+      };
+      await tresorSpeichern();
+      return info;
+    } catch (e) {
+      alert("Das Team konnte nicht erstellt werden.\n" + e);
+      return null;
+    }
+  }
+
   // Eigentümer: die Team-Geräte auflisten bzw. sperren/entsperren.
   async function mitgliederHolen() {
     if (!daten.sync) return null;
@@ -2073,6 +2099,7 @@
               mitgliedEinladen={mitgliedEinladen}
               mitgliederHolen={mitgliederHolen}
               mitgliedStatusSetzen={mitgliedStatusSetzen}
+              teamErstellen={teamErstellen}
               standardEnrollUrl={daten.einzelServer ?? ""}
               caErstellen={teamCaErstellen}
               caExportieren={teamCaExportieren}

@@ -570,6 +570,73 @@ pub async fn enroll_annehmen(
     })
 }
 
+/// Erstellt ein NEUES Team (gehostet, ohne Konto/E-Mail): erzeugt das
+/// Schlüsselpaar lokal, ruft den öffentlichen Team-Endpunkt und wird dadurch
+/// Eigentümer des neuen Kontos. Rückgabe wie ein Zugangs-Paket (Frontend legt
+/// es verschlüsselt in den Tresor).
+#[tauri::command]
+pub async fn team_erstellen(
+    team_url: String,
+    sync_adresse: String,
+    ca_pem: String,
+    team_name: String,
+    geraet_name: String,
+) -> Result<ZugangsInfo, String> {
+    let name = geraet_name.trim();
+    if name.is_empty() {
+        return Err("Bitte einen Geraetenamen angeben.".into());
+    }
+
+    let key = rcgen::KeyPair::generate().map_err(|e| format!("Schluessel nicht erzeugbar: {e}"))?;
+    let pubkey_pem = key.public_key_pem();
+
+    let client = client_oeffentlich(&ca_pem)?;
+    let url = format!("{}/api/team", basis_url(&team_url));
+    let body = serde_json::json!({
+        "pubkeyPem": pubkey_pem,
+        "name": name,
+        "team_name": team_name.trim(),
+    })
+    .to_string();
+    let r = client
+        .post(&url)
+        .header("content-type", "application/json")
+        .body(body)
+        .send()
+        .await
+        .map_err(|e| format!("Team erstellen fehlgeschlagen: {}", fehler_kette(&e)))?;
+    let status = r.status();
+    if !status.is_success() {
+        return Err(match status.as_u16() {
+            429 => "Zu viele Team-Erstellungen – bitte kurz warten.".to_string(),
+            503 => "Der Server kann derzeit keine Teams anlegen.".to_string(),
+            s => format!("Server antwortete mit {s}"),
+        });
+    }
+
+    #[derive(Deserialize)]
+    struct TeamAntwort {
+        #[serde(default)]
+        ausweis_pem: String,
+    }
+    let antwort: TeamAntwort = r
+        .json()
+        .await
+        .map_err(|e| format!("Antwort nicht lesbar: {e}"))?;
+    if !antwort.ausweis_pem.contains("CERTIFICATE") {
+        return Err("Der Server hat keinen gueltigen Ausweis geliefert.".into());
+    }
+
+    let ausweis_pem = format!("{}{}", key.serialize_pem(), antwort.ausweis_pem);
+    let geraet_name = geraet_name_aus_pem(&ausweis_pem).unwrap_or_else(|_| name.to_string());
+    Ok(ZugangsInfo {
+        adresse: sync_adresse.trim().to_string(),
+        geraet_name,
+        ausweis_pem,
+        ca_pem,
+    })
+}
+
 #[derive(Serialize)]
 pub struct EinladungErgebnis {
     pub token: String,

@@ -68,6 +68,11 @@
 	handle /api/enroll {
 		reverse_proxy api:8080
 	}
+	# Team erstellen (gehostet): das erste Gerät bootstrappt hier ein neues
+	# Konto + seinen Ausweis (noch ohne Zertifikat). Server-Logik bremst Missbrauch.
+	handle /api/team {
+		reverse_proxy api:8080
+	}
 	handle {
 		respond "Antrag 3000" 200
 	}

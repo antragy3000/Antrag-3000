@@ -74,6 +74,7 @@ pub fn run() {
             sync::einladung_lesen,
             sync::mitglieder_holen,
             sync::mitglied_status_setzen,
+            sync::team_erstellen,
             excel::kfp_excel_schreiben,
             katalog::katalog_laden,
             katalog::katalog_speichern,
