@@ -332,6 +332,14 @@ async fn main() {
         .route("/api/admin/vorschlaege", get(admin_vorschlaege))
         .route("/api/admin/vorschlaege/:vid/freigeben", post(admin_vorschlag_freigeben))
         .route("/api/admin/vorschlaege/:vid/verwerfen", post(admin_vorschlag_verwerfen))
+        // Förderer-Kuratierung (Roadmap 6c): verbundene Förderer + ihre
+        // Programm-Änderungen sehen und in den öffentlichen Katalog freigeben.
+        .route("/api/admin/foerderer-verbunden", get(admin_foerderer_verbunden))
+        .route("/api/admin/foerderer-programme", get(admin_foerderer_programme))
+        .route(
+            "/api/admin/foerderer-programme/:foerderer_id/:programm_id/freigeben",
+            post(admin_foerderer_programm_freigeben),
+        )
         .with_state(AppState {
             pool,
             schreib: Arc::new(Mutex::new(HashMap::new())),
@@ -506,6 +514,9 @@ async fn schema_anlegen(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             inhalt_json TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'aktiv',
             geaendert_am TEXT NOT NULL DEFAULT (datetime('now')),
+            -- Zeitpunkt der letzten Katalog-Freigabe (6c). NULL = noch nie
+            -- freigegeben; geaendert_am > freigegeben_am = offene Änderung.
+            freigegeben_am TEXT,
             PRIMARY KEY (foerderer_id, programm_id)
         )",
         // MVP: ein gemeinsames Team-Konto + Team-Nutzer.
@@ -532,6 +543,10 @@ async fn schema_anlegen(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         .await;
     // Der bestehende Team-Login (Nutzer 1) ist der Eigentümer.
     let _ = sqlx::query("UPDATE nutzer SET ist_eigentuemer = 1 WHERE id = 1")
+        .execute(pool)
+        .await;
+    // Roadmap 6c: Freigabe-Zeitstempel je Förderer-Programm nachziehen.
+    let _ = sqlx::query("ALTER TABLE foerderer_programm ADD COLUMN freigegeben_am TEXT")
         .execute(pool)
         .await;
     Ok(())
@@ -2631,6 +2646,56 @@ async fn katalog_eintrag_anwenden(
     Ok(())
 }
 
+/// Entfernt eine Förderung (nach id) aus dem verteilten Katalog. Gegenstück zu
+/// `katalog_eintrag_anwenden` – für zurückgezogene Förderer-Programme (6c).
+/// Kein Fehler, wenn die id gar nicht (mehr) im Katalog steht.
+async fn katalog_eintrag_entfernen(
+    pool: &SqlitePool,
+    konto_id: i64,
+    geraet_id: i64,
+    foerderung_id: &str,
+) -> Result<(), StatusCode> {
+    let Some(text) = katalog_text(pool, konto_id).await else {
+        return Ok(()); // kein Katalog → nichts zu entfernen
+    };
+    let mut v: serde_json::Value =
+        serde_json::from_str(&text).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let Some(arr) = v.get_mut("foerderungen").and_then(|x| x.as_array_mut()) else {
+        return Ok(());
+    };
+    let vorher = arr.len();
+    arr.retain(|f| f.get("id").and_then(|x| x.as_str()) != Some(foerderung_id));
+    if arr.len() == vorher {
+        return Ok(()); // war nicht drin
+    }
+    let (heute,): (String,) = sqlx::query_as("SELECT date('now')")
+        .fetch_one(pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    v["stand"] = serde_json::Value::String(heute);
+    let neu_str = v.to_string();
+    let stand = v.get("stand").and_then(|x| x.as_str()).map(|s| s.to_string());
+    let schema_version = v.get("schema_version").and_then(|x| x.as_i64());
+    sqlx::query(
+        "INSERT INTO katalog_aktuell
+            (konto_id, inhalt_json, stand, schema_version, geaendert_am, geaendert_von_geraet)
+         VALUES (?, ?, ?, ?, datetime('now'), ?)
+         ON CONFLICT(konto_id) DO UPDATE SET
+            inhalt_json = excluded.inhalt_json, stand = excluded.stand,
+            schema_version = excluded.schema_version, geaendert_am = excluded.geaendert_am,
+            geaendert_von_geraet = excluded.geaendert_von_geraet",
+    )
+    .bind(konto_id)
+    .bind(&neu_str)
+    .bind(&stand)
+    .bind(schema_version)
+    .bind(geraet_id)
+    .execute(pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(())
+}
+
 /// Vorschlag freigeben (POST /api/admin/vorschlaege/{id}/freigeben):
 /// übernimmt ihn in den Katalog und markiert ihn als freigegeben.
 async fn admin_vorschlag_freigeben(
@@ -2680,6 +2745,147 @@ async fn admin_vorschlag_verwerfen(
     if res.rows_affected() == 0 {
         return Err(StatusCode::NOT_FOUND);
     }
+    Ok(StatusCode::NO_CONTENT)
+}
+
+// ============================================================
+// Förderer-Kuratierung (Roadmap 6c): der Vendor/Admin sieht verbundene Förderer
+// und ihre Programm-Änderungen und gibt sie in den öffentlichen Katalog frei
+// (Löschungen werden mit übernommen).
+// ============================================================
+
+#[derive(Serialize)]
+struct VerbundenerFoerderer {
+    id: i64,
+    name: String,
+    status: String,
+    zuletzt_gesehen: Option<String>,
+    anzahl_programme: i64,
+}
+
+/// Verbundene Förderer auflisten (GET /api/admin/foerderer-verbunden).
+async fn admin_foerderer_verbunden(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<VerbundenerFoerderer>>, StatusCode> {
+    let _ = admin_pruefen(&st, &headers).await?;
+    let rows = sqlx::query_as::<_, (i64, String, String, Option<String>, i64)>(
+        "SELECT f.id, f.name, f.status, f.zuletzt_gesehen,
+                (SELECT COUNT(*) FROM foerderer_programm p
+                 WHERE p.foerderer_id = f.id AND p.status = 'aktiv')
+         FROM foerderer f ORDER BY f.erstellt_am DESC",
+    )
+    .fetch_all(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let liste = rows
+        .into_iter()
+        .map(|(id, name, status, zuletzt_gesehen, anzahl_programme)| VerbundenerFoerderer {
+            id,
+            name,
+            status,
+            zuletzt_gesehen,
+            anzahl_programme,
+        })
+        .collect();
+    Ok(Json(liste))
+}
+
+#[derive(Serialize)]
+struct KuratierProgramm {
+    foerderer_id: i64,
+    foerderer_name: String,
+    programm_id: String,
+    inhalt: serde_json::Value,
+    status: String,
+    geaendert_am: String,
+    /// Offen = seit der letzten Freigabe geändert (oder nie freigegeben).
+    offen: bool,
+}
+
+/// Alle Programme verbundener Förderer für die Kuratierung
+/// (GET /api/admin/foerderer-programme), mit „offen"-Kennzeichen.
+async fn admin_foerderer_programme(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<KuratierProgramm>>, StatusCode> {
+    let _ = admin_pruefen(&st, &headers).await?;
+    let rows = sqlx::query_as::<_, (i64, String, String, String, String, String, Option<String>)>(
+        "SELECT p.foerderer_id, f.name, p.programm_id, p.inhalt_json, p.status, p.geaendert_am, p.freigegeben_am
+         FROM foerderer_programm p JOIN foerderer f ON f.id = p.foerderer_id
+         ORDER BY p.geaendert_am DESC",
+    )
+    .fetch_all(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let liste = rows
+        .into_iter()
+        .map(|(foerderer_id, foerderer_name, programm_id, json, status, geaendert_am, freigegeben_am)| {
+            let offen = match &freigegeben_am {
+                None => true,
+                Some(fr) => &geaendert_am > fr,
+            };
+            KuratierProgramm {
+                foerderer_id,
+                foerderer_name,
+                programm_id,
+                inhalt: serde_json::from_str(&json).unwrap_or(serde_json::Value::Null),
+                status,
+                geaendert_am,
+                offen,
+            }
+        })
+        .collect();
+    Ok(Json(liste))
+}
+
+/// Ein Förderer-Programm freigeben (POST
+/// /api/admin/foerderer-programme/{foerderer_id}/{programm_id}/freigeben):
+/// bringt den Katalog in Deckung mit dem aktuellen Stand – aktiv → übernehmen,
+/// zurückgezogen → aus dem Katalog entfernen – und setzt `freigegeben_am`.
+async fn admin_foerderer_programm_freigeben(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    Path((foerderer_id, programm_id)): Path<(i64, String)>,
+) -> Result<StatusCode, StatusCode> {
+    let (_konto_id, geraet_id) = admin_pruefen(&st, &headers).await?;
+    let row: Option<(String, String)> = sqlx::query_as(
+        "SELECT inhalt_json, status FROM foerderer_programm WHERE foerderer_id = ? AND programm_id = ?",
+    )
+    .bind(foerderer_id)
+    .bind(&programm_id)
+    .fetch_optional(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let Some((inhalt_str, status)) = row else {
+        return Err(StatusCode::NOT_FOUND);
+    };
+
+    // Namensraum-id für den Katalog, damit sich zwei Förderer nicht überschreiben.
+    let katalog_id = format!("f{foerderer_id}-{programm_id}");
+    if status == "aktiv" {
+        let mut inhalt: serde_json::Value =
+            serde_json::from_str(&inhalt_str).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        inhalt["id"] = serde_json::Value::String(katalog_id.clone());
+        // Herkunfts-Stempel: automatisch die verbundene Förderer-Identität.
+        inhalt["herkunft"] =
+            serde_json::json!({ "typ": "foerderer-verbunden", "foerderer_id": foerderer_id });
+        katalog_eintrag_anwenden(&st.pool, 1, geraet_id, inhalt).await?;
+    } else {
+        katalog_eintrag_entfernen(&st.pool, 1, geraet_id, &katalog_id).await?;
+    }
+
+    sqlx::query(
+        "UPDATE foerderer_programm SET freigegeben_am = datetime('now')
+         WHERE foerderer_id = ? AND programm_id = ?",
+    )
+    .bind(foerderer_id)
+    .bind(&programm_id)
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -3174,6 +3380,85 @@ mod tests {
             .await
             .unwrap_err();
         assert_eq!(err, StatusCode::FORBIDDEN);
+    }
+
+    /// Admin-Kuratierung (6c): ein Förderer-Programm freigeben → landet unter
+    /// einer Namensraum-id im Katalog; zurückgezogen + freigeben → wieder raus.
+    #[tokio::test]
+    async fn admin_kuratiert_foerderer_programme() {
+        let st = test_state().await;
+        // Admin-Sitzung direkt anlegen + passender Header.
+        st.sitzungen.lock().unwrap().insert(
+            "admintok".into(),
+            AdminSitzung { konto_id: 1, geraet_id: 1, ablauf: Instant::now() + Duration::from_secs(300) },
+        );
+        let admin_hdr = || {
+            let mut h = HeaderMap::new();
+            h.insert("x-admin-token", "admintok".parse().unwrap());
+            h
+        };
+        // Admin-Gerät (id 1) – in Produktion real; hier für den FK
+        // geaendert_von_geraet beim Katalog-Schreiben nötig.
+        sqlx::query("INSERT INTO geraet (id, nutzer_id, bezeichnung, cert_fingerprint, status) VALUES (1, 1, 'Admin', 'adminfp', 'aktiv')")
+            .execute(&st.pool)
+            .await
+            .unwrap();
+        // Basis-Katalog für Konto 1 + ein Förderer mit einem Programm.
+        sqlx::query(
+            "INSERT INTO katalog_aktuell (konto_id, inhalt_json, schema_version) VALUES (1, '{\"schema_version\":1,\"foerderungen\":[]}', 1)",
+        )
+        .execute(&st.pool)
+        .await
+        .unwrap();
+        sqlx::query("INSERT INTO foerderer (id, name, cert_fingerprint, status) VALUES (7, 'Stiftung', 'fp7', 'aktiv')")
+            .execute(&st.pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO foerderer_programm (foerderer_id, programm_id, inhalt_json, status) VALUES (7, 'p1', '{\"name\":\"Programm A\"}', 'aktiv')")
+            .execute(&st.pool)
+            .await
+            .unwrap();
+
+        // Liste zeigt es als offen.
+        let liste = admin_foerderer_programme(State(st.clone()), admin_hdr()).await.unwrap().0;
+        assert_eq!(liste.len(), 1);
+        assert!(liste[0].offen);
+
+        // Freigeben → landet unter f7-p1 im Katalog.
+        admin_foerderer_programm_freigeben(State(st.clone()), admin_hdr(), Path((7, "p1".into())))
+            .await
+            .expect("freigeben");
+        let (kat,): (String,) =
+            sqlx::query_as("SELECT inhalt_json FROM katalog_aktuell WHERE konto_id = 1")
+                .fetch_one(&st.pool)
+                .await
+                .unwrap();
+        assert!(kat.contains("f7-p1"));
+        assert!(kat.contains("Programm A"));
+
+        // Danach nicht mehr offen.
+        let liste = admin_foerderer_programme(State(st.clone()), admin_hdr()).await.unwrap().0;
+        assert!(!liste[0].offen);
+
+        // Zurückziehen + freigeben → aus dem Katalog entfernt.
+        sqlx::query("UPDATE foerderer_programm SET status = 'zurueckgezogen', geaendert_am = datetime('now', '+1 second') WHERE foerderer_id = 7 AND programm_id = 'p1'")
+            .execute(&st.pool)
+            .await
+            .unwrap();
+        admin_foerderer_programm_freigeben(State(st.clone()), admin_hdr(), Path((7, "p1".into())))
+            .await
+            .expect("entfernen");
+        let (kat,): (String,) =
+            sqlx::query_as("SELECT inhalt_json FROM katalog_aktuell WHERE konto_id = 1")
+                .fetch_one(&st.pool)
+                .await
+                .unwrap();
+        assert!(!kat.contains("f7-p1"));
+
+        // Verbundene-Förderer-Liste.
+        let vf = admin_foerderer_verbunden(State(st.clone()), admin_hdr()).await.unwrap().0;
+        assert_eq!(vf.len(), 1);
+        assert_eq!(vf[0].name, "Stiftung");
     }
 
     /// Abo-Gate-Logik (Schritt 5): aus = immer frei; scharf = Einzelplatz frei,
