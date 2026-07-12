@@ -308,6 +308,12 @@ async fn main() {
         // den öffentlichen :443-Kanal ein (Förderer-CA signiert kopiersicher).
         .route("/api/admin/foerderer-einladung", post(foerderer_einladung_erstellen))
         .route("/api/foerderer-enroll", post(foerderer_enroll))
+        // Ein verbundener Förderer pflegt seine Programme (Roadmap 6b, mTLS):
+        .route("/api/foerderer-programme", get(foerderer_programme_lesen))
+        .route(
+            "/api/foerderer-programme/:programm_id",
+            put(foerderer_programm_schreiben).delete(foerderer_programm_loeschen),
+        )
         // Mitglieder verwalten (Eigentümer, per mTLS – ohne Vendor-Admin-TOTP):
         // Team-Geräte auflisten und sperren/entsperren.
         .route("/api/mitglieder", get(mitglieder_liste))
@@ -489,6 +495,18 @@ async fn schema_anlegen(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             ausweis_pem TEXT,
             pubkey_fingerprint TEXT,
             erstellt_am TEXT NOT NULL DEFAULT (datetime('now'))
+        )",
+        // Programme, die ein verbundener Förderer online pflegt (Roadmap 6b).
+        // Herkunft = der Förderer (foerderer_id, aus dem mTLS-Ausweis). status
+        // 'zurueckgezogen' ist ein Soft-Delete, damit die Kuratierung (6c) eine
+        // Löschung sieht und aus dem Katalog übernimmt.
+        "CREATE TABLE IF NOT EXISTS foerderer_programm (
+            foerderer_id INTEGER NOT NULL REFERENCES foerderer(id),
+            programm_id TEXT NOT NULL,
+            inhalt_json TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'aktiv',
+            geaendert_am TEXT NOT NULL DEFAULT (datetime('now')),
+            PRIMARY KEY (foerderer_id, programm_id)
         )",
         // MVP: ein gemeinsames Team-Konto + Team-Nutzer.
         "INSERT OR IGNORE INTO konto (id, name) VALUES (1, 'Team')",
@@ -751,6 +769,37 @@ async fn eigentuemer_pruefen(
         return Err(StatusCode::FORBIDDEN);
     }
     Ok((konto_id, geraet_id))
+}
+
+/// Ermittelt den verbundenen FÖRDERER aus seinem mTLS-Ausweis (Förderer-CA-
+/// signiert; Caddy vertraut ihr). Gibt die foerderer_id zurück oder 403, wenn
+/// der Fingerabdruck kein bekannter/aktiver Förderer ist.
+async fn foerderer_aus_cert(pool: &SqlitePool, headers: &HeaderMap) -> Result<i64, StatusCode> {
+    let fp = fingerprint(headers).ok_or(StatusCode::UNAUTHORIZED)?;
+    let row: Option<(i64, String)> =
+        sqlx::query_as("SELECT id, status FROM foerderer WHERE cert_fingerprint = ?")
+            .bind(&fp)
+            .fetch_optional(pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let Some((id, status)) = row else {
+        return Err(StatusCode::FORBIDDEN);
+    };
+    if status != "aktiv" {
+        return Err(StatusCode::FORBIDDEN); // gesperrter Förderer
+    }
+    let _ = sqlx::query("UPDATE foerderer SET zuletzt_gesehen = datetime('now') WHERE id = ?")
+        .bind(id)
+        .execute(pool)
+        .await;
+    Ok(id)
+}
+
+/// Tempo-Bremsen-Schlüssel für einen Förderer. Eigener Zahlenraum (negativ,
+/// unterhalb des Team-Create-Sentinels -1), damit er nicht mit Geräte-ids
+/// (positiv) kollidiert.
+fn foerderer_tempo_key(foerderer_id: i64) -> i64 {
+    -(1000 + foerderer_id)
 }
 
 async fn health() -> &'static str {
@@ -1807,6 +1856,135 @@ async fn foerderer_enroll(
         ausweis_pem,
         foerderer_ca_pem: ca.cert_pem.clone(),
     }))
+}
+
+// ---- Förderer pflegen ihre Programme online (Roadmap 6b) ----
+
+#[derive(Serialize, Debug)]
+struct FoerdererProgramm {
+    programm_id: String,
+    inhalt: serde_json::Value,
+    status: String,
+    geaendert_am: String,
+}
+
+/// Alle Programme des aufrufenden Förderers (GET /api/foerderer-programme).
+async fn foerderer_programme_lesen(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Vec<FoerdererProgramm>>, StatusCode> {
+    let fid = foerderer_aus_cert(&st.pool, &headers).await?;
+    let rows = sqlx::query_as::<_, (String, String, String, String)>(
+        "SELECT programm_id, inhalt_json, status, geaendert_am
+         FROM foerderer_programm WHERE foerderer_id = ? ORDER BY geaendert_am DESC",
+    )
+    .bind(fid)
+    .fetch_all(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let liste = rows
+        .into_iter()
+        .map(|(programm_id, json, status, geaendert_am)| FoerdererProgramm {
+            programm_id,
+            inhalt: serde_json::from_str(&json).unwrap_or(serde_json::Value::Null),
+            status,
+            geaendert_am,
+        })
+        .collect();
+    Ok(Json(liste))
+}
+
+#[derive(Deserialize)]
+struct ProgrammBody {
+    inhalt: serde_json::Value,
+}
+
+/// Ein Programm anlegen/aktualisieren (PUT /api/foerderer-programme/{id}).
+/// Upsert je (Förderer, programm_id); „letzte Änderung gewinnt" (der Förderer
+/// ist alleiniger Bearbeiter seiner eigenen Programme). Setzt den Status wieder
+/// auf 'aktiv' (falls zuvor zurückgezogen).
+async fn foerderer_programm_schreiben(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    Path(programm_id): Path<String>,
+    Json(body): Json<ProgrammBody>,
+) -> Result<StatusCode, StatusCode> {
+    let fid = foerderer_aus_cert(&st.pool, &headers).await?;
+    if !tempo_ok(&st, foerderer_tempo_key(fid)) {
+        return Err(StatusCode::TOO_MANY_REQUESTS);
+    }
+    if programm_id.trim().is_empty() || programm_id.len() > FELD_MAX {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    let inhalt_str = serde_json::to_string(&body.inhalt).map_err(|_| StatusCode::BAD_REQUEST)?;
+    if inhalt_str.len() > FOERDERER_MAX_BYTES {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+    // Mindestens ein Name muss drin sein (wie bei geteilten Förderern).
+    if body
+        .inhalt
+        .get("name")
+        .and_then(|x| x.as_str())
+        .unwrap_or("")
+        .trim()
+        .is_empty()
+    {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    // Kontingent aktiver Programme je Förderer (Upsert der gleichen id zählt nicht mit).
+    let anzahl: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM foerderer_programm
+         WHERE foerderer_id = ? AND programm_id <> ? AND status = 'aktiv'",
+    )
+    .bind(fid)
+    .bind(&programm_id)
+    .fetch_one(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if anzahl >= FOERDERER_QUOTA {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    sqlx::query(
+        "INSERT INTO foerderer_programm (foerderer_id, programm_id, inhalt_json, status, geaendert_am)
+         VALUES (?, ?, ?, 'aktiv', datetime('now'))
+         ON CONFLICT(foerderer_id, programm_id) DO UPDATE SET
+            inhalt_json = excluded.inhalt_json,
+            status = 'aktiv',
+            geaendert_am = excluded.geaendert_am",
+    )
+    .bind(fid)
+    .bind(&programm_id)
+    .bind(&inhalt_str)
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Ein Programm zurückziehen (DELETE /api/foerderer-programme/{id}).
+/// Soft-Delete: `status = 'zurueckgezogen'` – der Eintrag bleibt sichtbar,
+/// damit die Kuratierung (6c) die Löschung in den Katalog übernehmen kann.
+async fn foerderer_programm_loeschen(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    Path(programm_id): Path<String>,
+) -> Result<StatusCode, StatusCode> {
+    let fid = foerderer_aus_cert(&st.pool, &headers).await?;
+    let res = sqlx::query(
+        "UPDATE foerderer_programm SET status = 'zurueckgezogen', geaendert_am = datetime('now')
+         WHERE foerderer_id = ? AND programm_id = ?",
+    )
+    .bind(fid)
+    .bind(&programm_id)
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if res.rows_affected() == 0 {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[derive(Serialize, Debug)]
@@ -2936,6 +3114,66 @@ mod tests {
         .await
         .unwrap_err();
         assert_eq!(err, StatusCode::CONFLICT);
+    }
+
+    /// Ein verbundener Förderer legt ein Programm an, sieht es, zieht es zurück
+    /// (Soft-Delete); ein unbekanntes Zertifikat wird abgewiesen (403).
+    #[tokio::test]
+    async fn foerderer_programme_crud() {
+        let st = test_state().await;
+        let der = b"foerderer-cert".to_vec();
+        sqlx::query("INSERT INTO foerderer (name, cert_fingerprint, status) VALUES ('Stiftung', ?, 'aktiv')")
+            .bind(fp_von(&der))
+            .execute(&st.pool)
+            .await
+            .unwrap();
+
+        // Anlegen.
+        foerderer_programm_schreiben(
+            State(st.clone()),
+            hdr(&der),
+            Path("p1".into()),
+            Json(ProgrammBody { inhalt: serde_json::json!({ "name": "Programm A" }) }),
+        )
+        .await
+        .expect("anlegen");
+
+        // Lesen.
+        let liste = foerderer_programme_lesen(State(st.clone()), hdr(&der))
+            .await
+            .unwrap()
+            .0;
+        assert_eq!(liste.len(), 1);
+        assert_eq!(liste[0].programm_id, "p1");
+        assert_eq!(liste[0].status, "aktiv");
+
+        // Zurückziehen (Soft-Delete).
+        foerderer_programm_loeschen(State(st.clone()), hdr(&der), Path("p1".into()))
+            .await
+            .expect("zurückziehen");
+        let (status,): (String,) =
+            sqlx::query_as("SELECT status FROM foerderer_programm WHERE programm_id = 'p1'")
+                .fetch_one(&st.pool)
+                .await
+                .unwrap();
+        assert_eq!(status, "zurueckgezogen");
+
+        // Fehlender Name → 400.
+        let err = foerderer_programm_schreiben(
+            State(st.clone()),
+            hdr(&der),
+            Path("p2".into()),
+            Json(ProgrammBody { inhalt: serde_json::json!({ "foo": "bar" }) }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(err, StatusCode::BAD_REQUEST);
+
+        // Unbekanntes Zertifikat → 403.
+        let err = foerderer_programme_lesen(State(st.clone()), hdr(b"fremd"))
+            .await
+            .unwrap_err();
+        assert_eq!(err, StatusCode::FORBIDDEN);
     }
 
     /// Abo-Gate-Logik (Schritt 5): aus = immer frei; scharf = Einzelplatz frei,
