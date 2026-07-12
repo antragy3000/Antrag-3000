@@ -24,7 +24,7 @@
 // ============================================================
 
 mod service_ca;
-use service_ca::ServiceCa;
+use service_ca::Ca;
 
 use std::collections::HashMap;
 use std::env;
@@ -56,10 +56,13 @@ struct AppState {
     // gültigem TOTP-Code) und laufen nach SITZUNG_TTL_S ab. Im Speicher;
     // nach Neustart muss sich der Admin neu anmelden.
     sitzungen: Arc<Mutex<HashMap<String, AdminSitzung>>>,
-    // Service-CA (gehostetes Modell): signiert Geräte-Ausweise. None, wenn sie
-    // beim Start nicht geladen/erzeugt werden konnte – dann läuft der bisherige
-    // Team-CA-Sync unbeirrt weiter, nur die Auto-Signierung (Enrollment) ist aus.
-    service_ca: Arc<Option<ServiceCa>>,
+    // Service-CA (gehostetes Modell): signiert Team-Geräte-Ausweise. None, wenn
+    // sie beim Start nicht geladen/erzeugt werden konnte – dann läuft der
+    // bisherige Team-CA-Sync unbeirrt weiter, nur die Auto-Signierung ist aus.
+    service_ca: Arc<Option<Ca>>,
+    // Förderer-CA (Roadmap 6): signiert Förderer-Ausweise (Förderer verbinden
+    // sich online). None ⇒ Förderer-Enrollment aus, Rest unberührt.
+    foerderer_ca: Arc<Option<Ca>>,
 }
 
 /// Eine offene Admin-Sitzung (an ein Gerät gebunden, mit Ablaufzeit).
@@ -243,7 +246,8 @@ async fn main() {
     // mounten kann); ohne ENV neben der DB-Datei. Schlägt es fehl (z. B.
     // Ordner nicht beschreibbar), läuft der Server trotzdem weiter – der
     // bisherige Team-CA-Sync ist davon nicht betroffen.
-    let service_ca = match ServiceCa::laden_oder_erzeugen(&service_ca_dir(&db_pfad)) {
+    let ca_dir = service_ca_dir(&db_pfad);
+    let service_ca = match Ca::laden_oder_erzeugen(&ca_dir, "service-ca", "Antrag 3000 Service-CA") {
         Ok(ca) => {
             println!(
                 "Service-CA aktiv (Fingerabdruck {}…).",
@@ -253,6 +257,20 @@ async fn main() {
         }
         Err(e) => {
             eprintln!("WARNUNG: Service-CA nicht verfügbar ({e}). Team-CA-Sync läuft weiter.");
+            None
+        }
+    };
+    // Förderer-CA (Roadmap 6): getrennter Vertrauensanker für verbundene Förderer.
+    let foerderer_ca = match Ca::laden_oder_erzeugen(&ca_dir, "foerderer-ca", "Antrag 3000 Förderer-CA") {
+        Ok(ca) => {
+            println!(
+                "Förderer-CA aktiv (Fingerabdruck {}…).",
+                &ca.fingerprint()[..ca.fingerprint().len().min(16)]
+            );
+            Some(ca)
+        }
+        Err(e) => {
+            eprintln!("WARNUNG: Förderer-CA nicht verfügbar ({e}). Förderer-Enrollment aus.");
             None
         }
     };
@@ -285,6 +303,11 @@ async fn main() {
         // Konto + Eigentümer-Gerät. Ohne Zertifikat (das erste Gerät hat noch
         // keins) – über den öffentlichen :443-Kanal, mit Missbrauchs-Bremse.
         .route("/api/team", post(team_erstellen))
+        // Förderer verbinden (Roadmap 6): der Vendor lädt einen Förderer ein
+        // (admin-geschützt), der Förderer löst den Token ohne Zertifikat über
+        // den öffentlichen :443-Kanal ein (Förderer-CA signiert kopiersicher).
+        .route("/api/admin/foerderer-einladung", post(foerderer_einladung_erstellen))
+        .route("/api/foerderer-enroll", post(foerderer_enroll))
         // Mitglieder verwalten (Eigentümer, per mTLS – ohne Vendor-Admin-TOTP):
         // Team-Geräte auflisten und sperren/entsperren.
         .route("/api/mitglieder", get(mitglieder_liste))
@@ -308,6 +331,7 @@ async fn main() {
             schreib: Arc::new(Mutex::new(HashMap::new())),
             sitzungen: Arc::new(Mutex::new(HashMap::new())),
             service_ca: Arc::new(service_ca),
+            foerderer_ca: Arc::new(foerderer_ca),
         });
 
     let addr: SocketAddr = lausch.parse().expect("LAUSCH ist keine gültige Adresse");
@@ -437,6 +461,29 @@ async fn schema_anlegen(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             token TEXT PRIMARY KEY,
             konto_id INTEGER NOT NULL REFERENCES konto(id),
             bezeichnung TEXT,
+            ablauf TEXT NOT NULL,
+            benutzt INTEGER NOT NULL DEFAULT 0,
+            ausweis_pem TEXT,
+            pubkey_fingerprint TEXT,
+            erstellt_am TEXT NOT NULL DEFAULT (datetime('now'))
+        )",
+        // Verbundene Förderer (Roadmap 6): NICHT Teil eines Team-Kontos, sondern
+        // vom Vendor eingeladene externe Partner, die ihre Programme online
+        // pflegen. Identifiziert über den Fingerabdruck ihres Förderer-CA-
+        // signierten Ausweises.
+        "CREATE TABLE IF NOT EXISTS foerderer (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            cert_fingerprint TEXT NOT NULL UNIQUE,
+            status TEXT NOT NULL DEFAULT 'aktiv',
+            erstellt_am TEXT NOT NULL DEFAULT (datetime('now')),
+            zuletzt_gesehen TEXT
+        )",
+        // Einmal-Einladungen für Förderer (nur der Vendor/Admin erzeugt sie).
+        // Gleiche Idempotenz-/Einlöse-Logik wie die Team-Einladung.
+        "CREATE TABLE IF NOT EXISTS foerderer_einladung (
+            token TEXT PRIMARY KEY,
+            name TEXT,
             ablauf TEXT NOT NULL,
             benutzt INTEGER NOT NULL DEFAULT 0,
             ausweis_pem TEXT,
@@ -644,6 +691,18 @@ async fn konto_und_geraet(
             .execute(pool)
             .await;
         return Ok((konto_id, geraet_id));
+    }
+
+    // Ein verbundener FÖRDERER darf nicht als Team-Gerät auto-enrollt werden
+    // (sein Zertifikat stammt aus der Förderer-CA; er gehört in kein Team-Konto).
+    let ist_foerderer: Option<(i64,)> =
+        sqlx::query_as("SELECT id FROM foerderer WHERE cert_fingerprint = ?")
+            .bind(&fp)
+            .fetch_optional(pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if ist_foerderer.is_some() {
+        return Err(StatusCode::FORBIDDEN);
     }
 
     // Unbekanntes Gerät: nur anlegen, wenn Auto-Enroll erlaubt ist.
@@ -1311,7 +1370,7 @@ async fn einladung_erstellen(
     }
 
     // Service-CA muss verfügbar sein, sonst könnte niemand den Token einlösen.
-    let service_ca: &Option<ServiceCa> = &st.service_ca;
+    let service_ca: &Option<Ca> = &st.service_ca;
     let ca = service_ca.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
 
     let name = body.name.as_deref().unwrap_or("").trim();
@@ -1382,7 +1441,7 @@ async fn enroll(
     State(st): State<AppState>,
     Json(body): Json<EnrollBody>,
 ) -> Result<Json<EnrollAntwort>, StatusCode> {
-    let service_ca: &Option<ServiceCa> = &st.service_ca;
+    let service_ca: &Option<Ca> = &st.service_ca;
     let ca = service_ca.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
 
     let token = body.token.trim();
@@ -1441,7 +1500,7 @@ async fn enroll(
 
     // Kopiersicher signieren (nur der öffentliche Schlüssel geht ein).
     let ausweis_pem = ca
-        .signiere_geraet(&body.pubkey_pem, name)
+        .signiere(&body.pubkey_pem, name, "Antrag 3000 Team-Gerät")
         .map_err(|_| StatusCode::BAD_REQUEST)?;
     let cert_fp = service_ca::fingerprint_von_pem(&ausweis_pem)
         .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -1519,7 +1578,7 @@ async fn team_erstellen(
     State(st): State<AppState>,
     Json(body): Json<TeamErstellenBody>,
 ) -> Result<Json<TeamErstellenAntwort>, StatusCode> {
-    let service_ca: &Option<ServiceCa> = &st.service_ca;
+    let service_ca: &Option<Ca> = &st.service_ca;
     let ca = service_ca.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
 
     // Missbrauchs-Bremse (global): Sentinel-Geräte-id -1 (kein echtes Gerät hat
@@ -1540,7 +1599,7 @@ async fn team_erstellen(
 
     // Kopiersicher signieren (nur der öffentliche Schlüssel geht ein).
     let ausweis_pem = ca
-        .signiere_geraet(&body.pubkey_pem, geraet_name)
+        .signiere(&body.pubkey_pem, geraet_name, "Antrag 3000 Team-Gerät")
         .map_err(|_| StatusCode::BAD_REQUEST)?;
     let cert_fp = service_ca::fingerprint_von_pem(&ausweis_pem)
         .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -1578,6 +1637,175 @@ async fn team_erstellen(
         ausweis_pem,
         service_ca_pem: ca.cert_pem.clone(),
         konto_id,
+    }))
+}
+
+// ============================================================
+// Förderer verbinden (Roadmap 6): der Vendor lädt einen Förderer ein
+// (admin-geschützt), der Förderer verbindet sich kopiersicher über den
+// öffentlichen Kanal. Eigener Vertrauensanker (Förderer-CA), getrennt von den
+// Team-Geräten.
+// ============================================================
+
+#[derive(Deserialize)]
+struct FoerdererEinladungBody {
+    /// Optionaler Namens-Hinweis für den einzuladenden Förderer.
+    name: Option<String>,
+}
+
+#[derive(Serialize)]
+struct FoerdererEinladungAntwort {
+    token: String,
+    ablauf: String,
+    /// Förderer-CA-Zertifikat (Trust-Anker), damit der Vendor daraus ein
+    /// vollständiges Einladungs-Paket bauen kann.
+    foerderer_ca_pem: String,
+}
+
+/// Förderer-Einladung erstellen (POST /api/admin/foerderer-einladung). Nur der
+/// Vendor/Admin (TOTP-Sitzung). Erzeugt einen kurzlebigen Einmal-Token.
+async fn foerderer_einladung_erstellen(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<FoerdererEinladungBody>,
+) -> Result<Json<FoerdererEinladungAntwort>, StatusCode> {
+    let (_konto_id, geraet_id) = admin_pruefen(&st, &headers).await?;
+    if !tempo_ok(&st, geraet_id) {
+        return Err(StatusCode::TOO_MANY_REQUESTS);
+    }
+    let foerderer_ca: &Option<Ca> = &st.foerderer_ca;
+    let ca = foerderer_ca.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+
+    let name = body.name.as_deref().unwrap_or("").trim();
+    if name.len() > FELD_MAX {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+    let name_opt = if name.is_empty() { None } else { Some(name) };
+
+    let token = neuer_token();
+    sqlx::query(
+        "INSERT INTO foerderer_einladung (token, name, ablauf)
+         VALUES (?, ?, datetime('now', ?))",
+    )
+    .bind(&token)
+    .bind(name_opt)
+    .bind(format!("+{EINLADUNG_TTL_S} seconds"))
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let (ablauf,): (String,) =
+        sqlx::query_as("SELECT ablauf FROM foerderer_einladung WHERE token = ?")
+            .bind(&token)
+            .fetch_one(&st.pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(FoerdererEinladungAntwort {
+        token,
+        ablauf,
+        foerderer_ca_pem: ca.cert_pem.clone(),
+    }))
+}
+
+#[derive(Deserialize)]
+struct FoerdererEnrollBody {
+    token: String,
+    #[serde(rename = "pubkeyPem", alias = "pubkey_pem")]
+    pubkey_pem: String,
+    name: Option<String>,
+}
+
+#[derive(Serialize, Debug)]
+struct FoerdererEnrollAntwort {
+    ausweis_pem: String,
+    foerderer_ca_pem: String,
+}
+
+/// Förderer verbinden (POST /api/foerderer-enroll): löst den Einmal-Token ein
+/// und erhält einen von der Förderer-CA signierten Ausweis. OHNE Zertifikat,
+/// über den öffentlichen :443-Kanal. Idempotent + atomar wie das Team-Enroll.
+async fn foerderer_enroll(
+    State(st): State<AppState>,
+    Json(body): Json<FoerdererEnrollBody>,
+) -> Result<Json<FoerdererEnrollAntwort>, StatusCode> {
+    let foerderer_ca: &Option<Ca> = &st.foerderer_ca;
+    let ca = foerderer_ca.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+
+    let token = body.token.trim();
+    if token.is_empty() || token.len() > FELD_MAX {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    if body.pubkey_pem.len() > PUBKEY_MAX_BYTES {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+    let name = body.name.as_deref().unwrap_or("").trim();
+    let name = if name.is_empty() { "Förderer" } else { name };
+    if name.len() > FELD_MAX {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+    let pk_fp = pubkey_fingerprint(&body.pubkey_pem);
+
+    let row: Option<(String, i64, Option<String>, Option<String>)> = sqlx::query_as(
+        "SELECT ablauf, benutzt, ausweis_pem, pubkey_fingerprint
+         FROM foerderer_einladung WHERE token = ?",
+    )
+    .bind(token)
+    .fetch_optional(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let Some((ablauf, benutzt, ausweis_gesp, pk_gesp)) = row else {
+        return Err(StatusCode::UNAUTHORIZED);
+    };
+
+    if benutzt != 0 {
+        return match (ausweis_gesp, pk_gesp) {
+            (Some(ausweis), Some(p)) if p == pk_fp => Ok(Json(FoerdererEnrollAntwort {
+                ausweis_pem: ausweis,
+                foerderer_ca_pem: ca.cert_pem.clone(),
+            })),
+            _ => Err(StatusCode::CONFLICT),
+        };
+    }
+
+    let (jetzt,): (String,) = sqlx::query_as("SELECT datetime('now')")
+        .fetch_one(&st.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if ablauf <= jetzt {
+        return Err(StatusCode::GONE);
+    }
+
+    let ausweis_pem = ca
+        .signiere(&body.pubkey_pem, name, "Antrag 3000 Förderer")
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    let cert_fp = service_ca::fingerprint_von_pem(&ausweis_pem)
+        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let claim = sqlx::query(
+        "UPDATE foerderer_einladung SET benutzt = 1, ausweis_pem = ?, pubkey_fingerprint = ?
+         WHERE token = ? AND benutzt = 0",
+    )
+    .bind(&ausweis_pem)
+    .bind(&pk_fp)
+    .bind(token)
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if claim.rows_affected() == 0 {
+        return Err(StatusCode::CONFLICT);
+    }
+
+    sqlx::query("INSERT INTO foerderer (name, cert_fingerprint, status) VALUES (?, ?, 'aktiv')")
+        .bind(name)
+        .bind(&cert_fp)
+        .execute(&st.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(FoerdererEnrollAntwort {
+        ausweis_pem,
+        foerderer_ca_pem: ca.cert_pem.clone(),
     }))
 }
 
@@ -2302,12 +2530,14 @@ mod tests {
             NR.fetch_add(1, Ordering::Relaxed)
         ));
         let _ = std::fs::remove_dir_all(&dir);
-        let ca = ServiceCa::laden_oder_erzeugen(&dir).unwrap();
+        let service = Ca::laden_oder_erzeugen(&dir, "service-ca", "Antrag 3000 Service-CA").unwrap();
+        let foerderer = Ca::laden_oder_erzeugen(&dir, "foerderer-ca", "Antrag 3000 Förderer-CA").unwrap();
         AppState {
             pool,
             schreib: Arc::new(Mutex::new(HashMap::new())),
             sitzungen: Arc::new(Mutex::new(HashMap::new())),
-            service_ca: Arc::new(Some(ca)),
+            service_ca: Arc::new(Some(service)),
+            foerderer_ca: Arc::new(Some(foerderer)),
         }
     }
 
@@ -2634,6 +2864,78 @@ mod tests {
         .unwrap()
         .0;
         assert_ne!(antw.konto_id, antw2.konto_id);
+    }
+
+    /// Förderer verbinden: Token einlösen → Förderer-CA-signierter Ausweis +
+    /// Förderer-Zeile angelegt; idempotent, anderer Schlüssel → 409.
+    #[tokio::test]
+    async fn foerderer_enroll_und_idempotent() {
+        let st = test_state().await;
+        sqlx::query(
+            "INSERT INTO foerderer_einladung (token, ablauf) VALUES ('ftok', datetime('now', '+1 hour'))",
+        )
+        .execute(&st.pool)
+        .await
+        .unwrap();
+
+        let key = rcgen::KeyPair::generate().unwrap();
+        let pubkey_pem = key.public_key_pem();
+
+        let antw = foerderer_enroll(
+            State(st.clone()),
+            Json(FoerdererEnrollBody {
+                token: "ftok".into(),
+                pubkey_pem: pubkey_pem.clone(),
+                name: Some("Kulturstiftung".into()),
+            }),
+        )
+        .await
+        .expect("Förderer-Enroll muss klappen")
+        .0;
+        assert!(antw.ausweis_pem.contains("BEGIN CERTIFICATE"));
+
+        let fp = service_ca::fingerprint_von_pem(&antw.ausweis_pem).unwrap();
+        let (cnt, name): (i64, String) =
+            sqlx::query_as("SELECT COUNT(*), MAX(name) FROM foerderer WHERE cert_fingerprint = ?")
+                .bind(&fp)
+                .fetch_one(&st.pool)
+                .await
+                .unwrap();
+        assert_eq!(cnt, 1);
+        assert_eq!(name, "Kulturstiftung");
+
+        // Idempotent: gleicher Token + Schlüssel → gleicher Ausweis, kein 2. Förderer.
+        let wieder = foerderer_enroll(
+            State(st.clone()),
+            Json(FoerdererEnrollBody {
+                token: "ftok".into(),
+                pubkey_pem: pubkey_pem.clone(),
+                name: None,
+            }),
+        )
+        .await
+        .expect("idempotent")
+        .0;
+        assert_eq!(wieder.ausweis_pem, antw.ausweis_pem);
+        let cnt2: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM foerderer")
+            .fetch_one(&st.pool)
+            .await
+            .unwrap();
+        assert_eq!(cnt2, 1);
+
+        // Anderer Schlüssel nach dem Einlösen → 409.
+        let anderer = rcgen::KeyPair::generate().unwrap();
+        let err = foerderer_enroll(
+            State(st.clone()),
+            Json(FoerdererEnrollBody {
+                token: "ftok".into(),
+                pubkey_pem: anderer.public_key_pem(),
+                name: None,
+            }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(err, StatusCode::CONFLICT);
     }
 
     /// Abo-Gate-Logik (Schritt 5): aus = immer frei; scharf = Einzelplatz frei,

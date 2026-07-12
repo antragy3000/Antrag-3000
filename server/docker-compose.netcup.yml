@@ -37,9 +37,10 @@ services:
     volumes:
       - ./Caddyfile.netcup:/etc/caddy/Caddyfile:ro
       - ./ca/team-ca.crt:/etc/caddy/ca/team-ca.crt:ro
-      # Öffentliches Service-CA-Zertifikat (erzeugt die api ins ./service-ca-
-      # Volume). Nur lesend – der geheime Schlüssel wird NIE gemountet.
+      # Öffentliche CA-Zertifikate (erzeugt die api ins ./service-ca-Volume).
+      # Nur lesend – die geheimen Schlüssel werden NIE gemountet.
       - ./service-ca/service-ca.crt:/etc/caddy/ca/service-ca.crt:ro
+      - ./service-ca/foerderer-ca.crt:/etc/caddy/ca/foerderer-ca.crt:ro
       - ./server.crt:/etc/caddy/server.crt:ro
       - ./server.key:/etc/caddy/server.key:ro
       - ./updates:/srv/updates:ro
