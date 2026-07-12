@@ -17,10 +17,16 @@ tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-# Signatur-Herkunft: signiert jeden Export mit dem Foerderer-Schluessel
-# (ECDSA P-256, RustCrypto) -> jede Foerderung ist dem Foerderer zuordenbar.
+# Signatur-Herkunft (altes Datei-Export-Modell): signiert jeden Export mit dem
+# Foerderer-Schluessel (ECDSA P-256, RustCrypto).
 p256 = { version = "0.13", features = ["ecdsa", "pem", "pkcs8"] }
 base64 = "0.22"
+# Gehostetes Modell (Roadmap 7): online verbinden + live syncen.
+# reqwest mit rustls = mTLS-HTTP-Client (wie Nutzer-App); rcgen erzeugt das
+# Foerderer-Schluesselpaar LOKAL (kopiersicher, nur der oeffentliche Teil geht
+# an den Server).
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+rcgen = { version = "0.13" }
 
 [profile.release]
 opt-level = "z"

@@ -12,6 +12,8 @@
 // App merkt sich nur den PFAD zur Aktivierungs-Datei.
 // ============================================================
 
+mod verbinden;
+
 use base64::Engine as _;
 use p256::ecdsa::{signature::Signer, Signature, SigningKey};
 use p256::pkcs8::DecodePrivateKey;
@@ -169,6 +171,14 @@ fn main() {
             aktivierung_status,
             aktivierung_entfernen,
             export_signieren,
+            // Gehostetes Modell (Roadmap 7): online verbinden + live syncen.
+            verbinden::foerderer_einladung_lesen,
+            verbinden::foerderer_verbinden,
+            verbinden::verbindung_status,
+            verbinden::verbindung_trennen,
+            verbinden::programme_holen,
+            verbinden::programm_senden,
+            verbinden::programm_loeschen,
         ])
         .run(tauri::generate_context!())
         .expect("Fehler beim Starten der Förderer-App");
