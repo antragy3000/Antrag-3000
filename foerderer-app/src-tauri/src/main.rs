@@ -173,6 +173,7 @@ fn main() {
             export_signieren,
             // Gehostetes Modell (Roadmap 7): online verbinden + live syncen.
             verbinden::foerderer_einladung_lesen,
+            verbinden::foerderer_einladung_waehlen,
             verbinden::foerderer_verbinden,
             verbinden::verbindung_status,
             verbinden::verbindung_trennen,

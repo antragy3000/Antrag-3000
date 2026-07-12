@@ -14,6 +14,7 @@
 
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
+use tauri_plugin_dialog::DialogExt;
 
 /// Gespeicherter Zugang eines verbundenen Förderers.
 #[derive(Serialize, Deserialize)]
@@ -85,6 +86,25 @@ pub fn foerderer_einladung_lesen(pfad: String) -> Result<FoerdererEinladung, Str
         return Err("In der Einladung fehlt der Code.".into());
     }
     Ok(e)
+}
+
+/// Öffnet einen Datei-Dialog, um eine Förderer-Einladung zu wählen, und liest
+/// sie. None, wenn abgebrochen. (Der Dialog läuft – wie im Rest der App – im
+/// Rust-Teil.)
+#[tauri::command]
+pub fn foerderer_einladung_waehlen(
+    app: tauri::AppHandle,
+) -> Result<Option<FoerdererEinladung>, String> {
+    let datei = app
+        .dialog()
+        .file()
+        .add_filter("Förderer-Einladung", &["a3keinladung", "json"])
+        .blocking_pick_file();
+    let Some(fp) = datei else { return Ok(None) };
+    let pfad = fp.into_path().map_err(|e| format!("Pfad ungültig: {e}"))?;
+    Ok(Some(foerderer_einladung_lesen(
+        pfad.to_string_lossy().to_string(),
+    )?))
 }
 
 // --- HTTP-Helfer (wie in der Nutzer-App) -------------------------------

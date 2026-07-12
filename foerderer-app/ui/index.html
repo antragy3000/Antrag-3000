@@ -157,7 +157,7 @@
       <button id="tab-org" class="aktiv" data-tab="org">Organisation</button>
       <button id="tab-prog" data-tab="prog">Förderprogramme</button>
     </nav>
-    <button class="primaer" id="exportBtn" style="margin-left:auto">Für Antrag 3000 exportieren</button>
+    <button class="primaer" id="syncBtn" style="margin-left:auto" disabled>Programme synchronisieren</button>
   </header>
 
   <!-- ============ ANSICHT: ORGANISATION ============ -->
@@ -165,10 +165,11 @@
     <section class="karte voll">
       <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap">
         <div>
-          <h3 style="margin:0 0 3px">Aktivierung</h3>
-          <p class="hinweis" id="aktStatusText" style="margin:0">…</p>
+          <h3 style="margin:0 0 3px">Verbindung mit Antrag 3000</h3>
+          <p class="hinweis" id="verbStatusText" style="margin:0">…</p>
         </div>
-        <button class="zweit" id="aktLadenBtn" style="margin-left:auto">Aktivierung laden …</button>
+        <button class="zweit" id="verbindenBtn" style="margin-left:auto">Verbinden …</button>
+        <button class="entfernen" id="trennenBtn" style="display:none">Trennen</button>
       </div>
     </section>
 
@@ -364,7 +365,8 @@
   </main>
 
   <footer>
-    Ihre Angaben bleiben vorerst nur auf diesem Gerät. Das Einreichen an Antrag 3000 bauen wir in einem späteren Schritt.
+    Ihre Angaben bleiben lokal auf diesem Gerät. Sobald Sie <strong>verbunden</strong> sind, übermittelt
+    „Programme synchronisieren" nur Ihre Förderprogramme (öffentliche Programm-Infos) an Antrag 3000.
   </footer>
 
   <script>
@@ -756,72 +758,81 @@
     $("speichernProg").addEventListener("click", speichernProgramm);
     $("p-name").addEventListener("input", () => { $("p-name").classList.remove("fehlt"); $("fehler-p-name").classList.remove("zeigen"); });
 
-    // ================= Aktivierung (Signatur-Herkunft) =================
-    let aktiv = false, aktName = "";
-    function setAktText() {
-      const el = $("aktStatusText");
-      if (aktiv) {
-        el.textContent = "Aktiviert als: " + aktName + " – Ihre Exporte werden signiert.";
+    // ================= Verbindung (gehostetes Modell) =================
+    function tauriCore() { const t = window.__TAURI__; return (t && t.core) ? t.core : null; }
+    let verbunden = false, verbName = "";
+    function setVerbUI() {
+      const el = $("verbStatusText");
+      if (verbunden) {
+        el.textContent = "Verbunden als: " + verbName + " – Ihre Programme synchronisieren direkt mit Antrag 3000.";
         el.style.color = "var(--ok)";
-        $("aktLadenBtn").textContent = "Aktivierung ändern …";
+        $("verbindenBtn").textContent = "Verbindung ändern …";
+        $("trennenBtn").style.display = "inline-block";
       } else {
-        el.textContent = "Noch nicht aktiviert. Laden Sie Ihre Aktivierungs-Datei von Antrag 3000, damit Ihre Exporte fälschungssicher (signiert) werden.";
+        el.textContent = "Noch nicht verbunden. Öffnen Sie Ihre Einladung von Antrag 3000, um Ihre Förderprogramme direkt zu synchronisieren.";
         el.style.color = "var(--grau)";
-        $("aktLadenBtn").textContent = "Aktivierung laden …";
+        $("verbindenBtn").textContent = "Verbinden …";
+        $("trennenBtn").style.display = "none";
       }
+      $("syncBtn").disabled = !verbunden;
     }
-    async function aktStatusLaden() {
-      const t = window.__TAURI__;
-      if (!t || !t.core) { aktiv = false; aktName = ""; $("aktStatusText").textContent = "Aktivierung ist nur in der installierten App verfügbar (nicht in der Browser-Vorschau)."; return; }
-      try { const s = await t.core.invoke("aktivierung_status"); aktiv = !!s.aktiv; aktName = s.foerderer_name || ""; } catch { aktiv = false; aktName = ""; }
-      setAktText();
+    async function verbStatusLaden() {
+      const core = tauriCore();
+      if (!core) { verbunden = false; $("verbStatusText").textContent = "Die Verbindung ist nur in der installierten App verfügbar (nicht in der Browser-Vorschau)."; $("syncBtn").disabled = true; return; }
+      try { const s = await core.invoke("verbindung_status"); verbunden = !!s.verbunden; verbName = s.foerderer_name || ""; } catch { verbunden = false; verbName = ""; }
+      setVerbUI();
     }
-    $("aktLadenBtn").addEventListener("click", async () => {
-      const t = window.__TAURI__;
-      if (!t || !t.core) { alert("Nur in der installierten App verfügbar."); return; }
+    $("verbindenBtn").addEventListener("click", async () => {
+      const core = tauriCore();
+      if (!core) { alert("Nur in der installierten App verfügbar."); return; }
       try {
-        const s = await t.core.invoke("aktivierung_waehlen");
-        if (s) { aktiv = !!s.aktiv; aktName = s.foerderer_name || ""; setAktText();
-          alert("Aktivierung geladen: " + (aktName || "(ohne Namen)") + "\nIhre Exporte werden jetzt signiert."); }
-      } catch (e) { alert("Aktivierung nicht ladbar: " + e); }
+        const einl = await core.invoke("foerderer_einladung_waehlen");
+        if (!einl) return;
+        // Absender-Name: bevorzugt Ihre Organisation, sonst der Einladungs-Hinweis.
+        const name = ((orgLaden().org.name || "") || (einl.name || "")).trim();
+        if (!name) { alert("Bitte tragen Sie zuerst im Tab Organisation den Namen Ihrer Förderorganisation ein und speichern Sie."); return; }
+        const s = await core.invoke("foerderer_verbinden", {
+          enrollUrl: einl.enroll_url, syncAdresse: einl.sync_adresse, caPem: einl.ca_pem, token: einl.token, foerdererName: name,
+        });
+        verbunden = !!s.verbunden; verbName = s.foerderer_name || name; setVerbUI();
+        alert("Verbunden als: " + verbName + "\nSie können Ihre Programme jetzt synchronisieren.");
+      } catch (e) { alert("Verbinden nicht möglich: " + e); }
+    });
+    $("trennenBtn").addEventListener("click", async () => {
+      const core = tauriCore();
+      if (!core) return;
+      if (!confirm("Verbindung trennen? Ihre Programme bleiben lokal erhalten.")) return;
+      try { await core.invoke("verbindung_trennen"); verbunden = false; verbName = ""; setVerbUI(); }
+      catch (e) { alert("Trennen nicht möglich: " + e); }
     });
 
-    // ================= Export (Weg A: Datei) =================
-    function nutzlastObjekt() {
-      return { exportiert_am: new Date().toISOString(), organisation: orgLaden(), programme: progLaden() };
-    }
-    async function exportieren() {
-      const org = orgLaden(), prog = progLaden();
-      if (!(org.org.name || "").trim() && !prog.length) {
-        alert("Es gibt noch nichts zu exportieren. Bitte zuerst Ihre Organisation und/oder Förderprogramme anlegen.");
-        return;
-      }
-      const tauri = window.__TAURI__;
-      if (!tauri || !tauri.core) { alert("Der Export funktioniert nur in der installierten App (nicht in der Browser-Vorschau)."); return; }
-      const nutzlast = nutzlastObjekt();
-      let datei;
+    // ================= Synchronisieren (Push + Abgleich) =================
+    async function synchronisieren() {
+      const core = tauriCore();
+      if (!core) { alert("Nur in der installierten App verfügbar."); return; }
+      if (!verbunden) { alert("Bitte zuerst mit Antrag 3000 verbinden."); return; }
+      const lokal = progLaden().filter(p => (p.name || "").trim());
+      $("syncBtn").disabled = true; $("syncBtn").textContent = "Synchronisiert …";
       try {
-        if (aktiv) {
-          const payloadStr = JSON.stringify(nutzlast);
-          const signatur = await tauri.core.invoke("export_signieren", { inhalt: payloadStr });
-          // Exakt die signierten Bytes verbatim transportieren (Base64, UTF-8-sicher),
-          // damit die Pruefung in der Admin-App bit-genau verifizieren kann.
-          const nutzlast_b64 = btoa(unescape(encodeURIComponent(payloadStr)));
-          datei = { typ: "antrag3000-foerderer-export", version: 2, nutzlast_b64, signatur };
-        } else {
-          datei = { typ: "antrag3000-foerderer-export", version: 1, nutzlast };
+        // Serverstand holen, um lokal gelöschte Programme auch dort zurückzuziehen.
+        let serverIds = [];
+        try { serverIds = JSON.parse(await core.invoke("programme_holen")).map(p => p.programm_id); } catch {}
+        const lokalIds = new Set(lokal.map(p => p.id));
+        for (const p of lokal) {
+          await core.invoke("programm_senden", { programmId: p.id, inhaltJson: JSON.stringify(p) });
         }
-      } catch (e) { alert("Signieren nicht möglich: " + e); return; }
-      const sicher = ((org.org.name || "foerderer").replace(/[^A-Za-z0-9_-]+/g, "_")).slice(0, 40) || "foerderer";
-      const name = "antrag3000-foerderer-" + sicher + ".json";
-      const inhalt = JSON.stringify(datei, null, 2);
-      try {
-        const pfad = await tauri.core.invoke("export_speichern", { vorschlagName: name, inhalt });
-        if (pfad) alert("Export gespeichert" + (aktiv ? " (signiert)" : " (NICHT signiert – App nicht aktiviert)") + ":\n" + pfad + "\n\nBitte schicken Sie diese Datei an Antrag 3000.");
-      } catch (e) { alert("Export nicht möglich: " + e); }
+        for (const id of serverIds) {
+          if (!lokalIds.has(id)) await core.invoke("programm_loeschen", { programmId: id });
+        }
+        alert("Synchronisiert: " + lokal.length + " Programm(e) an Antrag 3000 übermittelt.");
+      } catch (e) {
+        alert("Synchronisieren fehlgeschlagen: " + e);
+      } finally {
+        $("syncBtn").textContent = "Programme synchronisieren"; $("syncBtn").disabled = !verbunden;
+      }
     }
-    $("exportBtn").addEventListener("click", exportieren);
-    aktStatusLaden();
+    $("syncBtn").addEventListener("click", synchronisieren);
+    verbStatusLaden();
 
     // ================= Start =================
     const orgStart = orgLaden(); orgInFelder(orgStart); orgGespeichert = JSON.stringify(orgStart);
