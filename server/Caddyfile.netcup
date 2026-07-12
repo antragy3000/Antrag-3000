@@ -73,6 +73,11 @@
 	handle /api/team {
 		reverse_proxy api:8080
 	}
+	# Förderer verbinden (Roadmap 6): ein eingeladener Förderer löst hier ohne
+	# Zertifikat seinen Token ein (Förderer-CA signiert). Vendor-Einladung nötig.
+	handle /api/foerderer-enroll {
+		reverse_proxy api:8080
+	}
 	handle {
 		respond "Antrag 3000" 200
 	}
