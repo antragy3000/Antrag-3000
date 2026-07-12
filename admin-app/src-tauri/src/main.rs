@@ -342,6 +342,105 @@ async fn admin_vorschlag_verwerfen(adresse: String, ausweis_pem: String, ca_pem:
     admin_post(&adresse, &ausweis_pem, &ca_pem, &token, &format!("/api/admin/vorschlaege/{vorschlag_id}/verwerfen")).await
 }
 
+// --- Förderer-Kuratierung (Roadmap 8): verbundene Förderer + ihre Programme ---
+
+#[tauri::command]
+async fn admin_foerderer_verbunden(adresse: String, ausweis_pem: String, ca_pem: String, token: String) -> Result<String, String> {
+    admin_get(&adresse, &ausweis_pem, &ca_pem, &token, "/api/admin/foerderer-verbunden").await
+}
+
+#[tauri::command]
+async fn admin_foerderer_programme(adresse: String, ausweis_pem: String, ca_pem: String, token: String) -> Result<String, String> {
+    admin_get(&adresse, &ausweis_pem, &ca_pem, &token, "/api/admin/foerderer-programme").await
+}
+
+/// Ein Förderer-Programm freigeben (in den Katalog übernehmen bzw. bei
+/// Zurückziehen entfernen).
+#[tauri::command]
+async fn admin_foerderer_programm_freigeben(
+    adresse: String, ausweis_pem: String, ca_pem: String, token: String,
+    foerderer_id: i64, programm_id: String,
+) -> Result<(), String> {
+    admin_post(
+        &adresse, &ausweis_pem, &ca_pem, &token,
+        &format!("/api/admin/foerderer-programme/{foerderer_id}/{programm_id}/freigeben"),
+    )
+    .await
+}
+
+/// Stellt eine Förderer-Einladung aus: fragt am Server einen Einmal-Token an
+/// und speichert ein Einladungs-Paket (.a3keinladung) zum Weitergeben. Das
+/// Paket führt die Server-Adressen und die Server-Trust-CA (die der Admin schon
+/// hat) mit – analog zur Team-Einladung.
+#[tauri::command]
+async fn admin_foerderer_einladen(
+    app: tauri::AppHandle,
+    adresse: String, ausweis_pem: String, ca_pem: String, token: String,
+    enroll_url: String, foerderer_name: String,
+) -> Result<serde_json::Value, String> {
+    let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
+    let url = format!("{}/api/admin/foerderer-einladung", basis_url(&adresse));
+    let r = client
+        .post(&url)
+        .header("x-admin-token", &token)
+        .json(&serde_json::json!({ "name": foerderer_name.trim() }))
+        .send()
+        .await
+        .map_err(|e| format!("Einladung fehlgeschlagen: {}", fehler_kette(&e)))?;
+    if r.status().as_u16() == 401 {
+        return Err("Sitzung abgelaufen – bitte neu anmelden.".into());
+    }
+    if !r.status().is_success() {
+        return Err(format!("Server antwortete mit {}.", r.status()));
+    }
+    let v: serde_json::Value = r.json().await.map_err(|e| format!("Antwort nicht lesbar: {e}"))?;
+    let einl_token = v.get("token").and_then(|x| x.as_str()).unwrap_or("");
+    if einl_token.is_empty() {
+        return Err("Kein Einladungs-Code erhalten.".into());
+    }
+    let ablauf = v.get("ablauf").and_then(|x| x.as_str()).unwrap_or("");
+
+    // Einladungs-Paket bauen (ca_pem = Server-Trust-CA, die der Förderer zum
+    // Prüfen des Servers braucht – die hat der Admin bereits).
+    let paket = serde_json::json!({
+        "typ": "antrag3000-foerderer-einladung",
+        "version": 1,
+        "enroll_url": enroll_url.trim(),
+        "sync_adresse": adresse.trim(),
+        "token": einl_token,
+        "ablauf": ablauf,
+        "ca_pem": ca_pem,
+        "name": foerderer_name.trim(),
+    });
+
+    let sicher: String = foerderer_name
+        .trim()
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
+        .collect::<String>()
+        .chars()
+        .take(40)
+        .collect();
+    let vorschlag = if sicher.is_empty() { "foerderer".to_string() } else { sicher };
+    let datei = app
+        .dialog()
+        .file()
+        .set_file_name(&format!("{vorschlag}.a3keinladung"))
+        .add_filter("Förderer-Einladung", &["a3keinladung"])
+        .blocking_save_file();
+    let Some(fp) = datei else {
+        return Ok(serde_json::json!({ "gespeichert": false }));
+    };
+    let pfad = fp.into_path().map_err(|e| format!("Pfad ungültig: {e}"))?;
+    std::fs::write(&pfad, serde_json::to_string_pretty(&paket).unwrap_or_default())
+        .map_err(|e| format!("Einladung nicht speicherbar: {e}"))?;
+    Ok(serde_json::json!({
+        "gespeichert": true,
+        "pfad": pfad.to_string_lossy(),
+        "ablauf": ablauf,
+    }))
+}
+
 /// Setzt den Status einer Meldung (offen/erledigt/verworfen).
 #[tauri::command]
 async fn admin_meldung_status(
@@ -899,6 +998,11 @@ fn main() {
             admin_foerderer_loeschen,
             admin_vorschlag_freigeben,
             admin_vorschlag_verwerfen,
+            // Förderer-Kuratierung (Roadmap 8).
+            admin_foerderer_verbunden,
+            admin_foerderer_programme,
+            admin_foerderer_programm_freigeben,
+            admin_foerderer_einladen,
             admin_katalog_hochladen,
             admin_logo_sicherstellen,
             foerderer_ca_erstellen,
