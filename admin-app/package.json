@@ -1,6 +1,6 @@
 {
   "name": "antrag3000-admin",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Antrag 3000 – Admin-Werkzeug zum Pflegen der Förder-Datenbank",
   "private": true,
   "type": "module",
