@@ -21,6 +21,7 @@
     mitgliedStatusSetzen,
     teamErstellen,
     standardEnrollUrl = "",
+    standardSyncAdresse = "",
     caErstellen,
     caExportieren,
     serverZert,
@@ -125,8 +126,12 @@
 
   // Gehostetes Modell: eigenes Team erstellen (ohne Konto/E-Mail).
   let teamErstellenOffen = $state(false);
+  // Adressen eingebacken vorbelegt (gehostetes Modell); nur unter „Erweitert"
+  // sichtbar/aenderbar (Self-Hosting).
   let teamDienstUrl = $state(standardEnrollUrl);
-  let teamSyncAdresse = $state("");
+  let teamSyncAdresse = $state(standardSyncAdresse);
+  let teamSelfHostOffen = $state(false);
+  let einladenSelfHostOffen = $state(false);
   let teamName = $state("");
   let teamGeraetName = $state("");
   async function teamErstellenKlick() {
@@ -319,10 +324,19 @@
             wird Eigentümer. Der Schlüssel entsteht lokal. Kein Konto/keine
             E-Mail nötig – die Wiederherstellung per E-Mail kommt später.
           </p>
-          <label for="team-dienst">Dienst-Adresse (öffentlich)</label>
-          <input id="team-dienst" type="text" placeholder="https://sync.antrag3000.de" bind:value={teamDienstUrl} />
-          <label for="team-sync">Sync-Adresse (mTLS)</label>
-          <input id="team-sync" type="text" placeholder="team.antrag3000.de:8443" bind:value={teamSyncAdresse} />
+          <button class="verwaltung-toggle klein-toggle" onclick={() => (teamSelfHostOffen = !teamSelfHostOffen)}>
+            {teamSelfHostOffen ? "▾" : "▸"} Erweitert (Self-Hosting)
+          </button>
+          {#if teamSelfHostOffen}
+            <p class="dezent klein">
+              Server-Adressen sind eingebacken (Antrag 3000). Nur ändern, wenn du
+              einen <strong>eigenen Server</strong> betreibst.
+            </p>
+            <label for="team-dienst">Dienst-Adresse (öffentlich)</label>
+            <input id="team-dienst" type="text" placeholder="https://sync.antrag3000.de" bind:value={teamDienstUrl} />
+            <label for="team-sync">Sync-Adresse (mTLS)</label>
+            <input id="team-sync" type="text" placeholder="team.antrag3000.de:8443" bind:value={teamSyncAdresse} />
+          {/if}
           <label for="team-name">Team-Name</label>
           <input id="team-name" type="text" placeholder="z. B. Atelier-Kollektiv" bind:value={teamName} />
           <label for="team-geraet">Name dieses Geräts</label>
@@ -468,8 +482,16 @@
           <strong>einmal</strong> nutzbar – gib sie offline weiter (der Code
           darin ist wie ein Schlüssel). Nur der Team-Eigentümer kann einladen.
         </p>
-        <label for="enroll-url">Öffentliche Verbindungs-Adresse</label>
-        <input id="enroll-url" type="text" placeholder="https://sync.antrag3000.de" bind:value={enrollUrl} />
+        <button class="verwaltung-toggle klein-toggle" onclick={() => (einladenSelfHostOffen = !einladenSelfHostOffen)}>
+          {einladenSelfHostOffen ? "▾" : "▸"} Erweitert (Self-Hosting)
+        </button>
+        {#if einladenSelfHostOffen}
+          <p class="dezent klein">
+            Adresse eingebacken (Antrag 3000). Nur bei eigenem Server ändern.
+          </p>
+          <label for="enroll-url">Öffentliche Verbindungs-Adresse</label>
+          <input id="enroll-url" type="text" placeholder="https://sync.antrag3000.de" bind:value={enrollUrl} />
+        {/if}
         <div class="block">
           <span class="block-titel">Neues Gerät</span>
           <p class="dezent">Optionaler Name, damit du die Einladung zuordnen kannst.</p>

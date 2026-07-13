@@ -66,6 +66,13 @@ export function leereStammdaten() {
   };
 }
 
+// Eingebackene Server-Adressen des gehosteten Modells. Zentral an EINER Stelle,
+// damit die App die Anbindung von selbst kennt (der Nutzer muss nichts
+// eintippen). Self-Hoster koennen den Wert im Tresor per „Erweitert"-Override
+// aendern; darum sind es Standardwerte, keine harten Konstanten im Aufruf.
+export const STANDARD_SERVER = "https://sync.antrag3000.de";  // oeffentlich (Katalog/Update/Enroll)
+export const STANDARD_TEAM_SYNC = "team.antrag3000.de:8443";  // mTLS-Sync-Adresse (Team)
+
 // Struktur eines frischen Tresors (wächst in späteren Schritten).
 // Bewusst ohne Projekt: Die App fordert zum Erstellen auf.
 export function frischerTresor() {
@@ -75,7 +82,7 @@ export function frischerTresor() {
     projekte: [],
     aktivesProjektId: null,
     modus: "einzel", // "einzel" (ohne Team) oder "team"
-    einzelServer: "https://sync.antrag3000.de", // Update-/Katalog-Server (Einzelplatz)
+    einzelServer: STANDARD_SERVER, // Update-/Katalog-Server (Einzelplatz), eingebacken
     sync: null,
     teamCa: null,
     katalogMeldungen: [],
@@ -319,7 +326,7 @@ export function normalisieren(d) {
     veraendert = true;
   }
   if (typeof d.einzelServer !== "string") {
-    d.einzelServer = "https://sync.antrag3000.de";
+    d.einzelServer = STANDARD_SERVER;
     veraendert = true;
   }
   if (!Array.isArray(d.katalogMeldungen)) {

@@ -29,7 +29,7 @@
   import { boardAusTresor, geteilteFoerdererAusTresor } from "$lib/sync";
   // Reine Tresor-Struktur-Helfer (Vorlagen + Migration) – ausgelagert nach
   // $lib/tresorFormat.js, damit diese Datei kleiner bleibt.
-  import { offizielleFristenAus, neueId, neuesProjekt, leereStammdaten, frischerTresor, normalisieren } from "$lib/tresorFormat.js";
+  import { offizielleFristenAus, neueId, neuesProjekt, leereStammdaten, frischerTresor, normalisieren, STANDARD_TEAM_SYNC } from "$lib/tresorFormat.js";
   // Reine Katalog-Helfer (Team-Förderer umwandeln, Board-Label, Ghost-Pflege).
   import { teamFoerdererZuKatalog, boardFoerderungLabel, katalogGhostsAktualisieren } from "$lib/katalogHelfer.js";
 
@@ -1438,6 +1438,9 @@
 
   // Einzelplatz: Modus wechseln bzw. Katalog manuell holen.
   let einzelMeldung = $state("");
+  // Self-Hosting-Override: die Server-Adresse ist eingebacken und normalerweise
+  // unsichtbar; nur wer einen eigenen Server betreibt, klappt sie hier auf.
+  let selfHostOffen = $state(false);
   async function modusWechseln(m) {
     daten.modus = m;
     if (m === "einzel") autoSyncStoppen();
@@ -2074,19 +2077,29 @@
                   Zugangs-Paket. Status, Fristen und eigene Förderer bleiben rein lokal
                   (keine Synchronisation).
                 </p>
-                <label for="einzel-server">Update-Server (Adresse)</label>
-                <input
-                  id="einzel-server"
-                  type="text"
-                  bind:value={daten.einzelServer}
-                  onchange={tresorSpeichern}
-                  placeholder="https://sync.antrag3000.de"
-                />
                 <div class="einzel-knoepfe">
                   <button class="primaer" onclick={einzelKatalogHolen}>
                     Förder-Datenbank aktualisieren
                   </button>
                 </div>
+                <button class="verwaltung-toggle klein-toggle" onclick={() => (selfHostOffen = !selfHostOffen)}>
+                  {selfHostOffen ? "▾" : "▸"} Erweitert (Self-Hosting)
+                </button>
+                {#if selfHostOffen}
+                  <p class="dezent klein">
+                    Die Server-Adresse ist fest eingebacken (Antrag 3000). Nur
+                    ändern, wenn du einen <strong>eigenen Server</strong>
+                    betreibst.
+                  </p>
+                  <label for="einzel-server">Update-Server (Adresse)</label>
+                  <input
+                    id="einzel-server"
+                    type="text"
+                    bind:value={daten.einzelServer}
+                    onchange={tresorSpeichern}
+                    placeholder="https://sync.antrag3000.de"
+                  />
+                {/if}
                 {#if einzelMeldung}<p class="einzel-meldung">{einzelMeldung}</p>{/if}
                 <p class="dezent klein">
                   App-Updates findest du oben rechts unter „⬆ Update" (wird beim Start
@@ -2107,6 +2120,7 @@
               mitgliedStatusSetzen={mitgliedStatusSetzen}
               teamErstellen={teamErstellen}
               standardEnrollUrl={daten.einzelServer ?? ""}
+              standardSyncAdresse={STANDARD_TEAM_SYNC}
               caErstellen={teamCaErstellen}
               caExportieren={teamCaExportieren}
               serverZert={serverZertErstellen}
