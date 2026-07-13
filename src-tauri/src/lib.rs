@@ -63,11 +63,6 @@ pub fn run() {
             sync::sync_foerderer_holen,
             sync::sync_foerderer_senden,
             sync::sync_foerderer_loeschen,
-            sync::team_ca_erstellen,
-            sync::geraet_paket_speichern,
-            sync::geraet_paket_direkt,
-            sync::team_ca_cert_exportieren,
-            sync::server_zertifikat_speichern,
             // Gehostetes Modell (Schritt 4): kopiersicheres Enrollment.
             sync::enroll_annehmen,
             sync::einladung_erstellen,

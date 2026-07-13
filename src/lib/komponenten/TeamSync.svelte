@@ -10,7 +10,6 @@
   //    im Tresor und wird nie angezeigt.
   let {
     sync,
-    teamCa,
     laden,
     testen,
     entfernen,
@@ -22,11 +21,6 @@
     teamErstellen,
     standardEnrollUrl = "",
     standardSyncAdresse = "",
-    caErstellen,
-    caExportieren,
-    serverZert,
-    paketErstellen,
-    geraetEinrichten,
     starten,
     stoppen,
     pruefen,
@@ -46,12 +40,7 @@
   let beschaeftigt = $state(false);
   let status = $state(null);
   let pruefe = $state(false);
-  let verwaltungOffen = $state(false);
   let pruefenOffen = $state(false);
-  let caAdresse = $state("");
-  let nasAdresse = $state("");
-  let neuerGeraetName = $state("");
-  let meinGeraetName = $state("");
   let vorschau = $state(null);          // Array der Sende-Körper (Trockenlauf)
   let mitschnittUrl = $state("http://127.0.0.1:8099");
   let mitschnittStatus = $state(null);
@@ -230,46 +219,6 @@
     }
   }
 
-  async function caErstellenKlick() {
-    if (!caAdresse.trim()) return;
-    beschaeftigt = true;
-    try {
-      await caErstellen(caAdresse.trim());
-    } finally {
-      beschaeftigt = false;
-    }
-  }
-  async function paketErstellenKlick() {
-    if (!neuerGeraetName.trim()) return;
-    beschaeftigt = true;
-    try {
-      await paketErstellen(neuerGeraetName.trim());
-      neuerGeraetName = "";
-    } finally {
-      beschaeftigt = false;
-    }
-  }
-  async function geraetEinrichtenKlick() {
-    if (!meinGeraetName.trim()) return;
-    beschaeftigt = true;
-    status = null;
-    try {
-      const info = await geraetEinrichten(meinGeraetName.trim());
-      if (info) status = await testen();
-    } finally {
-      beschaeftigt = false;
-    }
-  }
-  async function serverZertKlick() {
-    const adr = (nasAdresse || teamCa?.adresse || "").trim();
-    if (!adr) return;
-    beschaeftigt = true;
-    try {
-      await serverZert(adr);
-    } finally {
-      beschaeftigt = false;
-    }
-  }
 </script>
 
 <div class="bereich">
@@ -626,81 +575,6 @@
     {/if}
   {/if}
 
-  <button class="verwaltung-toggle" onclick={() => (verwaltungOffen = !verwaltungOffen)}>
-    {verwaltungOffen ? "▾" : "▸"} Team verwalten <span class="dezent">(für die einrichtende Person)</span>
-  </button>
-
-  {#if verwaltungOffen}
-    <div class="karte verwaltung">
-      {#if !teamCa}
-        <p>
-          Hier richtest du <strong>einmalig</strong> das Team ein: Die App
-          erzeugt die <strong>Team-CA</strong> (den „Aussteller-Stempel").
-          <strong>Nur eine Person</strong> im Team macht das – der Schlüssel
-          bleibt verschlüsselt in deinem Tresor.
-        </p>
-        <label for="ca-adr">Team-Adresse (DDNS deiner NAS)</label>
-        <input id="ca-adr" type="text" placeholder="deinteam.synology.me" bind:value={caAdresse} />
-        <button class="primaer" disabled={!caAdresse.trim() || beschaeftigt} onclick={caErstellenKlick}>
-          {beschaeftigt ? "Wird erstellt …" : "Team-CA erstellen"}
-        </button>
-      {:else}
-        <p class="ok">✓ Team-CA aktiv · Adresse <code>{teamCa.adresse}</code></p>
-
-        <div class="block">
-          <span class="block-titel">1 · Für die NAS</span>
-          <p class="dezent">Das öffentliche CA-Zertifikat kommt zu Caddy auf die NAS.</p>
-          <button class="zweit" disabled={beschaeftigt} onclick={() => caExportieren()}>
-            Team-CA-Zertifikat speichern …
-          </button>
-        </div>
-
-        <div class="block">
-          <span class="block-titel">1b · NAS-Server-Zertifikat (Tailscale)</span>
-          <p class="dezent">
-            Erzeugt <code>server.crt</code> + <code>server.key</code> für die
-            Tailscale-Adresse deiner NAS (von deiner Team-CA signiert). Beide
-            Dateien kommen ebenfalls zu Caddy. Diese Adresse wird auch für die
-            Zugangs-Pakete verwendet.
-          </p>
-          <div class="reihe">
-            <input
-              type="text"
-              placeholder={teamCa.adresse || "z. B. nas.dein-tailnet.ts.net"}
-              bind:value={nasAdresse}
-            />
-            <button class="zweit" disabled={beschaeftigt} onclick={serverZertKlick}>
-              Server-Zertifikat speichern …
-            </button>
-          </div>
-        </div>
-
-        <div class="block">
-          <span class="block-titel">2 · Gerät hinzufügen</span>
-          <p class="dezent">Erzeugt ein Zugangs-Paket, das du offline an die Person gibst.</p>
-          <div class="reihe">
-            <input type="text" placeholder="z. B. Laptop-Anna" bind:value={neuerGeraetName} />
-            <button class="zweit" disabled={!neuerGeraetName.trim() || beschaeftigt} onclick={paketErstellenKlick}>
-              Zugangs-Paket erstellen …
-            </button>
-          </div>
-        </div>
-
-        {#if !sync}
-          <div class="block">
-            <span class="block-titel">3 · Dieses Gerät direkt einrichten</span>
-            <p class="dezent">Ohne Umweg über eine Datei – richtet sofort dieses Gerät ein.</p>
-            <div class="reihe">
-              <input type="text" placeholder="z. B. Laptop-Jenny" bind:value={meinGeraetName} />
-              <button class="primaer" disabled={!meinGeraetName.trim() || beschaeftigt} onclick={geraetEinrichtenKlick}>
-                Einrichten
-              </button>
-            </div>
-          </div>
-        {/if}
-      {/if}
-    </div>
-  {/if}
 </div>
 
 <style>

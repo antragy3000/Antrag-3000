@@ -798,117 +798,6 @@
     }
   }
 
-  // --- Team verwalten (Admin): CA + Zugangs-Pakete in der App erzeugen ---
-  async function teamCaErstellen(adresse) {
-    try {
-      const ca = await invoke("team_ca_erstellen");
-      daten.teamCa = { certPem: ca.cert_pem, keyPem: ca.key_pem, adresse: adresse.trim() };
-      await tresorSpeichern();
-      return true;
-    } catch (e) {
-      alert("Die Team-CA konnte nicht erstellt werden.\n" + e);
-      return false;
-    }
-  }
-
-  // Öffentliches CA-Zertifikat als Datei speichern (für die NAS / Caddy).
-  async function teamCaExportieren() {
-    if (!daten.teamCa) return;
-    const ziel = await dateiSpeichern({
-      title: "Team-CA-Zertifikat speichern",
-      defaultPath: "team-ca.crt",
-      filters: [{ name: "Zertifikat", extensions: ["crt"] }],
-    });
-    if (!ziel) return;
-    try {
-      await invoke("team_ca_cert_exportieren", { certPem: daten.teamCa.certPem, ziel });
-      alert("Gespeichert:\n" + ziel + "\n\nDiese Datei kommt zu Caddy auf die NAS.");
-    } catch (e) {
-      alert("Konnte nicht gespeichert werden.\n" + e);
-    }
-  }
-
-  // NAS-Server-Zertifikat (von der Team-CA signiert) für die angegebene
-  // Tailscale-Adresse erzeugen. Schreibt server.crt + server.key, die auf
-  // die NAS kommen. Die App vertraut der Team-CA und damit diesem Server.
-  async function serverZertErstellen(nasAdresse) {
-    if (!daten.teamCa) return;
-    const adr = (nasAdresse ?? "").trim();
-    if (!adr) return;
-    const ziel = await dateiSpeichern({
-      title: "NAS-Server-Zertifikat speichern (server.crt)",
-      defaultPath: "server.crt",
-      filters: [{ name: "Zertifikat", extensions: ["crt"] }],
-    });
-    if (!ziel) return;
-    try {
-      await invoke("server_zertifikat_speichern", {
-        caCertPem: daten.teamCa.certPem,
-        caKeyPem: daten.teamCa.keyPem,
-        adresse: adr,
-        zielCrt: ziel,
-      });
-      // Adresse fürs Team merken, damit Geräte-Pakete genau diese nutzen.
-      daten.teamCa.adresse = adr;
-      await tresorSpeichern();
-      alert(
-        "Gespeichert: server.crt und server.key (im selben Ordner).\n\n" +
-          "Beide Dateien kommen auf die NAS (zu Caddy). Adresse fürs Team: " + adr,
-      );
-    } catch (e) {
-      alert("Das Server-Zertifikat konnte nicht erstellt werden.\n" + e);
-    }
-  }
-
-  // Zugangs-Paket für ein (anderes) Gerät erzeugen und als Datei speichern.
-  async function geraetPaketErstellen(geraetName) {
-    if (!daten.teamCa) return;
-    const sicher = (geraetName.trim().replace(/[^A-Za-z0-9_.-]/g, "_")) || "Geraet";
-    const ziel = await dateiSpeichern({
-      title: "Zugangs-Paket speichern",
-      defaultPath: sicher + ".a3kpaket",
-      filters: [{ name: "Zugangs-Paket", extensions: ["a3kpaket"] }],
-    });
-    if (!ziel) return;
-    try {
-      await invoke("geraet_paket_speichern", {
-        caCertPem: daten.teamCa.certPem,
-        caKeyPem: daten.teamCa.keyPem,
-        geraetName: geraetName.trim(),
-        adresse: daten.teamCa.adresse,
-        ziel,
-      });
-      alert("Zugangs-Paket gespeichert:\n" + ziel + "\n\nGib es offline an das Gerät weiter (z. B. USB) – nicht per Mail.");
-    } catch (e) {
-      alert("Das Zugangs-Paket konnte nicht erstellt werden.\n" + e);
-    }
-  }
-
-  // Dieses Gerät direkt einrichten (ohne Datei-Umweg).
-  async function diesesGeraetEinrichten(geraetName) {
-    if (!daten.teamCa) return null;
-    try {
-      const info = await invoke("geraet_paket_direkt", {
-        caCertPem: daten.teamCa.certPem,
-        caKeyPem: daten.teamCa.keyPem,
-        geraetName: geraetName.trim(),
-        adresse: daten.teamCa.adresse,
-      });
-      daten.sync = {
-        adresse: info.adresse,
-        geraetName: info.geraet_name,
-        ausweisPem: info.ausweis_pem,
-        caPem: info.ca_pem ?? "",
-        letzterAbgleich: null,
-      };
-      await tresorSpeichern();
-      return info;
-    } catch (e) {
-      alert("Das Gerät konnte nicht eingerichtet werden.\n" + e);
-      return null;
-    }
-  }
-
   // --- Etappe 4b/4c: Fortlaufender Abgleich (Start/Stopp) ---
   // Nach dem Start synchronisiert die App von selbst weiter: in einem
   // kurzen Takt werden GEÄNDERTE eigene Projekte hochgeladen und das
@@ -2109,7 +1998,6 @@
             {:else}
             <TeamSync
               sync={daten.sync}
-              teamCa={daten.teamCa}
               laden={zugangspaketLaden}
               testen={verbindungPruefen}
               entfernen={zugangspaketEntfernen}
@@ -2121,11 +2009,6 @@
               teamErstellen={teamErstellen}
               standardEnrollUrl={daten.einzelServer ?? ""}
               standardSyncAdresse={STANDARD_TEAM_SYNC}
-              caErstellen={teamCaErstellen}
-              caExportieren={teamCaExportieren}
-              serverZert={serverZertErstellen}
-              paketErstellen={geraetPaketErstellen}
-              geraetEinrichten={diesesGeraetEinrichten}
               starten={autoSyncStarten}
               stoppen={autoSyncStoppen}
               pruefen={verbindungPruefen}
