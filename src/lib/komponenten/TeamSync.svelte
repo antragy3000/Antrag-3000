@@ -13,7 +13,6 @@
     laden,
     testen,
     entfernen,
-    adresseAendern,
     einladungAnnehmen,
     mitgliedEinladen,
     mitgliederHolen,
@@ -200,25 +199,6 @@
     }
   }
 
-  let adresseOffen = $state(false);
-  let neueAdresse = $state("");
-  async function adresseAendernKlick() {
-    const a = neueAdresse.trim();
-    if (!a) return;
-    beschaeftigt = true;
-    status = null;
-    try {
-      const ok = await adresseAendern(a);
-      if (ok) {
-        adresseOffen = false;
-        neueAdresse = "";
-        status = await testen(); // mit der neuen Adresse gleich neu testen
-      }
-    } finally {
-      beschaeftigt = false;
-    }
-  }
-
 </script>
 
 <div class="bereich">
@@ -306,27 +286,7 @@
       <div class="zeile">
         <span class="etikett">Team-Adresse</span>
         <span class="wert pfad">{sync.adresse}</span>
-        <button class="leise klein" disabled={beschaeftigt} onclick={() => { adresseOffen = !adresseOffen; neueAdresse = sync.adresse; }}>
-          {adresseOffen ? "abbrechen" : "ändern"}
-        </button>
       </div>
-      {#if adresseOffen}
-        <div class="reihe adr-aendern">
-          <input
-            type="text"
-            placeholder={sync.adresse}
-            bind:value={neueAdresse}
-            onkeydown={(e) => { if (e.key === "Enter" && neueAdresse.trim()) adresseAendernKlick(); }}
-          />
-          <button class="zweit" disabled={beschaeftigt || !neueAdresse.trim()} onclick={adresseAendernKlick}>
-            Adresse speichern
-          </button>
-        </div>
-        <p class="dezent klein">
-          Nur die NAS-Adresse ändern – z. B. nach einem Tailscale-Wechsel. Dein
-          Geräte-Ausweis und die Team-CA bleiben unverändert.
-        </p>
-      {/if}
       {#if status}
         {#if status.ok}
           <p class="ok">✓ Verbunden – der Team-Server ist erreichbar.</p>
@@ -1020,8 +980,5 @@
   }
   .zeile .leise.klein:hover:not(:disabled) {
     color: var(--akzent-d2);
-  }
-  .adr-aendern {
-    margin: 8px 0 4px;
   }
 </style>

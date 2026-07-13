@@ -649,23 +649,6 @@
     await tresorSpeichern();
   }
 
-  // Nur die Team-Adresse (NAS) ändern – z. B. nach einem Tailscale-Wechsel.
-  // Geräte-Ausweis und Team-CA bleiben gleich; es wird ausschliesslich die
-  // Adresse aktualisiert, auf die der Sync verbindet. Danach kann neu getestet
-  // und gestartet werden.
-  async function teamAdresseAendern(neueAdresse) {
-    if (!daten.sync) return false;
-    const a = (neueAdresse || "").trim();
-    if (!a) return false;
-    syncLoopStoppen();
-    syncVerbunden = false;
-    syncMeldung = null;
-    zuletztGeprueft = null;
-    daten.sync.adresse = a;
-    await tresorSpeichern();
-    return true;
-  }
-
   // --- Gehostetes Modell (Schritt 4b): Einladung annehmen / Mitglied einladen ---
   // Neues Gerät: Einladungs-Datei wählen und kopiersicher verbinden. Der
   // Geräteschlüssel entsteht dabei LOKAL (in Rust) und verlässt das Gerät nie;
@@ -2001,7 +1984,6 @@
               laden={zugangspaketLaden}
               testen={verbindungPruefen}
               entfernen={zugangspaketEntfernen}
-              adresseAendern={teamAdresseAendern}
               einladungAnnehmen={einladungAnnehmen}
               mitgliedEinladen={mitgliedEinladen}
               mitgliederHolen={mitgliederHolen}
