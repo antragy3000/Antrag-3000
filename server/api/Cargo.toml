@@ -33,6 +33,10 @@ qrcode = "0.14"
 # SubjectPublicKeyInfo::from_pem (nur der oeffentliche Geraete-Schluessel wird
 # eingelesen -> kopiersicher) und from_ca_cert_pem (CA aus PEM rekonstruieren).
 rcgen = { version = "0.13", features = ["x509-parser"] }
+# time: relative Gueltigkeit fuer kurzlebige Ausweise (jetzt + N Tage, Roadmap 10).
+# Kommt ohnehin ueber rcgen mit; hier nur direkt nutzbar gemacht (keine neue
+# Transitiv-Last).
+time = "0.3"
 
 [dev-dependencies]
 # x509-parser: nur fuer den Test der Service-CA (prueft kryptografisch, dass

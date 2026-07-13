@@ -101,7 +101,13 @@ impl Ca {
     /// gebraucht und ist dem Server nicht bekannt – das macht den Ausweis
     /// kopiersicher. `cn` = Anzeigename (Gerät/Förderer), `org` = Organisation
     /// im Zertifikat (z. B. "Antrag 3000 Team-Gerät" oder "Antrag 3000 Förderer").
-    pub fn signiere(&self, pubkey_pem: &str, cn: &str, org: &str) -> Result<String, String> {
+    pub fn signiere(
+        &self,
+        pubkey_pem: &str,
+        cn: &str,
+        org: &str,
+        gueltig_tage: i64,
+    ) -> Result<String, String> {
         let ca_key = rcgen::KeyPair::from_pem(&self.key_pem)
             .map_err(|e| format!("CA-Schlüssel unlesbar: {e}"))?;
         let ca_cert = rcgen::CertificateParams::from_ca_cert_pem(&self.cert_pem)
@@ -124,8 +130,12 @@ impl Ca {
             .push(rcgen::DnType::CommonName, cn);
         p.is_ca = rcgen::IsCa::NoCa;
         p.key_usages = vec![rcgen::KeyUsagePurpose::DigitalSignature];
-        p.not_before = rcgen::date_time_ymd(2024, 1, 1);
-        p.not_after = rcgen::date_time_ymd(2035, 1, 1);
+        // Kurzlebig (Roadmap 10): ein geklauter Ausweis verfällt von selbst; die
+        // App erneuert rechtzeitig über die bestehende mTLS-Verbindung. Kleine
+        // Rückdatierung als Uhr-Toleranz zwischen Server und Gerät.
+        let jetzt = time::OffsetDateTime::now_utc();
+        p.not_before = jetzt - time::Duration::hours(1);
+        p.not_after = jetzt + time::Duration::days(gueltig_tage.max(1));
 
         let cert = p
             .signed_by(&pubkey, &ca_cert, &ca_key)
@@ -192,7 +202,7 @@ mod tests {
         let pubkey_pem = key.public_key_pem();
 
         let ausweis_pem = ca
-            .signiere(&pubkey_pem, "Test-Gerät", "Antrag 3000 Team-Gerät")
+            .signiere(&pubkey_pem, "Test-Gerät", "Antrag 3000 Team-Gerät", 90)
             .expect("Ausweis signieren");
         assert!(ausweis_pem.contains("BEGIN CERTIFICATE"));
 

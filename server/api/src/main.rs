@@ -318,6 +318,7 @@ async fn main() {
         // Team-Geräte auflisten und sperren/entsperren.
         .route("/api/mitglieder", get(mitglieder_liste))
         .route("/api/mitglieder/:geraet_id", put(mitglied_status))
+        .route("/api/ausweis/erneuern", post(ausweis_erneuern))
         // Admin (Etappe 4): Zwei-Faktor (Admin-Gerät + Passwort).
         .route("/api/admin/anmelden", post(admin_anmelden))
         .route("/api/admin/meldungen", get(admin_meldungen))
@@ -532,6 +533,12 @@ async fn schema_anlegen(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     let _ = sqlx::query("ALTER TABLE geraet ADD COLUMN ist_admin INTEGER NOT NULL DEFAULT 0")
         .execute(pool)
         .await;
+    // Roadmap 10 (kurzlebige Ausweise): der vorige Fingerabdruck bleibt bei der
+    // Erneuerung kurz gültig, damit die Umstellung kein Gerät aussperrt, falls die
+    // App die neue Antwort verliert. Idempotenter ALTER wie oben.
+    let _ = sqlx::query("ALTER TABLE geraet ADD COLUMN cert_fingerprint_vorher TEXT")
+        .execute(pool)
+        .await;
     // Gehostetes Modell, Schritt 1: Abo-Status je Konto + Team-Eigentümer je
     // Nutzer per ALTER nachziehen (bestehende DBs). Vorhandene Spalte → ALTER
     // schlägt fehl, wird bewusst ignoriert.
@@ -707,8 +714,9 @@ async fn konto_und_geraet(
     if let Some((geraet_id, konto_id, status)) = sqlx::query_as::<_, (i64, i64, String)>(
         "SELECT g.id, n.konto_id, g.status
          FROM geraet g JOIN nutzer n ON n.id = g.nutzer_id
-         WHERE g.cert_fingerprint = ?",
+         WHERE g.cert_fingerprint = ? OR g.cert_fingerprint_vorher = ?",
     )
+    .bind(&fp)
     .bind(&fp)
     .fetch_optional(pool)
     .await
@@ -1492,6 +1500,14 @@ struct EnrollAntwort {
     service_ca_pem: String,
 }
 
+/// Gültigkeit frisch ausgestellter Team-Geräte-Ausweise (Tage). Kurzlebig
+/// (Roadmap 10): ein geklauter Ausweis verfällt von selbst; die App erneuert
+/// rechtzeitig über `/api/ausweis/erneuern`.
+const GERAET_GUELTIG_TAGE: i64 = 90;
+/// Förderer-Ausweise: vorerst länger, da die Förderer-App noch keine automatische
+/// Erneuerung hat (Folgeschritt).
+const FOERDERER_GUELTIG_TAGE: i64 = 397;
+
 /// Verbinden (POST /api/enroll): ein neues Gerät löst seinen Einmal-Token ein
 /// und erhält einen von der Service-CA signierten Ausweis. OHNE Zertifikat –
 /// der Token ist die Berechtigung. Läuft über den öffentlichen :443-Kanal.
@@ -1564,7 +1580,7 @@ async fn enroll(
 
     // Kopiersicher signieren (nur der öffentliche Schlüssel geht ein).
     let ausweis_pem = ca
-        .signiere(&body.pubkey_pem, name, "Antrag 3000 Team-Gerät")
+        .signiere(&body.pubkey_pem, name, "Antrag 3000 Team-Gerät", GERAET_GUELTIG_TAGE)
         .map_err(|_| StatusCode::BAD_REQUEST)?;
     let cert_fp = service_ca::fingerprint_von_pem(&ausweis_pem)
         .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -1611,6 +1627,84 @@ async fn enroll(
 
     Ok(Json(EnrollAntwort {
         ausweis_pem,
+        service_ca_pem: ca.cert_pem.clone(),
+    }))
+}
+
+#[derive(Deserialize)]
+struct ErneuernBody {
+    /// Frischer öffentlicher Geräteschlüssel (SPKI-PEM). Der private Teil bleibt
+    /// lokal – die Erneuerung ist damit genauso kopiersicher wie das Enrollment.
+    #[serde(rename = "pubkeyPem", alias = "pubkey_pem")]
+    pubkey_pem: String,
+}
+
+#[derive(Serialize, Debug)]
+struct ErneuernAntwort {
+    ausweis_pem: String,
+    service_ca_pem: String,
+}
+
+/// Ausweis erneuern (POST /api/ausweis/erneuern, NUR über mTLS): ein bereits
+/// verbundenes Gerät holt sich vor Ablauf einen frischen, kurzlebigen Ausweis
+/// (Roadmap 10). Es erzeugt dafür lokal ein NEUES Schlüsselpaar und schickt nur
+/// den öffentlichen Teil. Der neue Fingerabdruck wird gesetzt; der bisherige
+/// bleibt als `cert_fingerprint_vorher` kurz gültig, damit die Umstellung kein
+/// Gerät aussperrt, falls die App die Antwort verliert (der alte Ausweis verfällt
+/// ohnehin per Ablaufdatum). Kein Abo-Gate: eine Erneuerung hält ein bestehendes
+/// Gerät nur am Leben, sie fügt keins hinzu.
+async fn ausweis_erneuern(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<ErneuernBody>,
+) -> Result<Json<ErneuernAntwort>, StatusCode> {
+    let ca = st
+        .service_ca
+        .as_ref()
+        .as_ref()
+        .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    if body.pubkey_pem.len() > PUBKEY_MAX_BYTES {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+    // Aufrufer identifizieren (bestehendes, aktives mTLS-Gerät). Ein gesperrtes
+    // oder unbekanntes Gerät bekommt hier nichts (konto_und_geraet → FORBIDDEN).
+    let (_konto_id, geraet_id) = konto_und_geraet(&st.pool, &headers).await?;
+    let alt_fp = fingerprint(&headers).ok_or(StatusCode::UNAUTHORIZED)?;
+
+    // Anzeigenamen (CN) des Geräts beibehalten.
+    let bezeichnung: String =
+        sqlx::query_scalar("SELECT bezeichnung FROM geraet WHERE id = ?")
+            .bind(geraet_id)
+            .fetch_one(&st.pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let neuer_ausweis = ca
+        .signiere(
+            &body.pubkey_pem,
+            &bezeichnung,
+            "Antrag 3000 Team-Gerät",
+            GERAET_GUELTIG_TAGE,
+        )
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    let neu_fp = service_ca::fingerprint_von_pem(&neuer_ausweis)
+        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Neuen Fingerabdruck setzen, den bisherigen als Überlappung behalten.
+    sqlx::query(
+        "UPDATE geraet
+         SET cert_fingerprint = ?, cert_fingerprint_vorher = ?, zuletzt_gesehen = datetime('now')
+         WHERE id = ?",
+    )
+    .bind(&neu_fp)
+    .bind(&alt_fp)
+    .bind(geraet_id)
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(ErneuernAntwort {
+        ausweis_pem: neuer_ausweis,
         service_ca_pem: ca.cert_pem.clone(),
     }))
 }
@@ -1663,7 +1757,7 @@ async fn team_erstellen(
 
     // Kopiersicher signieren (nur der öffentliche Schlüssel geht ein).
     let ausweis_pem = ca
-        .signiere(&body.pubkey_pem, geraet_name, "Antrag 3000 Team-Gerät")
+        .signiere(&body.pubkey_pem, geraet_name, "Antrag 3000 Team-Gerät", GERAET_GUELTIG_TAGE)
         .map_err(|_| StatusCode::BAD_REQUEST)?;
     let cert_fp = service_ca::fingerprint_von_pem(&ausweis_pem)
         .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -1841,7 +1935,7 @@ async fn foerderer_enroll(
     }
 
     let ausweis_pem = ca
-        .signiere(&body.pubkey_pem, name, "Antrag 3000 Förderer")
+        .signiere(&body.pubkey_pem, name, "Antrag 3000 Förderer", FOERDERER_GUELTIG_TAGE)
         .map_err(|_| StatusCode::BAD_REQUEST)?;
     let cert_fp = service_ca::fingerprint_von_pem(&ausweis_pem)
         .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -3248,6 +3342,51 @@ mod tests {
         .unwrap()
         .0;
         assert_ne!(antw.konto_id, antw2.konto_id);
+    }
+
+    /// Ausweis-Erneuerung: ein verbundenes Gerät bekommt einen frischen Ausweis;
+    /// der Fingerabdruck wird umgestellt, der bisherige bleibt als Überlappung
+    /// gültig (kein Aussperren), und dieselbe Geräte-Zeile bleibt bestehen.
+    #[tokio::test]
+    async fn ausweis_erneuern_setzt_neuen_fp_mit_ueberlappung() {
+        let (st, der_owner, _der_member, _member_id) = setup_team().await;
+        let alt_fp = fp_von(&der_owner);
+
+        let (geraet_id,): (i64,) =
+            sqlx::query_as("SELECT id FROM geraet WHERE cert_fingerprint = ?")
+                .bind(&alt_fp)
+                .fetch_one(&st.pool)
+                .await
+                .unwrap();
+
+        let key = rcgen::KeyPair::generate().unwrap();
+        let antw = ausweis_erneuern(
+            State(st.clone()),
+            hdr(&der_owner),
+            Json(ErneuernBody { pubkey_pem: key.public_key_pem() }),
+        )
+        .await
+        .expect("Erneuerung muss klappen")
+        .0;
+        assert!(antw.ausweis_pem.contains("BEGIN CERTIFICATE"));
+
+        let neu_fp = service_ca::fingerprint_von_pem(&antw.ausweis_pem).unwrap();
+        assert_ne!(neu_fp, alt_fp, "der Ausweis muss sich ändern");
+
+        // Dieselbe Zeile, neuer Fingerabdruck, alter als Überlappung.
+        let (fp, vorher): (String, Option<String>) = sqlx::query_as(
+            "SELECT cert_fingerprint, cert_fingerprint_vorher FROM geraet WHERE id = ?",
+        )
+        .bind(geraet_id)
+        .fetch_one(&st.pool)
+        .await
+        .unwrap();
+        assert_eq!(fp, neu_fp);
+        assert_eq!(vorher.as_deref(), Some(alt_fp.as_str()));
+
+        // Überlappung: der ALTE Ausweis wird weiter erkannt (kein Aussperren).
+        let (_konto, g2) = konto_und_geraet(&st.pool, &hdr(&der_owner)).await.unwrap();
+        assert_eq!(g2, geraet_id);
     }
 
     /// Förderer verbinden: Token einlösen → Förderer-CA-signierter Ausweis +
