@@ -183,6 +183,8 @@
     updateStillPruefen();
     // Und die Förder-Datenbank automatisch auf Aktualisierungen prüfen.
     katalogStillPruefen();
+    // Kurzlebigen Geräte-Ausweis rechtzeitig still erneuern (Roadmap 10).
+    ausweisErneuernPruefen();
   }
 
   // Ein-Klick-Entsperren über den gemerkten Zugang (auf dem Sperr-Bildschirm).
@@ -899,6 +901,41 @@
       await katalogUpdateVomServer();
     } catch {
       /* still: Server nicht erreichbar */
+    }
+  }
+
+  // Roadmap 10: der Geräte-Ausweis ist kurzlebig (90 Tage) und wird rechtzeitig
+  // still erneuert – über die bestehende mTLS-Verbindung, kopiersicher (der neue
+  // Schlüssel entsteht lokal in Rust). Läuft im Hintergrund; scheitert es
+  // (offline o. Ä.), bleibt der bisherige Ausweis unangetastet und weiter gültig.
+  // Ohne gespeicherten Zeitstempel (bestehendes Gerät) wird zunächst nur die Uhr
+  // gestartet, damit ein frisch verbundenes Gerät nicht sofort erneuert.
+  const AUSWEIS_ERNEUERN_NACH_TAGEN = 60; // vor dem 90-Tage-Ablauf
+  let ausweisGeprueft = false;
+  async function ausweisErneuernPruefen() {
+    if (ausweisGeprueft || !online || !daten?.sync?.ausweisPem) return;
+    ausweisGeprueft = true;
+    const tag = 24 * 60 * 60 * 1000;
+    const stamp = daten.sync.ausweisErneuertAm ? Date.parse(daten.sync.ausweisErneuertAm) : NaN;
+    if (isNaN(stamp)) {
+      daten.sync.ausweisErneuertAm = new Date().toISOString();
+      await tresorSpeichern();
+      return;
+    }
+    if (Date.now() - stamp < AUSWEIS_ERNEUERN_NACH_TAGEN * tag) return;
+    try {
+      const neu = await invoke("ausweis_erneuern", {
+        syncAdresse: daten.sync.adresse,
+        ausweisPem: daten.sync.ausweisPem,
+        caPem: daten.sync.caPem ?? "",
+      });
+      if (typeof neu === "string" && neu.includes("CERTIFICATE")) {
+        daten.sync.ausweisPem = neu;
+        daten.sync.ausweisErneuertAm = new Date().toISOString();
+        await tresorSpeichern();
+      }
+    } catch {
+      /* still: offline o. Ä. – der bisherige Ausweis bleibt gültig */
     }
   }
 

@@ -65,6 +65,7 @@ pub fn run() {
             sync::sync_foerderer_loeschen,
             // Gehostetes Modell (Schritt 4): kopiersicheres Enrollment.
             sync::enroll_annehmen,
+            sync::ausweis_erneuern,
             sync::einladung_erstellen,
             sync::einladung_lesen,
             sync::mitglieder_holen,

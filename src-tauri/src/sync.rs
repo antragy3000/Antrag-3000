@@ -570,6 +570,50 @@ pub async fn enroll_annehmen(
     })
 }
 
+/// Erneuert den Geräte-Ausweis über die bestehende mTLS-Verbindung (Roadmap 10:
+/// kurzlebige Ausweise). Erzeugt LOKAL ein frisches Schlüsselpaar, schickt nur
+/// den öffentlichen Teil und setzt den neuen Ausweis (privater Schlüssel +
+/// frisches Zertifikat) zusammen. Gibt den neuen Ausweis-PEM zurück; das Frontend
+/// speichert ihn im Tresor. Der Server hält den bisherigen Fingerabdruck kurz
+/// mit gültig, sodass ein Fehlschlag beim Speichern das Gerät nicht aussperrt.
+#[tauri::command]
+pub async fn ausweis_erneuern(
+    sync_adresse: String,
+    ausweis_pem: String,
+    ca_pem: String,
+) -> Result<String, String> {
+    let key = rcgen::KeyPair::generate().map_err(|e| format!("Schluessel nicht erzeugbar: {e}"))?;
+    let pubkey_pem = key.public_key_pem();
+
+    let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
+    let url = format!("{}/api/ausweis/erneuern", basis_url(&sync_adresse));
+    let body = serde_json::json!({ "pubkeyPem": pubkey_pem }).to_string();
+    let r = client
+        .post(&url)
+        .header("content-type", "application/json")
+        .body(body)
+        .send()
+        .await
+        .map_err(|e| format!("Erneuerung fehlgeschlagen: {}", fehler_kette(&e)))?;
+    if !r.status().is_success() {
+        return Err(format!("Server antwortete mit {}", r.status().as_u16()));
+    }
+
+    #[derive(Deserialize)]
+    struct ErneuernAntwort {
+        #[serde(default)]
+        ausweis_pem: String,
+    }
+    let antwort: ErneuernAntwort = r
+        .json()
+        .await
+        .map_err(|e| format!("Antwort nicht lesbar: {e}"))?;
+    if !antwort.ausweis_pem.contains("CERTIFICATE") {
+        return Err("Der Server hat keinen gueltigen Ausweis geliefert.".into());
+    }
+    Ok(format!("{}{}", key.serialize_pem(), antwort.ausweis_pem))
+}
+
 /// Erstellt ein NEUES Team (gehostet, ohne Konto/E-Mail): erzeugt das
 /// Schlüsselpaar lokal, ruft den öffentlichen Team-Endpunkt und wird dadurch
 /// Eigentümer des neuen Kontos. Rückgabe wie ein Zugangs-Paket (Frontend legt
