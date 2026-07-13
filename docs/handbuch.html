@@ -212,7 +212,7 @@
   <div class="sub">Fördermittel-Anträge für Kunst &amp; Kultur – sicher auf deinem Gerät</div>
   <div class="balken"></div>
   <div class="meta">
-    Version 0.4.1 &nbsp;·&nbsp; Stand Juni 2026 &nbsp;·&nbsp; Windows-Desktop-App
+    Version 0.4.8 &nbsp;·&nbsp; Stand Juli 2026 &nbsp;·&nbsp; Windows-Desktop-App
   </div>
   <div class="hinweisbox">
     <strong>Deine Daten bleiben bei dir.</strong> Alle sensiblen Angaben
@@ -394,6 +394,11 @@
   lang, gut zu merken und deutlich schwerer zu knacken. Ein Passwort-Manager hilft
   beim sicheren Aufbewahren. Dieses Passwort schützt all deine Finanz- und
   Steuerdaten – es lohnt sich, hier sorgfältig zu sein.</div>
+
+  <div class="merke"><strong>Direkt nach dem Anlegen ist alles bereit.</strong> Sobald
+  der Tresor steht, verbindet sich die App <strong>automatisch</strong> mit dem Server
+  und lädt die aktuelle Förder-Datenbank – du musst nichts einrichten und keine
+  Adresse eintippen. Ohne Internet geht es trotzdem sofort weiter (offline).</div>
 </section>
 
 <!-- ===== 4 ===== -->
@@ -1108,7 +1113,7 @@
   <h3>Die Schlüssel dahinter – einfach erklärt</h3>
   <div class="struktur">
     <div class="stp"><span class="num">1</span><div><b>Tresor-Passwort → Schlüssel:</b> Aus deinem Passwort wird ein Schlüssel berechnet, der deinen lokalen Tresor verschlüsselt. <b>Passwort weg = Daten weg</b> (so gewollt) – siehe Kapitel 3.</div></div>
-    <div class="stp"><span class="num">2</span><div><b>Team-CA → Geräte-Ausweis:</b> Du stellst (einmalig, offline) den „Aussteller-Stempel" deines Teams aus – das ist die <b>CA</b> (Zertifizierungsstelle; siehe Glossar) – und damit pro Gerät einen Ausweis. Nur Geräte mit gültigem Ausweis dürfen mit dem Server reden.</div></div>
+    <div class="stp"><span class="num">2</span><div><b>Einladung → Geräte-Ausweis:</b> Beim Verbinden erzeugt dein Gerät <b>lokal</b> ein Schlüsselpaar. Nur der <b>öffentliche</b> Teil geht mit der Einladung an den Server; dieser stellt daraus deinen <b>Ausweis</b> aus. Dein privater Schlüssel <b>verlässt das Gerät nie</b>. Nur Geräte mit gültigem Ausweis dürfen mit dem Server reden.</div></div>
   </div>
   <div class="merke">Wichtig: Diese beiden Dinge sind <strong>komplett getrennt</strong>.
   Dein Tresor-Passwort verlässt dein Gerät <strong>nie</strong>. Der Geräte-Ausweis
@@ -1119,41 +1124,41 @@
 <section class="chapter">
   <h2><span class="kn">21</span>Team &amp; Server (Einzelplatz oder Team)</h2>
   <p class="lead">Damit ein kleines Team gemeinsam den Überblick behält, werden
-  ausgewählte <strong>unkritische</strong> Daten über deine eigene NAS geteilt.
-  Diese Funktion ist in dieser Version verfügbar und völlig <strong>optional</strong>.</p>
+  ausgewählte <strong>unkritische</strong> Daten über den Antrag-3000-Server
+  geteilt. Diese Funktion ist völlig <strong>optional</strong>.</p>
 
   <h3>Zwei Betriebsarten: Einzelplatz oder Team</h3>
   <p>Im Reiter <strong>„Stammdaten &amp; Team"</strong> wählst du oben die Betriebsart:</p>
   <ul>
     <li><strong>Einzelplatz</strong> (Voreinstellung): Du nutzt Antrag 3000 allein.
     Du bekommst trotzdem <strong>App-Updates</strong> und Aktualisierungen der
-    <strong>Förder-Datenbank</strong> vom Server – <strong>ohne Zugangs-Paket</strong>.
-    Es wird <strong>nichts synchronisiert</strong>; Status, Fristen und eigene Förderer
-    bleiben rein auf deinem Gerät. Im Einzelplatz-Feld steht die Server-Adresse
-    (z. B. <code>nas-yh.tail73a506.ts.net:8445</code>); mit <em>„Förder-Datenbank aktualisieren"</em>
-    holst du die neueste Fassung.</li>
+    <strong>Förder-Datenbank</strong> vom Server. Es wird <strong>nichts
+    synchronisiert</strong>; Status, Fristen und eigene Förderer bleiben rein auf
+    deinem Gerät. Die <strong>Server-Adresse ist fest in der App eingebaut</strong> –
+    du musst nichts eintragen. Mit <em>„Förder-Datenbank aktualisieren"</em> holst
+    du jederzeit von Hand die neueste Fassung.</li>
     <li><strong>Team</strong>: Zusätzlich werden im Team die unkritischen Daten
     <strong>synchronisiert</strong> (Projektname, verfolgte Förderungen, Status,
-    Fristen, geteilte Förderer). Dafür brauchst du ein <strong>Zugangs-Paket</strong>
-    (Geräte-Ausweis), das die Administration erzeugt.</li>
+    Fristen, geteilte Förderer). Dafür verbindest du dein Gerät <strong>einmalig</strong>
+    – am einfachsten mit einer <strong>Einladung</strong> (siehe unten).</li>
   </ul>
   <div class="merke">Sensible Daten (Tresor) bleiben in <strong>beiden</strong>
   Betriebsarten ausschließlich lokal. Der Unterschied ist nur, ob die unkritischen
   Status-/Fristen-Daten mit einem Team geteilt werden.</div>
 
-  <div class="merke"><strong>Welcher Server ist das?</strong> Die Server-Adresse im
-  Einzelplatz zeigt auf die <strong>NAS</strong> (einen kleinen Server), die deine
-  Team-Verwalter:in bzw. der Anbieter betreibt und dir mitgeteilt hat. Gibt es keinen
-  solchen Server, funktioniert die App <strong>vollständig offline</strong> weiter –
-  du erhältst dann nur keine automatischen Aktualisierungen. Ein Datenverlust droht
-  dabei nie.</div>
+  <div class="merke"><strong>Die Verbindung entsteht von selbst.</strong> Sobald du
+  die App das erste Mal aktivierst (Tresor angelegt), stellt sie die Verbindung zum
+  Server automatisch her und lädt die Förder-Datenbank – ganz ohne Knopfdruck. Ohne
+  Internet arbeitet die App <strong>vollständig offline</strong> weiter; du erhältst
+  dann nur keine automatischen Aktualisierungen. Ein Datenverlust droht dabei nie.</div>
+
+  <div class="merke"><strong>Welcher Server ist das?</strong> Standardmäßig der von
+  Antrag 3000 betriebene Dienst – seine Adresse steckt fest in der App. Wer einen
+  <strong>eigenen Server</strong> betreiben will (Self-Hosting), kann die Adresse
+  unter <strong>„Erweitert (Self-Hosting)"</strong> ändern. Das ist ein Sonderfall
+  für technisch Versierte und für den normalen Gebrauch nicht nötig.</div>
 
   <p>Der Rest dieses Kapitels beschreibt den <strong>Team-Modus</strong>.</p>
-
-  <div class="merke">Voraussetzung ist eine laufende NAS mit dem Team-Server
-  (siehe separate Anleitung „NAS-Einrichtung"). Steht der Server noch nicht,
-  kannst du dein Gerät trotzdem schon einrichten – die App zeigt dann einfach
-  „noch nicht erreichbar".</div>
 
   <h3>Was geteilt wird – und was nicht</h3>
   <figure>
@@ -1180,31 +1185,39 @@
   gehen über diesen Weg an die Pflege – Einzelheiten in Kapitel 23.</div>
 
   <h3>Dein Gerät einrichten – Schritt für Schritt</h3>
-  <p>Das machst du <strong>einmalig</strong> pro Gerät. Danach läuft alles von allein.</p>
+  <p>Das machst du <strong>einmalig</strong> pro Gerät. Danach läuft alles von allein.
+  Der normale Weg ist eine <strong>Einladung</strong>, die dir die Team-Verwalter:in gibt.</p>
 
   <figure>
     <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap">
       <div style="background:#fff;border:2px solid #dfe1e6;border-radius:10px;padding:10px 12px;text-align:center;font-size:8.6pt;min-width:118px">
-        <div style="font-size:15pt">🔑</div><b>Zugangs-Paket</b><br><span style="color:#8590a2;font-size:7.8pt">eine Datei vom Team</span></div>
+        <div style="font-size:15pt">✉️</div><b>Einladung</b><br><span style="color:#8590a2;font-size:7.8pt">eine Datei vom Team</span></div>
       <div style="color:#8590a2;font-weight:700;font-size:14pt">→</div>
       <div style="background:#fff;border:2px solid #dfe1e6;border-radius:10px;padding:10px 12px;text-align:center;font-size:8.6pt;min-width:118px">
-        <div style="font-size:15pt">📥</div><b>Paket laden</b><br><span style="color:#8590a2;font-size:7.8pt">prüft &amp; richtet ein</span></div>
+        <div style="font-size:15pt">✓</div><b>Annehmen</b><br><span style="color:#8590a2;font-size:7.8pt">Schlüssel entsteht lokal</span></div>
       <div style="color:#8590a2;font-weight:700;font-size:14pt">→</div>
       <div style="background:#f6fffb;border:2px solid #22a06b;border-radius:10px;padding:10px 12px;text-align:center;font-size:8.6pt;min-width:118px">
-        <div style="font-size:15pt">✓</div><b>Verbunden</b><br><span style="color:#8590a2;font-size:7.8pt">läuft von allein</span></div>
+        <div style="font-size:15pt">🔗</div><b>Verbunden</b><br><span style="color:#8590a2;font-size:7.8pt">läuft von allein</span></div>
     </div>
-    <figcaption><b>Abb. 21.2</b> – Ein Paket, ein Klick – die App richtet sich selbst ein.</figcaption>
+    <figcaption><b>Abb. 21.2</b> – Eine Einladung, ein Klick – die App richtet sich selbst ein.</figcaption>
   </figure>
 
   <div class="struktur">
-    <div class="stp"><span class="num">1</span><div><b>Zugangs-Paket bekommen.</b> Du bekommst von der „Verwalter:in" deines Teams <b>eine einzige Datei</b> (endet auf <span class="pfad">.a3kpaket</span>). Darin steckt schon <b>alles</b>: dein Geräte-Ausweis <b>und</b> die Team-Adresse. Du bekommst sie <b>persönlich</b> – z. B. auf einem USB-Stick.</div></div>
-    <div class="stp"><span class="num">2</span><div><b>Paket in die App laden.</b> Im Bereich <b>Team-Sync</b> auf <b>„Zugangs-Paket wählen"</b> klicken und die <span class="pfad">.a3kpaket</span>-Datei aussuchen. Die App <b>prüft den Ausweis</b>, <b>benennt dein Gerät automatisch</b> (aus dem Ausweis) und <b>trägt die Adresse selbst ein</b> – alles landet <b>verschlüsselt in deinem Tresor</b>. Du musst nichts abtippen.</div></div>
+    <div class="stp"><span class="num">1</span><div><b>Einladung bekommen.</b> Du bekommst von der „Verwalter:in" deines Teams <b>eine Datei</b> (endet auf <span class="pfad">.a3keinladung</span>). Sie ist <b>einmal</b> nutzbar. Du bekommst sie <b>persönlich/offline</b> – z. B. auf einem USB-Stick.</div></div>
+    <div class="stp"><span class="num">2</span><div><b>Einladung annehmen.</b> Im Bereich <b>Team-Sync</b> unter <b>„Mit einer Einladung verbinden"</b> deinem Gerät einen Namen geben, auf <b>„Einladung annehmen"</b> klicken und die <span class="pfad">.a3keinladung</span>-Datei wählen. <b>Dein Geräteschlüssel entsteht dabei nur auf diesem Gerät und verlässt es nie</b> – nach außen geht nur der öffentliche Teil, zurück kommt dein fertiger Ausweis. Alles landet <b>verschlüsselt in deinem Tresor</b>.</div></div>
     <div class="stp"><span class="num">3</span><div><b>Verbinden &amp; fertig.</b> Die App meldet <b>„verbunden"</b>. Ab jetzt brauchst du nichts mehr zu tun – kein zweites Passwort, kein erneutes Einrichten.</div></div>
   </div>
 
-  <div class="warn"><strong>Wichtig:</strong> Schick das Zugangs-Paket <strong>nicht</strong>
-  per E-Mail oder Chat – es enthält deinen privaten Schlüssel. Nur persönlich/offline
-  weitergeben (USB-Stick). Jedes Gerät bekommt sein <strong>eigenes</strong> Paket.</div>
+  <div class="warn"><strong>Wichtig:</strong> Gib die Einladung <strong>nicht</strong>
+  per E-Mail oder Chat weiter – der Code darin ist <strong>einmal</strong> gültig und
+  wirkt wie ein Schlüssel. Nur persönlich/offline weitergeben (USB-Stick). Jedes
+  Gerät bekommt seine <strong>eigene</strong> Einladung.</div>
+
+  <div class="merke"><strong>Alternative: Zugangs-Paket.</strong> Betreibt dein Team
+  einen <strong>eigenen</strong> Server (Self-Hosting), bekommst du statt einer
+  Einladung evtl. ein fertiges <strong>Zugangs-Paket</strong> (Datei
+  <span class="pfad">.a3kpaket</span>). Das lädst du im selben Bereich unter
+  <em>„Zugangs-Paket wählen"</em> – der Rest ist identisch.</div>
 
   <h3>Synchronisieren starten und stoppen</h3>
   <p>Das Abgleichen läuft nicht ständig im Hintergrund, sondern <strong>nur,
@@ -1245,27 +1258,23 @@
   Antrag-Status. Deine eigenen Projekte sind mit „dieses Team-Gerät" markiert.
   Auch hier erscheinen <strong>nur unkritische</strong> Board-Felder.</p>
 
-  <div class="warn"><strong>Ab hier technisch – nur für die <em>eine</em> Person, die
-  das Team einrichtet.</strong> Als normales Teammitglied brauchst du das Folgende
-  nicht; für dich genügen die drei Schritte oben (Paket laden → fertig). Fachbegriffe
-  wie <strong>NAS, DDNS, Caddy, CA-Zertifikat</strong> sind im Glossar (Kap. 26)
-  kurz erklärt; die vollständige Server-Einrichtung steht in der separaten Anleitung
-  „NAS-Einrichtung".</div>
+  <div class="warn"><strong>Ab hier nur für die <em>eine</em> Person, die das Team
+  aufsetzt.</strong> Als normales Teammitglied brauchst du das Folgende nicht; für
+  dich genügen die drei Schritte oben (Einladung annehmen → fertig).</div>
 
-  <h3>Für die Verwalter:in: Team einrichten (in der App)</h3>
+  <h3>Für die Verwalter:in: Team erstellen &amp; Mitglieder einladen</h3>
   <p>Eine Person im Team richtet das Team <strong>einmalig</strong> ein – komplett
-  in der App, ohne Kommandozeile. Im Bereich Team-Sync unter
-  <strong>„▸ Team verwalten"</strong>:</p>
+  in der App, ohne Kommandozeile und ohne eigenen Server. Im Bereich Team-Sync:</p>
   <div class="struktur">
-    <div class="stp"><span class="num">1</span><div><b>Team-CA erstellen.</b> Team-Adresse (DDNS der NAS) eintippen und auf <b>„Team-CA erstellen"</b> klicken. Der „Aussteller-Stempel" entsteht und liegt <b>verschlüsselt im Tresor</b> – er wird nie angezeigt.</div></div>
-    <div class="stp"><span class="num">2</span><div><b>CA-Zertifikat für die NAS speichern.</b> Diese öffentliche Datei kommt auf die NAS (zu Caddy), damit der Server Team-Geräte erkennt.</div></div>
-    <div class="stp"><span class="num">3</span><div><b>Zugangs-Pakete erzeugen.</b> Pro Person ein <span class="pfad">.a3kpaket</span> erstellen und offline (USB) weitergeben. Das eigene Gerät kannst du auch direkt einrichten.</div></div>
+    <div class="stp"><span class="num">1</span><div><b>Eigenes Team erstellen.</b> Unter <b>„▸ Oder: eigenes Team erstellen"</b> einen Team-Namen und einen Namen für dieses Gerät eingeben und auf <b>„Team erstellen"</b> klicken. Der Dienst legt das Team an, dieses Gerät wird <b>Eigentümer</b>. Dein Schlüssel entsteht nur auf deinem Gerät. Kein Konto, keine E-Mail nötig.</div></div>
+    <div class="stp"><span class="num">2</span><div><b>Mitglieder einladen.</b> Unter <b>„▸ Mitglied einladen"</b> für jedes weitere Gerät eine <span class="pfad">.a3keinladung</span>-Datei erzeugen und offline (USB) weitergeben. Jede Einladung ist <b>einmal</b> nutzbar.</div></div>
+    <div class="stp"><span class="num">3</span><div><b>Mitglieder verwalten.</b> Unter <b>„▸ Mitglieder verwalten"</b> siehst du alle Geräte des Teams und kannst einzelne bei Bedarf <b>sperren</b> oder wieder freigeben.</div></div>
   </div>
-  <div class="merke">Nur diese eine Person braucht „Team verwalten". Alle anderen
-  bekommen ein fertiges Zugangs-Paket und folgen den drei Schritten oben.</div>
+  <div class="merke">Nur der/die Eigentümer:in kann einladen und verwalten. Alle
+  anderen bekommen eine fertige Einladung und folgen den drei Schritten oben.</div>
 
   <h3>Wenn „nicht erreichbar" erscheint – Virenscanner (HTTPS-Scan)</h3>
-  <p>Die häufigste Stolperfalle ist <strong>nicht</strong> die NAS, sondern ein
+  <p>Die häufigste Stolperfalle ist <strong>nicht</strong> der Server, sondern ein
   <strong>Virenscanner auf deinem PC</strong>. Viele Schutzprogramme (z. B.
   <strong>Norton</strong>, aber auch andere mit „SSL-Scan" / „Web-Schutz")
   klinken sich heimlich in jede verschlüsselte Verbindung ein, um sie zu
@@ -1275,16 +1284,16 @@
 
   <div class="warn"><strong>Typisches Fehlerbild:</strong> Die App meldet
   „⚠&nbsp;Nicht erreichbar … <span class="pfad">invalid peer certificate:
-  UnknownIssuer</span>", obwohl die NAS läuft und das Lämpchen im Netzwerk grün
-  ist. Das bedeutet: Das Zertifikat, das bei der App ankommt, stammt
-  <strong>nicht</strong> von deiner Team-CA, sondern wurde vom Virenscanner
+  UnknownIssuer</span>", obwohl der Server läuft und deine Internet-Verbindung
+  steht. Das bedeutet: Das Zertifikat, das bei der App ankommt, stammt
+  <strong>nicht</strong> vom echten Server, sondern wurde vom Virenscanner
   ersetzt (z.&nbsp;B. Aussteller „Norton Web/Mail Shield").</div>
 
   <p><strong>So behebst du es</strong> – am besten gezielt, ohne den Virenscanner
   ganz abzuschalten:</p>
   <div class="struktur">
     <div class="stp"><span class="num">1</span><div>Im Virenscanner die Funktion zum <b>Scannen verschlüsselter Verbindungen</b> suchen (bei Norton z.&nbsp;B. unter <i>Einstellungen → Firewall</i> bzw. <i>„Sicheres Surfen"</i>, Stichworte „HTTPS-Scan", „Verschlüsselte Verbindungen scannen", „Web/Mail-Shield").</div></div>
-    <div class="stp"><span class="num">2</span><div>Dort eine <b>Ausnahme</b> für deine Team-Adresse eintragen (die NAS-Adresse, z.&nbsp;B. <span class="pfad">nas-…​.ts.net</span>, ggf. zusätzlich die IP). <b>Besser als alles abschalten</b>, weil der übrige Schutz erhalten bleibt.</div></div>
+    <div class="stp"><span class="num">2</span><div>Dort eine <b>Ausnahme</b> für die Team-Adresse eintragen (z.&nbsp;B. <span class="pfad">team.antrag3000.de</span>). <b>Besser als alles abschalten</b>, weil der übrige Schutz erhalten bleibt.</div></div>
     <div class="stp"><span class="num">3</span><div>In der App erneut <b>„Verbindung testen"</b> – jetzt sollte <b>✓ Verbunden</b> erscheinen.</div></div>
   </div>
   <div class="merke">Wer keinen solchen HTTPS-Scan aktiv hat, ist davon nicht
@@ -1295,7 +1304,7 @@
   <ul>
     <li>Nur Geräte mit gültigem <strong>Team-Ausweis</strong> kommen überhaupt an den Server (mTLS).</li>
     <li>Der Server kennt <strong>nur Board-Daten</strong> – nie deine sensiblen Inhalte.</li>
-    <li>Der Server liegt auf <strong>deiner eigenen NAS</strong>, nicht bei einem Fremdanbieter.</li>
+    <li>Übertragen wird <strong>nur die unkritische Ebene</strong> – deine sensiblen Inhalte (Tresor) verlassen das Gerät technisch <strong>nie</strong>, auch nicht zum Server.</li>
   </ul>
 
   <div class="tipp"><strong>Ausblick (in Prüfung):</strong> Ein <strong>Ende-zu-Ende
@@ -1338,7 +1347,7 @@
   und die <strong>Kommandozeile</strong> voraus.</div>
   <p>Wer ganz sichergehen will, schaut sich an, was <strong>wirklich über die
   Leitung</strong> geht – mit einem kleinen Mithör-Programm, unabhängig von der
-  App und ohne NAS:</p>
+  App und ohne echten Server:</p>
   <div class="struktur">
     <div class="stp"><span class="num">1</span><div>Im Projektordner ein Terminal öffnen und <code>node tools/echo-server.mjs</code> starten.</div></div>
     <div class="stp"><span class="num">2</span><div>In der App unter „Prüfen &amp; Protokoll" auf <b>„An lokalen Mitschnitt senden"</b> klicken (Adresse <span class="pfad">http://127.0.0.1:8099</span>).</div></div>
@@ -1375,8 +1384,8 @@
   übernommen</strong>; danach siehst du, was sich geändert hat. Drei Wege:</p>
   <ul>
     <li><strong>🔄 Vom Server holen</strong> – die zentral gepflegte Fassung vom
-    Server. Im <em>Team</em>-Modus über dein Zugangs-Paket, im <em>Einzelplatz</em>
-    über die eingestellte Server-Adresse (Kap. 21).</li>
+    Server. Im <em>Team</em>-Modus über deinen Geräte-Ausweis, im <em>Einzelplatz</em>
+    über den eingebauten Server (Kap. 21).</li>
     <li><strong>Update aus Datei laden</strong> – eine Katalog-Datei, die du
     z. B. per USB bekommen hast.</li>
     <li><strong>Auf Werkszustand zurücksetzen</strong> – zurück zur
@@ -1615,13 +1624,12 @@
     Synchronisation unkritischer Daten). Zwei getrennte Dinge – siehe Kapitel 20.</dd>
 
     <dt>Ich habe das Gerät mit dem Team-Ausweis verloren – was tun?</dt>
-    <dd>Kein Drama: Da jedes Gerät einen <strong>eigenen</strong> Ausweis hat,
-    sperrst du nur diesen einen; die anderen laufen weiter. Für ein neues Gerät
-    erzeugt die Verwalter:in einfach in der App ein neues Zugangs-Paket
-    (die Team-CA bleibt erhalten – siehe Kapitel 21). Deine sensiblen Daten
-    waren auf dem Server ohnehin nie.</dd>
+    <dd>Kein Drama: Der/die Team-Eigentümer:in <strong>sperrt</strong> das verlorene
+    Gerät unter „Mitglieder verwalten"; die anderen laufen weiter. Für ein Ersatzgerät
+    erstellt er/sie einfach eine <strong>neue Einladung</strong> (siehe Kapitel 21).
+    Deine sensiblen Daten waren auf dem Server ohnehin nie.</dd>
 
-    <dt>Die App meldet „nicht erreichbar / UnknownIssuer", obwohl die NAS läuft.</dt>
+    <dt>Die App meldet „nicht erreichbar / UnknownIssuer", obwohl der Server läuft.</dt>
     <dd>Meist ist ein <strong>Virenscanner</strong> (z.&nbsp;B. Norton) schuld, der
     verschlüsselte Verbindungen durchleuchtet und dabei das Server-Zertifikat
     austauscht. Trage in dessen HTTPS-/SSL-Scan eine <strong>Ausnahme für deine
@@ -1654,37 +1662,43 @@
     <dt>KFP – Kostenfinanzplan</dt><dd>Die Gegenüberstellung aller Kosten und ihrer
     Finanzierung (Kap. 16).</dd>
 
-    <dt>Zugangs-Paket (<code>.a3kpaket</code>)</dt><dd>Eine Datei, die dein Team dir
-    gibt. Sie enthält deinen Geräte-Ausweis und die Server-Adresse – einmal laden,
-    fertig (Kap. 21).</dd>
+    <dt>Einladung (<code>.a3keinladung</code>)</dt><dd>Die Datei, mit der du ein Gerät
+    mit dem Team verbindest. Sie ist <strong>einmal</strong> gültig; dein
+    Geräteschlüssel entsteht beim Annehmen lokal und verlässt das Gerät nie (Kap. 21).</dd>
+
+    <dt>Zugangs-Paket (<code>.a3kpaket</code>)</dt><dd>Ältere Alternative zur Einladung,
+    vor allem für <strong>Self-Hosting</strong>: enthält den fertigen Geräte-Ausweis und
+    die Server-Adresse – einmal laden, fertig (Kap. 21).</dd>
 
     <dt>Geräte-Ausweis (Zertifikat)</dt><dd>Der digitale Ausweis deines Geräts, mit
-    dem es sich beim Team-Server anmeldet. Steckt im Zugangs-Paket (Kap. 20).</dd>
+    dem es sich beim Team-Server anmeldet. Entsteht beim Annehmen einer Einladung –
+    der private Teil bleibt auf dem Gerät (Kap. 20).</dd>
 
-    <dt>CA / Team-CA (Zertifizierungsstelle)</dt><dd>Der „Aussteller-Stempel" deines
-    Teams. Damit werden die Geräte-Ausweise ausgestellt; nur so ausgestellte Ausweise
-    gelten (Kap. 20/21).</dd>
+    <dt>CA / Team-CA (Zertifizierungsstelle)</dt><dd>Der „Aussteller-Stempel", mit dem
+    der <strong>Server</strong> die Geräte-Ausweise ausstellt; nur so ausgestellte
+    Ausweise gelten (Kap. 20/21).</dd>
 
-    <dt>NAS</dt><dd>Ein kleiner, immer laufender Speicher-/Server-Computer im
-    Netzwerk (z. B. von Synology). Darauf läuft der Team-Server.</dd>
+    <dt>NAS</dt><dd>Ein kleiner, immer laufender Server-Computer im Netzwerk (z. B. von
+    Synology). Nur relevant, wenn du den Server <strong>selbst</strong> betreibst
+    (Self-Hosting).</dd>
 
-    <dt>Server</dt><dd>Das Programm auf der NAS, das die unkritischen Daten (Katalog,
-    Team-Board) bereitstellt und App-Updates ausliefert.</dd>
+    <dt>Server</dt><dd>Der Dienst, der die unkritischen Daten (Katalog, Team-Board)
+    bereitstellt und App-Updates ausliefert. Standardmäßig von Antrag 3000 betrieben;
+    optional selbst betreibbar (Self-Hosting).</dd>
 
     <dt>mTLS</dt><dd>Eine besonders strenge, beidseitig geprüfte
     HTTPS-Verschlüsselung: nicht nur der Server weist sich aus, sondern auch dein
     Gerät (über den Geräte-Ausweis).</dd>
 
-    <dt>Caddy</dt><dd>Die Server-Software auf der NAS, die die verschlüsselte
-    Verbindung und die Update-Auslieferung übernimmt. Nur für die Einrichtung
-    relevant.</dd>
+    <dt>Caddy</dt><dd>Server-Software, die die verschlüsselte Verbindung und die
+    Update-Auslieferung übernimmt. Nur bei Self-Hosting relevant.</dd>
 
-    <dt>DDNS</dt><dd>Ein gleichbleibender Internet-Name für deine NAS, auch wenn sich
-    ihre technische Adresse ändert. Wird bei der Server-Einrichtung verwendet.</dd>
+    <dt>DDNS</dt><dd>Ein gleichbleibender Internet-Name für einen selbst betriebenen
+    Server, auch wenn sich seine technische Adresse ändert. Nur bei Self-Hosting.</dd>
 
-    <dt>Tailscale</dt><dd>Ein privates, verschlüsseltes Netzwerk, über das deine
-    Geräte die NAS direkt und sicher erreichen – ohne den Router im Internet zu
-    öffnen (Adressen der Form 100.x.x.x bzw. …ts.net).</dd>
+    <dt>Tailscale</dt><dd>Ein privates, verschlüsseltes Netzwerk, mit dem ein
+    <strong>selbst betriebener</strong> Server ohne offenen Router-Port erreichbar
+    wird. Nur bei Self-Hosting relevant.</dd>
 
     <dt>DPAPI</dt><dd>Eine eingebaute Windows-Schutzfunktion, die Geheimnisse an dein
     angemeldetes Windows-Konto bindet. Antrag 3000 nutzt sie für „Auf diesem Gerät
@@ -1698,7 +1712,7 @@
     installiert nur Updates mit gültigem Siegel des Teams (Kap. 24).</dd>
   </dl>
 
-  <div class="ende">— Ende des Handbuchs · Antrag 3000, Version 0.4.1 —</div>
+  <div class="ende">— Ende des Handbuchs · Antrag 3000, Version 0.4.8 —</div>
 </section>
 
 </body>
