@@ -230,6 +230,12 @@
       daten = frisch;
       passwort = passwortWdh = "";
       ansicht = "offen";
+      // Erstes Aktivieren: die eingebackene Server-Anbindung sofort und
+      // automatisch herstellen – Förder-Datenbank im Hintergrund holen und
+      // still nach einer neueren App-Version schauen. Kein Knopfdruck nötig.
+      // (Beim späteren Entsperren erledigt das nachEntsperren; hier fehlte es.)
+      katalogStillPruefen();
+      updateStillPruefen();
     } catch (e) {
       fehler = String(e);
     } finally {
