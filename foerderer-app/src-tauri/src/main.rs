@@ -16,10 +16,41 @@
 
 mod verbinden;
 
+use tauri_plugin_updater::UpdaterExt;
+
+// --- Signiertes Selbstupdate (wie Nutzer- und Admin-App) ---
+
+/// Prüft den Updater-Endpoint. Rückgabe: neue Version, oder None wenn aktuell.
+#[tauri::command]
+async fn nach_update_suchen(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    let upd = app.updater().map_err(|e| e.to_string())?;
+    match upd.check().await.map_err(|e| e.to_string())? {
+        Some(u) => Ok(Some(u.version)),
+        None => Ok(None),
+    }
+}
+
+/// Lädt das (minisign-verifizierte) Update, installiert es und startet neu.
+#[tauri::command]
+async fn update_installieren(app: tauri::AppHandle) -> Result<(), String> {
+    let upd = app.updater().map_err(|e| e.to_string())?;
+    if let Some(u) = upd.check().await.map_err(|e| e.to_string())? {
+        u.download_and_install(|_, _| {}, || {})
+            .await
+            .map_err(|e| e.to_string())?;
+        app.restart();
+    }
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
+            // Signiertes Selbstupdate.
+            nach_update_suchen,
+            update_installieren,
             // Gehostetes Modell (Roadmap 7): online verbinden + live syncen.
             verbinden::foerderer_einladung_lesen,
             verbinden::foerderer_einladung_waehlen,
