@@ -66,6 +66,7 @@ pub fn run() {
             // Gehostetes Modell (Schritt 4): kopiersicheres Enrollment.
             sync::enroll_annehmen,
             sync::ausweis_erneuern,
+            sync::ausweis_grace_erneuern,
             sync::einladung_erstellen,
             sync::einladung_lesen,
             sync::mitglieder_holen,

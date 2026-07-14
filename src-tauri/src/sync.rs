@@ -614,6 +614,72 @@ pub async fn ausweis_erneuern(
     Ok(format!("{}{}", key.serialize_pem(), antwort.ausweis_pem))
 }
 
+/// Grace-Wiederanmeldung (Roadmap 10): heilt den Fall, dass der kurzlebige
+/// Ausweis abgelaufen ist (Gerät war länger offline als die Gültigkeit) und daher
+/// nicht mehr durch den mTLS-Kanal kommt. Läuft über den ÖFFENTLICHEN Kanal: die
+/// App legt ihren alten Ausweis (Zertifikatteil) + einen frischen Schlüssel + einen
+/// Besitznachweis vor (Signatur über den neuen Schlüssel mit dem ALTEN privaten
+/// Schlüssel). Gibt den neuen Ausweis zurück; das Frontend speichert ihn.
+#[tauri::command]
+pub async fn ausweis_grace_erneuern(
+    public_url: String,
+    ausweis_pem: String,
+    ca_pem: String,
+) -> Result<String, String> {
+    use p256::ecdsa::{signature::Signer, Signature, SigningKey};
+    use p256::pkcs8::DecodePrivateKey;
+
+    // Alten Ausweis trennen: privater Schlüssel (Teil VOR dem Zertifikat) und
+    // Zertifikat (ab BEGIN CERTIFICATE).
+    let cert_start = ausweis_pem
+        .find("-----BEGIN CERTIFICATE-----")
+        .ok_or_else(|| "Kein Zertifikat im Ausweis.".to_string())?;
+    let alt_schluessel_pem = &ausweis_pem[..cert_start];
+    let alt_cert_pem = ausweis_pem[cert_start..].to_string();
+
+    let sk = SigningKey::from_pkcs8_pem(alt_schluessel_pem)
+        .map_err(|e| format!("Alter Schluessel unlesbar: {e}"))?;
+
+    // Frisches Schlüsselpaar; Besitznachweis = Signatur über den neuen pubkey.
+    let neu_key = rcgen::KeyPair::generate().map_err(|e| format!("Schluessel nicht erzeugbar: {e}"))?;
+    let neu_pub = neu_key.public_key_pem();
+    let sig: Signature = sk.sign(neu_pub.as_bytes());
+    let proof: Vec<u8> = sig.to_der().as_bytes().to_vec();
+
+    let client = client_oeffentlich(&ca_pem)?;
+    let url = format!("{}/api/ausweis/grace", basis_url(&public_url));
+    let body = serde_json::json!({
+        "ausweisPem": alt_cert_pem,
+        "pubkeyPem": neu_pub,
+        "proof": proof,
+    })
+    .to_string();
+    let r = client
+        .post(&url)
+        .header("content-type", "application/json")
+        .body(body)
+        .send()
+        .await
+        .map_err(|e| format!("Wiederanmeldung fehlgeschlagen: {}", fehler_kette(&e)))?;
+    if !r.status().is_success() {
+        return Err(format!("Server antwortete mit {}", r.status().as_u16()));
+    }
+
+    #[derive(Deserialize)]
+    struct GraceAntwort {
+        #[serde(default)]
+        ausweis_pem: String,
+    }
+    let antwort: GraceAntwort = r
+        .json()
+        .await
+        .map_err(|e| format!("Antwort nicht lesbar: {e}"))?;
+    if !antwort.ausweis_pem.contains("CERTIFICATE") {
+        return Err("Der Server hat keinen gueltigen Ausweis geliefert.".into());
+    }
+    Ok(format!("{}{}", neu_key.serialize_pem(), antwort.ausweis_pem))
+}
+
 /// Erstellt ein NEUES Team (gehostet, ohne Konto/E-Mail): erzeugt das
 /// Schlüsselpaar lokal, ruft den öffentlichen Team-Endpunkt und wird dadurch
 /// Eigentümer des neuen Kontos. Rückgabe wie ein Zugangs-Paket (Frontend legt

@@ -73,6 +73,10 @@ base64 = "0.22"
 # (reines Rust, kein OpenSSL/Kommandozeile noetig). Feature x509-parser
 # fuer from_ca_cert_pem (CA aus dem Tresor zum Signieren laden).
 rcgen = { version = "0.13", features = ["x509-parser"] }
+# p256: Besitznachweis bei der Grace-Wiederanmeldung (Roadmap 10) – signiert den
+# neuen Schluessel mit dem ALTEN privaten Schluessel des Ausweises (ECDSA P-256,
+# RustCrypto). Ausweis-Schluessel stammen von rcgen (P-256), passen also.
+p256 = { version = "0.13", features = ["ecdsa", "pkcs8", "pem"] }
 # Phase 3 / Etappe 5: signiertes App-Selbstupdate.
 # tauri-plugin-updater prueft neue Versionen und installiert NUR Pakete,
 # deren Signatur zum eingebauten oeffentlichen Schluessel passt (etablierte

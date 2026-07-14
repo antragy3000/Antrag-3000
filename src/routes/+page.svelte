@@ -935,7 +935,25 @@
         await tresorSpeichern();
       }
     } catch {
-      /* still: offline o. Ä. – der bisherige Ausweis bleibt gültig */
+      // Die mTLS-Erneuerung ging nicht – häufigster echter Grund: der Ausweis
+      // ist bereits abgelaufen (Gerät war länger offline) und kommt gar nicht
+      // mehr durch den mTLS-Kanal. Dann über den öffentlichen Kanal grace-
+      // wiederanmelden (mit Besitznachweis). Scheitert auch das (offline oder
+      // zu lange abgelaufen), bleibt der bisherige Ausweis unangetastet.
+      try {
+        const neu = await invoke("ausweis_grace_erneuern", {
+          publicUrl: daten.einzelServer,
+          ausweisPem: daten.sync.ausweisPem,
+          caPem: daten.sync.caPem ?? "",
+        });
+        if (typeof neu === "string" && neu.includes("CERTIFICATE")) {
+          daten.sync.ausweisPem = neu;
+          daten.sync.ausweisErneuertAm = new Date().toISOString();
+          await tresorSpeichern();
+        }
+      } catch {
+        /* still: offline oder zu lange abgelaufen – bisheriger Ausweis bleibt */
+      }
     }
   }
 
