@@ -78,6 +78,15 @@
 	handle /api/foerderer-enroll {
 		reverse_proxy api:8080
 	}
+	# Grace-Wiederanmeldung (Roadmap 10): war ein Gerät länger offline als sein
+	# kurzlebiger Ausweis gültig ist, kommt der abgelaufene Ausweis nicht mehr
+	# durch den mTLS-Kanal (:8443). Es löst hier mit dem alten Ausweis + einem
+	# Besitznachweis (Signatur mit dem alten Schlüssel) innerhalb der Kulanzfrist
+	# einen frischen ein. NUR diese eine Ausweis-Route ist öffentlich; die
+	# normale Erneuerung (/api/ausweis/erneuern) bleibt mTLS-only.
+	handle /api/ausweis/grace {
+		reverse_proxy api:8080
+	}
 	handle {
 		respond "Antrag 3000" 200
 	}

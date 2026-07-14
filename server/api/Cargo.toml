@@ -37,11 +37,16 @@ rcgen = { version = "0.13", features = ["x509-parser"] }
 # Kommt ohnehin ueber rcgen mit; hier nur direkt nutzbar gemacht (keine neue
 # Transitiv-Last).
 time = "0.3"
+# x509-parser: prueft kryptografisch, dass ein vorgelegter Ausweis von der
+# Service-CA signiert ist (Grace-Wiederanmeldung + CA-Test) und liest dessen
+# Ablauf/oeffentlichen Schluessel.
+x509-parser = { version = "0.16", features = ["verify"] }
+# p256: Besitznachweis bei der Grace-Wiederanmeldung – die App signiert den neuen
+# Schluessel mit dem ALTEN (ECDSA P-256), der Server prueft das gegen den
+# oeffentlichen Schluessel des alten Ausweises. RustCrypto, keine Eigenbau-Krypto.
+p256 = { version = "0.13", features = ["ecdsa", "pkcs8", "pem"] }
 
 [dev-dependencies]
-# x509-parser: nur fuer den Test der Service-CA (prueft kryptografisch, dass
-# ein ausgestellter Ausweis wirklich von der Service-CA signiert ist).
-x509-parser = { version = "0.16", features = ["verify"] }
 
 [profile.release]
 opt-level = "z"

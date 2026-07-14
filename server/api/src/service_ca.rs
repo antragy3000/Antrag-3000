@@ -142,6 +142,31 @@ impl Ca {
             .map_err(|e| format!("Ausweis nicht signierbar: {e}"))?;
         Ok(cert.pem())
     }
+
+    /// Für die Grace-Wiederanmeldung (Roadmap 10): prüft, dass `cert_pem`
+    /// (1) von DIESER CA signiert ist und (2) höchstens `grace_tage` in der
+    /// Vergangenheit abgelaufen ist. Gibt bei Erfolg den öffentlichen Schlüssel
+    /// des Ausweises als SEC1-Bytes zurück – damit prüft der Aufrufer danach den
+    /// Besitznachweis (Signatur mit dem alten privaten Schlüssel).
+    pub fn grace_pubkey(&self, cert_pem: &str, grace_tage: i64) -> Result<Vec<u8>, String> {
+        use x509_parser::pem::parse_x509_pem;
+        let (_, ca_pem) =
+            parse_x509_pem(self.cert_pem.as_bytes()).map_err(|_| "CA unlesbar".to_string())?;
+        let ca = ca_pem.parse_x509().map_err(|_| "CA unparsebar".to_string())?;
+        let (_, leaf_pem) =
+            parse_x509_pem(cert_pem.as_bytes()).map_err(|_| "Ausweis unlesbar".to_string())?;
+        let leaf = leaf_pem.parse_x509().map_err(|_| "Ausweis unparsebar".to_string())?;
+        // (1) Echt von dieser CA signiert?
+        leaf.verify_signature(Some(ca.public_key()))
+            .map_err(|_| "Ausweis nicht von dieser CA".to_string())?;
+        // (2) Nicht länger als die Kulanzfrist abgelaufen?
+        let not_after = leaf.validity().not_after.timestamp();
+        let jetzt = time::OffsetDateTime::now_utc().unix_timestamp();
+        if jetzt > not_after + grace_tage * 86_400 {
+            return Err("Ausweis zu lange abgelaufen".into());
+        }
+        Ok(leaf.public_key().subject_public_key.data.to_vec())
+    }
 }
 
 /// SHA-256-Fingerabdruck (Hex) EINES Zertifikat-PEMs. Genau der Wert, den der

@@ -319,6 +319,7 @@ async fn main() {
         .route("/api/mitglieder", get(mitglieder_liste))
         .route("/api/mitglieder/:geraet_id", put(mitglied_status))
         .route("/api/ausweis/erneuern", post(ausweis_erneuern))
+        .route("/api/ausweis/grace", post(ausweis_grace))
         // Admin (Etappe 4): Zwei-Faktor (Admin-Gerät + Passwort).
         .route("/api/admin/anmelden", post(admin_anmelden))
         .route("/api/admin/meldungen", get(admin_meldungen))
@@ -1507,6 +1508,10 @@ const GERAET_GUELTIG_TAGE: i64 = 90;
 /// Förderer-Ausweise: vorerst länger, da die Förderer-App noch keine automatische
 /// Erneuerung hat (Folgeschritt).
 const FOERDERER_GUELTIG_TAGE: i64 = 397;
+/// Kulanzfrist der Grace-Wiederanmeldung: so lange NACH Ablauf darf ein Gerät
+/// über den öffentlichen Kanal (mit Besitznachweis) noch einen frischen Ausweis
+/// holen – für den Fall „länger als die Gültigkeit offline gewesen".
+const GRACE_TAGE: i64 = 90;
 
 /// Verbinden (POST /api/enroll): ein neues Gerät löst seinen Einmal-Token ein
 /// und erhält einen von der Service-CA signierten Ausweis. OHNE Zertifikat –
@@ -1691,6 +1696,121 @@ async fn ausweis_erneuern(
         .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
 
     // Neuen Fingerabdruck setzen, den bisherigen als Überlappung behalten.
+    sqlx::query(
+        "UPDATE geraet
+         SET cert_fingerprint = ?, cert_fingerprint_vorher = ?, zuletzt_gesehen = datetime('now')
+         WHERE id = ?",
+    )
+    .bind(&neu_fp)
+    .bind(&alt_fp)
+    .bind(geraet_id)
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(ErneuernAntwort {
+        ausweis_pem: neuer_ausweis,
+        service_ca_pem: ca.cert_pem.clone(),
+    }))
+}
+
+#[derive(Deserialize)]
+struct GraceBody {
+    /// Der alte (evtl. abgelaufene) Ausweis – nur der Zertifikatteil.
+    #[serde(rename = "ausweisPem", alias = "ausweis_pem")]
+    ausweis_pem: String,
+    /// Frischer öffentlicher Geräteschlüssel (SPKI-PEM).
+    #[serde(rename = "pubkeyPem", alias = "pubkey_pem")]
+    pubkey_pem: String,
+    /// Besitznachweis: ECDSA-P256-Signatur (DER) über die Bytes von `pubkey_pem`,
+    /// erzeugt mit dem ALTEN privaten Schlüssel. Beweist, dass der Aufrufer den
+    /// alten Schlüssel wirklich besitzt – nicht nur das öffentliche Zertifikat.
+    #[serde(default)]
+    proof: Vec<u8>,
+}
+
+/// Grace-Wiederanmeldung (POST /api/ausweis/grace, ÖFFENTLICH): heilt den Fall,
+/// dass ein Gerät länger als die Ausweis-Gültigkeit offline war – der abgelaufene
+/// Ausweis kommt nicht mehr durch den mTLS-Kanal. Ohne neue Einladung: die App
+/// legt ihren alten (echt CA-signierten) Ausweis + einen frischen Schlüssel + den
+/// Besitznachweis vor und bekommt innerhalb der Kulanzfrist einen neuen.
+/// Sicherheit: (1) Ausweis echt CA-signiert + höchstens GRACE_TAGE abgelaufen,
+/// (2) Besitznachweis mit dem alten Schlüssel (kein Kapern per öffentlichem Zert),
+/// (3) Gerät weiterhin `aktiv` (eine Sperre verhindert die Grace-Erneuerung),
+/// (4) Missbrauchs-Bremse. Kein Abo-Gate (hält nur ein Gerät am Leben).
+async fn ausweis_grace(
+    State(st): State<AppState>,
+    Json(body): Json<GraceBody>,
+) -> Result<Json<ErneuernAntwort>, StatusCode> {
+    let ca = st
+        .service_ca
+        .as_ref()
+        .as_ref()
+        .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    if body.pubkey_pem.len() > PUBKEY_MAX_BYTES
+        || body.ausweis_pem.len() > 8192
+        || body.proof.len() > 512
+    {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+    // Öffentlicher Kanal → globale Missbrauchs-Bremse (wie /api/team).
+    if !tempo_ok(&st, -1) {
+        return Err(StatusCode::TOO_MANY_REQUESTS);
+    }
+
+    // (1) Ausweis echt von der Service-CA + innerhalb der Kulanzfrist. Liefert den
+    //     öffentlichen Schlüssel des alten Ausweises (SEC1) für (2).
+    let sec1 = ca
+        .grace_pubkey(&body.ausweis_pem, GRACE_TAGE)
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
+
+    // (2) Besitznachweis: die Signatur über pubkey_pem muss zum alten Schlüssel
+    //     passen. Nur wer den alten PRIVATEN Schlüssel hat, kann sie erzeugen.
+    use p256::ecdsa::signature::Verifier;
+    let vk = p256::ecdsa::VerifyingKey::from_sec1_bytes(&sec1)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    let sig = p256::ecdsa::Signature::from_der(&body.proof)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    vk.verify(body.pubkey_pem.as_bytes(), &sig)
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
+
+    // (3) Gerät muss bekannt UND aktiv sein (Sperre bleibt wirksam).
+    let alt_fp = service_ca::fingerprint_von_pem(&body.ausweis_pem)
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    let row: Option<(i64, String)> = sqlx::query_as(
+        "SELECT id, status FROM geraet
+         WHERE cert_fingerprint = ? OR cert_fingerprint_vorher = ?",
+    )
+    .bind(&alt_fp)
+    .bind(&alt_fp)
+    .fetch_optional(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let Some((geraet_id, status)) = row else {
+        return Err(StatusCode::FORBIDDEN);
+    };
+    if status != "aktiv" {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
+    let bezeichnung: String =
+        sqlx::query_scalar("SELECT bezeichnung FROM geraet WHERE id = ?")
+            .bind(geraet_id)
+            .fetch_one(&st.pool)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let neuer_ausweis = ca
+        .signiere(
+            &body.pubkey_pem,
+            &bezeichnung,
+            "Antrag 3000 Team-Gerät",
+            GERAET_GUELTIG_TAGE,
+        )
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    let neu_fp = service_ca::fingerprint_von_pem(&neuer_ausweis)
+        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+
     sqlx::query(
         "UPDATE geraet
          SET cert_fingerprint = ?, cert_fingerprint_vorher = ?, zuletzt_gesehen = datetime('now')
@@ -3387,6 +3507,82 @@ mod tests {
         // Überlappung: der ALTE Ausweis wird weiter erkannt (kein Aussperren).
         let (_konto, g2) = konto_und_geraet(&st.pool, &hdr(&der_owner)).await.unwrap();
         assert_eq!(g2, geraet_id);
+    }
+
+    /// Grace-Wiederanmeldung: ein abgelaufen-gedachtes, aber echt CA-signiertes
+    /// Gerät bekommt mit gültigem Besitznachweis über den öffentlichen Kanal einen
+    /// frischen Ausweis (Überlappung gesetzt); ein falscher Besitznachweis (fremder
+    /// Schlüssel) wird abgewiesen.
+    #[tokio::test]
+    async fn grace_erneuerung_mit_besitznachweis() {
+        use p256::ecdsa::{signature::Signer, Signature, SigningKey};
+        use p256::pkcs8::DecodePrivateKey;
+
+        let st = test_state().await;
+        // Altes Gerät: rcgen-Schlüssel, echt von der Service-CA signiert.
+        let alt_key = rcgen::KeyPair::generate().unwrap();
+        let alt_cert = st
+            .service_ca
+            .as_ref()
+            .as_ref()
+            .unwrap()
+            .signiere(&alt_key.public_key_pem(), "Alt-Laptop", "Antrag 3000 Team-Gerät", 90)
+            .unwrap();
+        let alt_fp = service_ca::fingerprint_von_pem(&alt_cert).unwrap();
+        sqlx::query(
+            "INSERT INTO geraet (nutzer_id, bezeichnung, cert_fingerprint, status)
+             VALUES (1, 'Alt-Laptop', ?, 'aktiv')",
+        )
+        .bind(&alt_fp)
+        .execute(&st.pool)
+        .await
+        .unwrap();
+
+        // Neuer Schlüssel + Besitznachweis (Signatur über den neuen pubkey mit dem ALTEN Schlüssel).
+        let neu_key = rcgen::KeyPair::generate().unwrap();
+        let neu_pub = neu_key.public_key_pem();
+        let sk = SigningKey::from_pkcs8_pem(&alt_key.serialize_pem()).unwrap();
+        let sig: Signature = sk.sign(neu_pub.as_bytes());
+
+        let antw = ausweis_grace(
+            State(st.clone()),
+            Json(GraceBody {
+                ausweis_pem: alt_cert.clone(),
+                pubkey_pem: neu_pub.clone(),
+                proof: sig.to_der().as_bytes().to_vec(),
+            }),
+        )
+        .await
+        .expect("Grace muss klappen")
+        .0;
+        assert!(antw.ausweis_pem.contains("BEGIN CERTIFICATE"));
+
+        let neu_fp = service_ca::fingerprint_von_pem(&antw.ausweis_pem).unwrap();
+        let (fp, vorher): (String, Option<String>) = sqlx::query_as(
+            "SELECT cert_fingerprint, cert_fingerprint_vorher FROM geraet WHERE cert_fingerprint = ?",
+        )
+        .bind(&neu_fp)
+        .fetch_one(&st.pool)
+        .await
+        .unwrap();
+        assert_eq!(fp, neu_fp);
+        assert_eq!(vorher.as_deref(), Some(alt_fp.as_str()));
+
+        // Falscher Besitznachweis (fremder Schlüssel) → abgewiesen.
+        let fremd = rcgen::KeyPair::generate().unwrap();
+        let sk_fremd = SigningKey::from_pkcs8_pem(&fremd.serialize_pem()).unwrap();
+        let sig_fremd: Signature = sk_fremd.sign(neu_pub.as_bytes());
+        let err = ausweis_grace(
+            State(st.clone()),
+            Json(GraceBody {
+                ausweis_pem: alt_cert.clone(),
+                pubkey_pem: neu_pub.clone(),
+                proof: sig_fremd.to_der().as_bytes().to_vec(),
+            }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(err, StatusCode::UNAUTHORIZED);
     }
 
     /// Förderer verbinden: Token einlösen → Förderer-CA-signierter Ausweis +
