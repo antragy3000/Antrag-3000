@@ -308,6 +308,10 @@ async fn main() {
         // den öffentlichen :443-Kanal ein (Förderer-CA signiert kopiersicher).
         .route("/api/admin/foerderer-einladung", post(foerderer_einladung_erstellen))
         .route("/api/foerderer-enroll", post(foerderer_enroll))
+        // Förderer-Ausweis kurzlebig + Auto-Erneuerung (Roadmap 10): erneuern per
+        // mTLS, grace öffentlich (abgelaufener Ausweis kommt nicht mehr durch mTLS).
+        .route("/api/foerderer/ausweis-erneuern", post(foerderer_ausweis_erneuern))
+        .route("/api/foerderer/ausweis-grace", post(foerderer_ausweis_grace))
         // Ein verbundener Förderer pflegt seine Programme (Roadmap 6b, mTLS):
         .route("/api/foerderer-programme", get(foerderer_programme_lesen))
         .route(
@@ -557,6 +561,11 @@ async fn schema_anlegen(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     let _ = sqlx::query("ALTER TABLE foerderer_programm ADD COLUMN freigegeben_am TEXT")
         .execute(pool)
         .await;
+    // Roadmap 10 (kurzlebige Förderer-Ausweise): Überlappungs-Fingerabdruck für
+    // die Erneuerung – wie beim geraet, verhindert Aussperren bei der Umstellung.
+    let _ = sqlx::query("ALTER TABLE foerderer ADD COLUMN cert_fingerprint_vorher TEXT")
+        .execute(pool)
+        .await;
     Ok(())
 }
 
@@ -801,7 +810,11 @@ async fn eigentuemer_pruefen(
 async fn foerderer_aus_cert(pool: &SqlitePool, headers: &HeaderMap) -> Result<i64, StatusCode> {
     let fp = fingerprint(headers).ok_or(StatusCode::UNAUTHORIZED)?;
     let row: Option<(i64, String)> =
-        sqlx::query_as("SELECT id, status FROM foerderer WHERE cert_fingerprint = ?")
+        sqlx::query_as(
+            "SELECT id, status FROM foerderer
+             WHERE cert_fingerprint = ? OR cert_fingerprint_vorher = ?",
+        )
+            .bind(&fp)
             .bind(&fp)
             .fetch_optional(pool)
             .await
@@ -1505,9 +1518,9 @@ struct EnrollAntwort {
 /// (Roadmap 10): ein geklauter Ausweis verfällt von selbst; die App erneuert
 /// rechtzeitig über `/api/ausweis/erneuern`.
 const GERAET_GUELTIG_TAGE: i64 = 90;
-/// Förderer-Ausweise: vorerst länger, da die Förderer-App noch keine automatische
-/// Erneuerung hat (Folgeschritt).
-const FOERDERER_GUELTIG_TAGE: i64 = 397;
+/// Förderer-Ausweise: kurzlebig wie Team-Geräte – die Förderer-App erneuert
+/// automatisch (analog Roadmap 10).
+const FOERDERER_GUELTIG_TAGE: i64 = 90;
 /// Kulanzfrist der Grace-Wiederanmeldung: so lange NACH Ablauf darf ein Gerät
 /// über den öffentlichen Kanal (mit Besitznachweis) noch einen frischen Ausweis
 /// holen – für den Fall „länger als die Gültigkeit offline gewesen".
@@ -2081,6 +2094,130 @@ async fn foerderer_enroll(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
+    Ok(Json(FoerdererEnrollAntwort {
+        ausweis_pem,
+        foerderer_ca_pem: ca.cert_pem.clone(),
+    }))
+}
+
+/// Förderer-Ausweis erneuern (POST /api/foerderer/ausweis-erneuern, NUR mTLS):
+/// ein verbundener Förderer holt vor Ablauf einen frischen, kurzlebigen Ausweis
+/// (Roadmap 10). Frisches Schlüsselpaar entsteht in der Förderer-App; nur der
+/// öffentliche Teil kommt her. Überlappung via `cert_fingerprint_vorher`.
+async fn foerderer_ausweis_erneuern(
+    State(st): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<ErneuernBody>,
+) -> Result<Json<FoerdererEnrollAntwort>, StatusCode> {
+    let ca = st
+        .foerderer_ca
+        .as_ref()
+        .as_ref()
+        .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    if body.pubkey_pem.len() > PUBKEY_MAX_BYTES {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+    let fid = foerderer_aus_cert(&st.pool, &headers).await?;
+    let alt_fp = fingerprint(&headers).ok_or(StatusCode::UNAUTHORIZED)?;
+    let name: String = sqlx::query_scalar("SELECT name FROM foerderer WHERE id = ?")
+        .bind(fid)
+        .fetch_one(&st.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let ausweis_pem = ca
+        .signiere(&body.pubkey_pem, &name, "Antrag 3000 Förderer", FOERDERER_GUELTIG_TAGE)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    let neu_fp = service_ca::fingerprint_von_pem(&ausweis_pem)
+        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+    sqlx::query(
+        "UPDATE foerderer
+         SET cert_fingerprint = ?, cert_fingerprint_vorher = ?, zuletzt_gesehen = datetime('now')
+         WHERE id = ?",
+    )
+    .bind(&neu_fp)
+    .bind(&alt_fp)
+    .bind(fid)
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(Json(FoerdererEnrollAntwort {
+        ausweis_pem,
+        foerderer_ca_pem: ca.cert_pem.clone(),
+    }))
+}
+
+/// Förderer-Grace-Wiederanmeldung (POST /api/foerderer/ausweis-grace, ÖFFENTLICH):
+/// wie bei den Team-Geräten – ein abgelaufener, aber echt Förderer-CA-signierter
+/// Ausweis + Besitznachweis (p256-Signatur mit dem alten Schlüssel) ergibt
+/// innerhalb der Kulanzfrist einen frischen. Förderer muss `aktiv` sein; globale
+/// Missbrauchs-Bremse.
+async fn foerderer_ausweis_grace(
+    State(st): State<AppState>,
+    Json(body): Json<GraceBody>,
+) -> Result<Json<FoerdererEnrollAntwort>, StatusCode> {
+    let ca = st
+        .foerderer_ca
+        .as_ref()
+        .as_ref()
+        .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    if body.pubkey_pem.len() > PUBKEY_MAX_BYTES
+        || body.ausweis_pem.len() > 8192
+        || body.proof.len() > 512
+    {
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+    if !tempo_ok(&st, -1) {
+        return Err(StatusCode::TOO_MANY_REQUESTS);
+    }
+    let sec1 = ca
+        .grace_pubkey(&body.ausweis_pem, GRACE_TAGE)
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
+    use p256::ecdsa::signature::Verifier;
+    let vk = p256::ecdsa::VerifyingKey::from_sec1_bytes(&sec1)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    let sig = p256::ecdsa::Signature::from_der(&body.proof)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    vk.verify(body.pubkey_pem.as_bytes(), &sig)
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
+
+    let alt_fp = service_ca::fingerprint_von_pem(&body.ausweis_pem)
+        .ok_or(StatusCode::BAD_REQUEST)?;
+    let row: Option<(i64, String)> = sqlx::query_as(
+        "SELECT id, status FROM foerderer
+         WHERE cert_fingerprint = ? OR cert_fingerprint_vorher = ?",
+    )
+    .bind(&alt_fp)
+    .bind(&alt_fp)
+    .fetch_optional(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let Some((fid, status)) = row else {
+        return Err(StatusCode::FORBIDDEN);
+    };
+    if status != "aktiv" {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    let name: String = sqlx::query_scalar("SELECT name FROM foerderer WHERE id = ?")
+        .bind(fid)
+        .fetch_one(&st.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let ausweis_pem = ca
+        .signiere(&body.pubkey_pem, &name, "Antrag 3000 Förderer", FOERDERER_GUELTIG_TAGE)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+    let neu_fp = service_ca::fingerprint_von_pem(&ausweis_pem)
+        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+    sqlx::query(
+        "UPDATE foerderer
+         SET cert_fingerprint = ?, cert_fingerprint_vorher = ?, zuletzt_gesehen = datetime('now')
+         WHERE id = ?",
+    )
+    .bind(&neu_fp)
+    .bind(&alt_fp)
+    .bind(fid)
+    .execute(&st.pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(FoerdererEnrollAntwort {
         ausweis_pem,
         foerderer_ca_pem: ca.cert_pem.clone(),
@@ -3695,6 +3832,90 @@ mod tests {
         .await
         .unwrap_err();
         assert_eq!(err, StatusCode::CONFLICT);
+    }
+
+    /// Förderer-Ausweis: Erneuern (mTLS) setzt neuen Fingerabdruck mit Überlappung;
+    /// Grace (öffentlich) heilt mit gültigem Besitznachweis, weist einen falschen ab.
+    #[tokio::test]
+    async fn foerderer_ausweis_erneuern_und_grace() {
+        use p256::ecdsa::{signature::Signer, Signature, SigningKey};
+        use p256::pkcs8::DecodePrivateKey;
+
+        let st = test_state().await;
+        // Verbundenen Förderer anlegen (echt Förderer-CA-signiert).
+        let alt_key = rcgen::KeyPair::generate().unwrap();
+        let alt_cert = st
+            .foerderer_ca
+            .as_ref()
+            .as_ref()
+            .unwrap()
+            .signiere(&alt_key.public_key_pem(), "Kulturstiftung", "Antrag 3000 Förderer", 90)
+            .unwrap();
+        let alt_fp = service_ca::fingerprint_von_pem(&alt_cert).unwrap();
+        sqlx::query("INSERT INTO foerderer (name, cert_fingerprint, status) VALUES ('Kulturstiftung', ?, 'aktiv')")
+            .bind(&alt_fp)
+            .execute(&st.pool)
+            .await
+            .unwrap();
+
+        // Erneuern (mTLS): Header aus dem Zertifikat-DER bauen.
+        let der = {
+            let (_, p) = x509_parser::pem::parse_x509_pem(alt_cert.as_bytes()).unwrap();
+            p.contents
+        };
+        let neu_key = rcgen::KeyPair::generate().unwrap();
+        let antw = foerderer_ausweis_erneuern(
+            State(st.clone()),
+            hdr(&der),
+            Json(ErneuernBody { pubkey_pem: neu_key.public_key_pem() }),
+        )
+        .await
+        .expect("Erneuern muss klappen")
+        .0;
+        let neu_fp = service_ca::fingerprint_von_pem(&antw.ausweis_pem).unwrap();
+        let (fp, vorher): (String, Option<String>) = sqlx::query_as(
+            "SELECT cert_fingerprint, cert_fingerprint_vorher FROM foerderer WHERE cert_fingerprint = ?",
+        )
+        .bind(&neu_fp)
+        .fetch_one(&st.pool)
+        .await
+        .unwrap();
+        assert_eq!(fp, neu_fp);
+        assert_eq!(vorher.as_deref(), Some(alt_fp.as_str()));
+
+        // Grace (öffentlich): alter Ausweis + Besitznachweis mit dem ALTEN Schlüssel.
+        let neu2 = rcgen::KeyPair::generate().unwrap();
+        let neu2_pub = neu2.public_key_pem();
+        let sk = SigningKey::from_pkcs8_pem(&alt_key.serialize_pem()).unwrap();
+        let sig: Signature = sk.sign(neu2_pub.as_bytes());
+        let g = foerderer_ausweis_grace(
+            State(st.clone()),
+            Json(GraceBody {
+                ausweis_pem: alt_cert.clone(),
+                pubkey_pem: neu2_pub.clone(),
+                proof: sig.to_der().as_bytes().to_vec(),
+            }),
+        )
+        .await
+        .expect("Grace muss klappen")
+        .0;
+        assert!(g.ausweis_pem.contains("BEGIN CERTIFICATE"));
+
+        // Falscher Besitznachweis (fremder Schlüssel) → abgewiesen.
+        let fremd = rcgen::KeyPair::generate().unwrap();
+        let sk_f = SigningKey::from_pkcs8_pem(&fremd.serialize_pem()).unwrap();
+        let sig_f: Signature = sk_f.sign(neu2_pub.as_bytes());
+        let err = foerderer_ausweis_grace(
+            State(st.clone()),
+            Json(GraceBody {
+                ausweis_pem: alt_cert.clone(),
+                pubkey_pem: neu2_pub.clone(),
+                proof: sig_f.to_der().as_bytes().to_vec(),
+            }),
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(err, StatusCode::UNAUTHORIZED);
     }
 
     /// Ein verbundener Förderer legt ein Programm an, sieht es, zieht es zurück

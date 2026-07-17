@@ -87,6 +87,12 @@
 	handle /api/ausweis/grace {
 		reverse_proxy api:8080
 	}
+	# Förderer-Grace (Roadmap 10): analog für Förderer-Ausweise. Nur diese
+	# eine Förderer-Ausweis-Route ist öffentlich; /api/foerderer/ausweis-erneuern
+	# bleibt mTLS-only.
+	handle /api/foerderer/ausweis-grace {
+		reverse_proxy api:8080
+	}
 	handle {
 		respond "Antrag 3000" 200
 	}

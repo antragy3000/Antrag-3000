@@ -174,6 +174,28 @@ impl Ca {
             .map_err(|e| format!("Zwischen-CA nicht signierbar: {e}"))?;
         Ok((cert.pem(), key.serialize_pem()))
     }
+
+    /// Grace-Wiederanmeldung für einstufige CAs (Förderer-CA): prüft, dass das
+    /// erste Zertifikat in `cert_pem` von DIESER CA signiert ist und höchstens
+    /// `grace_tage` abgelaufen; gibt den öffentlichen Schlüssel (SEC1) für die
+    /// Besitznachweis-Prüfung zurück.
+    pub fn grace_pubkey(&self, cert_pem: &str, grace_tage: i64) -> Result<Vec<u8>, String> {
+        use x509_parser::pem::parse_x509_pem;
+        let (_, ca_pem) =
+            parse_x509_pem(self.cert_pem.as_bytes()).map_err(|_| "CA unlesbar".to_string())?;
+        let ca = ca_pem.parse_x509().map_err(|_| "CA unparsebar".to_string())?;
+        let (_, leaf_pem) =
+            parse_x509_pem(cert_pem.as_bytes()).map_err(|_| "Ausweis unlesbar".to_string())?;
+        let leaf = leaf_pem.parse_x509().map_err(|_| "Ausweis unparsebar".to_string())?;
+        leaf.verify_signature(Some(ca.public_key()))
+            .map_err(|_| "Ausweis nicht von dieser CA".to_string())?;
+        let not_after = leaf.validity().not_after.timestamp();
+        let jetzt = time::OffsetDateTime::now_utc().unix_timestamp();
+        if jetzt > not_after + grace_tage * 86_400 {
+            return Err("Ausweis zu lange abgelaufen".into());
+        }
+        Ok(leaf.public_key().subject_public_key.data.to_vec())
+    }
 }
 
 /// Zweistufige Service-CA (Roadmap 10): **Wurzel** (Vertrauensanker; ihr Schlüssel
