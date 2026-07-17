@@ -2009,7 +2009,7 @@
                     Förder-Datenbank aktualisieren
                   </button>
                 </div>
-                <button class="verwaltung-toggle klein-toggle" onclick={() => (selfHostOffen = !selfHostOffen)}>
+                <button type="button" class="self-host-toggle" onclick={() => (selfHostOffen = !selfHostOffen)}>
                   {selfHostOffen ? "▾" : "▸"} Erweitert (Self-Hosting)
                 </button>
                 {#if selfHostOffen}
@@ -2535,6 +2535,23 @@
   }
   .einzel-knoepfe {
     margin-top: 14px;
+  }
+  /* Dezenter Text-Umschalter statt großer Knopf – Self-Hosting ist die Ausnahme. */
+  .self-host-toggle {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--grau, #5e6c84);
+    font: inherit;
+    font-size: 0.8rem;
+    cursor: pointer;
+    opacity: 0.8;
+  }
+  .self-host-toggle:hover {
+    opacity: 1;
+    text-decoration: underline;
   }
   .einzel-panel .primaer {
     width: auto;

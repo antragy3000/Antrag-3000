@@ -73,6 +73,13 @@ export function leereStammdaten() {
 export const STANDARD_SERVER = "https://sync.antrag3000.de";  // oeffentlich (Katalog/Update/Enroll)
 export const STANDARD_TEAM_SYNC = "team.antrag3000.de:8443";  // mTLS-Sync-Adresse (Team)
 
+// Erkennt die ABGESCHALTETEN NAS-/Tailscale-Adressen (vor dem Netcup-Umzug),
+// damit ältere Tresore automatisch auf den eingebackenen Dienst umziehen statt
+// ins Leere zu laufen ("Vom Server nicht ladbar …ts.net").
+function istAbgeschalteteAdresse(adr) {
+  return typeof adr === "string" && /nas-yh|tail73a506|\.ts\.net/i.test(adr);
+}
+
 // Struktur eines frischen Tresors (wächst in späteren Schritten).
 // Bewusst ohne Projekt: Die App fordert zum Erstellen auf.
 export function frischerTresor() {
@@ -327,6 +334,15 @@ export function normalisieren(d) {
   }
   if (typeof d.einzelServer !== "string") {
     d.einzelServer = STANDARD_SERVER;
+    veraendert = true;
+  } else if (istAbgeschalteteAdresse(d.einzelServer)) {
+    // Alte NAS/Tailscale-Adresse -> auf den eingebackenen Dienst umziehen.
+    d.einzelServer = STANDARD_SERVER;
+    veraendert = true;
+  }
+  // Team-Sync-Adresse ebenso von der alten NAS auf den Dienst umziehen.
+  if (d.sync && istAbgeschalteteAdresse(d.sync.adresse)) {
+    d.sync.adresse = STANDARD_TEAM_SYNC;
     veraendert = true;
   }
   if (!Array.isArray(d.katalogMeldungen)) {
