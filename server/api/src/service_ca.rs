@@ -143,29 +143,173 @@ impl Ca {
         Ok(cert.pem())
     }
 
-    /// Für die Grace-Wiederanmeldung (Roadmap 10): prüft, dass `cert_pem`
-    /// (1) von DIESER CA signiert ist und (2) höchstens `grace_tage` in der
-    /// Vergangenheit abgelaufen ist. Gibt bei Erfolg den öffentlichen Schlüssel
-    /// des Ausweises als SEC1-Bytes zurück – damit prüft der Aufrufer danach den
-    /// Besitznachweis (Signatur mit dem alten privaten Schlüssel).
+    /// Erzeugt eine von DIESER (Wurzel-)CA signierte **Zwischen-CA** (Roadmap 10):
+    /// eigenes Schlüsselpaar + ein CA-Zertifikat, das die Wurzel abstempelt. Braucht
+    /// den Wurzel-Schlüssel – nur bei diesem EINMALIGEN Schritt; danach darf der
+    /// Wurzel-Schlüssel offline. Gibt (zwischen_cert_pem, zwischen_key_pem).
+    pub fn erzeuge_zwischen_ca(&self, cn: &str) -> Result<(String, String), String> {
+        let wurzel_key = rcgen::KeyPair::from_pem(&self.key_pem)
+            .map_err(|e| format!("Wurzel-Schlüssel unlesbar: {e}"))?;
+        let wurzel_cert = rcgen::CertificateParams::from_ca_cert_pem(&self.cert_pem)
+            .map_err(|e| format!("Wurzel-Zertifikat unlesbar: {e}"))?
+            .self_signed(&wurzel_key)
+            .map_err(|e| format!("Wurzel nicht rekonstruierbar: {e}"))?;
+        let key = rcgen::KeyPair::generate().map_err(|e| format!("Schlüssel nicht erzeugbar: {e}"))?;
+        let mut p = rcgen::CertificateParams::new(Vec::<String>::new())
+            .map_err(|e| format!("Zwischen-CA-Parameter fehlerhaft: {e}"))?;
+        p.distinguished_name
+            .push(rcgen::DnType::OrganizationName, "Antrag 3000");
+        p.distinguished_name.push(rcgen::DnType::CommonName, cn);
+        // Darf Blatt-Ausweise signieren, aber keine weiteren (Unter-)CAs.
+        p.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Constrained(0));
+        p.key_usages = vec![
+            rcgen::KeyUsagePurpose::KeyCertSign,
+            rcgen::KeyUsagePurpose::CrlSign,
+        ];
+        let jetzt = time::OffsetDateTime::now_utc();
+        p.not_before = jetzt - time::Duration::hours(1);
+        p.not_after = jetzt + time::Duration::days(1095); // ~3 Jahre
+        let cert = p
+            .signed_by(&key, &wurzel_cert, &wurzel_key)
+            .map_err(|e| format!("Zwischen-CA nicht signierbar: {e}"))?;
+        Ok((cert.pem(), key.serialize_pem()))
+    }
+}
+
+/// Zweistufige Service-CA (Roadmap 10): **Wurzel** (Vertrauensanker; ihr Schlüssel
+/// darf offline verwahrt werden) + **Zwischen-CA** (signiert die Blatt-Ausweise am
+/// Server). Caddy vertraut weiter der Wurzel; jeder ausgestellte Ausweis trägt die
+/// Kette Blatt→Zwischen. Wird der Server geknackt, ist nur die Zwischen-CA
+/// betroffen – aus der (offline) Wurzel stellt man eine neue aus, statt „alles neu".
+pub struct StufenCa {
+    /// Wurzel-Zertifikat (öffentlich; Caddy-Trust-Anker + `service_ca_pem` in Antworten).
+    pub wurzel_cert_pem: String,
+    /// Zwischen-Zertifikat – wird an jeden Blatt-Ausweis angehängt (Kette).
+    pub zwischen_cert_pem: String,
+    /// Zwischen-Schlüssel – signiert die Blatt-Ausweise (bleibt am Server).
+    zwischen_key_pem: String,
+}
+
+impl StufenCa {
+    /// Lädt/erzeugt Wurzel (`service-ca.crt/.key`, unverändert – bestehende bleibt)
+    /// und Zwischen-CA (`service-int.crt/.key`). Fehlt die Zwischen-CA, wird sie
+    /// EINMALIG aus der Wurzel erzeugt (braucht dafür den Wurzel-Schlüssel; danach
+    /// darf er offline – die Zwischen-CA signiert im Alltag allein).
+    pub fn laden_oder_erzeugen(dir: &Path) -> Result<Self, String> {
+        let wurzel_crt = dir.join("service-ca.crt");
+        let int_crt = dir.join("service-int.crt");
+        let int_key = dir.join("service-int.key");
+
+        // Ist die Zwischen-CA schon da? Dann reicht das Wurzel-ZERTIFIKAT als
+        // Vertrauensanker – der Wurzel-SCHLÜSSEL wird im Alltag NICHT gebraucht
+        // (er darf offline liegen). WICHTIG: hier die Wurzel NICHT neu erzeugen,
+        // sonst würde ein offline genommener Schlüssel eine neue Wurzel auslösen
+        // und alle bestehenden Ausweise entwerten.
+        if let (Ok(zc), Ok(zk), Ok(wc)) = (
+            std::fs::read_to_string(&int_crt),
+            std::fs::read_to_string(&int_key),
+            std::fs::read_to_string(&wurzel_crt),
+        ) {
+            if !zc.trim().is_empty() && !zk.trim().is_empty() && !wc.trim().is_empty() {
+                return Ok(StufenCa {
+                    wurzel_cert_pem: wc,
+                    zwischen_cert_pem: zc,
+                    zwischen_key_pem: zk,
+                });
+            }
+        }
+
+        // Erststart (noch keine Zwischen-CA): Wurzel laden/erzeugen (braucht den
+        // Wurzel-Schlüssel) und die Zwischen-CA einmalig daraus ableiten.
+        let wurzel = Ca::laden_oder_erzeugen(dir, "service-ca", "Antrag 3000 Service-CA")?;
+        let (zc, zk) = wurzel.erzeuge_zwischen_ca("Antrag 3000 Service-CA (Zwischen)")?;
+        schreibe_geschuetzt(&int_key, &zk, 0o600)
+            .map_err(|e| format!("Zwischen-Schlüssel nicht speicherbar: {e}"))?;
+        schreibe_geschuetzt(&int_crt, &zc, 0o644)
+            .map_err(|e| format!("Zwischen-Zertifikat nicht speicherbar: {e}"))?;
+        Ok(StufenCa {
+            wurzel_cert_pem: wurzel.cert_pem,
+            zwischen_cert_pem: zc,
+            zwischen_key_pem: zk,
+        })
+    }
+
+    /// Fingerabdruck der Zwischen-CA (nur zum Loggen/Prüfen).
+    pub fn fingerprint(&self) -> String {
+        fingerprint_von_pem(&self.zwischen_cert_pem).unwrap_or_default()
+    }
+
+    /// Signiert einen Blatt-Ausweis mit dem ZWISCHEN-Schlüssel (kopiersicher aus
+    /// dem öffentlichen Schlüssel des Gegenübers) und hängt das Zwischen-Zertifikat
+    /// an → fertige Kette (Blatt + Zwischen) für den Client. Der Fingerabdruck des
+    /// Ausweises ist der des BLATTS (erstes Zertifikat).
+    pub fn ausweis_kette(
+        &self,
+        pubkey_pem: &str,
+        cn: &str,
+        org: &str,
+        gueltig_tage: i64,
+    ) -> Result<String, String> {
+        let int_key = rcgen::KeyPair::from_pem(&self.zwischen_key_pem)
+            .map_err(|e| format!("Zwischen-Schlüssel unlesbar: {e}"))?;
+        let int_cert = rcgen::CertificateParams::from_ca_cert_pem(&self.zwischen_cert_pem)
+            .map_err(|e| format!("Zwischen-Zertifikat unlesbar: {e}"))?
+            .self_signed(&int_key)
+            .map_err(|e| format!("Zwischen-CA nicht rekonstruierbar: {e}"))?;
+        let pubkey = rcgen::SubjectPublicKeyInfo::from_pem(pubkey_pem)
+            .map_err(|e| format!("Öffentlicher Schlüssel unlesbar: {e}"))?;
+        let cn = cn.trim();
+        if cn.is_empty() {
+            return Err("Name (CN) fehlt.".into());
+        }
+        let mut p = rcgen::CertificateParams::new(Vec::<String>::new())
+            .map_err(|e| format!("Ausweis-Parameter fehlerhaft: {e}"))?;
+        p.distinguished_name
+            .push(rcgen::DnType::OrganizationName, org);
+        p.distinguished_name.push(rcgen::DnType::CommonName, cn);
+        p.is_ca = rcgen::IsCa::NoCa;
+        p.key_usages = vec![rcgen::KeyUsagePurpose::DigitalSignature];
+        let jetzt = time::OffsetDateTime::now_utc();
+        p.not_before = jetzt - time::Duration::hours(1);
+        p.not_after = jetzt + time::Duration::days(gueltig_tage.max(1));
+        let blatt = p
+            .signed_by(&pubkey, &int_cert, &int_key)
+            .map_err(|e| format!("Ausweis nicht signierbar: {e}"))?;
+        Ok(format!("{}{}", blatt.pem(), self.zwischen_cert_pem))
+    }
+
+    /// Grace-Wiederanmeldung (Roadmap 10): das Blatt (erstes Zertifikat in
+    /// `cert_pem`) muss von der Zwischen-CA ODER – für Alt-Ausweise – direkt von der
+    /// Wurzel signiert sein und höchstens `grace_tage` abgelaufen. Gibt bei Erfolg
+    /// den öffentlichen Blatt-Schlüssel (SEC1) für die Besitznachweis-Prüfung zurück.
     pub fn grace_pubkey(&self, cert_pem: &str, grace_tage: i64) -> Result<Vec<u8>, String> {
         use x509_parser::pem::parse_x509_pem;
-        let (_, ca_pem) =
-            parse_x509_pem(self.cert_pem.as_bytes()).map_err(|_| "CA unlesbar".to_string())?;
-        let ca = ca_pem.parse_x509().map_err(|_| "CA unparsebar".to_string())?;
-        let (_, leaf_pem) =
+        let (_, blatt_pem) =
             parse_x509_pem(cert_pem.as_bytes()).map_err(|_| "Ausweis unlesbar".to_string())?;
-        let leaf = leaf_pem.parse_x509().map_err(|_| "Ausweis unparsebar".to_string())?;
-        // (1) Echt von dieser CA signiert?
-        leaf.verify_signature(Some(ca.public_key()))
-            .map_err(|_| "Ausweis nicht von dieser CA".to_string())?;
-        // (2) Nicht länger als die Kulanzfrist abgelaufen?
-        let not_after = leaf.validity().not_after.timestamp();
+        let blatt = blatt_pem
+            .parse_x509()
+            .map_err(|_| "Ausweis unparsebar".to_string())?;
+        let von_uns = [&self.zwischen_cert_pem, &self.wurzel_cert_pem]
+            .iter()
+            .any(|ca_pem| {
+                parse_x509_pem(ca_pem.as_bytes())
+                    .ok()
+                    .and_then(|(_, p)| {
+                        p.parse_x509()
+                            .ok()
+                            .map(|c| blatt.verify_signature(Some(c.public_key())).is_ok())
+                    })
+                    .unwrap_or(false)
+            });
+        if !von_uns {
+            return Err("Ausweis nicht von dieser CA".into());
+        }
+        let not_after = blatt.validity().not_after.timestamp();
         let jetzt = time::OffsetDateTime::now_utc().unix_timestamp();
         if jetzt > not_after + grace_tage * 86_400 {
             return Err("Ausweis zu lange abgelaufen".into());
         }
-        Ok(leaf.public_key().subject_public_key.data.to_vec())
+        Ok(blatt.public_key().subject_public_key.data.to_vec())
     }
 }
 
@@ -184,13 +328,18 @@ pub fn fingerprint_von_pem(cert_pem: &str) -> Option<String> {
 /// Base64 zwischen den BEGIN/END-Zeilen dekodieren.
 fn pem_zu_der(pem: &str) -> Option<Vec<u8>> {
     use base64::Engine;
-    let b64: String = pem
+    // Nur das ERSTE Zertifikat: ein Ausweis kann eine Kette sein (Blatt +
+    // Zwischen-CA); der Fingerabdruck ist immer der des BLATTS (erstes Zert),
+    // genau wie ihn Caddy aus dem vorgelegten Client-Zertifikat bildet.
+    const B: &str = "-----BEGIN CERTIFICATE-----";
+    const E: &str = "-----END CERTIFICATE-----";
+    let start = pem.find(B)? + B.len();
+    let laenge = pem[start..].find(E)?;
+    let b64: String = pem[start..start + laenge]
         .lines()
-        .filter(|l| !l.starts_with("-----"))
+        .map(|l| l.trim())
         .collect::<String>();
-    base64::engine::general_purpose::STANDARD
-        .decode(b64.trim())
-        .ok()
+    base64::engine::general_purpose::STANDARD.decode(b64).ok()
 }
 
 /// Schreibt eine Datei und setzt (auf Unix) enge Rechte. Auf Windows – dem
@@ -253,6 +402,34 @@ mod tests {
         let foerderer = Ca::laden_oder_erzeugen(&dir, "foerderer-ca", "Antrag 3000 Förderer-CA").unwrap();
         assert_ne!(service.cert_pem, foerderer.cert_pem);
         assert_ne!(service.fingerprint(), foerderer.fingerprint());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Offline-Wurzel: ist die Zwischen-CA erst einmal da, lädt der Server auch
+    /// OHNE Wurzel-Schlüssel weiter – und erzeugt die Wurzel NICHT neu (sonst
+    /// würden alle bestehenden Ausweise entwertet).
+    #[test]
+    fn stufen_ca_laedt_ohne_wurzel_schluessel() {
+        let dir = std::env::temp_dir().join(format!("a3k-stufen-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+
+        // Erststart: Wurzel + Zwischen-CA entstehen.
+        let ca1 = StufenCa::laden_oder_erzeugen(&dir).unwrap();
+        assert!(dir.join("service-ca.key").exists());
+        assert!(dir.join("service-int.crt").exists());
+
+        // Wurzel-Schlüssel „offline nehmen" (löschen).
+        std::fs::remove_file(dir.join("service-ca.key")).unwrap();
+
+        // Neu laden: gleiche Wurzel + gleiche Zwischen-CA, Wurzel-Schlüssel bleibt weg.
+        let ca2 = StufenCa::laden_oder_erzeugen(&dir).unwrap();
+        assert_eq!(ca1.wurzel_cert_pem, ca2.wurzel_cert_pem, "Wurzel darf nicht neu erzeugt werden");
+        assert_eq!(ca1.zwischen_cert_pem, ca2.zwischen_cert_pem);
+        assert!(
+            !dir.join("service-ca.key").exists(),
+            "Wurzel-Schlüssel darf nicht wieder auftauchen"
+        );
+
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

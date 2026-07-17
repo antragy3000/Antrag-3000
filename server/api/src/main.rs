@@ -24,7 +24,7 @@
 // ============================================================
 
 mod service_ca;
-use service_ca::Ca;
+use service_ca::{Ca, StufenCa};
 
 use std::collections::HashMap;
 use std::env;
@@ -59,7 +59,7 @@ struct AppState {
     // Service-CA (gehostetes Modell): signiert Team-Geräte-Ausweise. None, wenn
     // sie beim Start nicht geladen/erzeugt werden konnte – dann läuft der
     // bisherige Team-CA-Sync unbeirrt weiter, nur die Auto-Signierung ist aus.
-    service_ca: Arc<Option<Ca>>,
+    service_ca: Arc<Option<StufenCa>>,
     // Förderer-CA (Roadmap 6): signiert Förderer-Ausweise (Förderer verbinden
     // sich online). None ⇒ Förderer-Enrollment aus, Rest unberührt.
     foerderer_ca: Arc<Option<Ca>>,
@@ -247,10 +247,10 @@ async fn main() {
     // Ordner nicht beschreibbar), läuft der Server trotzdem weiter – der
     // bisherige Team-CA-Sync ist davon nicht betroffen.
     let ca_dir = service_ca_dir(&db_pfad);
-    let service_ca = match Ca::laden_oder_erzeugen(&ca_dir, "service-ca", "Antrag 3000 Service-CA") {
+    let service_ca = match StufenCa::laden_oder_erzeugen(&ca_dir) {
         Ok(ca) => {
             println!(
-                "Service-CA aktiv (Fingerabdruck {}…).",
+                "Service-CA (2-stufig) aktiv (Zwischen-Fingerabdruck {}…).",
                 &ca.fingerprint()[..ca.fingerprint().len().min(16)]
             );
             Some(ca)
@@ -1443,7 +1443,7 @@ async fn einladung_erstellen(
     }
 
     // Service-CA muss verfügbar sein, sonst könnte niemand den Token einlösen.
-    let service_ca: &Option<Ca> = &st.service_ca;
+    let service_ca: &Option<StufenCa> = &st.service_ca;
     let ca = service_ca.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
 
     let name = body.name.as_deref().unwrap_or("").trim();
@@ -1474,7 +1474,7 @@ async fn einladung_erstellen(
     Ok(Json(EinladungAntwort {
         token,
         ablauf,
-        service_ca_pem: ca.cert_pem.clone(),
+        service_ca_pem: ca.wurzel_cert_pem.clone(),
     }))
 }
 
@@ -1526,7 +1526,7 @@ async fn enroll(
     State(st): State<AppState>,
     Json(body): Json<EnrollBody>,
 ) -> Result<Json<EnrollAntwort>, StatusCode> {
-    let service_ca: &Option<Ca> = &st.service_ca;
+    let service_ca: &Option<StufenCa> = &st.service_ca;
     let ca = service_ca.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
 
     let token = body.token.trim();
@@ -1561,7 +1561,7 @@ async fn enroll(
         return match (ausweis_gesp, pk_gesp) {
             (Some(ausweis), Some(p)) if p == pk_fp => Ok(Json(EnrollAntwort {
                 ausweis_pem: ausweis,
-                service_ca_pem: ca.cert_pem.clone(),
+                service_ca_pem: ca.wurzel_cert_pem.clone(),
             })),
             _ => Err(StatusCode::CONFLICT),
         };
@@ -1585,7 +1585,7 @@ async fn enroll(
 
     // Kopiersicher signieren (nur der öffentliche Schlüssel geht ein).
     let ausweis_pem = ca
-        .signiere(&body.pubkey_pem, name, "Antrag 3000 Team-Gerät", GERAET_GUELTIG_TAGE)
+        .ausweis_kette(&body.pubkey_pem, name, "Antrag 3000 Team-Gerät", GERAET_GUELTIG_TAGE)
         .map_err(|_| StatusCode::BAD_REQUEST)?;
     let cert_fp = service_ca::fingerprint_von_pem(&ausweis_pem)
         .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -1632,7 +1632,7 @@ async fn enroll(
 
     Ok(Json(EnrollAntwort {
         ausweis_pem,
-        service_ca_pem: ca.cert_pem.clone(),
+        service_ca_pem: ca.wurzel_cert_pem.clone(),
     }))
 }
 
@@ -1685,7 +1685,7 @@ async fn ausweis_erneuern(
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let neuer_ausweis = ca
-        .signiere(
+        .ausweis_kette(
             &body.pubkey_pem,
             &bezeichnung,
             "Antrag 3000 Team-Gerät",
@@ -1710,7 +1710,7 @@ async fn ausweis_erneuern(
 
     Ok(Json(ErneuernAntwort {
         ausweis_pem: neuer_ausweis,
-        service_ca_pem: ca.cert_pem.clone(),
+        service_ca_pem: ca.wurzel_cert_pem.clone(),
     }))
 }
 
@@ -1801,7 +1801,7 @@ async fn ausweis_grace(
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let neuer_ausweis = ca
-        .signiere(
+        .ausweis_kette(
             &body.pubkey_pem,
             &bezeichnung,
             "Antrag 3000 Team-Gerät",
@@ -1825,7 +1825,7 @@ async fn ausweis_grace(
 
     Ok(Json(ErneuernAntwort {
         ausweis_pem: neuer_ausweis,
-        service_ca_pem: ca.cert_pem.clone(),
+        service_ca_pem: ca.wurzel_cert_pem.clone(),
     }))
 }
 
@@ -1856,7 +1856,7 @@ async fn team_erstellen(
     State(st): State<AppState>,
     Json(body): Json<TeamErstellenBody>,
 ) -> Result<Json<TeamErstellenAntwort>, StatusCode> {
-    let service_ca: &Option<Ca> = &st.service_ca;
+    let service_ca: &Option<StufenCa> = &st.service_ca;
     let ca = service_ca.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
 
     // Missbrauchs-Bremse (global): Sentinel-Geräte-id -1 (kein echtes Gerät hat
@@ -1877,7 +1877,7 @@ async fn team_erstellen(
 
     // Kopiersicher signieren (nur der öffentliche Schlüssel geht ein).
     let ausweis_pem = ca
-        .signiere(&body.pubkey_pem, geraet_name, "Antrag 3000 Team-Gerät", GERAET_GUELTIG_TAGE)
+        .ausweis_kette(&body.pubkey_pem, geraet_name, "Antrag 3000 Team-Gerät", GERAET_GUELTIG_TAGE)
         .map_err(|_| StatusCode::BAD_REQUEST)?;
     let cert_fp = service_ca::fingerprint_von_pem(&ausweis_pem)
         .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -1913,7 +1913,7 @@ async fn team_erstellen(
 
     Ok(Json(TeamErstellenAntwort {
         ausweis_pem,
-        service_ca_pem: ca.cert_pem.clone(),
+        service_ca_pem: ca.wurzel_cert_pem.clone(),
         konto_id,
     }))
 }
@@ -3128,7 +3128,7 @@ mod tests {
             NR.fetch_add(1, Ordering::Relaxed)
         ));
         let _ = std::fs::remove_dir_all(&dir);
-        let service = Ca::laden_oder_erzeugen(&dir, "service-ca", "Antrag 3000 Service-CA").unwrap();
+        let service = StufenCa::laden_oder_erzeugen(&dir).unwrap();
         let foerderer = Ca::laden_oder_erzeugen(&dir, "foerderer-ca", "Antrag 3000 Förderer-CA").unwrap();
         AppState {
             pool,
@@ -3526,7 +3526,7 @@ mod tests {
             .as_ref()
             .as_ref()
             .unwrap()
-            .signiere(&alt_key.public_key_pem(), "Alt-Laptop", "Antrag 3000 Team-Gerät", 90)
+            .ausweis_kette(&alt_key.public_key_pem(), "Alt-Laptop", "Antrag 3000 Team-Gerät", 90)
             .unwrap();
         let alt_fp = service_ca::fingerprint_von_pem(&alt_cert).unwrap();
         sqlx::query(
@@ -3583,6 +3583,46 @@ mod tests {
         .await
         .unwrap_err();
         assert_eq!(err, StatusCode::UNAUTHORIZED);
+    }
+
+    /// Zwei-Ebenen-CA: `ausweis_kette` liefert Blatt + Zwischen-CA; das Blatt ist
+    /// von der Zwischen-CA signiert, die Zwischen-CA von der Wurzel (vollständige
+    /// Kette). Der Ausweis-Fingerabdruck ist der des Blatts – nicht der ganzen Kette.
+    #[tokio::test]
+    async fn zwischen_ca_kette_verifiziert() {
+        use x509_parser::pem::parse_x509_pem;
+        let st = test_state().await;
+        let ca = st.service_ca.as_ref().as_ref().unwrap();
+
+        let key = rcgen::KeyPair::generate().unwrap();
+        let kette = ca
+            .ausweis_kette(&key.public_key_pem(), "Laptop", "Antrag 3000 Team-Gerät", 90)
+            .unwrap();
+        assert_eq!(
+            kette.matches("BEGIN CERTIFICATE").count(),
+            2,
+            "Kette muss Blatt + Zwischen-CA enthalten"
+        );
+
+        let (rest, blatt_pem) = parse_x509_pem(kette.as_bytes()).unwrap();
+        let (_, zw_pem) = parse_x509_pem(rest).unwrap();
+        let (_, w_pem) = parse_x509_pem(ca.wurzel_cert_pem.as_bytes()).unwrap();
+        let blatt = blatt_pem.parse_x509().unwrap();
+        let zw = zw_pem.parse_x509().unwrap();
+        let wurzel = w_pem.parse_x509().unwrap();
+        blatt
+            .verify_signature(Some(zw.public_key()))
+            .expect("Blatt muss von der Zwischen-CA signiert sein");
+        zw.verify_signature(Some(wurzel.public_key()))
+            .expect("Zwischen-CA muss von der Wurzel signiert sein");
+
+        // Fingerabdruck = der des Blatts (erstes Zertifikat), nicht der Kette.
+        let nur_blatt = kette.split("-----END CERTIFICATE-----").next().unwrap().to_string()
+            + "-----END CERTIFICATE-----\n";
+        assert_eq!(
+            service_ca::fingerprint_von_pem(&kette),
+            service_ca::fingerprint_von_pem(&nur_blatt),
+        );
     }
 
     /// Förderer verbinden: Token einlösen → Förderer-CA-signierter Ausweis +
