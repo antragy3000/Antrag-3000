@@ -60,6 +60,7 @@ fn main() {
             verbinden::programme_holen,
             verbinden::programm_senden,
             verbinden::programm_loeschen,
+            verbinden::ausweis_auto_erneuern,
         ])
         .run(tauri::generate_context!())
         .expect("Fehler beim Starten der Förderer-App");

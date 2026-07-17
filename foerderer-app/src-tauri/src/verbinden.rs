@@ -26,6 +26,13 @@ struct Zugang {
     /// Server-Trust-CA (prüft das Server-Zertifikat).
     ca_pem: String,
     foerderer_name: String,
+    /// Öffentliche Adresse (aus der Einladung) für die Grace-Wiederanmeldung,
+    /// falls der Ausweis abgelaufen ist. Optional (Alt-Zugänge ohne das Feld).
+    #[serde(default)]
+    enroll_url: String,
+    /// Zeitpunkt der letzten Ausstellung/Erneuerung (Unix-Sekunden); 0 = unbekannt.
+    #[serde(default)]
+    ausweis_erneuert_am: i64,
 }
 
 fn zugang_datei(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
@@ -46,6 +53,19 @@ fn zugang_lesen(app: &tauri::AppHandle) -> Result<Zugang, String> {
         return Err("Zugang unvollständig.".into());
     }
     Ok(z)
+}
+
+fn zugang_speichern(app: &tauri::AppHandle, z: &Zugang) -> Result<(), String> {
+    let inhalt =
+        serde_json::to_string_pretty(z).map_err(|e| format!("Zugang nicht serialisierbar: {e}"))?;
+    std::fs::write(zugang_datei(app)?, inhalt).map_err(|e| format!("Zugang nicht speicherbar: {e}"))
+}
+
+fn jetzt_unix() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
 }
 
 // --- Einladung lesen ---------------------------------------------------
@@ -236,11 +256,10 @@ pub async fn foerderer_verbinden(
         ausweis_pem,
         ca_pem: ca_pem.trim().to_string(),
         foerderer_name: name.to_string(),
+        enroll_url: enroll_url.trim().to_string(),
+        ausweis_erneuert_am: jetzt_unix(),
     };
-    let inhalt =
-        serde_json::to_string_pretty(&z).map_err(|e| format!("Zugang nicht serialisierbar: {e}"))?;
-    std::fs::write(zugang_datei(&app)?, inhalt)
-        .map_err(|e| format!("Zugang nicht speicherbar: {e}"))?;
+    zugang_speichern(&app, &z)?;
 
     Ok(VerbindungStatus {
         verbunden: true,
@@ -336,6 +355,138 @@ pub async fn programm_loeschen(app: tauri::AppHandle, programm_id: String) -> Re
     if !r.status().is_success() {
         return Err(format!("Server antwortete mit {}", r.status()));
     }
+    Ok(())
+}
+
+// --- Ausweis kurzlebig halten (Roadmap 10) -----------------------------
+
+/// Öffentliche Adresse für die Grace-Wiederanmeldung: die aus der Einladung
+/// gespeicherte `enroll_url`; fehlt sie (Alt-Zugang), aus der mTLS-Adresse
+/// abgeleitet (gehostet: `team.<domain>:8443` → `https://sync.<domain>`).
+fn oeffentliche_url(z: &Zugang) -> String {
+    if !z.enroll_url.trim().is_empty() {
+        return basis_url(&z.enroll_url);
+    }
+    let host = z
+        .adresse
+        .trim()
+        .trim_start_matches("https://")
+        .trim_start_matches("http://")
+        .split('/')
+        .next()
+        .unwrap_or("")
+        .split(':')
+        .next()
+        .unwrap_or("");
+    let public_host = match host.strip_prefix("team.") {
+        Some(rest) => format!("sync.{rest}"),
+        None => host.to_string(),
+    };
+    format!("https://{public_host}")
+}
+
+#[derive(Deserialize)]
+struct ErneuernAntwort {
+    #[serde(default)]
+    ausweis_pem: String,
+}
+
+/// Erneuerung über die bestehende mTLS-Verbindung (frischer Schlüssel lokal).
+async fn erneuern_mtls(z: &Zugang) -> Result<String, String> {
+    let key = rcgen::KeyPair::generate().map_err(|e| format!("Schlüssel nicht erzeugbar: {e}"))?;
+    let client = client_mit_ausweis(&z.ausweis_pem, &z.ca_pem)?;
+    let url = format!("{}/api/foerderer/ausweis-erneuern", basis_url(&z.adresse));
+    let body = serde_json::json!({ "pubkeyPem": key.public_key_pem() }).to_string();
+    let r = client
+        .post(&url)
+        .header("content-type", "application/json")
+        .body(body)
+        .send()
+        .await
+        .map_err(|e| format!("Erneuerung fehlgeschlagen: {}", fehler_kette(&e)))?;
+    if !r.status().is_success() {
+        return Err(format!("Server antwortete mit {}", r.status().as_u16()));
+    }
+    let ant: ErneuernAntwort = r.json().await.map_err(|e| format!("Antwort nicht lesbar: {e}"))?;
+    if !ant.ausweis_pem.contains("CERTIFICATE") {
+        return Err("Kein gültiger Ausweis.".into());
+    }
+    Ok(format!("{}{}", key.serialize_pem(), ant.ausweis_pem))
+}
+
+/// Grace-Wiederanmeldung über den öffentlichen Kanal (Ausweis war abgelaufen).
+/// Besitznachweis: der neue Schlüssel wird mit dem ALTEN signiert (p256).
+async fn erneuern_grace(z: &Zugang) -> Result<String, String> {
+    use p256::ecdsa::{signature::Signer, Signature, SigningKey};
+    use p256::pkcs8::DecodePrivateKey;
+
+    let cert_start = z
+        .ausweis_pem
+        .find("-----BEGIN CERTIFICATE-----")
+        .ok_or_else(|| "Kein Zertifikat im Ausweis.".to_string())?;
+    let alt_key_pem = &z.ausweis_pem[..cert_start];
+    let alt_cert_pem = z.ausweis_pem[cert_start..].to_string();
+    let sk =
+        SigningKey::from_pkcs8_pem(alt_key_pem).map_err(|e| format!("Alter Schlüssel unlesbar: {e}"))?;
+
+    let neu = rcgen::KeyPair::generate().map_err(|e| format!("Schlüssel nicht erzeugbar: {e}"))?;
+    let neu_pub = neu.public_key_pem();
+    let sig: Signature = sk.sign(neu_pub.as_bytes());
+    let proof: Vec<u8> = sig.to_der().as_bytes().to_vec();
+
+    let client = client_oeffentlich(&z.ca_pem)?;
+    let url = format!("{}/api/foerderer/ausweis-grace", oeffentliche_url(z));
+    let body = serde_json::json!({
+        "ausweisPem": alt_cert_pem,
+        "pubkeyPem": neu_pub,
+        "proof": proof,
+    })
+    .to_string();
+    let r = client
+        .post(&url)
+        .header("content-type", "application/json")
+        .body(body)
+        .send()
+        .await
+        .map_err(|e| format!("Wiederanmeldung fehlgeschlagen: {}", fehler_kette(&e)))?;
+    if !r.status().is_success() {
+        return Err(format!("Server antwortete mit {}", r.status().as_u16()));
+    }
+    let ant: ErneuernAntwort = r.json().await.map_err(|e| format!("Antwort nicht lesbar: {e}"))?;
+    if !ant.ausweis_pem.contains("CERTIFICATE") {
+        return Err("Kein gültiger Ausweis.".into());
+    }
+    Ok(format!("{}{}", neu.serialize_pem(), ant.ausweis_pem))
+}
+
+/// Hält den kurzlebigen Förderer-Ausweis frisch (Roadmap 10). Beim App-Start
+/// still aufgerufen. Ohne Zeitstempel (Alt-Zugang) wird nur die Uhr gestartet; ist
+/// der Ausweis älter als 60 Tage (vor dem 90-Tage-Ablauf), wird er erneuert –
+/// zuerst über die mTLS-Verbindung, sonst über die öffentliche Grace-
+/// Wiederanmeldung (falls schon abgelaufen). Scheitert alles (offline), bleibt der
+/// bisherige Ausweis unangetastet und weiter gültig.
+#[tauri::command]
+pub async fn ausweis_auto_erneuern(app: tauri::AppHandle) -> Result<(), String> {
+    let mut z = match zugang_lesen(&app) {
+        Ok(z) => z,
+        Err(_) => return Ok(()), // nicht verbunden – nichts zu tun
+    };
+    let jetzt = jetzt_unix();
+    if z.ausweis_erneuert_am <= 0 {
+        z.ausweis_erneuert_am = jetzt;
+        zugang_speichern(&app, &z)?;
+        return Ok(());
+    }
+    if jetzt - z.ausweis_erneuert_am < 60 * 86_400 {
+        return Ok(()); // noch frisch genug
+    }
+    let neu = match erneuern_mtls(&z).await {
+        Ok(a) => a,
+        Err(_) => erneuern_grace(&z).await?, // mTLS ging nicht → evtl. abgelaufen
+    };
+    z.ausweis_pem = neu;
+    z.ausweis_erneuert_am = jetzt;
+    zugang_speichern(&app, &z)?;
     Ok(())
 }
 

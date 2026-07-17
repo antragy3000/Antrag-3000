@@ -1,6 +1,6 @@
 [package]
 name = "antrag3000-foerderer"
-version = "0.2.0"
+version = "0.3.0"
 description = "Antrag 3000 – Förderer-App"
 authors = ["Antrag 3000 Team"]
 license = "GPL-3.0-or-later"
@@ -26,6 +26,9 @@ serde_json = "1"
 # an den Server).
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 rcgen = { version = "0.13" }
+# p256: Besitznachweis bei der Grace-Wiederanmeldung (Roadmap 10) – signiert den
+# neuen Schluessel mit dem ALTEN (ECDSA P-256, RustCrypto). Wie in der Nutzer-App.
+p256 = { version = "0.13", features = ["ecdsa", "pkcs8", "pem"] }
 
 [profile.release]
 opt-level = "z"

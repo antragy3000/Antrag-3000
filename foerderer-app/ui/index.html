@@ -854,6 +854,9 @@
       finally { btn.disabled = false; btn.textContent = orig; }
     });
     verbStatusLaden();
+    // Kurzlebigen Ausweis still frisch halten (Roadmap 10). Fehler (offline) egal –
+    // der bisherige Ausweis bleibt gültig.
+    { const core = tauriCore(); if (core) core.invoke("ausweis_auto_erneuern").catch(() => {}); }
 
     // ================= Start =================
     const orgStart = orgLaden(); orgInFelder(orgStart); orgGespeichert = JSON.stringify(orgStart);
