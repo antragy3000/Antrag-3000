@@ -1,6 +1,6 @@
 {
   "name": "antrag-3000",
-  "version": "0.4.8",
+  "version": "0.4.9",
   "description": "Recherche, Verwaltung und Vorbereitung von Fördermittel-Anträgen für Kunst- und Kulturprojekte",
   "type": "module",
   "scripts": {
