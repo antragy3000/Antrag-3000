@@ -11,6 +11,8 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch",
     "waechter": "node tools/sync-waechter.mjs",
     "sicherheit": "node tools/sicherheit-test.mjs",
+    "tokens": "node tools/tokens-sync.mjs",
+    "tokens:check": "node tools/tokens-sync.mjs --check",
     "tauri": "tauri"
   },
   "license": "GPL-3.0-or-later",

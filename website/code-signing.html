@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
 <link rel="icon" type="image/png" href="favicon-32.png">
-<title>Datenschutzerklärung – Antrag 3000</title>
+<title>Code-Signing-Richtlinie – Antrag 3000</title>
 <meta name="robots" content="noindex">
 <style>
   /* >>> TOKENS (generiert von: npm run tokens · Quelle: design/tokens.css · NICHT von Hand aendern) */
@@ -84,13 +84,15 @@
   .back:hover{color:var(--text)}
   h1{font-size:30px; margin:40px 0 8px}
   h2{font-size:20px; margin:30px 0 6px}
-  p{margin:0 0 8px}
-  ul{margin:0 0 8px; padding-left:22px}
-  li{margin:0 0 4px}
+  p{margin:0 0 6px}
+  ul{margin:0 0 6px; padding-left:22px}
+  li{margin:2px 0}
   .muted{color:var(--muted)}
   .hint{background:var(--surface); border:1px solid var(--border); border-radius:12px;
     padding:14px 18px; font-size:15px; color:var(--muted); margin:18px 0 8px}
-  .ph{color:var(--accent-on-tint); background:var(--accent-tint); padding:1px 6px; border-radius:6px}
+  .attrib{background:var(--accent-tint); color:var(--accent-on-tint); border:1px solid var(--border);
+    border-radius:12px; padding:14px 18px; font-size:15px; margin:24px 0 8px}
+  .attrib a{color:var(--accent-on-tint); font-weight:600}
   footer{border-top:1px solid var(--border); margin-top:48px; padding:22px 0 48px;
     color:var(--muted); font-size:14px}
   footer a{color:var(--muted); text-decoration:none}
@@ -106,63 +108,65 @@
 </header>
 
 <main class="wrap">
-  <h1>Datenschutzerklärung</h1>
+  <h1>Code-Signing-Richtlinie</h1>
+  <p class="muted">Code Signing Policy · Stand: Juli 2026</p>
 
   <div class="hint">
-    Gerüst zum Ausfüllen. Es passt zu dieser Website, die <strong>keine Cookies setzt,
-    kein Tracking nutzt und keine Formulare</strong> hat (Kontakt nur per E-Mail).
-    Ersetze die <span class="ph">[Platzhalter]</span> und prüfe vor allem den Abschnitt
-    „Hosting" mit den Angaben deines Anbieters. Dies ist kein Rechtsrat.
+    Hinweis: Die Einrichtung des
+    Code-Signings über die SignPath Foundation ist im Aufbau. Diese Seite beschreibt,
+    wie die Windows-Installer von Antrag 3000 signiert werden.
   </div>
 
-  <h2>1. Verantwortlicher</h2>
-  <p>Verantwortlich für die Datenverarbeitung auf dieser Website ist:</p>
-  <p><span class="ph">[Name]</span>, <span class="ph">[Anschrift]</span><br>
-  E-Mail: <a href="mailto:pilot@antrag3000.de">pilot@antrag3000.de</a></p>
+  <h2>Warum werden die Programme signiert?</h2>
+  <p class="muted">Eine digitale Signatur (Code-Signing) belegt, dass ein Installer
+  tatsächlich vom Projekt Antrag 3000 stammt und nach dem Signieren nicht verändert
+  wurde. Windows und Virenschutz-Programme erkennen signierte Dateien als
+  vertrauenswürdig und zeigen keine Warnung vor „unbekanntem Herausgeber".</p>
 
-  <h2>2. Grundsatz</h2>
-  <p class="muted">Diese Website dient ausschließlich der Information. Sie verwendet
-  keine Cookies, kein Analyse- oder Tracking-Werkzeug, keine eingebetteten externen
-  Schriftarten und keine Social-Media-Plugins. Es gibt kein Kontaktformular; die
-  Kontaktaufnahme erfolgt allein über die angegebene E-Mail-Adresse.</p>
-
-  <h2>3. Hosting und Server-Logfiles</h2>
-  <p class="muted">Die Website wird bei <span class="ph">[Name des Hosting-Anbieters,
-  Anschrift]</span> gehostet. Beim Aufruf der Seiten verarbeitet der Anbieter technisch
-  notwendige Zugriffsdaten (Server-Logfiles), insbesondere:</p>
-  <ul class="muted">
-    <li>IP-Adresse des anfragenden Geräts</li>
-    <li>Datum und Uhrzeit des Zugriffs</li>
-    <li>aufgerufene Seite / Datei</li>
-    <li>übertragene Datenmenge und Statusmeldung</li>
-    <li>verwendeter Browser und Betriebssystem</li>
+  <h2>Welche Dateien werden signiert?</h2>
+  <ul>
+    <li>Die Windows-Installer von Antrag 3000 (NSIS-Setup, <code>*-setup.exe</code>, 64&nbsp;Bit).</li>
   </ul>
-  <p class="muted">Diese Verarbeitung dient dem sicheren und stabilen Betrieb der
-  Website und beruht auf unserem berechtigten Interesse (Art. 6 Abs. 1 lit. f DSGVO).
-  Einzelheiten und Speicherdauer regelt die Auftragsverarbeitung mit dem Hosting-Anbieter.</p>
+  <p class="muted">Die App-eigenen Selbst-Updates sind zusätzlich mit einer eigenen
+  Signatur (minisign) abgesichert, die die App vor dem Einspielen prüft. Das ist von
+  der hier beschriebenen Windows-Signatur unabhängig.</p>
 
-  <h2>4. Kontaktaufnahme per E-Mail</h2>
-  <p class="muted">Wenn du uns per E-Mail schreibst, verarbeiten wir deine Angaben
-  (E-Mail-Adresse, Name und Inhalt der Nachricht) ausschließlich zur Bearbeitung
-  deiner Anfrage (Art. 6 Abs. 1 lit. b bzw. f DSGVO). Die Daten werden gelöscht,
-  sobald sie nicht mehr benötigt werden und keine Aufbewahrungspflichten entgegenstehen.</p>
+  <h2>Wie entstehen die signierten Dateien?</h2>
+  <ul>
+    <li>Der gesamte Quellcode ist öffentlich:
+      <a href="https://github.com/antragy3000/Antrag-3000">github.com/antragy3000/Antrag-3000</a>.</li>
+    <li>Die Installer werden nachvollziehbar aus diesem Quellcode gebaut
+      (Tauri-Standard-Toolchain).</li>
+    <li>Signiert wird ausschließlich mit dem von der SignPath Foundation
+      bereitgestellten Zertifikat. Der private Schlüssel liegt auf einem gesicherten
+      Hardware-Modul (HSM) bei SignPath und wird vom Projekt nie eingesehen oder
+      lokal gespeichert.</li>
+    <li>Jede Freigabe zum Signieren wird manuell durch die verantwortliche Person
+      geprüft und bestätigt.</li>
+  </ul>
 
-  <h2>5. Deine Rechte</h2>
-  <p class="muted">Du hast jederzeit das Recht auf Auskunft, Berichtigung, Löschung,
-  Einschränkung der Verarbeitung, Datenübertragbarkeit sowie Widerspruch gegen die
-  Verarbeitung. Wende dich dafür an die oben genannte Adresse. Außerdem steht dir ein
-  Beschwerderecht bei einer Datenschutz-Aufsichtsbehörde zu.</p>
+  <h2>Verantwortlich</h2>
+  <p>Yossi Herzka · <a href="mailto:pilot@antrag3000.de">pilot@antrag3000.de</a></p>
+  <p class="muted">Zugänge zu Quellcode-Repository und Signier-Dienst sind mit
+  Zwei-Faktor-Authentifizierung geschützt.</p>
 
-  <h2>6. Hinweis zur App „Antrag 3000"</h2>
-  <p class="muted">Die Desktop-App selbst speichert sensible Daten ausschließlich lokal
-  und verschlüsselt auf dem Gerät der Nutzer:innen. Diese Daten werden nicht an uns oder
-  Dritte übertragen. Diese Datenschutzerklärung betrifft nur diese Website.</p>
+  <h2>Signatur selbst prüfen</h2>
+  <p class="muted">Unter Windows: Rechtsklick auf die Installer-Datei →
+  <em>Eigenschaften</em> → Reiter <em>Digitale Signaturen</em>. Dort muss Antrag 3000
+  als Unterzeichner erscheinen und die Signatur als gültig ausgewiesen sein.</p>
+
+  <div class="attrib">
+    Kostenloses Code-Signing bereitgestellt von
+    <a href="https://signpath.io">SignPath.io</a>, Zertifikat der
+    <a href="https://signpath.org">SignPath Foundation</a>.
+  </div>
 </main>
 
 <footer>
   <div class="wrap">
     <a href="index.html">Startseite</a> &nbsp;·&nbsp;
     <a href="impressum.html">Impressum</a> &nbsp;·&nbsp;
+    <a href="datenschutz.html">Datenschutz</a> &nbsp;·&nbsp;
     <a href="mailto:pilot@antrag3000.de">Kontakt</a>
   </div>
 </footer>

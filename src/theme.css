@@ -1,110 +1,178 @@
 /* ============================================================
-   Antrag 3000 – zentrales Farb-Theme.
-   Hier an EINER Stelle umfaerben. Wichtigste Stellschrauben:
-     --akzent (Markenfarbe), --text, --text-muted,
-     --weiss/--flaeche (Hintergruende), --rand (Linien).
-   Die App liest diese Variablen ueber src/routes/+layout.svelte.
+   Antrag 3000 – Farb-Theme der NUTZER-APP.
+   ------------------------------------------------------------
+   Die gemeinsamen Grundtoene stehen NICHT hier, sondern in
+   design/tokens.css (eine Quelle fuer alle Oberflaechen).
+   Der Block unten zwischen  >>> TOKENS  und  <<< TOKENS  wird
+   von  `npm run tokens`  automatisch aus design/tokens.css
+   gefuellt – dort NICHT von Hand aendern.
+
+   Darunter stehen die APP-eigenen Variablennamen (--akzent,
+   --text, …). Die WICHTIGEN zeigen per var(--marke-… / --n-… /
+   --sig-…) auf die gemeinsamen Grundtoene; nur so faerbt eine
+   Aenderung in design/tokens.css die ganze App um. Die feinen
+   Zwischentoene bleiben als fester Wert (App-intern).
+   Global geladen ueber src/routes/+layout.svelte.
    ============================================================ */
+
+/* >>> TOKENS (generiert von: npm run tokens · Quelle: design/tokens.css · NICHT von Hand aendern) */
 :root{
-  /* Akzent (Blau) – die Markenfarbe */
-  --akzent: #4f6df5;
-  --akzent-d: #3d5bf0;
-  --akzent-d2: #3a55d9;
-  --akzent-d3: #2b46c4;
-  --akzent-d4: #3b4fb0;
-  --link: #0055cc;
-  --link-2: #1f6feb;
-  --link-3: #195fc9;
-  --link-d: #0747a6;
-  --link-d2: #0c4a8f;
-  --link-d3: #0c5a8f;
-  --akzent-bg: #eef1ff;
-  --akzent-bg2: #e9f0ff;
-  --akzent-bg3: #e9f2ff;
-  --akzent-bg4: #e6f0ff;
-  --akzent-bg5: #e6f4ff;
-  --akzent-bg6: #deebff;
-  --akzent-bg7: #d7e0ff;
-  --akzent-bg8: #dce4fb;
-  --akzent-bg-x: #f4f7ff;
-  --akzent-bg-y: #f4f6fb;
-  --flaeche-blau: #f7f9ff;
-  --akzent-rand: #b9c7f7;
-  --akzent-rand2: #c7d0f8;
-  --akzent-rand3: #b3d4ff;
-  --akzent-rand4: #94c0ff;
+  /* --- Marke: Tuerkis (Logo) --- */
+  --marke-tuerkis: #14b7a8;         /* helles Logo-Tuerkis: Akzente, Punkt, Logo */
+  --marke-tuerkis-knopf: #0b8175;   /* Knopf-Fuellung (weisse Schrift lesbar, 4.76:1) */
+  --marke-tuerkis-dunkel: #0a7167;  /* Hover */
+  --marke-tuerkis-tief: #075048;    /* gedrueckt/tief */
+  --marke-tuerkis-link: #0b7568;    /* Links auf Weiss (5.6:1) */
+  --marke-tuerkis-tint: #e4f5f2;    /* helle Flaeche: aktive Reiter, Chips */
 
-  /* Text / Graustufen */
-  --text: #172b4d;
-  --text-tief: #0b1020;
-  --text-2: #44546f;
-  --text-muted: #5e6c84;
-  --text-muted2: #6b778c;
-  --text-leise: #8590a2;
-  --grau-5: #a9b0bd;
-  --grau-4: #b3bac5;
-  --grau-3: #c1c7d0;
+  /* --- Marke: Navy (Logo-Wortmarke) --- */
+  --marke-navy: #123a5e;            /* Text, Ueberschriften, Tiefton */
 
-  /* Flaechen / Hintergrund */
-  --weiss: #fff;
-  --flaeche: #fafbfc;
-  --flaeche-b: #f7f8fa;
-  --flaeche-c: #f7f8f9;
-  --flaeche-2: #f4f5f7;
-  --flaeche-2b: #f1f2f4;
-  --flaeche-2c: #eef0f3;
-  --flaeche-3: #ebedf0;
-  --flaeche-3b: #ebecf0;
-  --flaeche-3c: #e2e5ea;
+  /* --- Rollenfarbe Foerderer: Gold --- */
+  --marke-gold: #f5a623;
+  --marke-gold-dunkel: #d98c0f;
+  --marke-gold-tint: #fff7e9;
 
-  /* Raender */
-  --rand: #dfe1e6;
-  --rand-2: #e4e7ec;
+  /* --- Rollenfarbe Admin: Blau --- */
+  --marke-blau: #4f6df5;
+  --marke-blau-dunkel: #3d5bf0;
 
-  /* Gefahr (Rot) */
-  --gefahr-text: #ae2e24;
-  --gefahr: #ca3521;
+  /* --- Neutrale (kuehl, navy-getoent) --- */
+  --n-weiss: #ffffff;
+  --n-text: #123a5e;                /* = Navy: Haupttext */
+  --n-text-2: #35536b;              /* Fliesstext weicher */
+  --n-muted: #5f7480;               /* Meta, Hinweise */
+  --n-leise: #869aa2;               /* sehr leise */
+  --n-flaeche: #f6faf9;             /* helle Flaeche */
+  --n-flaeche-2: #eef4f3;           /* App-Hintergrund */
+  --n-flaeche-3: #e1ebe9;           /* Trenn-Flaeche */
+  --n-rand: #d9e4e2;               /* Linien, Karten-Rand */
+  --n-rand-2: #dee8e6;
+
+  /* --- Signalfarben (fuer alle gleich) --- */
+  --sig-gefahr: #ca3521;
+  --sig-gefahr-text: #ae2e24;
+  --sig-gefahr-bg: #ffeceb;
+  --sig-gefahr-rand: #f4b1a8;
+  --sig-erfolg: #22a06b;
+  --sig-erfolg-text: #216e4e;
+  --sig-erfolg-bg: #dcfff1;
+  --sig-warnung: #ffab00;
+  --sig-warnung-text: #7f5f01;
+  --sig-warnung-bg: #fff7d6;
+  --sig-warnung-rand: #f0c36d;
+
+  /* --- Form: Radien & Schatten --- */
+  --radius: 8px;
+  --radius-gross: 12px;
+  --schatten-1: 0 1px 2px rgba(18, 58, 94, 0.06);
+  --schatten-2: 0 8px 24px rgba(18, 58, 94, 0.08);
+  --schatten-3: 0 8px 28px rgba(18, 58, 94, 0.18);
+}
+/* <<< TOKENS */
+
+:root{
+  /* === Akzent (Tuerkis) – zeigt auf die Marke === */
+  --akzent: var(--marke-tuerkis-knopf);   /* Knopf-Fuellung, aktive Zustaende */
+  --akzent-hell: var(--marke-tuerkis);    /* helles Logo-Tuerkis: Punkt, feine Akzente */
+  --akzent-d: var(--marke-tuerkis-dunkel);
+  --akzent-d2: #096459;
+  --akzent-d3: var(--marke-tuerkis-tief);
+  --akzent-d4: #0a6b60;
+  --link: var(--marke-tuerkis-link);
+  --link-2: #0e8a7c;
+  --link-3: #0c7d70;
+  --link-d: #086054;
+  --link-d2: #075349;
+  --link-d3: #06564c;
+  --akzent-bg: var(--marke-tuerkis-tint);
+  /* App-eigene Feintoene (aus dem Tuerkis abgeleitet) */
+  --akzent-bg2: #ddf2ee;
+  --akzent-bg3: #def3ef;
+  --akzent-bg4: #daf1ec;
+  --akzent-bg5: #d8f0eb;
+  --akzent-bg6: #ccebe4;
+  --akzent-bg7: #c2e6de;
+  --akzent-bg8: #cfeae4;
+  --akzent-bg-x: #eef8f6;
+  --akzent-bg-y: #eef6f4;
+  --flaeche-blau: #f0f9f7;
+  --akzent-rand: #a6ddd4;
+  --akzent-rand2: #b8e3db;
+  --akzent-rand3: #8fd3c9;
+  --akzent-rand4: #63c6ba;
+
+  /* === Text / Graustufen – zeigen auf die Neutralen === */
+  --text: var(--n-text);
+  --text-tief: #0a2033;
+  --text-2: var(--n-text-2);
+  --text-muted: var(--n-muted);
+  --text-muted2: #6b8592;
+  --text-leise: var(--n-leise);
+  --grau-5: #a7b7bd;
+  --grau-4: #b4c1c6;
+  --grau-3: #c2ced2;
+
+  /* === Flaechen / Hintergrund === */
+  --weiss: var(--n-weiss);
+  --flaeche: var(--n-flaeche);
+  --flaeche-b: #f3f8f7;
+  --flaeche-c: #f2f8f6;
+  --flaeche-2: var(--n-flaeche-2);
+  --flaeche-2b: #e9f1ef;
+  --flaeche-2c: #e5efec;
+  --flaeche-3: var(--n-flaeche-3);
+  --flaeche-3b: #e1ebe9;
+  --flaeche-3c: #d6e4e0;
+
+  /* === Raender === */
+  --rand: var(--n-rand);
+  --rand-2: var(--n-rand-2);
+
+  /* === Gefahr (Rot) – zeigen auf Signalfarben === */
+  --gefahr-text: var(--sig-gefahr-text);
+  --gefahr: var(--sig-gefahr);
   --gefahr-2: #c9372c;
   --gefahr-d: #8a1c0a;
   --gefahr-d2: #5d1f1a;
-  --gefahr-bg: #ffeceb;
+  --gefahr-bg: var(--sig-gefahr-bg);
   --gefahr-bg2: #ffecec;
   --gefahr-bg3: #ffebe6;
   --gefahr-bg4: #fff8f7;
-  --gefahr-rand: #f4b1a8;
+  --gefahr-rand: var(--sig-gefahr-rand);
   --gefahr-rand2: #f1c7c2;
 
-  /* Erfolg (Gruen) */
-  --erfolg-text: #216e4e;
+  /* === Erfolg (Gruen) === */
+  --erfolg-text: var(--sig-erfolg-text);
   --erfolg-text2: #14794e;
   --erfolg-d: #1a5a40;
   --erfolg-d2: #143d2b;
-  --erfolg: #22a06b;
+  --erfolg: var(--sig-erfolg);
   --erfolg-2: #36b37e;
-  --erfolg-bg: #dcfff1;
+  --erfolg-bg: var(--sig-erfolg-bg);
   --erfolg-bg2: #e3fcef;
 
-  /* Warnung (Gelb/Orange) */
+  /* === Warnung (Gelb/Orange) === */
   --warnung: #e2a400;
-  --warnung-2: #ffab00;
+  --warnung-2: var(--sig-warnung);
   --warnung-3: #f08c00;
   --orange-d: #a54800;
-  --warnung-text: #7f5f01;
+  --warnung-text: var(--sig-warnung-text);
   --warnung-text2: #533f04;
   --warnung-text3: #7a5b00;
   --warnung-text4: #7a4a00;
   --warnung-text5: #8a6d00;
   --warnung-text6: #7a4f01;
-  --warnung-bg: #fff7d6;
+  --warnung-bg: var(--sig-warnung-bg);
   --warnung-bg2: #fffaf0;
   --warnung-bg3: #fff4e5;
   --warnung-bg4: #fff7ef;
   --warnung-bg5: #fdf1e3;
-  --warnung-rand: #f0c36d;
+  --warnung-rand: var(--sig-warnung-rand);
   --warnung-rand2: #e7c9a3;
   --warnung-rand3: #ffd9b0;
 
-  /* Lila */
+  /* === Lila (sekundaerer Akzent, sparsam) === */
   --lila: #8270db;
   --lila-d: #5e4db2;
   --lila-d2: #5e44b0;
@@ -113,15 +181,15 @@
   --lila-bg2: #f1edff;
   --lila-bg3: #f3eefe;
   --lila-bg4: #eae6ff;
-  --lila-bg5: #f1f4ff;
+  --lila-bg5: #eef6f4;
 
-  /* Schatten / Overlays */
-  --schatten-xs: rgba(9, 30, 66, 0.08);
-  --schatten-sm: rgba(9, 30, 66, 0.12);
-  --schatten-md2: rgba(9, 30, 66, 0.15);
-  --schatten-md: rgba(9, 30, 66, 0.18);
-  --schatten-lg: rgba(9, 30, 66, 0.3);
-  --schatten-xl: rgba(9, 30, 66, 0.45);
+  /* === Schatten / Overlays (Logo-Navy als Basis) === */
+  --schatten-xs: rgba(18, 58, 94, 0.08);
+  --schatten-sm: rgba(18, 58, 94, 0.12);
+  --schatten-md2: rgba(18, 58, 94, 0.15);
+  --schatten-md: rgba(18, 58, 94, 0.18);
+  --schatten-lg: rgba(18, 58, 94, 0.3);
+  --schatten-xl: rgba(18, 58, 94, 0.45);
   --schatten-schwach: rgba(0, 0, 0, 0.04);
   --erfolg-glow: rgba(54, 179, 126, 0.18);
   --warnung-glow: rgba(255, 171, 0, 0.18);

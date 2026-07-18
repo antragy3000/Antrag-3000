@@ -1,0 +1,67 @@
+/* ============================================================
+   Antrag 3000 – GEMEINSAME DESIGN-TOKENS (die eine Quelle).
+   ------------------------------------------------------------
+   Das ist die EINZIGE Stelle, an der die Grundfarben stehen.
+   Aendere hier – und fuehre danach  `npm run tokens`  aus.
+   Das Skript kopiert diese Toene in jede Oberflaeche
+   (Nutzer-App, Foerderer-App, Admin-App, Website).
+
+   Rollenfarben (bewusst getrennt):
+     Nutzer-App + Website = Marke (Tuerkis + Navy)
+     Foerderer-App        = Gold
+     Admin-App            = Blau
+   Jede Oberflaeche waehlt ihren Akzent aus DIESER Palette.
+   ============================================================ */
+:root{
+  /* --- Marke: Tuerkis (Logo) --- */
+  --marke-tuerkis: #14b7a8;         /* helles Logo-Tuerkis: Akzente, Punkt, Logo */
+  --marke-tuerkis-knopf: #0b8175;   /* Knopf-Fuellung (weisse Schrift lesbar, 4.76:1) */
+  --marke-tuerkis-dunkel: #0a7167;  /* Hover */
+  --marke-tuerkis-tief: #075048;    /* gedrueckt/tief */
+  --marke-tuerkis-link: #0b7568;    /* Links auf Weiss (5.6:1) */
+  --marke-tuerkis-tint: #e4f5f2;    /* helle Flaeche: aktive Reiter, Chips */
+
+  /* --- Marke: Navy (Logo-Wortmarke) --- */
+  --marke-navy: #123a5e;            /* Text, Ueberschriften, Tiefton */
+
+  /* --- Rollenfarbe Foerderer: Gold --- */
+  --marke-gold: #f5a623;
+  --marke-gold-dunkel: #d98c0f;
+  --marke-gold-tint: #fff7e9;
+
+  /* --- Rollenfarbe Admin: Blau --- */
+  --marke-blau: #4f6df5;
+  --marke-blau-dunkel: #3d5bf0;
+
+  /* --- Neutrale (kuehl, navy-getoent) --- */
+  --n-weiss: #ffffff;
+  --n-text: #123a5e;                /* = Navy: Haupttext */
+  --n-text-2: #35536b;              /* Fliesstext weicher */
+  --n-muted: #5f7480;               /* Meta, Hinweise */
+  --n-leise: #869aa2;               /* sehr leise */
+  --n-flaeche: #f6faf9;             /* helle Flaeche */
+  --n-flaeche-2: #eef4f3;           /* App-Hintergrund */
+  --n-flaeche-3: #e1ebe9;           /* Trenn-Flaeche */
+  --n-rand: #d9e4e2;               /* Linien, Karten-Rand */
+  --n-rand-2: #dee8e6;
+
+  /* --- Signalfarben (fuer alle gleich) --- */
+  --sig-gefahr: #ca3521;
+  --sig-gefahr-text: #ae2e24;
+  --sig-gefahr-bg: #ffeceb;
+  --sig-gefahr-rand: #f4b1a8;
+  --sig-erfolg: #22a06b;
+  --sig-erfolg-text: #216e4e;
+  --sig-erfolg-bg: #dcfff1;
+  --sig-warnung: #ffab00;
+  --sig-warnung-text: #7f5f01;
+  --sig-warnung-bg: #fff7d6;
+  --sig-warnung-rand: #f0c36d;
+
+  /* --- Form: Radien & Schatten --- */
+  --radius: 8px;
+  --radius-gross: 12px;
+  --schatten-1: 0 1px 2px rgba(18, 58, 94, 0.06);
+  --schatten-2: 0 8px 24px rgba(18, 58, 94, 0.08);
+  --schatten-3: 0 8px 28px rgba(18, 58, 94, 0.18);
+}
