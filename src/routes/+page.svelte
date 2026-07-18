@@ -2288,7 +2288,7 @@
     height: 100%;
   }
   :global(body) {
-    font-family: "Segoe UI", system-ui, sans-serif;
+    font-family: var(--schrift-sans);
     background: var(--flaeche-2);
     color: var(--text);
   }

@@ -58,6 +58,26 @@
   --sig-warnung-bg: #fff7d6;
   --sig-warnung-rand: #f0c36d;
 
+  /* --- Schrift (System-Schriften, keine Web-Fonts) --- */
+  --schrift-sans: system-ui, "Segoe UI", Roboto, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+  --schrift-serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+  /* Groessen-Skala (rem, Basis 16px) */
+  --fs-xs: 0.78rem;
+  --fs-sm: 0.86rem;
+  --fs-basis: 1rem;
+  --fs-md: 1.12rem;
+  --fs-lg: 1.3rem;
+  --fs-xl: 1.6rem;
+  --fs-2xl: 2rem;
+  --fs-3xl: 2.6rem;
+  /* Gewichte */
+  --fw-normal: 400;
+  --fw-halb: 600;
+  --fw-fett: 700;
+  /* Zeilenhoehe */
+  --lh-eng: 1.15;
+  --lh-normal: 1.55;
+
   /* --- Form: Radien & Schatten --- */
   --radius: 8px;
   --radius-gross: 12px;
