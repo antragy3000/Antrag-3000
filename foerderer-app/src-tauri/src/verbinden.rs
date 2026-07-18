@@ -477,8 +477,8 @@ pub async fn ausweis_auto_erneuern(app: tauri::AppHandle) -> Result<(), String> 
         zugang_speichern(&app, &z)?;
         return Ok(());
     }
-    if jetzt - z.ausweis_erneuert_am < 60 * 86_400 {
-        return Ok(()); // noch frisch genug
+    if jetzt - z.ausweis_erneuert_am < 120 * 86_400 {
+        return Ok(()); // noch frisch genug (erneuert vor dem 180-Tage-Ablauf)
     }
     let neu = match erneuern_mtls(&z).await {
         Ok(a) => a,

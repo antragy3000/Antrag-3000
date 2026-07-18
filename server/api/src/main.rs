@@ -1518,9 +1518,14 @@ struct EnrollAntwort {
 /// (Roadmap 10): ein geklauter Ausweis verfällt von selbst; die App erneuert
 /// rechtzeitig über `/api/ausweis/erneuern`.
 const GERAET_GUELTIG_TAGE: i64 = 90;
-/// Förderer-Ausweise: kurzlebig wie Team-Geräte – die Förderer-App erneuert
-/// automatisch (analog Roadmap 10).
-const FOERDERER_GUELTIG_TAGE: i64 = 90;
+/// Förderer-Ausweise: die Förderer-App erneuert automatisch (analog Roadmap 10),
+/// aber bewusst mit größerem Fenster als Team-Geräte – Förderer öffnen die App oft
+/// nur ein-/zweimal im Jahr. Gültigkeit + Grace ≈ 18 Monate.
+const FOERDERER_GUELTIG_TAGE: i64 = 180;
+/// Kulanzfrist der Förderer-Grace-Wiederanmeldung (nach Ablauf). Großzügig, damit
+/// „einmal im Jahr öffnen" sicher self-heilt. Risikoarm: Besitznachweis nötig,
+/// jederzeit sperrbar, nur öffentliche Programm-Daten.
+const FOERDERER_GRACE_TAGE: i64 = 365;
 /// Kulanzfrist der Grace-Wiederanmeldung: so lange NACH Ablauf darf ein Gerät
 /// über den öffentlichen Kanal (mit Besitznachweis) noch einen frischen Ausweis
 /// holen – für den Fall „länger als die Gültigkeit offline gewesen".
@@ -2170,7 +2175,7 @@ async fn foerderer_ausweis_grace(
         return Err(StatusCode::TOO_MANY_REQUESTS);
     }
     let sec1 = ca
-        .grace_pubkey(&body.ausweis_pem, GRACE_TAGE)
+        .grace_pubkey(&body.ausweis_pem, FOERDERER_GRACE_TAGE)
         .map_err(|_| StatusCode::UNAUTHORIZED)?;
     use p256::ecdsa::signature::Verifier;
     let vk = p256::ecdsa::VerifyingKey::from_sec1_bytes(&sec1)
