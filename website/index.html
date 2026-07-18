@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light">
+<meta name="color-scheme" content="light dark">
 <link rel="icon" type="image/png" href="favicon-32.png">
 <title>Antrag 3000 – Fördermittel finden, beantragen und abrechnen</title>
 <meta name="description" content="Antrag 3000 hilft freischaffenden Künstler:innen und kleinen Teams im DACH-Raum, passende Förderungen zu finden, Anträge vorzubereiten und sie bis zum Verwendungsnachweis abzurechnen. Sensible Daten bleiben lokal und verschlüsselt.">
@@ -87,12 +87,21 @@
   }
   /* <<< TOKENS */
   :root{
-    color-scheme:light;
+    color-scheme:light dark;
     --bg:var(--n-weiss); --surface:var(--n-flaeche); --card:var(--n-weiss);
     --text:var(--n-text); --muted:var(--n-muted); --border:var(--n-rand);
     --accent:var(--marke-tuerkis-link); --accent-tint:var(--marke-tuerkis-tint); --accent-on-tint:#0b5f55;
     --btn:var(--marke-tuerkis-knopf); --btn-text:var(--n-weiss);
     --radius:10px; --maxw:920px;
+  }
+  /* Dunkelmodus - folgt automatisch dem Betriebssystem (prefers-color-scheme) */
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0e1a20; --surface:#15242c; --card:#17272f;
+      --text:#e8eef1; --muted:#9fb1ba; --border:#263a44;
+      --accent:#2dcfbe; --accent-tint:#123a37; --accent-on-tint:#8fe9dd;
+      --btn:#2dcfbe; --btn-text:#07231f;
+    }
   }
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
@@ -167,7 +176,7 @@
   .pill-a{background:#fff4e5; color:#a54800; border:1px solid #f0c36d}
   .pill-b{background:var(--accent-tint); color:var(--accent-on-tint); border:1px solid var(--accent); opacity:0}
   .btn-mini{position:absolute; display:inline-flex; align-items:center; gap:7px; padding:9px 14px;
-    border-radius:10px; font-size:14px; font-weight:600; background:var(--accent); color:#fff}
+    border-radius:10px; font-size:14px; font-weight:600; background:var(--accent); color:var(--btn-text)}
   .rcpt{position:absolute; left:26px; right:26px; height:34px; display:flex; align-items:center;
     gap:10px; padding:0 13px; border:1px solid var(--border); border-radius:10px;
     background:var(--surface); opacity:0}
@@ -212,11 +221,11 @@
     91%{left:67%;top:128px} 93%{left:67%;top:128px} 98.5%{opacity:1;left:67%;top:128px} 100%{opacity:0;left:67%;top:128px} }
 
   .s1a{animation:s1a 15s infinite}
-  @keyframes s1a{ 0%,8%{background:transparent;color:var(--muted);border-color:var(--border)} 8.5%,100%{background:var(--accent);color:#fff;border-color:var(--accent)} }
+  @keyframes s1a{ 0%,8%{background:transparent;color:var(--muted);border-color:var(--border)} 8.5%,100%{background:var(--accent);color:var(--btn-text);border-color:var(--accent)} }
   .s1b{animation:s1b 15s infinite}
-  @keyframes s1b{ 0%,22%{background:transparent;color:var(--muted);border-color:var(--border)} 22.5%,100%{background:var(--accent);color:#fff;border-color:var(--accent)} }
+  @keyframes s1b{ 0%,22%{background:transparent;color:var(--muted);border-color:var(--border)} 22.5%,100%{background:var(--accent);color:var(--btn-text);border-color:var(--accent)} }
   .s1c{animation:s1c 15s infinite}
-  @keyframes s1c{ 0%,35%{background:transparent;color:var(--muted);border-color:var(--border)} 35.5%,100%{background:var(--accent);color:#fff;border-color:var(--accent)} }
+  @keyframes s1c{ 0%,35%{background:transparent;color:var(--muted);border-color:var(--border)} 35.5%,100%{background:var(--accent);color:var(--btn-text);border-color:var(--accent)} }
   .s2star{animation:s2star 15s infinite}
   @keyframes s2star{ 0%,50%{color:var(--border)} 50.5%,100%{color:var(--accent)} }
   .s2row{animation:s2row 15s infinite}
@@ -230,7 +239,7 @@
   @keyframes rin2{ 0%,80%{opacity:0;transform:translateX(-16px)} 81.5%,100%{opacity:1;transform:none} }
   @keyframes rin3{ 0%,81.5%{opacity:0;transform:translateX(-16px)} 83%,100%{opacity:1;transform:none} }
   .s5sel{animation:s5sel 15s infinite}
-  @keyframes s5sel{ 0%,92%{background:transparent;color:var(--muted);border-color:var(--border)} 92.5%,100%{background:var(--accent);color:#fff;border-color:var(--accent)} }
+  @keyframes s5sel{ 0%,92%{background:transparent;color:var(--muted);border-color:var(--border)} 92.5%,100%{background:var(--accent);color:var(--btn-text);border-color:var(--accent)} }
   .s5bar{animation:s5bar 15s infinite}
   @keyframes s5bar{ 0%,92%{width:0} 98%,100%{width:100%} }
   .s5ok{animation:s5ok 15s infinite}

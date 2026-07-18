@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light">
+<meta name="color-scheme" content="light dark">
 <link rel="icon" type="image/png" href="favicon-32.png">
 <title>Code-Signing-Richtlinie – Antrag 3000</title>
 <meta name="robots" content="noindex">
@@ -84,11 +84,20 @@
   }
   /* <<< TOKENS */
   :root{
-    color-scheme:light;
+    color-scheme:light dark;
     --bg:var(--n-weiss); --surface:var(--n-flaeche); --card:var(--n-weiss);
     --text:var(--n-text); --muted:var(--n-muted); --border:var(--n-rand);
     --accent:var(--marke-tuerkis-link); --accent-tint:var(--marke-tuerkis-tint); --accent-on-tint:#0b5f55;
     --radius:10px; --maxw:720px;
+  }
+  /* Dunkelmodus - folgt automatisch dem Betriebssystem (prefers-color-scheme) */
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0e1a20; --surface:#15242c; --card:#17272f;
+      --text:#e8eef1; --muted:#9fb1ba; --border:#263a44;
+      --accent:#2dcfbe; --accent-tint:#123a37; --accent-on-tint:#8fe9dd;
+      --btn:#2dcfbe; --btn-text:#07231f;
+    }
   }
   *{box-sizing:border-box}
   body{margin:0; background:var(--bg); color:var(--text);
