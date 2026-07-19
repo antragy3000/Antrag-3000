@@ -86,9 +86,10 @@
       --gold:var(--marke-gold); --gold-d:var(--marke-gold-dunkel); --gold-tint:var(--marke-gold-tint);
       --rand:var(--n-rand); --grau:var(--n-muted); --leise:var(--n-leise); --dunkel:var(--marke-navy);
       --weiss:var(--n-weiss); --flaeche:var(--n-flaeche); --bg:var(--n-flaeche-2); --ok:var(--sig-erfolg); --gefahr:var(--sig-gefahr);
-      /* Entkopplung fuer Dunkelmodus: weisse Knopfschrift bleibt weiss;
-         Gold/Rot als TEXT getrennt von der Fuellung (Text muss dunkel heller werden) */
-      --auf-farbe:#fff; --gold-text:var(--gold-d); --gefahr-text:var(--gefahr);
+      /* Gold/Rot als TEXT getrennt von der Fuellung (Text muss im Dunkelmodus
+         heller werden). Der Gold-Haupt-Knopf nutzt Navy-Schrift (--marke-navy,
+         in beiden Modi lesbar auf Gold ~6:1). */
+      --gold-text:var(--gold-d); --gefahr-text:var(--gefahr);
     }
     /* Dunkelmodus - folgt automatisch dem Betriebssystem (app-lokal) */
     @media (prefers-color-scheme: dark){
@@ -129,7 +130,7 @@
     .ok { color: var(--ok); font-size: 0.85rem; font-weight: 600; display: none; }
     .ok.zeigen { display: inline; }
 
-    button.primaer { padding: 10px 20px; font-size: 0.93rem; font-weight: 600; font-family: inherit; color: var(--auf-farbe); background: var(--gold); border: none; border-radius: 8px; cursor: pointer; }
+    button.primaer { padding: 10px 20px; font-size: 0.93rem; font-weight: 600; font-family: inherit; color: var(--marke-navy); background: var(--gold); border: none; border-radius: 8px; cursor: pointer; }
     button.primaer:hover:not(:disabled) { background: var(--gold-d); }
     button.primaer:disabled { background: #d7dbe0; cursor: default; }
     button.zweit { padding: 9px 16px; font-size: 0.9rem; font-weight: 600; font-family: inherit; color: var(--dunkel); background: var(--weiss); border: 2px solid var(--rand); border-radius: 8px; cursor: pointer; }
