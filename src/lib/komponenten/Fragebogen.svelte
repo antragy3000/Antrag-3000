@@ -318,7 +318,7 @@
     padding: 11px;
     font-size: 1rem;
     font-weight: 600;
-    color: var(--weiss);
+    color: var(--auf-farbe);
     background: var(--akzent);
     border: none;
     border-radius: 8px;

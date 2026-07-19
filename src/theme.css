@@ -62,6 +62,26 @@
   --sig-warnung-bg: #fff7d6;
   --sig-warnung-rand: #f0c36d;
 
+  /* --- Schrift (System-Schriften, keine Web-Fonts) --- */
+  --schrift-sans: system-ui, "Segoe UI", Roboto, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+  --schrift-serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+  /* Groessen-Skala (rem, Basis 16px) */
+  --fs-xs: 0.78rem;
+  --fs-sm: 0.86rem;
+  --fs-basis: 1rem;
+  --fs-md: 1.12rem;
+  --fs-lg: 1.3rem;
+  --fs-xl: 1.6rem;
+  --fs-2xl: 2rem;
+  --fs-3xl: 2.6rem;
+  /* Gewichte */
+  --fw-normal: 400;
+  --fw-halb: 600;
+  --fw-fett: 700;
+  /* Zeilenhoehe */
+  --lh-eng: 1.15;
+  --lh-normal: 1.55;
+
   /* --- Form: Radien & Schatten --- */
   --radius: 8px;
   --radius-gross: 12px;
@@ -72,6 +92,10 @@
 /* <<< TOKENS */
 
 :root{
+  /* Signalisiert dem System: App unterstuetzt hell UND dunkel (Formular-
+     Elemente, Scrollbars passen sich an). */
+  color-scheme: light dark;
+
   /* === Akzent (Tuerkis) – zeigt auf die Marke === */
   --akzent: var(--marke-tuerkis-knopf);   /* Knopf-Fuellung, aktive Zustaende */
   --akzent-hell: var(--marke-tuerkis);    /* helles Logo-Tuerkis: Punkt, feine Akzente */
@@ -86,6 +110,9 @@
   --link-d2: #075349;
   --link-d3: #06564c;
   --akzent-bg: var(--marke-tuerkis-tint);
+  /* Tuerkis als TEXT (getrennt von der Knopf-Fuellung --akzent, weil es im
+     Dunkelmodus HELLER werden muss). Hellmodus = wie --akzent. */
+  --akzent-text: var(--akzent);
   /* App-eigene Feintoene (aus dem Tuerkis abgeleitet) */
   --akzent-bg2: #ddf2ee;
   --akzent-bg3: #def3ef;
@@ -115,6 +142,9 @@
 
   /* === Flaechen / Hintergrund === */
   --weiss: var(--n-weiss);
+  /* Weisse Schrift auf farbigen Flaechen (Knoepfe). BLEIBT im Dunkelmodus
+     weiss – deshalb getrennt von --weiss (das dort zur dunklen Flaeche wird). */
+  --auf-farbe: #fff;
   --flaeche: var(--n-flaeche);
   --flaeche-b: #f3f8f7;
   --flaeche-c: #f2f8f6;
@@ -194,4 +224,137 @@
   --erfolg-glow: rgba(54, 179, 126, 0.18);
   --warnung-glow: rgba(255, 171, 0, 0.18);
 
+}
+
+/* ============================================================
+   DUNKELMODUS – folgt automatisch dem Betriebssystem.
+   App-LOKAL (Foerderer/Admin unberuehrt). Ueberschreibt die
+   semantischen App-Variablen mit dunklen Werten. --auf-farbe
+   (weisse Knopfschrift) bleibt bewusst weiss.
+   ============================================================ */
+@media (prefers-color-scheme: dark){
+  :root{
+    /* Flaechen / Hintergrund (dunkel) */
+    --weiss: #17272f;        /* Karten / erhoehte Flaeche */
+    --flaeche: #15242c;
+    --flaeche-b: #1a2b34;
+    --flaeche-c: #1a2b34;
+    --flaeche-2: #0e1a20;    /* App-Grund */
+    --flaeche-2b: #1c2f39;
+    --flaeche-2c: #21343e;
+    --flaeche-3: #243842;
+    --flaeche-3b: #243842;
+    --flaeche-3c: #2b414b;
+    --flaeche-blau: #12302c;
+
+    /* Text (hell) */
+    --text: #e8eef1;
+    --text-tief: #f5f8fa;
+    --text-2: #c6d4da;
+    --text-muted: #9fb1ba;
+    --text-muted2: #93a6af;
+    --text-leise: #7e929c;
+    --grau-5: #6a7d87;
+    --grau-4: #5c6f79;
+    --grau-3: #4e626c;
+
+    /* Raender */
+    --rand: #263a44;
+    --rand-2: #2c414b;
+
+    /* Akzent (Tuerkis): Fuellung dunkel genug fuer weisse Schrift,
+       Text/Punkt hell */
+    --akzent: #0b8175;
+    --akzent-hell: #2dcfbe;
+    --akzent-text: #2dcfbe;
+    --akzent-d: #0e9a8b;
+    --akzent-d2: #0b8175;
+    --akzent-d3: #0a6b60;
+    --akzent-d4: #0e9a8b;
+    --link: #2dcfbe;
+    --link-2: #45ddcd;
+    --link-3: #3dd6c6;
+    --link-d: #5fe6d8;
+    --link-d2: #45ddcd;
+    --link-d3: #45ddcd;
+    --akzent-bg: #123a37;
+    --akzent-bg2: #143f3b;
+    --akzent-bg3: #123a37;
+    --akzent-bg4: #163f3b;
+    --akzent-bg5: #113531;
+    --akzent-bg6: #0f302d;
+    --akzent-bg7: #0d2b28;
+    --akzent-bg8: #163f3b;
+    --akzent-bg-x: #0f2a28;
+    --akzent-bg-y: #0f2926;
+    --akzent-rand: #1e5750;
+    --akzent-rand2: #235f57;
+    --akzent-rand3: #2a6f66;
+    --akzent-rand4: #31857a;
+
+    /* Gefahr (Rot): Fuellung mit weisser Schrift, Text hell */
+    --gefahr: #d33d2c;
+    --gefahr-text: #f4a19a;
+    --gefahr-2: #d84636;
+    --gefahr-d: #f4a19a;
+    --gefahr-d2: #f4a19a;
+    --gefahr-bg: #3a1613;
+    --gefahr-bg2: #3a1613;
+    --gefahr-bg3: #38150f;
+    --gefahr-bg4: #2a110d;
+    --gefahr-rand: #6e2c22;
+    --gefahr-rand2: #5e261e;
+
+    /* Erfolg (Gruen) */
+    --erfolg: #2eb87f;
+    --erfolg-text: #5fd6a0;
+    --erfolg-text2: #5fd6a0;
+    --erfolg-d: #46c78e;
+    --erfolg-d2: #46c78e;
+    --erfolg-2: #3ec489;
+    --erfolg-bg: #123528;
+    --erfolg-bg2: #123528;
+
+    /* Warnung (Gelb/Orange) */
+    --warnung: #e0a52a;
+    --warnung-2: #ffab00;
+    --warnung-3: #f0a020;
+    --orange-d: #e0954a;
+    --warnung-text: #e8c266;
+    --warnung-text2: #e8c266;
+    --warnung-text3: #e8c266;
+    --warnung-text4: #e8c266;
+    --warnung-text5: #e8c266;
+    --warnung-text6: #e8c266;
+    --warnung-bg: #3a2e0e;
+    --warnung-bg2: #332810;
+    --warnung-bg3: #2e2610;
+    --warnung-bg4: #2a220e;
+    --warnung-bg5: #26200e;
+    --warnung-rand: #6e5a1e;
+    --warnung-rand2: #5e4c1e;
+    --warnung-rand3: #6e5024;
+
+    /* Lila (sekundaer) */
+    --lila: #a99cf0;
+    --lila-d: #b3a6f5;
+    --lila-d2: #b3a6f5;
+    --lila-d3: #b3a6f5;
+    --lila-bg: #221f3a;
+    --lila-bg2: #221f3a;
+    --lila-bg3: #211d38;
+    --lila-bg4: #262247;
+    --lila-bg5: #1c2f38;
+
+    /* Schatten (staerker auf dunklem Grund) */
+    --schatten-xs: rgba(0, 0, 0, 0.3);
+    --schatten-sm: rgba(0, 0, 0, 0.4);
+    --schatten-md2: rgba(0, 0, 0, 0.45);
+    --schatten-md: rgba(0, 0, 0, 0.5);
+    --schatten-lg: rgba(0, 0, 0, 0.6);
+    --schatten-xl: rgba(0, 0, 0, 0.7);
+    --schatten-schwach: rgba(0, 0, 0, 0.25);
+    --erfolg-glow: rgba(46, 184, 127, 0.3);
+    --warnung-glow: rgba(255, 171, 0, 0.22);
+  }
 }

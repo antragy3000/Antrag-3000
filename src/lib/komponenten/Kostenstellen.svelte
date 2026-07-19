@@ -177,7 +177,7 @@
     color: var(--text);
   }
   .betrag.ueber {
-    color: var(--gefahr);
+    color: var(--gefahr-text);
     font-weight: 700;
   }
   .hinweis {

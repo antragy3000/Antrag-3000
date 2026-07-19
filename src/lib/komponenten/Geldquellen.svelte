@@ -288,7 +288,7 @@
     font-variant-numeric: tabular-nums;
   }
   .betrag.ueber {
-    color: var(--gefahr);
+    color: var(--gefahr-text);
     font-weight: 700;
   }
   .summe-label {
@@ -325,7 +325,7 @@
     font-size: 0.92rem;
     font-weight: 600;
     font-family: inherit;
-    color: var(--weiss);
+    color: var(--auf-farbe);
     background: var(--akzent);
     border: none;
     border-radius: 8px;

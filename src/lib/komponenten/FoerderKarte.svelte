@@ -170,10 +170,10 @@
     border-radius: 6px;
   }
   .stern:hover {
-    color: var(--warnung);
+    color: var(--warnung-text);
   }
   .stern.aktiv {
-    color: var(--warnung);
+    color: var(--warnung-text);
   }
 
   .herkunft {

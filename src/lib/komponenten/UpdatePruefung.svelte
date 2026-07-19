@@ -160,7 +160,7 @@
   .knoepfe { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
   .primaer {
     padding: 9px 16px; font-size: 0.92rem; font-weight: 600; font-family: inherit;
-    color: var(--weiss); background: var(--akzent); border: none; border-radius: 8px; cursor: pointer;
+    color: var(--auf-farbe); background: var(--akzent); border: none; border-radius: 8px; cursor: pointer;
   }
   .primaer:hover { background: var(--akzent-d); }
   .zweit {

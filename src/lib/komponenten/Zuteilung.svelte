@@ -353,11 +353,11 @@
   .qk-zahlen { display: flex; gap: 20px; font-size: 0.86rem; color: var(--text-muted); flex-wrap: wrap; }
   .qk-zahlen strong { color: var(--text); }
   .rest.offen { color: var(--warnung-text3); font-weight: 600; }
-  .rest.ueber { color: var(--gefahr); font-weight: 700; }
+  .rest.ueber { color: var(--gefahr-text); font-weight: 700; }
 
   /* Detail */
   .zurueck {
-    background: none; border: none; color: var(--akzent); font-size: 0.9rem;
+    background: none; border: none; color: var(--akzent-text); font-size: 0.9rem;
     font-weight: 600; cursor: pointer; padding: 0; margin-bottom: 14px; font-family: inherit;
   }
   .zurueck:hover { text-decoration: underline; }
@@ -387,10 +387,10 @@
   td.zelle input:focus { outline: none; border-color: var(--akzent); }
   .rest-btn {
     display: block; margin: 4px 0 0 auto; border: none; border-radius: 6px;
-    background: var(--akzent-bg); color: var(--akzent-d); font-size: 0.72rem; font-weight: 600;
+    background: var(--akzent-bg); color: var(--akzent-text); font-size: 0.72rem; font-weight: 600;
     padding: 2px 6px; cursor: pointer; font-family: inherit;
   }
-  .rest-btn:hover { background: var(--akzent); color: var(--weiss); }
+  .rest-btn:hover { background: var(--akzent); color: var(--auf-farbe); }
   .akt { text-align: right; white-space: nowrap; }
   .summe-label { text-align: right; font-weight: 600; color: var(--text-2); }
   .summe { font-weight: 700; color: var(--text); }

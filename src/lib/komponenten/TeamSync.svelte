@@ -646,7 +646,7 @@
     font-size: 0.93rem;
     font-weight: 600;
     font-family: inherit;
-    color: var(--weiss);
+    color: var(--auf-farbe);
     background: var(--gefahr-2);
     border: none;
     border-radius: 8px;
@@ -926,7 +926,7 @@
     font-size: 0.93rem;
     font-weight: 600;
     font-family: inherit;
-    color: var(--weiss);
+    color: var(--auf-farbe);
     background: var(--akzent);
     border: none;
     border-radius: 8px;
@@ -976,7 +976,7 @@
   .zeile .leise.klein {
     margin-left: auto;
     padding: 0 6px;
-    color: var(--akzent);
+    color: var(--akzent-text);
   }
   .zeile .leise.klein:hover:not(:disabled) {
     color: var(--akzent-d2);

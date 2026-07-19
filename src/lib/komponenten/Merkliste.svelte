@@ -509,7 +509,7 @@
     border: none;
     font-size: 1.2rem;
     line-height: 1;
-    color: var(--warnung);
+    color: var(--warnung-text);
     cursor: pointer;
     padding: 2px 4px;
     border-radius: 6px;
@@ -523,7 +523,7 @@
     border: none;
     font-size: 1.05rem;
     line-height: 1;
-    color: var(--akzent);
+    color: var(--akzent-text);
     cursor: pointer;
     padding: 3px 4px;
     border-radius: 6px;

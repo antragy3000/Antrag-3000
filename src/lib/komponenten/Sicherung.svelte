@@ -196,7 +196,7 @@
     border: none;
   }
   .primaer {
-    color: var(--weiss);
+    color: var(--auf-farbe);
     background: var(--akzent);
   }
   .primaer:hover:not(:disabled) {
@@ -211,7 +211,7 @@
     border-color: var(--akzent);
   }
   .gefahr {
-    color: var(--weiss);
+    color: var(--auf-farbe);
     background: var(--gefahr);
   }
   .gefahr:hover:not(:disabled) {

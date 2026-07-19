@@ -1689,7 +1689,7 @@
       <h1 class="logo-gross" aria-label="Antrag 3000">
         <svg viewBox="0 0 470 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <svg x="6" y="10" width="100" height="100" viewBox="19.75 9.5 89.5 89.5">
-            <g fill="#17b6a6">
+            <g fill="var(--akzent-hell)">
               <rect x="30" y="88" width="62" height="7" rx="3" transform="rotate(0.5 61 91.5)"></rect>
               <rect x="27" y="78.5" width="66" height="7" rx="3" transform="rotate(-1.5 60 82)" opacity="0.9"></rect>
               <rect x="33" y="69" width="70" height="7" rx="3" transform="rotate(1 68 72.5)"></rect>
@@ -1701,7 +1701,7 @@
               <rect x="35" y="13.5" width="52" height="7" rx="3" transform="rotate(4 61 17)"></rect>
             </g>
           </svg>
-          <text x="122" y="82" font-family="'DM Serif Display', Georgia, 'Times New Roman', serif" font-size="60" fill="#123a5e">Antrag <tspan fill="#14b7a8">3000</tspan></text>
+          <text x="122" y="82" font-family="'DM Serif Display', Georgia, 'Times New Roman', serif" font-size="60" fill="var(--text)">Antrag <tspan fill="var(--akzent-hell)">3000</tspan></text>
         </svg>
       </h1>
       <p class="untertitel">Willkommen! Lege zuerst dein Tresor-Passwort fest.</p>
@@ -1733,7 +1733,7 @@
       <h1 class="logo-gross" aria-label="Antrag 3000">
         <svg viewBox="0 0 470 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <svg x="6" y="10" width="100" height="100" viewBox="19.75 9.5 89.5 89.5">
-            <g fill="#17b6a6">
+            <g fill="var(--akzent-hell)">
               <rect x="30" y="88" width="62" height="7" rx="3" transform="rotate(0.5 61 91.5)"></rect>
               <rect x="27" y="78.5" width="66" height="7" rx="3" transform="rotate(-1.5 60 82)" opacity="0.9"></rect>
               <rect x="33" y="69" width="70" height="7" rx="3" transform="rotate(1 68 72.5)"></rect>
@@ -1745,7 +1745,7 @@
               <rect x="35" y="13.5" width="52" height="7" rx="3" transform="rotate(4 61 17)"></rect>
             </g>
           </svg>
-          <text x="122" y="82" font-family="'DM Serif Display', Georgia, 'Times New Roman', serif" font-size="60" fill="#123a5e">Antrag <tspan fill="#14b7a8">3000</tspan></text>
+          <text x="122" y="82" font-family="'DM Serif Display', Georgia, 'Times New Roman', serif" font-size="60" fill="var(--text)">Antrag <tspan fill="var(--akzent-hell)">3000</tspan></text>
         </svg>
       </h1>
       <p class="untertitel">Tresor entsperren</p>
@@ -1820,7 +1820,7 @@
         <span class="logo" role="img" aria-label="Antrag 3000">
           <svg viewBox="0 0 470 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <svg x="6" y="10" width="100" height="100" viewBox="19.75 9.5 89.5 89.5">
-              <g fill="#17b6a6">
+              <g fill="var(--akzent-hell)">
                 <rect x="30" y="88" width="62" height="7" rx="3" transform="rotate(0.5 61 91.5)"></rect>
                 <rect x="27" y="78.5" width="66" height="7" rx="3" transform="rotate(-1.5 60 82)" opacity="0.9"></rect>
                 <rect x="33" y="69" width="70" height="7" rx="3" transform="rotate(1 68 72.5)"></rect>
@@ -1832,7 +1832,7 @@
                 <rect x="35" y="13.5" width="52" height="7" rx="3" transform="rotate(4 61 17)"></rect>
               </g>
             </svg>
-            <text x="122" y="82" font-family="'DM Serif Display', Georgia, 'Times New Roman', serif" font-size="60" fill="#123a5e">Antrag <tspan fill="#14b7a8">3000</tspan></text>
+            <text x="122" y="82" font-family="'DM Serif Display', Georgia, 'Times New Roman', serif" font-size="60" fill="var(--text)">Antrag <tspan fill="var(--akzent-hell)">3000</tspan></text>
           </svg>
         </span>
         <div class="projektwahl">
@@ -2434,7 +2434,7 @@
     font-size: 0.9rem;
     font-weight: 600;
     font-family: inherit;
-    color: var(--akzent);
+    color: var(--akzent-text);
     background: none;
     border: none;
     border-top: 1px solid var(--flaeche-2b);
@@ -2505,7 +2505,7 @@
   }
   .modus-knoepfe button.aktiv {
     background: var(--akzent);
-    color: var(--weiss);
+    color: var(--auf-farbe);
   }
   .einzel-panel {
     background: var(--weiss);
@@ -2560,7 +2560,7 @@
     font-size: 0.92rem;
     font-weight: 600;
     font-family: inherit;
-    color: var(--weiss);
+    color: var(--auf-farbe);
     background: var(--akzent);
     border: none;
     border-radius: 8px;
@@ -2646,7 +2646,7 @@
     padding: 11px;
     font-size: 1rem;
     font-weight: 600;
-    color: var(--weiss);
+    color: var(--auf-farbe);
     background: var(--akzent);
     border: none;
     border-radius: 8px;
@@ -2738,7 +2738,7 @@
   .neu-fuss { display: flex; justify-content: flex-end; margin-top: 20px; }
   .neu-fuss button {
     padding: 9px 18px; font-size: 0.92rem; font-weight: 600; font-family: inherit;
-    color: var(--weiss); background: var(--akzent); border: none; border-radius: 8px; cursor: pointer;
+    color: var(--auf-farbe); background: var(--akzent); border: none; border-radius: 8px; cursor: pointer;
   }
   .neu-fuss button:hover { background: var(--akzent-d); }
   .app header button.leise {
@@ -2784,7 +2784,7 @@
   }
   nav button.aktiv {
     background: var(--akzent-bg);
-    color: var(--akzent-d);
+    color: var(--akzent-text);
     font-weight: 600;
   }
   /* trennt die drei Navigations-Blöcke */
@@ -2820,7 +2820,7 @@
   }
   .modus-schalter button.aktiv {
     background: var(--akzent);
-    color: var(--weiss);
+    color: var(--auf-farbe);
   }
 
   .links {

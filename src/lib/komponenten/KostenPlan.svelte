@@ -776,7 +776,7 @@
     font-size: 0.95rem;
     font-weight: 600;
     font-family: inherit;
-    color: var(--weiss);
+    color: var(--auf-farbe);
     background: var(--akzent);
     border: none;
     border-radius: 8px;
@@ -845,7 +845,7 @@
   }
   .pfeil:hover:not(:disabled) {
     background: var(--akzent-bg);
-    color: var(--akzent);
+    color: var(--akzent-text);
   }
   .pfeil:disabled {
     color: var(--rand);

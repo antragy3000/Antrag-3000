@@ -277,7 +277,7 @@
 
   .primaer {
     padding: 9px 16px; font-size: 0.92rem; font-weight: 600; font-family: inherit;
-    color: var(--weiss); background: var(--akzent); border: none; border-radius: 8px; cursor: pointer;
+    color: var(--auf-farbe); background: var(--akzent); border: none; border-radius: 8px; cursor: pointer;
   }
   .primaer:hover:not(:disabled) { background: var(--akzent-d); }
   .primaer:disabled { background: var(--grau-3); cursor: default; }
@@ -289,7 +289,7 @@
   .zweit:disabled { color: var(--grau-4); background: var(--flaeche-2); cursor: default; }
   .gefahr {
     padding: 8px 14px; font-size: 0.9rem; font-weight: 600; font-family: inherit;
-    color: var(--weiss); background: var(--gefahr); border: none; border-radius: 8px; cursor: pointer;
+    color: var(--auf-farbe); background: var(--gefahr); border: none; border-radius: 8px; cursor: pointer;
   }
   .gefahr:hover:not(:disabled) { background: var(--gefahr-text); }
   .leise {

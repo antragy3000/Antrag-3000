@@ -561,7 +561,7 @@
   .off-add {
     background: none;
     border: none;
-    color: var(--akzent);
+    color: var(--akzent-text);
     font-size: 0.85rem;
     font-family: inherit;
     cursor: pointer;
@@ -657,7 +657,7 @@
     cursor: default;
   }
   .datei-knopf.hochladen {
-    color: var(--akzent-d);
+    color: var(--akzent-text);
     border-color: var(--akzent-rand2);
   }
   .datei-entfernen {
@@ -729,7 +729,7 @@
     font-size: 0.9rem;
     font-weight: 600;
     font-family: inherit;
-    color: var(--weiss);
+    color: var(--auf-farbe);
     background: var(--akzent);
     border: none;
     border-radius: 8px;
@@ -763,7 +763,7 @@
     font-size: 0.95rem;
     font-weight: 600;
     font-family: inherit;
-    color: var(--weiss);
+    color: var(--auf-farbe);
     background: var(--link-2);
     border: none;
     border-radius: 8px;
@@ -790,7 +790,7 @@
     font-size: 0.95rem;
     font-weight: 600;
     font-family: inherit;
-    color: var(--weiss);
+    color: var(--auf-farbe);
     background: var(--erfolg-text);
     border: none;
     border-radius: 8px;
@@ -848,7 +848,7 @@
     font-size: 0.93rem;
     font-weight: 600;
     font-family: inherit;
-    color: var(--weiss);
+    color: var(--auf-farbe);
     background: var(--erfolg-text);
     border: none;
     border-radius: 8px;

@@ -538,7 +538,7 @@
     font-size: 0.92rem;
     font-weight: 600;
     font-family: inherit;
-    color: var(--weiss);
+    color: var(--auf-farbe);
     background: var(--akzent);
     border: none;
     border-radius: 8px;
@@ -670,7 +670,7 @@
   }
 
   button.leise.aktiv {
-    color: var(--akzent-d);
+    color: var(--akzent-text);
     font-weight: 700;
   }
 
