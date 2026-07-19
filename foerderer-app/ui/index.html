@@ -81,10 +81,23 @@
     }
     /* <<< TOKENS */
     :root {
+      color-scheme: light dark;
       /* Rollenfarbe GOLD + gemeinsame Neutrale/Signale aus design/tokens.css (npm run tokens) */
       --gold:var(--marke-gold); --gold-d:var(--marke-gold-dunkel); --gold-tint:var(--marke-gold-tint);
       --rand:var(--n-rand); --grau:var(--n-muted); --leise:var(--n-leise); --dunkel:var(--marke-navy);
       --weiss:var(--n-weiss); --flaeche:var(--n-flaeche); --bg:var(--n-flaeche-2); --ok:var(--sig-erfolg); --gefahr:var(--sig-gefahr);
+      /* Entkopplung fuer Dunkelmodus: weisse Knopfschrift bleibt weiss;
+         Gold/Rot als TEXT getrennt von der Fuellung (Text muss dunkel heller werden) */
+      --auf-farbe:#fff; --gold-text:var(--gold-d); --gefahr-text:var(--gefahr);
+    }
+    /* Dunkelmodus - folgt automatisch dem Betriebssystem (app-lokal) */
+    @media (prefers-color-scheme: dark){
+      :root{
+        --weiss:#17272f; --flaeche:#15242c; --bg:#0e1a20;
+        --dunkel:#e8eef1; --grau:#9fb1ba; --leise:#7e929c; --rand:#263a44;
+        --gold:#f5a623; --gold-d:#e0a53a; --gold-text:#f0c065; --gold-tint:#3a2e0e;
+        --ok:#5fd6a0; --gefahr:#d33d2c; --gefahr-text:#f4a19a;
+      }
     }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: var(--schrift-sans); color: var(--dunkel); background: var(--bg); font-size: 14px; }
@@ -97,18 +110,18 @@
     header .logo > svg { height: 30px; width: auto; display: block; }
     header .produkt-tag {
       font-weight: 700; font-size: 0.72rem; letter-spacing: 0.06em;
-      text-transform: uppercase; color: var(--gold-d); background: var(--gold-tint);
+      text-transform: uppercase; color: var(--gold-text); background: var(--gold-tint);
       border-radius: 6px; padding: 3px 8px;
     }
     nav { display: flex; gap: 6px; margin-left: 18px; }
     nav button { padding: 8px 16px; font-size: 0.9rem; font-weight: 600; font-family: inherit; color: var(--grau); background: transparent; border: none; border-radius: 8px; cursor: pointer; }
     nav button:hover { background: var(--flaeche); }
-    nav button.aktiv { color: var(--gold-d); background: var(--gold-tint); }
+    nav button.aktiv { color: var(--gold-text); background: var(--gold-tint); }
 
     main { padding: 24px 22px 72px; max-width: 1000px; margin: 0 auto; }
     .intro { color: var(--grau); font-size: 0.95rem; line-height: 1.55; max-width: 640px; margin: 0 0 20px; }
     .intro strong { color: var(--dunkel); }
-    .tag { display: inline-block; padding: 3px 10px; border-radius: 999px; background: var(--gold-tint); color: var(--gold-d); border: 1px solid var(--gold); font-weight: 600; }
+    .tag { display: inline-block; padding: 3px 10px; border-radius: 999px; background: var(--gold-tint); color: var(--gold-text); border: 1px solid var(--gold); font-weight: 600; }
 
     .kopfzeile { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
     .kopfzeile h2 { margin: 0; font-size: 1.2rem; }
@@ -116,14 +129,14 @@
     .ok { color: var(--ok); font-size: 0.85rem; font-weight: 600; display: none; }
     .ok.zeigen { display: inline; }
 
-    button.primaer { padding: 10px 20px; font-size: 0.93rem; font-weight: 600; font-family: inherit; color: var(--weiss); background: var(--gold); border: none; border-radius: 8px; cursor: pointer; }
+    button.primaer { padding: 10px 20px; font-size: 0.93rem; font-weight: 600; font-family: inherit; color: var(--auf-farbe); background: var(--gold); border: none; border-radius: 8px; cursor: pointer; }
     button.primaer:hover:not(:disabled) { background: var(--gold-d); }
     button.primaer:disabled { background: #d7dbe0; cursor: default; }
     button.zweit { padding: 9px 16px; font-size: 0.9rem; font-weight: 600; font-family: inherit; color: var(--dunkel); background: var(--weiss); border: 2px solid var(--rand); border-radius: 8px; cursor: pointer; }
     button.zweit:hover { border-color: var(--gold); }
     button.mini { padding: 5px 11px; font-size: 0.8rem; font-weight: 600; font-family: inherit; border-radius: 7px; border: 2px solid var(--rand); background: var(--weiss); color: var(--dunkel); cursor: pointer; }
     button.mini:hover { border-color: var(--gold); }
-    button.mini.gefahr { color: var(--gefahr); border-color: #f2c7c1; }
+    button.mini.gefahr { color: var(--gefahr-text); border-color: #f2c7c1; }
 
     .raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; align-items: start; }
     .karte { background: var(--weiss); border: 1px solid var(--rand); border-radius: 12px; padding: 22px 24px; margin-bottom: 16px; }
@@ -132,7 +145,7 @@
     .karte .hinweis { color: var(--leise); font-size: 0.85rem; margin: 0 0 6px; }
 
     label.feld { display: block; font-size: 0.82rem; font-weight: 600; color: var(--grau); margin: 14px 0 5px; }
-    label.feld .stern { color: var(--gold-d); }
+    label.feld .stern { color: var(--gold-text); }
     input[type=text], input[type=email], input[type=number], input[type=date], textarea, select {
       width: 100%; padding: 9px 12px; font-size: 0.95rem; font-family: inherit; color: var(--dunkel);
       border: 2px solid var(--rand); border-radius: 8px; background: var(--flaeche);
@@ -140,7 +153,7 @@
     textarea { min-height: 90px; resize: vertical; }
     input:focus, textarea:focus, select:focus { outline: none; border-color: var(--gold); background: var(--weiss); }
     input.fehlt { border-color: var(--gefahr); background: #fff6f5; }
-    .feld-fehler { color: var(--gefahr); font-size: 0.8rem; margin: 5px 0 0; display: none; }
+    .feld-fehler { color: var(--gefahr-text); font-size: 0.8rem; margin: 5px 0 0; display: none; }
     .feld-fehler.zeigen { display: block; }
     .zeile { display: flex; gap: 14px; flex-wrap: wrap; }
     .zeile > div { flex: 1 1 150px; }
@@ -150,13 +163,13 @@
     label.chk { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border: 2px solid var(--rand); border-radius: 999px; font-size: 0.88rem; cursor: pointer; background: var(--weiss); user-select: none; }
     label.chk:hover { border-color: var(--gold); }
     label.chk input { accent-color: var(--gold); }
-    label.chk:has(input:checked) { border-color: var(--gold); background: var(--gold-tint); color: var(--gold-d); }
+    label.chk:has(input:checked) { border-color: var(--gold); background: var(--gold-tint); color: var(--gold-text); }
     button.chip-vor { padding: 7px 12px; border: 2px dashed var(--rand); border-radius: 999px; font-size: 0.88rem; background: var(--weiss); color: var(--grau); cursor: pointer; font-family: inherit; }
-    button.chip-vor:hover:not(:disabled) { border-color: var(--gold); color: var(--gold-d); }
+    button.chip-vor:hover:not(:disabled) { border-color: var(--gold); color: var(--gold-text); }
     button.chip-vor:disabled { opacity: 0.4; cursor: default; }
     .dok-liste { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
-    .chip-dok { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border: 2px solid var(--gold); background: var(--gold-tint); color: var(--gold-d); border-radius: 999px; font-size: 0.88rem; }
-    .chip-dok button { border: none; background: none; color: var(--gold-d); cursor: pointer; font-size: 0.95rem; line-height: 1; padding: 0; }
+    .chip-dok { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border: 2px solid var(--gold); background: var(--gold-tint); color: var(--gold-text); border-radius: 999px; font-size: 0.88rem; }
+    .chip-dok button { border: none; background: none; color: var(--gold-text); cursor: pointer; font-size: 0.95rem; line-height: 1; padding: 0; }
     .dok-add { display: flex; gap: 8px; margin-top: 8px; }
     .dok-add input { flex: 1; }
     /* Regionale/städtische Eingrenzung (optional) */
@@ -170,10 +183,10 @@
     .stadt-wahl input { width: 100%; max-width: 340px; }
     .stadt-treffer { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
     .stadt-treffer-btn { padding: 5px 10px; border: 2px dashed var(--rand); border-radius: 999px; font-size: 0.82rem; background: var(--weiss); color: var(--grau); cursor: pointer; font-family: inherit; }
-    .stadt-treffer-btn:hover { border-color: var(--gold); color: var(--gold-d); }
+    .stadt-treffer-btn:hover { border-color: var(--gold); color: var(--gold-text); }
     .chips-liste { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-    .stadt-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 2px solid var(--gold); background: var(--gold-tint); color: var(--gold-d); border-radius: 999px; font-size: 0.84rem; }
-    .stadt-chip button { border: none; background: none; color: var(--gold-d); cursor: pointer; font-size: 0.95rem; line-height: 1; padding: 0; }
+    .stadt-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 2px solid var(--gold); background: var(--gold-tint); color: var(--gold-text); border-radius: 999px; font-size: 0.84rem; }
+    .stadt-chip button { border: none; background: none; color: var(--gold-text); cursor: pointer; font-size: 0.95rem; line-height: 1; padding: 0; }
 
     /* Logo */
     .logo-zeile { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
@@ -182,9 +195,9 @@
     .logo-knoepfe { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
     .datei-knopf { display: inline-block; padding: 9px 16px; font-size: 0.9rem; font-weight: 600; color: var(--dunkel); background: var(--weiss); border: 2px solid var(--rand); border-radius: 8px; cursor: pointer; }
     .datei-knopf:hover { border-color: var(--gold); }
-    .entfernen { padding: 7px 14px; font-size: 0.85rem; background: var(--weiss); color: var(--gefahr); border: 2px solid #f2c7c1; border-radius: 8px; cursor: pointer; }
+    .entfernen { padding: 7px 14px; font-size: 0.85rem; background: var(--weiss); color: var(--gefahr-text); border: 2px solid #f2c7c1; border-radius: 8px; cursor: pointer; }
     .logo-tipp { color: var(--leise); font-size: 0.8rem; }
-    .warnung { color: var(--gefahr); font-size: 0.82rem; margin: 8px 0 0; }
+    .warnung { color: var(--gefahr-text); font-size: 0.82rem; margin: 8px 0 0; }
 
     /* Programm-Liste */
     .p-karte { display: flex; align-items: center; gap: 14px; }
@@ -199,7 +212,7 @@
     .frist-reihe input[type=text] { flex: 1 1 180px; }
     .radio-gruppe { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
     label.radio { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border: 2px solid var(--rand); border-radius: 999px; font-size: 0.88rem; cursor: pointer; background: var(--weiss); }
-    label.radio:has(input:checked) { border-color: var(--gold); background: var(--gold-tint); color: var(--gold-d); }
+    label.radio:has(input:checked) { border-color: var(--gold); background: var(--gold-tint); color: var(--gold-text); }
     label.radio input { accent-color: var(--gold); }
 
     footer { max-width: 1000px; margin: 0 auto; padding: 0 22px 40px; color: var(--leise); font-size: 0.8rem; }
@@ -224,7 +237,7 @@
               <rect x="35" y="13.5" width="52" height="7" rx="3" transform="rotate(4 61 17)"></rect>
             </g>
           </svg>
-          <text x="122" y="82" font-family="'DM Serif Display', Georgia, 'Times New Roman', serif" font-size="60" fill="#123a5e">Antrag <tspan fill="#f5a623">3000</tspan></text>
+          <text x="122" y="82" font-family="'DM Serif Display', Georgia, 'Times New Roman', serif" font-size="60" fill="var(--dunkel)">Antrag <tspan fill="#f5a623">3000</tspan></text>
         </svg>
       </span>
       <span class="produkt-tag">Förderer</span>

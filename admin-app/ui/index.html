@@ -81,14 +81,38 @@
     }
     /* <<< TOKENS */
     /* Rollenfarbe BLAU + gemeinsame Neutrale aus design/tokens.css (npm run tokens) */
-    :root { --blau:var(--marke-blau); --blau-d:var(--marke-blau-dunkel); --rand:var(--n-rand); --grau:var(--n-muted); --dunkel:var(--marke-navy); }
+    :root {
+      color-scheme: light dark;
+      --blau:var(--marke-blau); --blau-d:var(--marke-blau-dunkel); --rand:var(--n-rand);
+      --grau:var(--n-muted); --dunkel:var(--marke-navy);
+      /* Flaechen + Entkopplung (fuer Dunkelmodus). Hellmodus = wie bisher. */
+      --weiss:var(--n-weiss); --bg:var(--n-flaeche-2); --flaeche:var(--n-flaeche);
+      --auf-farbe:#fff; --grau-3:#c1c7d0; --code-bg:#f1f2f4;
+      --blau-bg:#eceffe; --blau-text:var(--blau);
+      --gefahr:var(--sig-gefahr); --gefahr-d:#ae2e24; --gefahr-bg:var(--sig-gefahr-bg); --gefahr-text:#ae2e24;
+      --erfolg-bg:var(--sig-erfolg-bg); --erfolg-text:#143d2b;
+      --info-bg:#e6f4ff; --info-text:#0c5a8f;
+      --warnung-bg:#fff7e6; --warnung-bg2:#fff7d6; --warnung-text:#7a5c00; --warnung-text2:#7a4d00; --warnung-rand:#f5cd47;
+    }
+    /* Dunkelmodus - folgt automatisch dem Betriebssystem (app-lokal) */
+    @media (prefers-color-scheme: dark){
+      :root{
+        --weiss:#17272f; --bg:#0e1a20; --flaeche:#15242c; --rand:#263a44;
+        --dunkel:#e8eef1; --grau:#9fb1ba; --grau-3:#3a4a54; --code-bg:#1c2f38;
+        --blau:#4f6df5; --blau-d:#6a83f7; --blau-bg:#1c2340; --blau-text:#8fa4fb;
+        --gefahr:#d33d2c; --gefahr-d:#b83525; --gefahr-bg:#3a1613; --gefahr-text:#f4a19a;
+        --erfolg-bg:#123528; --erfolg-text:#5fd6a0;
+        --info-bg:#122d3a; --info-text:#7fc3e8;
+        --warnung-bg:#3a2e0e; --warnung-bg2:#332810; --warnung-text:#e8c266; --warnung-text2:#e0b85a; --warnung-rand:#6e5a1e;
+      }
+    }
     * { box-sizing: border-box; }
     body {
       margin: 0; font-family: var(--schrift-sans);
-      color: var(--dunkel); background: #f4f5f7; font-size: 14px;
+      color: var(--dunkel); background: var(--bg); font-size: 14px;
     }
     header {
-      background: #fff; border-bottom: 1px solid var(--rand);
+      background: var(--weiss); border-bottom: 1px solid var(--rand);
       padding: 12px 20px; display: flex; align-items: center; gap: 12px;
     }
     /* Marke wie in der Nutzer-App: Inline-SVG (Aktenstapel + Wortmarke),
@@ -98,51 +122,51 @@
     header .logo > svg { height: 30px; width: auto; display: block; }
     header .produkt-tag {
       font-weight: 700; font-size: 0.72rem; letter-spacing: 0.06em;
-      text-transform: uppercase; color: var(--blau); background: #eceffe;
+      text-transform: uppercase; color: var(--blau-text); background: var(--blau-bg);
       border-radius: 6px; padding: 3px 8px;
     }
     header .geraet { margin-left: auto; color: var(--grau); font-size: 0.85rem; }
     main { padding: 20px; max-width: 880px; margin: 0 auto; }
-    .karte { background: #fff; border: 1px solid var(--rand); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+    .karte { background: var(--weiss); border: 1px solid var(--rand); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
     h2 { font-size: 1rem; margin: 0 0 12px; }
     label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--grau); margin: 10px 0 4px; }
     input[type=text] {
       width: 100%; padding: 10px 12px; font-size: 1.1rem; letter-spacing: 0.15em;
-      border: 2px solid var(--rand); border-radius: 8px; background: #fafbfc; font-family: inherit;
+      border: 2px solid var(--rand); border-radius: 8px; background: var(--flaeche); font-family: inherit;
     }
-    input:focus { outline: none; border-color: var(--blau); background: #fff; }
+    input:focus { outline: none; border-color: var(--blau); background: var(--weiss); }
     button {
       padding: 9px 16px; font-size: 0.92rem; font-weight: 600; font-family: inherit;
-      color: #fff; background: var(--blau); border: none; border-radius: 8px; cursor: pointer;
+      color: var(--auf-farbe); background: var(--blau); border: none; border-radius: 8px; cursor: pointer;
     }
     button:hover:not(:disabled) { background: var(--blau-d); }
-    button:disabled { background: #c1c7d0; cursor: default; }
-    button.zweit { color: var(--dunkel); background: #fff; border: 2px solid var(--rand); }
-    button.zweit:hover:not(:disabled) { border-color: var(--blau); background: #fff; }
+    button:disabled { background: var(--grau-3); cursor: default; }
+    button.zweit { color: var(--dunkel); background: var(--weiss); border: 2px solid var(--rand); }
+    button.zweit:hover:not(:disabled) { border-color: var(--blau); background: var(--weiss); }
     button.mini { padding: 4px 9px; font-size: 0.78rem; margin: 0 4px 4px 0; }
-    button.gefahr:not(:disabled) { background: #ca3521; }
-    button.gefahr:hover:not(:disabled) { background: #ae2e24; }
+    button.gefahr:not(:disabled) { background: var(--gefahr); }
+    button.gefahr:hover:not(:disabled) { background: var(--gefahr-d); }
     .knoepfe { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
     .meld { margin-top: 12px; padding: 10px 12px; border-radius: 8px; font-size: 0.9rem; }
-    .meld.ok { background: #e3fcef; color: #143d2b; }
-    .meld.fehler { background: #ffeceb; color: #ae2e24; }
-    .meld.info { background: #e6f4ff; color: #0c5a8f; }
+    .meld.ok { background: var(--erfolg-bg); color: var(--erfolg-text); }
+    .meld.fehler { background: var(--gefahr-bg); color: var(--gefahr-text); }
+    .meld.info { background: var(--info-bg); color: var(--info-text); }
     nav { display: flex; gap: 8px; margin-bottom: 16px; }
-    nav button { background: #fff; color: var(--dunkel); border: 2px solid var(--rand); }
-    nav button.aktiv { background: var(--blau); color: #fff; border-color: var(--blau); }
+    nav button { background: var(--weiss); color: var(--dunkel); border: 2px solid var(--rand); }
+    nav button.aktiv { background: var(--blau); color: var(--auf-farbe); border-color: var(--blau); }
     table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
-    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #f1f2f4; vertical-align: top; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rand); vertical-align: top; }
     th { color: var(--grau); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.03em; }
     .dezent { color: var(--grau); font-size: 0.85rem; line-height: 1.5; }
-    .pill { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 0.74rem; font-weight: 600; background: #eef1ff; color: #3b4fb0; }
+    .pill { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 0.74rem; font-weight: 600; background: var(--blau-bg); color: var(--blau-text); }
     .leer { color: var(--grau); padding: 16px 0; }
     .verborgen { display: none; }
-    code { background: #f1f2f4; padding: 1px 5px; border-radius: 4px; }
+    code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
 
     /* Such-/Filterfeld (Katalog) */
     input[type=search] {
       width: 100%; padding: 8px 12px; font-size: 0.95rem; letter-spacing: normal;
-      border: 2px solid var(--rand); border-radius: 8px; background: #fafbfc; font-family: inherit;
+      border: 2px solid var(--rand); border-radius: 8px; background: var(--flaeche); font-family: inherit;
     }
 
     /* Dialog-Fenster (Overlay) für Detail/Diff und Bearbeiten */
@@ -156,27 +180,27 @@
        unsichtbar über allem und finge alle Klicks/Eingaben ab. */
     #overlay.verborgen { display: none; }
     #overlayBox {
-      background: #fff; border-radius: 12px; width: 100%; max-width: 640px;
+      background: var(--weiss); border-radius: 12px; width: 100%; max-width: 640px;
       box-shadow: 0 12px 40px rgba(9,30,66,0.3); margin: auto;
     }
     .ov-kopf { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--rand); }
     .ov-kopf h2 { margin: 0; }
-    .ov-kopf .x { margin-left: auto; background: #fff; color: var(--grau); border: 2px solid var(--rand); padding: 4px 10px; }
+    .ov-kopf .x { margin-left: auto; background: var(--weiss); color: var(--grau); border: 2px solid var(--rand); padding: 4px 10px; }
     .ov-inhalt { padding: 20px; }
     .ov-fuss { padding: 14px 20px; border-top: 1px solid var(--rand); display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
 
     /* Detail-/Diff-Felderliste */
-    .feldzeile { display: grid; grid-template-columns: 180px 1fr; gap: 10px; padding: 7px 0; border-bottom: 1px solid #f1f2f4; font-size: 0.88rem; }
+    .feldzeile { display: grid; grid-template-columns: 180px 1fr; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--rand); font-size: 0.88rem; }
     .feldzeile .fname { color: var(--grau); font-weight: 600; }
-    .feldzeile.geaendert { background: #fff7e6; border-radius: 6px; padding: 7px 8px; }
-    .vorher { color: #ae2e24; text-decoration: line-through; display: block; }
-    .nachher { color: #216e4e; display: block; }
+    .feldzeile.geaendert { background: var(--warnung-bg); border-radius: 6px; padding: 7px 8px; }
+    .vorher { color: var(--gefahr-text); text-decoration: line-through; display: block; }
+    .nachher { color: var(--erfolg-text); display: block; }
     .wert { white-space: pre-wrap; word-break: break-word; }
     .ov-h3 { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--grau); margin: 18px 0 6px; }
 
     /* „Gemeldet"-Markierung in der Meldungs-Detailansicht */
-    .meld-box { background: #fff7e6; border: 1px solid #f5cd47; border-radius: 8px; padding: 12px 14px; }
-    .meld-box .meld-art { font-weight: 700; color: #7a4d00; margin-bottom: 4px; }
+    .meld-box { background: var(--warnung-bg); border: 1px solid var(--warnung-rand); border-radius: 8px; padding: 12px 14px; }
+    .meld-box .meld-art { font-weight: 700; color: var(--warnung-text2); margin-bottom: 4px; }
     .meld-box .meld-text { font-size: 0.95rem; margin-bottom: 6px; }
 
     /* Bearbeiten-Formular */
@@ -184,10 +208,10 @@
     .form-feld label { margin: 0 0 4px; }
     .form-feld input[type=text], .form-feld textarea {
       width: 100%; padding: 8px 12px; font-size: 0.95rem; letter-spacing: normal;
-      border: 2px solid var(--rand); border-radius: 8px; background: #fafbfc; font-family: inherit;
+      border: 2px solid var(--rand); border-radius: 8px; background: var(--flaeche); font-family: inherit;
     }
     .form-feld textarea { min-height: 70px; resize: vertical; }
-    .form-feld .idfeld { font-family: ui-monospace, Consolas, monospace; color: var(--grau); background: #f1f2f4; }
+    .form-feld .idfeld { font-family: ui-monospace, Consolas, monospace; color: var(--grau); background: var(--code-bg); }
     details.erweitert { margin-top: 8px; border: 1px solid var(--rand); border-radius: 8px; padding: 8px 12px; }
     details.erweitert summary { cursor: pointer; font-weight: 600; color: var(--dunkel); }
     details.erweitert textarea {
@@ -196,7 +220,7 @@
     }
     .form-feld select {
       width: 100%; padding: 8px 12px; font-size: 0.95rem; border: 2px solid var(--rand);
-      border-radius: 8px; background: #fafbfc; font-family: inherit;
+      border-radius: 8px; background: var(--flaeche); font-family: inherit;
     }
     /* Mehrfachauswahl (Checkbox-Gruppen) */
     .check-gruppe { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 4px 0; }
@@ -208,12 +232,12 @@
     .region-land label.check { margin-right: 14px; }
     .feld-paar { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .frist-zeile { display: grid; grid-template-columns: 130px 1fr auto; gap: 8px; align-items: center; margin-bottom: 6px; }
-    .frist-zeile input { padding: 7px 10px; font-size: 0.9rem; border: 2px solid var(--rand); border-radius: 8px; background: #fafbfc; font-family: inherit; }
+    .frist-zeile input { padding: 7px 10px; font-size: 0.9rem; border: 2px solid var(--rand); border-radius: 8px; background: var(--flaeche); font-family: inherit; }
     /* Prüf-Status */
     .pstatus { display: inline-block; padding: 1px 9px; border-radius: 99px; font-size: 0.74rem; font-weight: 700; white-space: nowrap; }
-    .pstatus.ueberfaellig { background: #ffeceb; color: #ae2e24; }
-    .pstatus.bald { background: #fff7d6; color: #7a5c00; }
-    .pstatus.ok { background: #e3fcef; color: #216e4e; }
+    .pstatus.ueberfaellig { background: var(--gefahr-bg); color: var(--gefahr-text); }
+    .pstatus.bald { background: var(--warnung-bg2); color: var(--warnung-text); }
+    .pstatus.ok { background: var(--erfolg-bg); color: var(--erfolg-text); }
     .pruef-summe { display: flex; gap: 16px; flex-wrap: wrap; margin: 4px 0 4px; font-size: 0.9rem; }
   </style>
 </head>
@@ -235,7 +259,7 @@
               <rect x="35" y="13.5" width="52" height="7" rx="3" transform="rotate(4 61 17)"></rect>
             </g>
           </svg>
-          <text x="122" y="82" font-family="'DM Serif Display', Georgia, 'Times New Roman', serif" font-size="60" fill="#123a5e">Antrag <tspan fill="#4f6df5">3000</tspan></text>
+          <text x="122" y="82" font-family="'DM Serif Display', Georgia, 'Times New Roman', serif" font-size="60" fill="var(--dunkel)">Antrag <tspan fill="#4f6df5">3000</tspan></text>
         </svg>
       </span>
       <span class="produkt-tag">Admin</span>
