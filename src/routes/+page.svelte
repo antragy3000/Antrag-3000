@@ -2703,6 +2703,10 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    /* Bei schmalem Fenster duerfen die drei Kopf-Bloecke (Logo, Reiter,
+       rechte Knoepfe) auf mehrere Zeilen umbrechen, statt zu ueberlaufen. */
+    flex-wrap: wrap;
+    row-gap: 10px;
     padding: 12px 24px;
     background: var(--weiss);
     box-shadow: 0 1px 2px var(--schatten-xs);
@@ -2766,7 +2770,12 @@
 
   nav {
     display: flex;
-    gap: 4px;
+    /* Reiter brechen bei zu schmalem Fenster in die naechste Zeile um.
+       min-width:0 erlaubt dem Nav-Block zu schrumpfen, damit die Knoepfe
+       wirklich umbrechen statt ueberzulaufen. */
+    flex-wrap: wrap;
+    min-width: 0;
+    gap: 6px 4px;
   }
   nav button {
     width: auto;
