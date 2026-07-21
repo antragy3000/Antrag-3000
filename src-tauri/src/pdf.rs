@@ -108,7 +108,13 @@ fn tabelle_einfuegen(doc: &mut Document, zeilen: &[Vec<String>]) {
             if fett {
                 st = st.bold();
             }
-            reihe.push_element(elements::Paragraph::new(text).styled(st).padded(1));
+            // Zell-Innenabstand (oben, rechts, unten, links) in mm. 1 mm war zu
+            // eng – die Beschriftungen klebten an den Rahmenlinien.
+            reihe.push_element(
+                elements::Paragraph::new(text)
+                    .styled(st)
+                    .padded(genpdf::Margins::from((1.8, 2.5, 1.8, 2.5))),
+            );
         }
         let _ = reihe.push();
     }
