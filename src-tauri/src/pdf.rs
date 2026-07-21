@@ -113,7 +113,7 @@ fn tabelle_einfuegen(doc: &mut Document, zeilen: &[Vec<String>]) {
             reihe.push_element(
                 elements::Paragraph::new(text)
                     .styled(st)
-                    .padded(genpdf::Margins::from((1.8, 2.5, 1.8, 2.5))),
+                    .padded(genpdf::Margins::from((2.5, 3.0, 2.5, 3.0))),
             );
         }
         let _ = reihe.push();
@@ -186,6 +186,9 @@ fn vorblatt_fuellen(
                 elements::Paragraph::new(a.ueberschrift.as_str())
                     .styled(style::Style::new().bold().with_font_size(12)),
             );
+            // Luft zwischen Ueberschrift und folgendem Inhalt/Tabelle, sonst
+            // "klebt" die Ueberschrift am Tabellenrahmen darunter.
+            doc.push(elements::Break::new(0.4));
         }
         for absatz in &a.absaetze {
             for zeile in absatz.lines() {
@@ -519,14 +522,19 @@ mod tests {
             },
         ];
 
+        let absender = vec![
+            "Max Muster".to_string(),
+            "Musterstraße 1".to_string(),
+            "8000 Zürich".to_string(),
+        ];
         let mut doc = neues_dokument().unwrap();
-        vorblatt_fuellen(&mut doc, "Förderantrag ÄÖÜ", &abschnitte, None);
+        vorblatt_fuellen(&mut doc, "Förderantrag ÄÖÜ", &absender, &abschnitte, None);
         let mut a = Vec::new();
         doc.render(&mut a).unwrap();
         assert!(a.starts_with(b"%PDF"), "Vorblatt ist kein PDF");
 
         let mut doc2 = neues_dokument().unwrap();
-        vorblatt_fuellen(&mut doc2, "Anhang", &[], None);
+        vorblatt_fuellen(&mut doc2, "Anhang", &[], &[], None);
         let mut b = Vec::new();
         doc2.render(&mut b).unwrap();
 
@@ -549,5 +557,62 @@ mod tests {
         // PNG mit Alphakanal (RGBA) - muss auf Weiss geglaettet werden.
         let pdf = bild_pdf(PNG_1X1.to_vec()).unwrap();
         assert!(pdf.starts_with(b"%PDF"), "Bild-PDF ist kein PDF");
+    }
+
+    // Erzeugt ein mehrseitiges Muster-Antrags-PDF zum Sichten (Zell-Abstand,
+    // Absender-Briefkopf, Tabellen-Umbruch ueber Seitengrenzen). Laeuft nur auf
+    // Anfrage:  cargo test muster_pdf_datei -- --ignored --nocapture
+    // Danach z. B. mit PyMuPDF zu PNG rendern und ansehen.
+    #[test]
+    #[ignore = "Werkzeug: schreibt ein Muster-PDF in den Temp-Ordner zum Sichten"]
+    fn muster_pdf_datei() {
+        let absender = vec![
+            "Max Muster".to_string(),
+            "Organisation/Träger: Kollektiv X".to_string(),
+            "Musterstraße 1".to_string(),
+            "8000 Zürich".to_string(),
+            "E-Mail: max@example.ch".to_string(),
+            "Telefon: 044 123 45 67".to_string(),
+        ];
+        let mut tab = vec![vec![
+            "Ausgaben".to_string(),
+            "Erläuterung".to_string(),
+            "Betrag".to_string(),
+        ]];
+        for i in 1..=10 {
+            tab.push(vec![format!("**{i} Kostengruppe"), "".into(), "**2.000,00 €".into()]);
+            tab.push(vec![format!("{i}.1 Künstlerische Leitung"), "".into(), "1.000,00 €".into()]);
+            tab.push(vec![format!("{i}.2 Assistenz Leitung"), "".into(), "1.000,00 €".into()]);
+        }
+        let abschnitte = vec![
+            PdfAbschnitt {
+                ueberschrift: "Kurzbeschreibung".into(),
+                absaetze: vec!["Ein kurzer Beschreibungstext für das Testprojekt.".into()],
+                tabelle: vec![],
+            },
+            PdfAbschnitt {
+                ueberschrift: "Kostenplan".into(),
+                absaetze: vec![],
+                tabelle: tab,
+            },
+            PdfAbschnitt {
+                ueberschrift: "Bankverbindung".into(),
+                absaetze: vec!["IBAN: CH00 0000 0000 0000 0000 0".into(), "Bank: ZKB".into()],
+                tabelle: vec![],
+            },
+        ];
+        let mut doc = neues_dokument().unwrap();
+        vorblatt_fuellen(
+            &mut doc,
+            "Förderantrag: Test Projekt – Stadt Zürich – Kulturförderung",
+            &absender,
+            &abschnitte,
+            None,
+        );
+        let mut bytes = Vec::new();
+        doc.render(&mut bytes).unwrap();
+        let pfad = std::env::temp_dir().join("antrag3000-muster.pdf");
+        std::fs::write(&pfad, &bytes).unwrap();
+        eprintln!("MUSTER-PDF geschrieben: {}", pfad.display());
     }
 }
