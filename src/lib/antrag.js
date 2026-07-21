@@ -11,7 +11,7 @@
 // Kostenfinanzplan (Bereich "Kostenplan", kfp.js).
 export const FORMULAR_FELDER = [
   ["projekttitel", "Projekttitel", "input"],
-  ["kurzbeschreibung", "Kurzbeschreibung (2–3 Sätze)", "textarea"],
+  ["kurzbeschreibung", "Kurzbeschreibung", "textarea"],
   ["beschreibung", "Ausführliche Projektbeschreibung", "textarea"],
   ["ziele", "Ziele und Zielgruppe", "textarea"],
   ["zeitraum", "Zeitraum (von – bis)", "input"],
@@ -22,6 +22,9 @@ export const FORMULAR_FELDER = [
 export function leeresFormular() {
   const f = {};
   for (const [key] of FORMULAR_FELDER) f[key] = "";
+  // Benutzerdefinierte Zusatzfelder (pro Projekt frei erweiterbar).
+  // Liste von { id, beschriftung, typ: "input"|"textarea", wert }.
+  f._eigeneFelder = [];
   return f;
 }
 
@@ -46,6 +49,13 @@ export function formularWordBauen(formular, projektName = "") {
     if (key === "projekttitel") continue; // steht schon im Titel
     const wert = (formular[key] || "").trim();
     if (wert) abschnitte.push({ ueberschrift: beschriftung, absaetze: [wert] });
+  }
+
+  // Benutzerdefinierte Zusatzfelder anhaengen (Feldname wird zur Ueberschrift).
+  for (const feld of formular._eigeneFelder ?? []) {
+    const ueberschrift = (feld.beschriftung || "").trim();
+    const wert = (feld.wert || "").trim();
+    if (ueberschrift && wert) abschnitte.push({ ueberschrift, absaetze: [wert] });
   }
 
   return { titel, warnhinweis, abschnitte };

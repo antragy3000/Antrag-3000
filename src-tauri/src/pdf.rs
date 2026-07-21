@@ -71,7 +71,9 @@ fn neues_dokument() -> Result<Document, String> {
     let mut doc = Document::new(familie);
     doc.set_font_size(10);
     let mut deko = SimplePageDecorator::new();
-    deko.set_margins(18);
+    // Seitenraender nach DIN 5008 / DIN 676 (Geschaeftsbrief): links 25 mm,
+    // rechts 20 mm, oben + unten 20 mm. Reihenfolge: (oben, rechts, unten, links).
+    deko.set_margins((20.0, 20.0, 20.0, 25.0));
     doc.set_page_decorator(deko);
     Ok(doc)
 }
@@ -134,8 +136,39 @@ fn briefkopf_einfuegen(doc: &mut Document, logo: Option<&str>) {
     }
 }
 
-fn vorblatt_fuellen(doc: &mut Document, titel: &str, abschnitte: &[PdfAbschnitt], logo: Option<&str>) {
+fn vorblatt_fuellen(
+    doc: &mut Document,
+    titel: &str,
+    absender: &[String],
+    abschnitte: &[PdfAbschnitt],
+    logo: Option<&str>,
+) {
     briefkopf_einfuegen(doc, logo);
+
+    // Absender-Briefkopf: Name + Adresse der antragstellenden Person oben.
+    // Der BLOCK sitzt rechts, die Zeilen darin sind aber LINKSBUENDIG (nicht
+    // flatterrandig). Umsetzung: randlose 2-Spalten-Tabelle, linke Spalte
+    // leer, rechte Spalte der linksbuendige Adressblock (ein einzelner Absatz
+    // nutzt in genpdf immer die volle Breite, daher der Umweg ueber die Tabelle).
+    if !absender.is_empty() {
+        let st = style::Style::new().with_font_size(9);
+        let mut block = elements::LinearLayout::vertical();
+        for zeile in absender {
+            block.push(elements::Paragraph::new(zeile).styled(st));
+        }
+        // DIN-5008-Informationsblock: beginnt 124 mm vom linken Blattrand.
+        // Bei 25 mm linkem + 20 mm rechtem Rand (Textbreite 165 mm) trifft das
+        // Verhaeltnis 3:2 genau diese Position: 25 + 165*3/5 = 124 mm.
+        let mut t = elements::TableLayout::new(vec![3, 2]);
+        t.set_cell_decorator(elements::FrameCellDecorator::new(false, false, false));
+        let mut reihe = t.row();
+        reihe.push_element(elements::Paragraph::new("")); // linke Spalte leer
+        reihe.push_element(block); // rechte Spalte: Adressblock, linksbuendig
+        let _ = reihe.push();
+        doc.push(t);
+        doc.push(elements::Break::new(1.0));
+    }
+
     doc.push(
         elements::Paragraph::new(titel).styled(style::Style::new().bold().with_font_size(16)),
     );
@@ -311,12 +344,13 @@ fn baue_antrags_pdf(
     projekt: &str,
     foerderung: &str,
     titel: &str,
+    absender: &[String],
     abschnitte: &[PdfAbschnitt],
     anhaenge: &[String],
     logo: Option<&str>,
 ) -> Result<Vec<u8>, String> {
     let mut doc = neues_dokument()?;
-    vorblatt_fuellen(&mut doc, titel, abschnitte, logo);
+    vorblatt_fuellen(&mut doc, titel, absender, abschnitte, logo);
     let mut vorblatt = Vec::new();
     doc.render(&mut vorblatt)
         .map_err(|e| format!("PDF-Inhalt nicht erzeugbar: {e}"))?;
@@ -373,11 +407,12 @@ pub fn antrags_pdf_vorschau(
     projekt: String,
     foerderung: String,
     titel: String,
+    absender: Vec<String>,
     abschnitte: Vec<PdfAbschnitt>,
     anhaenge: Vec<String>,
     logo: Option<String>,
 ) -> Result<String, String> {
-    let bytes = baue_antrags_pdf(&app, &projekt, &foerderung, &titel, &abschnitte, &anhaenge, logo.as_deref())?;
+    let bytes = baue_antrags_pdf(&app, &projekt, &foerderung, &titel, &absender, &abschnitte, &anhaenge, logo.as_deref())?;
     // Eindeutiger Name, damit ein erneutes Erzeugen nicht an einer noch im
     // PDF-Programm geoeffneten (gesperrten) Vorschaudatei scheitert.
     let nonce = std::time::SystemTime::now()
@@ -401,11 +436,12 @@ pub fn antrags_pdf_speichern(
     projekt: String,
     foerderung: String,
     titel: String,
+    absender: Vec<String>,
     abschnitte: Vec<PdfAbschnitt>,
     anhaenge: Vec<String>,
     logo: Option<String>,
 ) -> Result<String, String> {
-    let bytes = baue_antrags_pdf(&app, &projekt, &foerderung, &titel, &abschnitte, &anhaenge, logo.as_deref())?;
+    let bytes = baue_antrags_pdf(&app, &projekt, &foerderung, &titel, &absender, &abschnitte, &anhaenge, logo.as_deref())?;
     let ordner_pfad = ordner::wurzel(&app)?
         .join(ordner::bereinigen(&projekt)?)
         .join(ordner::bereinigen(&foerderung)?);
@@ -432,7 +468,8 @@ pub fn verwendungsnachweis_pdf(
     logo: Option<String>,
 ) -> Result<String, String> {
     let mut doc = neues_dokument()?;
-    vorblatt_fuellen(&mut doc, &titel, &abschnitte, logo.as_deref());
+    // Verwendungsnachweis hat keinen Absender-Briefkopf (leer).
+    vorblatt_fuellen(&mut doc, &titel, &[], &abschnitte, logo.as_deref());
     let mut bytes = Vec::new();
     doc.render(&mut bytes)
         .map_err(|e| format!("PDF-Inhalt nicht erzeugbar: {e}"))?;

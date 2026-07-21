@@ -569,14 +569,14 @@
   // KFP, Anhang-Liste + hochgeladene Dateien dieser Förderung).
   function pdfArgs(foerderung) {
     const antrag = aktivesProjekt.antraege[foerderung.id];
-    const { titel, abschnitte, anhaenge } = antragsPdfBauen(
+    const { titel, absender, abschnitte, anhaenge } = antragsPdfBauen(
       $state.snapshot(daten.stammdaten),
       $state.snapshot(aktivesProjekt.formular),
       $state.snapshot(aktivesProjekt.kfp),
       $state.snapshot(foerderung),
       $state.snapshot(antrag?.checkliste ?? [])
     );
-    return { projekt: aktivesProjekt.name, foerderung: foerderung.name, titel, abschnitte, anhaenge, logo: daten.stammdaten?.logo || null };
+    return { projekt: aktivesProjekt.name, foerderung: foerderung.name, titel, absender, abschnitte, anhaenge, logo: daten.stammdaten?.logo || null };
   }
 
   // Vorschau erzeugen und im PDF-Programm öffnen.

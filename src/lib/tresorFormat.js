@@ -157,11 +157,17 @@ export function normalisieren(d) {
       veraendert = true;
     } else {
       for (const feld of Object.keys(formularVorlage)) {
+        if (feld.startsWith("_")) continue; // Sonderfelder (Listen) nicht zu "" machen
         if (typeof p.formular[feld] !== "string") {
           p.formular[feld] = "";
           veraendert = true;
         }
       }
+    }
+    // Benutzerdefinierte Zusatzfelder (Liste) sicherstellen.
+    if (!Array.isArray(p.formular._eigeneFelder)) {
+      p.formular._eigeneFelder = [];
+      veraendert = true;
     }
     // Kostenfinanzplan ergaenzen; Texte aus den frueheren Feldern
     // "Kostenueberblick"/"Finanzierungsueberblick" hinueberretten.
