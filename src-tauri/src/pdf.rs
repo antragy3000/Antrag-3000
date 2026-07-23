@@ -19,6 +19,7 @@ use std::collections::BTreeMap;
 use std::fs;
 
 use base64::Engine;
+use genpdf::elements::CellDecorator;
 use genpdf::{elements, fonts, style, Alignment, Document, Element, SimplePageDecorator};
 use image::{DynamicImage, GenericImageView};
 use lopdf::{Dictionary, Document as LoDocument, Object, ObjectId};
@@ -80,6 +81,121 @@ fn neues_dokument() -> Result<Document, String> {
 
 // --- Vorblatt-Inhalt fuellen -------------------------------------------
 
+/// Tabellen-Element mit Kopfzeilen-WIEDERHOLUNG auf jeder Folgeseite und
+/// ZUSAMMENHALTEN kleiner Tabellen. Ersetzt genpdf's TableLayout, dessen
+/// Seitenumbruch die Kopfzeile verliert und eine Zeile von ihrer Kopfzeile
+/// abtrennt (siehe Antrags-PDF-Umbrueche). Die erste Zeile gilt als Kopfzeile.
+struct KopfTabelle {
+    kopf: Vec<String>,
+    zeilen: Vec<Vec<String>>,
+    gewichte: Vec<usize>,
+    render_idx: usize,
+}
+
+impl KopfTabelle {
+    /// Rendert EINE Zeile (Zellen nebeneinander) an der aktuellen Position;
+    /// gibt Zeilenhoehe und has_more (Zelle passte nicht ganz) zurueck.
+    /// ** am Zellanfang = fett; Kopfzeile (zeilen_idx == 0) immer fett.
+    #[allow(clippy::too_many_arguments)]
+    fn zeile_rendern(
+        gewichte: &[usize],
+        zellen: &[String],
+        zeilen_idx: usize,
+        deko: &mut elements::FrameCellDecorator,
+        context: &genpdf::Context,
+        area: genpdf::render::Area<'_>,
+        style: style::Style,
+    ) -> Result<(genpdf::Mm, bool), genpdf::error::Error> {
+        let bereiche = area.split_horizontally(gewichte);
+        let mut hoehe = genpdf::Mm::from(0.0_f32);
+        let mut mehr = false;
+        for (si, bereich) in bereiche.iter().enumerate() {
+            let roh = zellen.get(si).map(|s| s.as_str()).unwrap_or("");
+            let (text, fett) = match roh.strip_prefix("**") {
+                Some(rest) => (rest, true),
+                None => (roh, zeilen_idx == 0),
+            };
+            let mut st = style::Style::new();
+            if fett {
+                st = st.bold();
+            }
+            let mut p = elements::Paragraph::new(text)
+                .styled(st)
+                .padded(genpdf::Margins::from((2.5, 3.0, 2.5, 3.0)));
+            let r = p.render(context, bereich.clone(), style)?;
+            mehr |= r.has_more;
+            hoehe = hoehe.max(r.size.height);
+        }
+        for (i, mut bereich) in bereiche.into_iter().enumerate() {
+            bereich.set_height(hoehe);
+            deko.decorate_cell(i, zeilen_idx, mehr, bereich, style);
+        }
+        Ok((hoehe, mehr))
+    }
+}
+
+impl Element for KopfTabelle {
+    fn render(
+        &mut self,
+        context: &genpdf::Context,
+        mut area: genpdf::render::Area<'_>,
+        style: style::Style,
+    ) -> Result<genpdf::RenderResult, genpdf::error::Error> {
+        let mut result = genpdf::RenderResult::default();
+        if self.gewichte.is_empty() {
+            return Ok(result);
+        }
+        result.size.width = area.size().width;
+
+        let gesamt = self.zeilen.len() + 1; // inkl. Kopfzeile
+
+        // Kleine Tabelle am Seitenende ganz auf die naechste Seite schieben,
+        // damit Kopfzeile + Zeilen zusammenbleiben. Nur auf einer TEIL-Seite
+        // (Schwelle 230 mm < nutzbare Seite ~257 mm) -> keine Endlosschleife.
+        if self.render_idx == 0 && gesamt <= 8 {
+            let noetig = genpdf::Mm::from(gesamt as f32 * 11.0);
+            if area.size().height < noetig && area.size().height < genpdf::Mm::from(230.0_f32) {
+                result.has_more = true;
+                return Ok(result);
+            }
+        }
+
+        // Dekorator frisch pro Seite -> die Kopfzeile bekommt oben wieder einen
+        // Rahmen, und jedes Seiten-Fragment ist sauber umrandet.
+        let mut deko = elements::FrameCellDecorator::new(true, true, false);
+        deko.set_table_size(self.gewichte.len(), gesamt);
+
+        // 1. Kopfzeile immer zuoberst (Wiederholung auf Folgeseiten).
+        let kopf = self.kopf.clone();
+        let (kh, _) = Self::zeile_rendern(
+            &self.gewichte, &kopf, 0, &mut deko, context, area.clone(), style,
+        )?;
+        area.add_offset(genpdf::Position::new(0, kh));
+        result.size.height += kh;
+
+        // 2. Datenzeilen ab render_idx, bis die Seite voll ist.
+        while self.render_idx < self.zeilen.len() {
+            // Passt noch mindestens eine (einzeilige) Zeile? (~9 mm)
+            if area.size().height < genpdf::Mm::from(9.0_f32) {
+                break;
+            }
+            let zeile = self.zeilen[self.render_idx].clone();
+            let (zh, mehr) = Self::zeile_rendern(
+                &self.gewichte, &zeile, self.render_idx + 1, &mut deko, context, area.clone(), style,
+            )?;
+            area.add_offset(genpdf::Position::new(0, zh));
+            result.size.height += zh;
+            self.render_idx += 1;
+            if mehr {
+                break; // mehrzeilige Zelle hat sich geteilt -> Rest naechste Seite
+            }
+        }
+
+        result.has_more = self.render_idx < self.zeilen.len();
+        Ok(result)
+    }
+}
+
 fn tabelle_einfuegen(doc: &mut Document, zeilen: &[Vec<String>]) {
     let spalten = zeilen.iter().map(|z| z.len()).max().unwrap_or(0);
     if spalten == 0 {
@@ -93,32 +209,12 @@ fn tabelle_einfuegen(doc: &mut Document, zeilen: &[Vec<String>]) {
         6 => vec![2, 2, 5, 4, 3, 3],
         n => vec![1; n],
     };
-    let mut tabelle = elements::TableLayout::new(gewichte);
-    tabelle.set_cell_decorator(elements::FrameCellDecorator::new(true, true, false));
-
-    for (zi, zeile) in zeilen.iter().enumerate() {
-        let mut reihe = tabelle.row();
-        for si in 0..spalten {
-            let roh = zeile.get(si).map(|s| s.as_str()).unwrap_or("");
-            let (text, fett) = match roh.strip_prefix("**") {
-                Some(rest) => (rest, true),
-                None => (roh, zi == 0),
-            };
-            let mut st = style::Style::new();
-            if fett {
-                st = st.bold();
-            }
-            // Zell-Innenabstand (oben, rechts, unten, links) in mm. 1 mm war zu
-            // eng – die Beschriftungen klebten an den Rahmenlinien.
-            reihe.push_element(
-                elements::Paragraph::new(text)
-                    .styled(st)
-                    .padded(genpdf::Margins::from((2.5, 3.0, 2.5, 3.0))),
-            );
-        }
-        let _ = reihe.push();
-    }
-    doc.push(tabelle);
+    doc.push(KopfTabelle {
+        kopf: zeilen[0].clone(),
+        zeilen: zeilen[1..].to_vec(),
+        gewichte,
+        render_idx: 0,
+    });
 }
 
 /// Fügt das Logo als Briefkopf oben ein (links ausgerichtet, ca. 55 mm
@@ -599,6 +695,21 @@ mod tests {
                 ueberschrift: "Bankverbindung".into(),
                 absaetze: vec!["IBAN: CH00 0000 0000 0000 0000 0".into(), "Bank: ZKB".into()],
                 tabelle: vec![],
+            },
+            // Fueller, damit die kleine Tabelle darunter nahe an ein
+            // Seitenende faellt (testet das Zusammenhalten kleiner Tabellen).
+            PdfAbschnitt {
+                ueberschrift: "Ausfuehrliche Projektbeschreibung".into(),
+                absaetze: vec!["Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam. ".repeat(20)],
+                tabelle: vec![],
+            },
+            PdfAbschnitt {
+                ueberschrift: "Bei dieser Foerderung beantragte Summe".into(),
+                absaetze: vec![],
+                tabelle: vec![
+                    vec!["Foerderer".into(), "Betrag".into()],
+                    vec!["**Internationales Kuenstler:innengremium (Fehlbetrag)".into(), "**20.620,00 €".into()],
+                ],
             },
         ];
         let mut doc = neues_dokument().unwrap();
