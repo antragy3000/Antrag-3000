@@ -7,16 +7,24 @@
 #   - OHNE Auto-Update-Artefakte       -> kein Signatur-Schluessel noetig,
 #     Verteilung fuer den Pilot von Hand (.dmg weitergeben).
 #
-# Starten: Reiter "Actions" -> links "macOS-Pilot-Build" -> Knopf
-# "Run workflow". Nach ~15-25 Min liegt unten beim Lauf das Artefakt
+# Laeuft AUTOMATISCH bei jeder neuen Version (wenn sich die Versionsnummer in
+# src-tauri/tauri.conf.json aendert und nach master gepusht wird) sowie
+# jederzeit von Hand ("Actions" -> "macOS-Pilot-Build" -> "Run workflow").
+# Nach ~15-25 Min liegt unten beim Lauf das Artefakt
 # "Antrag-3000-macOS-universal" (enthaelt die .dmg) zum Download.
 
 name: macOS-Pilot-Build
 
-# Ausloeser: NUR per Hand ueber den "Run workflow"-Knopf
-# (Reiter Actions -> macOS-Pilot-Build -> Run workflow). Bewusst KEIN
-# push-Trigger, damit nicht jeder Commit ~20 Min macOS-Build-Zeit verbraucht.
+# Ausloeser:
+#   - push auf master, ABER nur wenn tauri.conf.json (= Versionsnummer)
+#     geaendert wurde -> so baut jede Auslieferung automatisch mit, ohne
+#     dass jeder normale Commit ~20 Min macOS-Build-Zeit verbraucht.
+#   - workflow_dispatch: zusaetzlich jederzeit von Hand startbar.
 on:
+  push:
+    branches: [master]
+    paths:
+      - "src-tauri/tauri.conf.json"
   workflow_dispatch:
 
 jobs:
