@@ -478,6 +478,97 @@ pub async fn sync_foerderer_loeschen(
 // Installation bleibt unberührt.
 // ============================================================
 
+// ---------------- macOS-Update-HINWEIS -----------------------
+// Leichtgewichtiger Update-HINWEIS fuer macOS (KEIN Auto-Update). Der macOS-
+// Pilot ist unsigniert und ohne Updater-Artefakte; echtes Selbstupdate laeuft
+// nur unter Windows. Hier fragen wir ueber die TLS-verifizierte Verbindung
+// eine kleine mac.json ab und melden, ob eine neuere Version vorliegt –
+// installiert wird dann von Hand (Download-Link + Pruefsumme im Frontend).
+
+const MAC_UPDATE_URL: &str = "https://sync.antrag3000.de/updates/mac.json";
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct MacUpdate {
+    pub version: String,
+    pub url: String,
+    #[serde(default)]
+    pub sha256: String,
+    #[serde(default)]
+    pub notes: String,
+}
+
+/// Vergleicht zwei Versionen "a.b.c" numerisch: true, wenn `neu` > `alt`.
+fn version_neuer(neu: &str, alt: &str) -> bool {
+    fn teile(s: &str) -> Vec<u64> {
+        s.split(|c: char| c == '.' || c == '-' || c == '+')
+            .map(|t| {
+                t.chars()
+                    .take_while(|c| c.is_ascii_digit())
+                    .collect::<String>()
+                    .parse::<u64>()
+                    .unwrap_or(0)
+            })
+            .collect()
+    }
+    let (n, a) = (teile(neu), teile(alt));
+    for i in 0..n.len().max(a.len()) {
+        let x = n.get(i).copied().unwrap_or(0);
+        let y = a.get(i).copied().unwrap_or(0);
+        if x != y {
+            return x > y;
+        }
+    }
+    false
+}
+
+/// Prueft (nur auf macOS) ueber den oeffentlichen Update-Server, ob eine
+/// neuere Version vorliegt. Some(info) nur, wenn die Server-Version neuer als
+/// die laufende ist. Auf anderen Plattformen (Windows: echtes Auto-Update)
+/// und bei Netz-/Parse-Fehlern still None – kein stoerendes Fehler-Popup.
+#[tauri::command]
+pub async fn mac_update_pruefen() -> Result<Option<MacUpdate>, String> {
+    if !cfg!(target_os = "macos") {
+        return Ok(None);
+    }
+    let client = match reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+    {
+        Ok(c) => c,
+        Err(_) => return Ok(None),
+    };
+    let resp = match client.get(MAC_UPDATE_URL).send().await {
+        Ok(r) if r.status().is_success() => r,
+        _ => return Ok(None),
+    };
+    let body = match resp.text().await {
+        Ok(t) => t,
+        Err(_) => return Ok(None),
+    };
+    let info: MacUpdate = match serde_json::from_str(&body) {
+        Ok(i) => i,
+        Err(_) => return Ok(None),
+    };
+    if version_neuer(&info.version, env!("CARGO_PKG_VERSION")) {
+        Ok(Some(info))
+    } else {
+        Ok(None)
+    }
+}
+
+#[cfg(test)]
+mod mac_update_tests {
+    use super::version_neuer;
+    #[test]
+    fn versionen_vergleichen() {
+        assert!(version_neuer("0.4.15", "0.4.14"));
+        assert!(version_neuer("0.5.0", "0.4.14"));
+        assert!(version_neuer("1.0.0", "0.9.9"));
+        assert!(!version_neuer("0.4.14", "0.4.14"));
+        assert!(!version_neuer("0.4.13", "0.4.14"));
+    }
+}
+
 /// HTTP-Client für den ÖFFENTLICHEN Enroll-Kanal (das neue Gerät hat noch
 /// keinen Ausweis). Vertraut den öffentlichen Wurzeln (Let's Encrypt) UND –
 /// falls mitgegeben – zusätzlich der Einladungs-CA (für self-hosted Server mit

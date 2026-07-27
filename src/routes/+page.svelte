@@ -20,6 +20,8 @@
   import KatalogUpdate from "$lib/komponenten/KatalogUpdate.svelte";
   import UpdatePruefung from "$lib/komponenten/UpdatePruefung.svelte";
   import { check as appUpdateCheck } from "@tauri-apps/plugin-updater";
+  import { openUrl } from "@tauri-apps/plugin-opener";
+  import { sichereWebUrl } from "$lib/sicherheit";
   import { getVersion } from "@tauri-apps/api/app";
   import { formularWordBauen } from "$lib/antrag";
   import { antragsPdfBauen } from "$lib/antragsPdf";
@@ -83,6 +85,9 @@
   let sicherungOffen = $state(false);
   let katalogOffen = $state(false);
   let updateOffen = $state(false);
+  // macOS: Hinweis auf eine neuere Version (kein Auto-Update dort). Objekt
+  // { version, url, sha256, notes } oder null.
+  let macUpdate = $state(null);
   let updateGeprueft = false; // Auto-Prüfung nur einmal pro Sitzung.
   // "Was ist neu?"-Meldung nach einem Update: { version, notes } oder null.
   let wasIstNeu = $state(null);
@@ -181,6 +186,8 @@
     await wasIstNeuPruefen();
     // Einmal still nach einer neuen App-Version schauen (Etappe 5).
     updateStillPruefen();
+    // macOS: still auf eine neuere Version hinweisen (kein Auto-Update dort).
+    macUpdatePruefen();
     // Und die Förder-Datenbank automatisch auf Aktualisierungen prüfen.
     katalogStillPruefen();
     // Kurzlebigen Geräte-Ausweis rechtzeitig still erneuern (Roadmap 10).
@@ -887,6 +894,25 @@
     } catch {
       /* still: kein Update-Server erreichbar o. Ä. */
     }
+  }
+
+  // macOS hat kein Selbst-Update (Pilot unsigniert). Stattdessen still ueber
+  // die TLS-verifizierte Verbindung nach einer neueren Version schauen und –
+  // falls vorhanden – einen Hinweis mit Download-Link + Pruefsumme zeigen.
+  // Auf Windows/Linux liefert der Rust-Befehl immer null (kein Hinweis).
+  async function macUpdatePruefen() {
+    try {
+      const info = await invoke("mac_update_pruefen");
+      // Nur zeigen, wenn Version da UND der Download-Link sicher ist.
+      if (info && info.version && sichereWebUrl(info.url)) macUpdate = info;
+    } catch {
+      /* still: kein Popup bei Netz-/Serverfehler */
+    }
+  }
+
+  function macHerunterladen() {
+    const u = sichereWebUrl(macUpdate?.url);
+    if (u) openUrl(u);
   }
 
   // Beim Start die Förder-Datenbank im Hintergrund auf Aktualisierungen
@@ -2222,6 +2248,31 @@
       </div>
     {/if}
 
+    {#if macUpdate}
+      <div class="schleier-neu" role="presentation" onclick={() => (macUpdate = null)}>
+        <div class="dialog-neu" role="presentation" onclick={(e) => e.stopPropagation()}>
+          <h2>Neue Version verfügbar: {macUpdate.version}</h2>
+          <p style="color:var(--text-muted); line-height:1.55;">
+            Auf dem Mac wird von Hand aktualisiert: Lade die neue Version
+            herunter und öffne sie einmalig per Rechtsklick → „Öffnen".
+          </p>
+          {#if macUpdate.notes}
+            <div class="neu-notizen">{macUpdate.notes}</div>
+          {/if}
+          {#if macUpdate.sha256}
+            <p class="mac-hash">
+              Prüfsumme (SHA-256) zum Selbst-Vergleichen:<br />
+              <code>{macUpdate.sha256}</code>
+            </p>
+          {/if}
+          <div class="neu-fuss">
+            <button class="mac-spaeter" onclick={() => (macUpdate = null)}>Später</button>
+            <button onclick={macHerunterladen}>⬇ Herunterladen</button>
+          </div>
+        </div>
+      </div>
+    {/if}
+
     {#if katalogOffen}
       <KatalogUpdate
         schliessen={() => (katalogOffen = false)}
@@ -2745,6 +2796,33 @@
     color: var(--auf-farbe); background: var(--akzent); border: none; border-radius: 8px; cursor: pointer;
   }
   .neu-fuss button:hover { background: var(--akzent-d); }
+  .neu-fuss .mac-spaeter {
+    margin-right: 10px;
+    color: var(--text);
+    background: var(--weiss);
+    border: 2px solid var(--rand);
+  }
+  .neu-fuss .mac-spaeter:hover {
+    background: var(--flaeche-2);
+    border-color: var(--akzent);
+  }
+  .mac-hash {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin: 14px 0 0;
+    line-height: 1.5;
+  }
+  .mac-hash code {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 0.8rem;
+    color: var(--text);
+    background: var(--flaeche-2);
+    border: 1px solid var(--rand);
+    border-radius: 6px;
+    padding: 4px 8px;
+    word-break: break-all;
+  }
   .app header button.leise {
     width: auto;
     margin: 0;

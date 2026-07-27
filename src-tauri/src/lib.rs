@@ -58,6 +58,7 @@ pub fn run() {
             sync::katalog_oeffentlich_holen,
             sync::sync_logo_holen,
             sync::logo_oeffentlich_holen,
+            sync::mac_update_pruefen,
             logo::logo_herunterladen,
             sync::sync_meldung_senden,
             sync::sync_foerderer_holen,
