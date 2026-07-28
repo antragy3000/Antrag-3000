@@ -247,9 +247,15 @@ export function belegNummern(belege, kfp) {
   return nummern;
 }
 
-/// Baut Titel + Abschnitte für den Verwendungsnachweis EINER Geldquelle
-/// (Phase A5). Wird ans Rust-Backend gegeben, das daraus PDF/Word rendert.
-/// Abschnitte: Angaben, Sachbericht, Belegliste, Kostenübersicht.
+/// Baut den Verwendungsnachweis EINER Geldquelle (Phase A5). Wird ans
+/// Rust-Backend gegeben, das daraus PDF/Word rendert.
+/// Liefert:
+///   titel      – Haupttitel
+///   untertitel – Zeilen unter dem Titel (Projekt, Soll/Ist)
+///   abschnitte – Sachbericht + je Kostenstelle eine gruppierte Belegliste
+///                (Kostenstelle = Überschrift der Gruppe, mit Zwischensumme)
+///   anhaenge   – { datei, stempel } je Beleg-Datei dieser Geldquelle; der
+///                Stempel wird rot oben links auf die angehängte Seite gedruckt.
 /// In Tabellenzellen markiert ** am Anfang eine fette (Summen-)Zeile.
 export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName, sachbericht = "") {
   const nummern = belegNummern(belege, kfp);
@@ -263,65 +269,78 @@ export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName, 
   const summe = zugeordnet.reduce((s, b) => s + anteil(b), 0);
 
   const titel = `Verwendungsnachweis – ${quelle.name}`;
+  // Untertitel unter dem Titel (statt einer „Angaben"-Tabelle): Projekt + Soll/Ist.
+  const untertitel = [
+    `für das Projekt ${projektName || "—"}`,
+    `Bewilligt ${betragFormat(soll)} · Abgerechnet ${betragFormat(summe)} · Stand ${new Date().toLocaleDateString("de-DE")}`,
+  ];
+
   const abschnitte = [];
+  const anhaenge = [];
 
-  // 1) Angaben.
-  abschnitte.push({
-    ueberschrift: "Angaben",
-    absaetze: [],
-    tabelle: [
-      ["Angabe", "Wert"],
-      ["Projekt", projektName || "—"],
-      ["Geldquelle", quelle.name || "—"],
-      ["Bewilligt (Soll)", betragFormat(soll)],
-      ["Abgerechnet", betragFormat(summe)],
-      ["Stand", new Date().toLocaleDateString("de-DE")],
-    ],
-  });
-
-  // 2) Sachbericht (projektweit, falls hinterlegt).
+  // Sachbericht (projektweit, falls hinterlegt).
   if ((sachbericht ?? "").trim()) {
     abschnitte.push({ ueberschrift: "Sachbericht", absaetze: [sachbericht.trim()], tabelle: [] });
   }
 
-  // 3) Belegliste.
   if (zugeordnet.length) {
-    const zeilen = [["Nr.", "Datum", "Beleg", "Kostenstelle", "Summe", "Anteil"]];
+    // Belege nach Kostenstelle gruppieren – jede Kostenstelle wird zur
+    // Überschrift ihrer eigenen kleinen Belegliste (keine separate Übersicht).
+    const gruppen = new Map(); // key: ks-id oder "" (ohne) -> Belege
     for (const b of zugeordnet) {
-      const beleg = [b.empfaenger, b.zweck].filter(Boolean).join(" · ") || "—";
-      zeilen.push([
-        nummern.get(b.id) ?? `#${b.nr}`,
-        datumText(b.datum),
-        beleg,
-        kostenstelleLabel(kfp, b.kostenstelle) || "—",
-        betragFormat(belegBrutto(b)),
-        betragFormat(anteil(b)),
-      ]);
+      const key = b.kostenstelle || "";
+      if (!gruppen.has(key)) gruppen.set(key, []);
+      gruppen.get(key).push(b);
     }
-    zeilen.push(["**Summe", "", "", "", "", "**" + betragFormat(summe)]);
-    abschnitte.push({ ueberschrift: "Belegliste", absaetze: [], tabelle: zeilen });
+    // Reihenfolge: nach Kostenstellen-Nummer; „ohne Kostenstelle" ganz ans Ende.
+    const rang = (key) => {
+      const nr = key ? kostenstelleNummer(kfp, key) : "";
+      if (!nr) return [Infinity, Infinity];
+      const [a, b] = nr.split(".").map(Number);
+      return [a || 0, b || 0];
+    };
+    const keys = [...gruppen.keys()].sort((x, y) => {
+      const [ax, bx] = rang(x);
+      const [ay, by] = rang(y);
+      return ax - ay || bx - by;
+    });
+
+    for (const key of keys) {
+      const ksLabel = key ? kostenstelleLabel(kfp, key) || "(entfernt)" : "";
+      const ueberschrift = key ? `Kostenstelle ${ksLabel}` : "Ohne Kostenstelle";
+      const zeilen = [["Nr.", "Datum", "Beleg", "Summe", "Anteil"]];
+      let gruppenSumme = 0;
+      for (const b of gruppen.get(key)) {
+        const nr = nummern.get(b.id) ?? `#${b.nr}`;
+        const belegText = [b.empfaenger, b.zweck].filter(Boolean).join(" · ") || "—";
+        gruppenSumme += anteil(b);
+        zeilen.push([
+          nr,
+          datumText(b.datum),
+          belegText,
+          betragFormat(belegBrutto(b)),
+          betragFormat(anteil(b)),
+        ]);
+        // Roter Stempel für die angehängten Dateien dieses Belegs.
+        const stempel = key ? `Beleg ${nr} · ${ksLabel}` : `Beleg ${nr} · ohne Kostenstelle`;
+        for (const d of b.dateien ?? []) {
+          if (d?.name) anhaenge.push({ datei: d.name, stempel });
+        }
+      }
+      // Label in der breiten „Beleg"-Spalte (die schmale Nr.-Spalte würde das
+      // lange Wort verwerfen); Betrag in der „Anteil"-Spalte.
+      zeilen.push(["", "", "**Zwischensumme", "", "**" + betragFormat(gruppenSumme)]);
+      abschnitte.push({ ueberschrift, absaetze: [], tabelle: zeilen });
+    }
   } else {
     abschnitte.push({
-      ueberschrift: "Belegliste",
+      ueberschrift: "Belege",
       absaetze: ["Dieser Geldquelle sind noch keine Belege zugeordnet."],
       tabelle: [],
     });
   }
 
-  // 4) Kostenübersicht: diesem Förderer zugeordnete Beträge je Kostenstelle.
-  if (zugeordnet.length) {
-    const proKs = new Map();
-    for (const b of zugeordnet) {
-      const label = kostenstelleLabel(kfp, b.kostenstelle) || "ohne Kostenstelle";
-      proKs.set(label, (proKs.get(label) ?? 0) + anteil(b));
-    }
-    const zeilen = [["Kostenstelle", "Zugeordnet"]];
-    for (const [label, betrag] of proKs) zeilen.push([label, betragFormat(betrag)]);
-    zeilen.push(["**Summe", "**" + betragFormat(summe)]);
-    abschnitte.push({ ueberschrift: "Kostenübersicht", absaetze: [], tabelle: zeilen });
-  }
-
-  return { titel, abschnitte };
+  return { titel, untertitel, abschnitte, anhaenge };
 }
 
 /// Nur die Nummer einer Kostenstelle (z. B. "1.2"), oder "" wenn keine bzw.

@@ -11,15 +11,12 @@ function zeilen(...teile) {
   return teile.filter((t) => t && String(t).trim() !== "");
 }
 
-export function antragsPdfBauen(stammdaten, formular, kfp, foerderung, checkliste) {
+/// Absender-Briefkopf (Name + Kontakt der antragstellenden Person/Organisation)
+/// aus den Stammdaten. Steht oben im PDF wie der Absender auf einem Brief.
+/// Wird vom Antrags-PDF UND vom Verwendungsnachweis genutzt.
+export function absenderZeilen(stammdaten) {
   const s = stammdaten;
-  const titel = `Förderantrag: ${formular.projekttitel || "(ohne Projekttitel)"} – ${foerderung.name}`;
-  const abschnitte = [];
-
-  // 1. Absender-Briefkopf: Name + Kontakt der antragstellenden Person/
-  //    Organisation. Steht oben im PDF (rechtsbündig, neben/unter dem Logo)
-  //    wie der Absender auf einem Brief – NICHT mehr als Abschnitt im Text.
-  const absender = zeilen(
+  return zeilen(
     [s.person.vorname, s.person.nachname].filter(Boolean).join(" "),
     s.person.kuenstlername && `Künstler:innenname: ${s.person.kuenstlername}`,
     s.person.organisation && `Organisation/Träger: ${s.person.organisation}`,
@@ -30,6 +27,16 @@ export function antragsPdfBauen(stammdaten, formular, kfp, foerderung, checklist
     s.kontakt.telefon && `Telefon: ${s.kontakt.telefon}`,
     s.kontakt.webseite && `Webseite: ${s.kontakt.webseite}`
   );
+}
+
+export function antragsPdfBauen(stammdaten, formular, kfp, foerderung, checkliste) {
+  const s = stammdaten;
+  const titel = `Förderantrag: ${formular.projekttitel || "(ohne Projekttitel)"} – ${foerderung.name}`;
+  const abschnitte = [];
+
+  // 1. Absender-Briefkopf (siehe absenderZeilen) – oben im PDF, NICHT als
+  //    Abschnitt im Text.
+  const absender = absenderZeilen(s);
 
   // Finanzangaben (Bank + Steuer) werden hier nur GEBAUT und erst NACH dem
   // Kostenfinanzplan eingefügt – so stehen alle Geld-/Verwaltungsangaben

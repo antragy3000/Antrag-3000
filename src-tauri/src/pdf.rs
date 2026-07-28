@@ -22,7 +22,7 @@ use base64::Engine;
 use genpdf::elements::CellDecorator;
 use genpdf::{elements, fonts, style, Alignment, Document, Element, SimplePageDecorator};
 use image::{DynamicImage, GenericImageView};
-use lopdf::{Dictionary, Document as LoDocument, Object, ObjectId};
+use lopdf::{Dictionary, Document as LoDocument, Object, ObjectId, Stream};
 use serde::Deserialize;
 
 use crate::ordner;
@@ -54,6 +54,16 @@ pub struct PdfAbschnitt {
     pub absaetze: Vec<String>,
     #[serde(default)]
     pub tabelle: Vec<Vec<String>>,
+}
+
+/// Ein anzuhaengender Beleg (Verwendungsnachweis): der Dateiname im
+/// Belegordner des Projekts plus der rote Stempel-Text, der oben links auf
+/// jede Seite dieses Belegs gedruckt wird (z. B. „Beleg 1.2.1 · 1.2 Technik").
+#[derive(Deserialize)]
+pub struct BelegAnhang {
+    pub datei: String,
+    #[serde(default)]
+    pub stempel: String,
 }
 
 // --- Schrift / Grunddokument -------------------------------------------
@@ -204,6 +214,9 @@ fn tabelle_einfuegen(doc: &mut Document, zeilen: &[Vec<String>]) {
     let gewichte: Vec<usize> = match spalten {
         2 => vec![6, 2],
         3 => vec![5, 4, 2],
+        // Nach Kostenstelle gruppierte Belegliste des Verwendungsnachweises:
+        // Nr · Datum · Beleg · Summe · Anteil (Gewichte ~mm bei 165 mm Breite).
+        5 => vec![16, 27, 62, 30, 30],
         // Belegliste des Verwendungsnachweises: Nr · Datum · Beleg ·
         // Kostenstelle · Summe · Anteil. Die Gewichte entsprechen ~mm (Textbreite
         // 165 mm): schmale Spalten (Nr) klein, aber Datum- und Betragsspalten
@@ -244,6 +257,7 @@ fn briefkopf_einfuegen(doc: &mut Document, logo: Option<&str>) {
 fn vorblatt_fuellen(
     doc: &mut Document,
     titel: &str,
+    untertitel: &[String],
     absender: &[String],
     abschnitte: &[PdfAbschnitt],
     logo: Option<&str>,
@@ -277,6 +291,17 @@ fn vorblatt_fuellen(
     doc.push(
         elements::Paragraph::new(titel).styled(style::Style::new().bold().with_font_size(16)),
     );
+    // Untertitel-Zeilen direkt unter dem Titel (z. B. „für das Projekt X",
+    // Soll/Ist), etwas kleiner und in Grau abgesetzt.
+    if !untertitel.is_empty() {
+        doc.push(elements::Break::new(0.3));
+        let st = style::Style::new()
+            .with_font_size(11)
+            .with_color(style::Color::Rgb(90, 90, 90));
+        for zeile in untertitel {
+            doc.push(elements::Paragraph::new(zeile).styled(st));
+        }
+    }
     doc.push(elements::Break::new(1.0));
 
     for a in abschnitte {
@@ -444,6 +469,176 @@ fn zusammenfuegen(bloecke: Vec<Vec<u8>>) -> Result<Vec<u8>, String> {
     Ok(out)
 }
 
+// --- Beleg-Anhaenge mit rotem Stempel (Verwendungsnachweis) ------------
+
+/// Wandelt Text in WinAnsi-Bytes (Helvetica-Standardkodierung). Deckt Latin-1
+/// inkl. Umlaute und den Mittelpunkt „·" ab sowie die gaengigen Typografie-
+/// Zeichen; alles andere wird zu '?'.
+fn winansi_bytes(s: &str) -> Vec<u8> {
+    s.chars()
+        .map(|c| {
+            let u = c as u32;
+            match c {
+                '\u{2013}' => 0x96, // –
+                '\u{2014}' => 0x97, // —
+                '\u{2022}' => 0x95, // •
+                '\u{2018}' => 0x91,
+                '\u{2019}' => 0x92,
+                '\u{201A}' => 0x82,
+                '\u{201C}' => 0x93,
+                '\u{201D}' => 0x94,
+                '\u{201E}' => 0x84,
+                '\u{2026}' => 0x85, // …
+                '\u{20AC}' => 0x80, // €
+                _ if u < 0x80 => u as u8,
+                _ if (0xA0..=0xFF).contains(&u) => u as u8, // Latin-1 == WinAnsi
+                _ => b'?',
+            }
+        })
+        .collect()
+}
+
+/// Maskiert die in PDF-Textstrings kritischen Zeichen ( ) und \.
+fn pdf_string_escape(bytes: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(bytes.len() + 4);
+    for &b in bytes {
+        if b == b'(' || b == b')' || b == b'\\' {
+            out.push(b'\\');
+        }
+        out.push(b);
+    }
+    out
+}
+
+fn zahl(o: &Object) -> Option<f32> {
+    match o {
+        Object::Integer(i) => Some(*i as f32),
+        Object::Real(r) => Some(*r as f32),
+        _ => None,
+    }
+}
+
+/// Objekt ggf. dereferenzieren und als Dictionary klonen.
+fn als_dict(doc: &LoDocument, o: &Object) -> Option<Dictionary> {
+    match o {
+        Object::Reference(id) => doc.get_object(*id).ok()?.as_dict().ok().cloned(),
+        Object::Dictionary(d) => Some(d.clone()),
+        _ => None,
+    }
+}
+
+/// Seitenhoehe (in PDF-Punkten) aus der MediaBox der Seite oder eines
+/// Eltern-Knotens; Fallback A4-Hoehe (842 pt).
+fn seite_hoehe(doc: &LoDocument, page_id: ObjectId) -> f32 {
+    let mut cur = Some(page_id);
+    while let Some(id) = cur {
+        let Ok(d) = doc.get_object(id).and_then(|o| o.as_dict()) else {
+            break;
+        };
+        if let Ok(roh) = d.get(b"MediaBox") {
+            let mb = match roh {
+                Object::Reference(r) => doc.get_object(*r).ok().cloned(),
+                other => Some(other.clone()),
+            };
+            if let Some(arr) = mb.as_ref().and_then(|o| o.as_array().ok()) {
+                if arr.len() == 4 {
+                    let y0 = zahl(&arr[1]).unwrap_or(0.0);
+                    let y1 = zahl(&arr[3]).unwrap_or(842.0);
+                    return (y1 - y0).abs();
+                }
+            }
+        }
+        cur = d.get(b"Parent").ok().and_then(|p| p.as_reference().ok());
+    }
+    842.0
+}
+
+/// Die (ggf. von einem Eltern-Knoten geerbten) Resources einer Seite als
+/// klonbares Dictionary.
+fn effektive_resources(doc: &LoDocument, page_id: ObjectId) -> Dictionary {
+    let mut cur = Some(page_id);
+    while let Some(id) = cur {
+        let Ok(d) = doc.get_object(id).and_then(|o| o.as_dict()) else {
+            break;
+        };
+        if let Ok(r) = d.get(b"Resources") {
+            if let Some(dict) = als_dict(doc, r) {
+                return dict;
+            }
+        }
+        cur = d.get(b"Parent").ok().and_then(|p| p.as_reference().ok());
+    }
+    Dictionary::new()
+}
+
+/// Legt den roten Stempel-Text auf JEDE Seite des PDF-Blocks (oben links) und
+/// gibt den neuen PDF-Block zurueck. Best-effort: schlaegt etwas fehl, kommt
+/// der Beleg unveraendert zurueck (nie verlieren wir den Beleg selbst).
+fn stempel_auf_block(block: &[u8], text: &str) -> Vec<u8> {
+    if text.trim().is_empty() {
+        return block.to_vec();
+    }
+    let Ok(mut doc) = LoDocument::load_mem(block) else {
+        return block.to_vec();
+    };
+
+    // Stempel-Schrift (die rote Farbe setzt der Content-Stream, nicht die Font).
+    let mut font = Dictionary::new();
+    font.set("Type", Object::Name(b"Font".to_vec()));
+    font.set("Subtype", Object::Name(b"Type1".to_vec()));
+    font.set("BaseFont", Object::Name(b"Helvetica".to_vec()));
+    font.set("Encoding", Object::Name(b"WinAnsiEncoding".to_vec()));
+    let font_id = doc.add_object(Object::Dictionary(font));
+
+    let escaped = pdf_string_escape(&winansi_bytes(text));
+    let seiten: Vec<ObjectId> = doc.get_pages().into_values().collect();
+
+    for page_id in seiten {
+        let hoehe = seite_hoehe(&doc, page_id);
+        // Roter Text, 12 pt, 28 pt vom linken und oberen Blattrand.
+        let mut inhalt: Vec<u8> = Vec::new();
+        inhalt.extend_from_slice(b"q 1 0 0 rg BT /A3Stamp 12 Tf ");
+        inhalt.extend_from_slice(format!("28 {:.1} Td (", hoehe - 28.0).as_bytes());
+        inhalt.extend_from_slice(&escaped);
+        inhalt.extend_from_slice(b") Tj ET Q\n");
+        let stream_id = doc.add_object(Stream::new(Dictionary::new(), inhalt));
+
+        // Stempel-Font in die Resources der Seite mergen (eigene Resources
+        // setzen, damit die vorhandenen Ressourcen erhalten bleiben).
+        let mut res = effektive_resources(&doc, page_id);
+        let mut fonts = res
+            .get(b"Font")
+            .ok()
+            .and_then(|o| als_dict(&doc, o))
+            .unwrap_or_default();
+        fonts.set("A3Stamp", Object::Reference(font_id));
+        res.set("Font", Object::Dictionary(fonts));
+
+        if let Ok(page) = doc.get_object_mut(page_id).and_then(|o| o.as_dict_mut()) {
+            page.set("Resources", Object::Dictionary(res));
+            // Stempel-Stream ans Ende der Content-Streams haengen (Overlay).
+            let neu = match page.get(b"Contents") {
+                Ok(Object::Reference(r)) => {
+                    Object::Array(vec![Object::Reference(*r), Object::Reference(stream_id)])
+                }
+                Ok(Object::Array(a)) => {
+                    let mut a = a.clone();
+                    a.push(Object::Reference(stream_id));
+                    Object::Array(a)
+                }
+                _ => Object::Array(vec![Object::Reference(stream_id)]),
+            };
+            page.set("Contents", neu);
+        }
+    }
+
+    let mut out = Vec::new();
+    if doc.save_to(&mut out).is_err() {
+        return block.to_vec();
+    }
+    out
+}
+
 // --- gemeinsamer Aufbau -------------------------------------------------
 
 #[allow(clippy::too_many_arguments)]
@@ -458,7 +653,7 @@ fn baue_antrags_pdf(
     logo: Option<&str>,
 ) -> Result<Vec<u8>, String> {
     let mut doc = neues_dokument()?;
-    vorblatt_fuellen(&mut doc, titel, absender, abschnitte, logo);
+    vorblatt_fuellen(&mut doc, titel, &[], absender, abschnitte, logo);
     let mut vorblatt = Vec::new();
     doc.render(&mut vorblatt)
         .map_err(|e| format!("PDF-Inhalt nicht erzeugbar: {e}"))?;
@@ -563,24 +758,73 @@ pub fn antrags_pdf_speichern(
     Ok(pfad.to_string_lossy().to_string())
 }
 
-/// Verwendungsnachweis (Abrechnung) als PDF: nur das Vorblatt (Titel +
-/// Abschnitte), ohne Anhaenge. Wird in den Unterordner _Abrechnung des
-/// Projekts geschrieben und die Datei geoeffnet.
+/// Verwendungsnachweis (Abrechnung) als PDF: Vorblatt (Kopfzeile + Titel +
+/// gruppierte Belegliste) und dahinter die Beleg-Dateien dieser Geldquelle
+/// als Anhang – jede Seite oben links mit rotem Stempel (Beleg-Nr. +
+/// Kostenstelle). Wird in den Unterordner _Abrechnung geschrieben und geoeffnet.
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub fn verwendungsnachweis_pdf(
     app: tauri::AppHandle,
     projekt: String,
     foerderer: String,
     titel: String,
+    untertitel: Vec<String>,
+    absender: Vec<String>,
     abschnitte: Vec<PdfAbschnitt>,
+    anhaenge: Vec<BelegAnhang>,
     logo: Option<String>,
 ) -> Result<String, String> {
     let mut doc = neues_dokument()?;
-    // Verwendungsnachweis hat keinen Absender-Briefkopf (leer).
-    vorblatt_fuellen(&mut doc, &titel, &[], &abschnitte, logo.as_deref());
-    let mut bytes = Vec::new();
-    doc.render(&mut bytes)
+    // Kopfzeile wie beim Antrags-PDF: Logo + Absender (Stammdaten), darunter
+    // Titel + Untertitel (Projekt, Soll/Ist).
+    vorblatt_fuellen(&mut doc, &titel, &untertitel, &absender, &abschnitte, logo.as_deref());
+    let mut vorblatt = Vec::new();
+    doc.render(&mut vorblatt)
         .map_err(|e| format!("PDF-Inhalt nicht erzeugbar: {e}"))?;
+
+    // Beleg-Dateien dieser Geldquelle aus dem (lesbaren) Belegordner anhaengen,
+    // jede Seite mit rotem Stempel. Fehlende/ungueltige Dateien werden still
+    // uebersprungen – der Nachweis selbst entsteht immer.
+    let belegordner = ordner::wurzel(&app)?
+        .join(ordner::bereinigen(&projekt)?)
+        .join("Belege");
+    let mut bloecke = vec![vorblatt];
+    for a in &anhaenge {
+        let name = a.datei.as_str();
+        if name.is_empty()
+            || name.contains('/')
+            || name.contains('\\')
+            || name.contains(':')
+            || name == "."
+            || name == ".."
+            || std::path::Path::new(name).is_absolute()
+        {
+            continue;
+        }
+        let pfad = belegordner.join(name);
+        let Ok(daten) = fs::read(&pfad) else { continue };
+        let ext = pfad
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.to_lowercase())
+            .unwrap_or_default();
+        let block = match ext.as_str() {
+            "pdf" => daten,
+            "png" | "jpg" | "jpeg" => match bild_pdf(daten) {
+                Ok(b) => b,
+                Err(_) => continue,
+            },
+            _ => continue,
+        };
+        bloecke.push(stempel_auf_block(&block, &a.stempel));
+    }
+
+    let bytes = if bloecke.len() == 1 {
+        bloecke.pop().unwrap()
+    } else {
+        zusammenfuegen(bloecke)?
+    };
 
     let ordner_pfad = ordner::wurzel(&app)?
         .join(ordner::bereinigen(&projekt)?)
@@ -627,13 +871,13 @@ mod tests {
             "8000 Zürich".to_string(),
         ];
         let mut doc = neues_dokument().unwrap();
-        vorblatt_fuellen(&mut doc, "Förderantrag ÄÖÜ", &absender, &abschnitte, None);
+        vorblatt_fuellen(&mut doc, "Förderantrag ÄÖÜ", &[], &absender, &abschnitte, None);
         let mut a = Vec::new();
         doc.render(&mut a).unwrap();
         assert!(a.starts_with(b"%PDF"), "Vorblatt ist kein PDF");
 
         let mut doc2 = neues_dokument().unwrap();
-        vorblatt_fuellen(&mut doc2, "Anhang", &[], &[], None);
+        vorblatt_fuellen(&mut doc2, "Anhang", &[], &[], &[], None);
         let mut b = Vec::new();
         doc2.render(&mut b).unwrap();
 
@@ -719,6 +963,7 @@ mod tests {
         vorblatt_fuellen(
             &mut doc,
             "Förderantrag: Test Projekt – Stadt Zürich – Kulturförderung",
+            &[],
             &absender,
             &abschnitte,
             None,
@@ -739,19 +984,9 @@ mod tests {
     #[ignore = "Werkzeug: schreibt einen Muster-Verwendungsnachweis in den Temp-Ordner"]
     fn muster_verwendungsnachweis() {
         let z = |s: &str| s.to_string();
+        // Kopf-Beleg einer Gruppe (Nr · Datum · Beleg · Summe · Anteil).
+        let kopf = || vec![z("Nr."), z("Datum"), z("Beleg"), z("Summe"), z("Anteil")];
         let abschnitte = vec![
-            PdfAbschnitt {
-                ueberschrift: "Angaben".into(),
-                absaetze: vec![],
-                tabelle: vec![
-                    vec![z("Angabe"), z("Wert")],
-                    vec![z("Projekt"), z("Klangraum – Interaktive Installation")],
-                    vec![z("Geldquelle"), z("Stadt Zürich – Kulturförderung")],
-                    vec![z("Bewilligt (Soll)"), z("8.000,00 €")],
-                    vec![z("Abgerechnet"), z("6.450,00 €")],
-                    vec![z("Stand"), z("28.07.2026")],
-                ],
-            },
             PdfAbschnitt {
                 ueberschrift: "Sachbericht".into(),
                 absaetze: vec![
@@ -761,42 +996,90 @@ mod tests {
                 tabelle: vec![],
             },
             PdfAbschnitt {
-                ueberschrift: "Belegliste".into(),
+                ueberschrift: "Kostenstelle 1.1 Material".into(),
                 absaetze: vec![],
                 tabelle: vec![
-                    vec![z("Nr."), z("Datum"), z("Beleg"), z("Kostenstelle"), z("Summe"), z("Anteil")],
-                    vec![z("1.1.1"), z("05.03.2026"), z("Bühnenbau GmbH · Rohmaterial"), z("1.1 Material"), z("1.250,00 €"), z("1.250,00 €")],
-                    vec![z("1.1.2"), z("03.05.2026"), z("Bauhaus · Farben, Kleinmaterial"), z("1.1 Material"), z("480,00 €"), z("300,00 €")],
-                    vec![z("1.2.1"), z("12.03.2026"), z("Tonstudio Klang · Aufnahme"), z("1.2 Technik"), z("2.400,00 €"), z("2.000,00 €")],
-                    vec![z("2.1.1"), z("20.04.2026"), z("Grafikbüro Nord · Plakate & Flyer"), z("2.1 Werbung"), z("900,00 €"), z("900,00 €")],
-                    vec![z("3.1.1"), z("30.06.2026"), z("Honorar Regie · Aisha Ndiaye"), z("3.1 Honorare"), z("2.000,00 €"), z("2.000,00 €")],
-                    vec![z("**Summe"), z(""), z(""), z(""), z(""), z("**6.450,00 €")],
+                    kopf(),
+                    vec![z("1.1.1"), z("05.03.2026"), z("Bühnenbau GmbH · Rohmaterial"), z("1.250,00 €"), z("1.250,00 €")],
+                    vec![z("1.1.2"), z("03.05.2026"), z("Bauhaus · Farben, Kleinmaterial"), z("480,00 €"), z("300,00 €")],
+                    vec![z(""), z(""), z("**Zwischensumme"), z(""), z("**1.550,00 €")],
                 ],
             },
             PdfAbschnitt {
-                ueberschrift: "Kostenübersicht".into(),
+                ueberschrift: "Kostenstelle 1.2 Technik".into(),
                 absaetze: vec![],
                 tabelle: vec![
-                    vec![z("Kostenstelle"), z("Zugeordnet")],
-                    vec![z("1.1 Material"), z("1.550,00 €")],
-                    vec![z("1.2 Technik"), z("2.000,00 €")],
-                    vec![z("2.1 Werbung"), z("900,00 €")],
-                    vec![z("3.1 Honorare"), z("2.000,00 €")],
-                    vec![z("**Summe"), z("**6.450,00 €")],
+                    kopf(),
+                    vec![z("1.2.1"), z("12.03.2026"), z("Tonstudio Klang · Aufnahme"), z("2.400,00 €"), z("2.000,00 €")],
+                    vec![z(""), z(""), z("**Zwischensumme"), z(""), z("**2.000,00 €")],
+                ],
+            },
+            PdfAbschnitt {
+                ueberschrift: "Kostenstelle 2.1 Werbung".into(),
+                absaetze: vec![],
+                tabelle: vec![
+                    kopf(),
+                    vec![z("2.1.1"), z("20.04.2026"), z("Grafikbüro Nord · Plakate & Flyer"), z("900,00 €"), z("900,00 €")],
+                    vec![z(""), z(""), z("**Zwischensumme"), z(""), z("**900,00 €")],
+                ],
+            },
+            PdfAbschnitt {
+                ueberschrift: "Kostenstelle 3.1 Honorare".into(),
+                absaetze: vec![],
+                tabelle: vec![
+                    kopf(),
+                    vec![z("3.1.1"), z("30.06.2026"), z("Honorar Regie · Aisha Ndiaye"), z("2.000,00 €"), z("2.000,00 €")],
+                    vec![z(""), z(""), z("**Zwischensumme"), z(""), z("**2.000,00 €")],
                 ],
             },
         ];
+        let absender = vec![
+            z("Kollektiv Klangraum"),
+            z("Organisation/Träger: Verein Klangraum"),
+            z("Bahnhofstraße 3"),
+            z("8001 Zürich"),
+            z("E-Mail: hallo@klangraum.ch"),
+        ];
+        let untertitel = vec![
+            z("für das Projekt Klangraum – Interaktive Installation"),
+            z("Bewilligt 8.000,00 € · Abgerechnet 6.450,00 € · Stand 28.07.2026"),
+        ];
         let mut doc = neues_dokument().unwrap();
-        // Wie in verwendungsnachweis_pdf: Titel + Abschnitte, kein Briefkopf.
         vorblatt_fuellen(
             &mut doc,
             "Verwendungsnachweis – Stadt Zürich – Kulturförderung",
-            &[],
+            &untertitel,
+            &absender,
             &abschnitte,
             None,
         );
-        let mut bytes = Vec::new();
-        doc.render(&mut bytes).unwrap();
+        let mut vorblatt = Vec::new();
+        doc.render(&mut vorblatt).unwrap();
+
+        // Zwei Platzhalter-„Belege" (im echten Nachweis die Fotos/Scans) mit
+        // rotem Stempel oben links, damit die Anhang-Darstellung sichtbar wird.
+        let platzhalter = |beschriftung: &str| {
+            let mut d = neues_dokument().unwrap();
+            d.push(
+                elements::Paragraph::new("Beispiel-Beleg (Scan/Foto)")
+                    .styled(style::Style::new().bold().with_font_size(14)),
+            );
+            d.push(elements::Break::new(0.5));
+            d.push(elements::Paragraph::new(beschriftung));
+            let mut v = Vec::new();
+            d.render(&mut v).unwrap();
+            v
+        };
+        let beleg1 = stempel_auf_block(
+            &platzhalter("Hier steht im echten Nachweis das Foto/die PDF des Belegs."),
+            "Beleg 1.1.1 · 1.1 Material",
+        );
+        let beleg2 = stempel_auf_block(
+            &platzhalter("Zweiter Beispiel-Beleg."),
+            "Beleg 1.2.1 · 1.2 Technik",
+        );
+        let bytes = zusammenfuegen(vec![vorblatt, beleg1, beleg2]).unwrap();
+
         let pfad = std::env::temp_dir().join("antrag3000-verwendungsnachweis.pdf");
         std::fs::write(&pfad, &bytes).unwrap();
         eprintln!("MUSTER-VERWENDUNGSNACHWEIS geschrieben: {}", pfad.display());

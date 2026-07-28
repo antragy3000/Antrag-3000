@@ -24,7 +24,7 @@
   import { sichereWebUrl } from "$lib/sicherheit";
   import { getVersion } from "@tauri-apps/api/app";
   import { formularWordBauen } from "$lib/antrag";
-  import { antragsPdfBauen } from "$lib/antragsPdf";
+  import { antragsPdfBauen, absenderZeilen } from "$lib/antragsPdf";
   import { kfpExport, neuePostenId } from "$lib/kfp";
   import { verwendungsnachweisAbschnitte } from "$lib/abrechnung";
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
@@ -389,22 +389,41 @@
     const a = aktivesProjekt.abrechnung;
     const q = a.quellen.find((x) => x.id === quelleId);
     if (!q) return;
-    const { titel, abschnitte } = verwendungsnachweisAbschnitte(
+    const { titel, untertitel, abschnitte, anhaenge } = verwendungsnachweisAbschnitte(
       q,
       a.belege,
       aktivesProjekt.kfp,
       aktivesProjekt.name,
       a.sachbericht
     );
-    const cmd = format === "word" ? "verwendungsnachweis_word" : "verwendungsnachweis_pdf";
+    const absender = daten.stammdaten ? absenderZeilen(daten.stammdaten) : [];
+    const logo = daten.stammdaten?.logo || null;
     try {
-      await invoke(cmd, {
-        projekt: aktivesProjekt.name,
-        foerderer: q.name,
-        titel,
-        abschnitte,
-        logo: daten.stammdaten?.logo || null,
-      });
+      if (format === "word") {
+        // Word kennt keinen eigenen Untertitel-Bereich: die Untertitel-Zeilen
+        // als führenden Absatz voranstellen. Beleg-Anhänge gibt es nur im PDF.
+        const wortAbschnitte = untertitel.length
+          ? [{ ueberschrift: "", absaetze: untertitel, tabelle: [] }, ...abschnitte]
+          : abschnitte;
+        await invoke("verwendungsnachweis_word", {
+          projekt: aktivesProjekt.name,
+          foerderer: q.name,
+          titel,
+          abschnitte: wortAbschnitte,
+          logo,
+        });
+      } else {
+        await invoke("verwendungsnachweis_pdf", {
+          projekt: aktivesProjekt.name,
+          foerderer: q.name,
+          titel,
+          untertitel,
+          absender,
+          abschnitte,
+          anhaenge,
+          logo,
+        });
+      }
     } catch (e) {
       alert("Der Verwendungsnachweis konnte nicht erzeugt werden.\n" + e);
     }
