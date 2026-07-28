@@ -205,8 +205,11 @@ fn tabelle_einfuegen(doc: &mut Document, zeilen: &[Vec<String>]) {
         2 => vec![6, 2],
         3 => vec![5, 4, 2],
         // Belegliste des Verwendungsnachweises: Nr · Datum · Beleg ·
-        // Kostenstelle · Belegsumme · Zugeordnet.
-        6 => vec![2, 2, 5, 4, 3, 3],
+        // Kostenstelle · Summe · Anteil. Die Gewichte entsprechen ~mm (Textbreite
+        // 165 mm): schmale Spalten (Nr) klein, aber Datum- und Betragsspalten
+        // breit genug, dass die nicht-umbrechbaren Werte (z. B. "05.03.2026",
+        // "1.250,00 €") komplett hineinpassen – sonst verwirft genpdf die Zelle.
+        6 => vec![16, 27, 36, 34, 26, 26],
         n => vec![1; n],
     };
     doc.push(KopfTabelle {
@@ -725,5 +728,77 @@ mod tests {
         let pfad = std::env::temp_dir().join("antrag3000-muster.pdf");
         std::fs::write(&pfad, &bytes).unwrap();
         eprintln!("MUSTER-PDF geschrieben: {}", pfad.display());
+    }
+
+    // Erzeugt einen Muster-VERWENDUNGSNACHWEIS (Abrechnung) zum Sichten, genau
+    // wie ihn das Frontend (verwendungsnachweisAbschnitte) baut: Angaben,
+    // Sachbericht, Belegliste (mit Summenzeile) und Kostenuebersicht. Kein
+    // Absender-Briefkopf (wie in verwendungsnachweis_pdf). Laeuft nur auf
+    // Anfrage:  cargo test muster_verwendungsnachweis -- --ignored --nocapture
+    #[test]
+    #[ignore = "Werkzeug: schreibt einen Muster-Verwendungsnachweis in den Temp-Ordner"]
+    fn muster_verwendungsnachweis() {
+        let z = |s: &str| s.to_string();
+        let abschnitte = vec![
+            PdfAbschnitt {
+                ueberschrift: "Angaben".into(),
+                absaetze: vec![],
+                tabelle: vec![
+                    vec![z("Angabe"), z("Wert")],
+                    vec![z("Projekt"), z("Klangraum – Interaktive Installation")],
+                    vec![z("Geldquelle"), z("Stadt Zürich – Kulturförderung")],
+                    vec![z("Bewilligt (Soll)"), z("8.000,00 €")],
+                    vec![z("Abgerechnet"), z("6.450,00 €")],
+                    vec![z("Stand"), z("28.07.2026")],
+                ],
+            },
+            PdfAbschnitt {
+                ueberschrift: "Sachbericht".into(),
+                absaetze: vec![
+                    z("Das Projekt Klangraum realisierte eine begehbare Klang- und Lichtinstallation im Kulturhaus Zürich. Über sechs Wochen entstand gemeinsam mit vier Kunstschaffenden eine interaktive Umgebung, in der Besucher:innen durch Bewegung Klänge auslösen."),
+                    z("Die Förderung der Stadt Zürich deckte die Material- und Technikkosten sowie einen Teil der Honorare. Alle geplanten Programmpunkte konnten umgesetzt werden; die Publikumsresonanz war mit rund 1.200 Besuchen deutlich über der Erwartung."),
+                ],
+                tabelle: vec![],
+            },
+            PdfAbschnitt {
+                ueberschrift: "Belegliste".into(),
+                absaetze: vec![],
+                tabelle: vec![
+                    vec![z("Nr."), z("Datum"), z("Beleg"), z("Kostenstelle"), z("Summe"), z("Anteil")],
+                    vec![z("1.1.1"), z("05.03.2026"), z("Bühnenbau GmbH · Rohmaterial"), z("1.1 Material"), z("1.250,00 €"), z("1.250,00 €")],
+                    vec![z("1.1.2"), z("03.05.2026"), z("Bauhaus · Farben, Kleinmaterial"), z("1.1 Material"), z("480,00 €"), z("300,00 €")],
+                    vec![z("1.2.1"), z("12.03.2026"), z("Tonstudio Klang · Aufnahme"), z("1.2 Technik"), z("2.400,00 €"), z("2.000,00 €")],
+                    vec![z("2.1.1"), z("20.04.2026"), z("Grafikbüro Nord · Plakate & Flyer"), z("2.1 Werbung"), z("900,00 €"), z("900,00 €")],
+                    vec![z("3.1.1"), z("30.06.2026"), z("Honorar Regie · Aisha Ndiaye"), z("3.1 Honorare"), z("2.000,00 €"), z("2.000,00 €")],
+                    vec![z("**Summe"), z(""), z(""), z(""), z(""), z("**6.450,00 €")],
+                ],
+            },
+            PdfAbschnitt {
+                ueberschrift: "Kostenübersicht".into(),
+                absaetze: vec![],
+                tabelle: vec![
+                    vec![z("Kostenstelle"), z("Zugeordnet")],
+                    vec![z("1.1 Material"), z("1.550,00 €")],
+                    vec![z("1.2 Technik"), z("2.000,00 €")],
+                    vec![z("2.1 Werbung"), z("900,00 €")],
+                    vec![z("3.1 Honorare"), z("2.000,00 €")],
+                    vec![z("**Summe"), z("**6.450,00 €")],
+                ],
+            },
+        ];
+        let mut doc = neues_dokument().unwrap();
+        // Wie in verwendungsnachweis_pdf: Titel + Abschnitte, kein Briefkopf.
+        vorblatt_fuellen(
+            &mut doc,
+            "Verwendungsnachweis – Stadt Zürich – Kulturförderung",
+            &[],
+            &abschnitte,
+            None,
+        );
+        let mut bytes = Vec::new();
+        doc.render(&mut bytes).unwrap();
+        let pfad = std::env::temp_dir().join("antrag3000-verwendungsnachweis.pdf");
+        std::fs::write(&pfad, &bytes).unwrap();
+        eprintln!("MUSTER-VERWENDUNGSNACHWEIS geschrieben: {}", pfad.display());
     }
 }

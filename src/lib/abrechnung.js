@@ -286,7 +286,7 @@ export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName, 
 
   // 3) Belegliste.
   if (zugeordnet.length) {
-    const zeilen = [["Beleg-Nr.", "Datum", "Beleg", "Kostenstelle", "Belegsumme", "Zugeordnet"]];
+    const zeilen = [["Nr.", "Datum", "Beleg", "Kostenstelle", "Summe", "Anteil"]];
     for (const b of zugeordnet) {
       const beleg = [b.empfaenger, b.zweck].filter(Boolean).join(" · ") || "—";
       zeilen.push([
