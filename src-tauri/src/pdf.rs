@@ -1056,26 +1056,57 @@ mod tests {
         let mut vorblatt = Vec::new();
         doc.render(&mut vorblatt).unwrap();
 
-        // Zwei Platzhalter-„Belege" (im echten Nachweis die Fotos/Scans) mit
-        // rotem Stempel oben links, damit die Anhang-Darstellung sichtbar wird.
-        let platzhalter = |beschriftung: &str| {
+        // Realistische Beispiel-Belege (wie eingescannte Rechnungen) mit rotem
+        // Stempel oben links – so ist die Anhang-Darstellung anschaulich.
+        let grau = || style::Style::new().with_font_size(9).with_color(style::Color::Rgb(90, 90, 90));
+        let beispiel_beleg = |firma: &str, adresse: &str, nr: &str, datum: &str,
+                              posten: &[(&str, &str)], summe: &str| {
             let mut d = neues_dokument().unwrap();
-            d.push(
-                elements::Paragraph::new("Beispiel-Beleg (Scan/Foto)")
-                    .styled(style::Style::new().bold().with_font_size(14)),
-            );
-            d.push(elements::Break::new(0.5));
-            d.push(elements::Paragraph::new(beschriftung));
+            d.push(elements::Paragraph::new(firma).styled(style::Style::new().bold().with_font_size(15)));
+            d.push(elements::Paragraph::new(adresse).styled(grau()));
+            d.push(elements::Break::new(0.6));
+            d.push(elements::Paragraph::new(format!("Rechnung Nr. {nr}          Datum: {datum}")));
+            d.push(elements::Break::new(0.6));
+            let mut zeilen = vec![vec![z("Position"), z("Betrag")]];
+            for (p, b) in posten {
+                zeilen.push(vec![z(p), z(b)]);
+            }
+            zeilen.push(vec![z("**Summe"), format!("**{summe}")]);
+            tabelle_einfuegen(&mut d, &zeilen);
+            d.push(elements::Break::new(0.8));
+            d.push(elements::Paragraph::new("Zahlung: Karte · Betrag dankend erhalten.").styled(grau()));
             let mut v = Vec::new();
             d.render(&mut v).unwrap();
             v
         };
         let beleg1 = stempel_auf_block(
-            &platzhalter("Hier steht im echten Nachweis das Foto/die PDF des Belegs."),
+            &beispiel_beleg(
+                "Bühnenbau GmbH",
+                "Werkstrasse 8 · 8004 Zürich",
+                "2026-0342",
+                "05.03.2026",
+                &[
+                    ("Holzplatten Multiplex 18 mm (12 Stk.)", "840,00 €"),
+                    ("Beschläge & Schrauben", "260,00 €"),
+                    ("Lieferung", "150,00 €"),
+                ],
+                "1.250,00 €",
+            ),
             "Beleg 1.1.1 · 1.1 Material",
         );
         let beleg2 = stempel_auf_block(
-            &platzhalter("Zweiter Beispiel-Beleg."),
+            &beispiel_beleg(
+                "Tonstudio Klang",
+                "Seefeldstrasse 21 · 8008 Zürich",
+                "R-2026-118",
+                "12.03.2026",
+                &[
+                    ("Studiomiete (2 Tage)", "1.600,00 €"),
+                    ("Toningenieur", "640,00 €"),
+                    ("Export & Datenträger", "160,00 €"),
+                ],
+                "2.400,00 €",
+            ),
             "Beleg 1.2.1 · 1.2 Technik",
         );
         let bytes = zusammenfuegen(vec![vorblatt, beleg1, beleg2]).unwrap();
