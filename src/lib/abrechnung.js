@@ -286,6 +286,15 @@ export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName, 
     abschnitte.push({ ueberschrift: "Sachbericht", absaetze: [sachbericht.trim()], tabelle: [] });
   }
 
+  // Nachweise dieser Geldquelle (z. B. Bankauszug) kommen ZUERST im Anhang –
+  // mit rotem Stempel „Bankauszug · <Förderer>" – danach die Belege.
+  for (const d of quelle.dateien ?? []) {
+    if (!d?.name) continue;
+    const stempel = `Bankauszug · ${quelle.name || ""}`.trim();
+    anhaenge.push({ datei: d.name, stempel });
+    anhangliste.push(`• ${stempel} — ${d.name}`);
+  }
+
   if (zugeordnet.length) {
     // Belege nach Kostenstelle gruppieren.
     const gruppen = new Map(); // key: ks-id oder "" (ohne) -> Belege
@@ -350,16 +359,8 @@ export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName, 
     });
   }
 
-  // Nachweise dieser Geldquelle (z. B. Bankauszug) hinten anhängen und in der
-  // Anhangsliste aufführen – mit rotem Stempel „Bankauszug · <Förderer>".
-  for (const d of quelle.dateien ?? []) {
-    if (!d?.name) continue;
-    const stempel = `Bankauszug · ${quelle.name || ""}`.trim();
-    anhaenge.push({ datei: d.name, stempel });
-    anhangliste.push(`• ${stempel} — ${d.name}`);
-  }
-
-  // Anhangsliste: welche Dateien diesem Nachweis als Kopie beiliegen.
+  // Anhangsliste: welche Dateien diesem Nachweis als Kopie beiliegen
+  // (Bankauszug zuerst, dann die Belege – gleiche Reihenfolge wie die Anhänge).
   if (anhangliste.length) {
     abschnitte.push({ ueberschrift: "Anhänge", absaetze: anhangliste, tabelle: [] });
   }

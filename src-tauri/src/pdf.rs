@@ -222,6 +222,65 @@ impl Element for KopfTabelle {
     }
 }
 
+/// Ein Block aus (gestylten) Textzeilen, der NICHT ueber einen Seitenumbruch
+/// getrennt wird: passt er nicht ganz auf die aktuelle (Teil-)Seite, wandert er
+/// komplett auf die naechste. So bleiben z. B. die „Anhaenge"-Ueberschrift und
+/// ihre Liste zusammen. Hoehen-Schaetzung heuristisch wie bei KopfTabelle; die
+/// Schwelle 230 mm verhindert eine Endlosschleife (auf einer frischen Seite
+/// wird immer gerendert, auch wenn es sehr lang ist).
+struct Zusammenblock {
+    zeilen: Vec<(String, bool, u8)>, // (Text, fett, Schriftgroesse in pt)
+    render_idx: usize,
+}
+
+impl Element for Zusammenblock {
+    fn render(
+        &mut self,
+        context: &genpdf::Context,
+        mut area: genpdf::render::Area<'_>,
+        style: style::Style,
+    ) -> Result<genpdf::RenderResult, genpdf::error::Error> {
+        let mut result = genpdf::RenderResult::default();
+        result.size.width = area.size().width;
+
+        if self.render_idx == 0 {
+            let mut noetig = 0.0f32;
+            for (t, _f, sz) in &self.zeilen {
+                let umbrueche = (t.chars().count() as f32 / 90.0).ceil().max(1.0);
+                noetig += umbrueche * (*sz as f32 * 0.5 + 1.4);
+            }
+            if area.size().height < genpdf::Mm::from(noetig)
+                && area.size().height < genpdf::Mm::from(230.0_f32)
+            {
+                result.has_more = true;
+                return Ok(result);
+            }
+        }
+
+        while self.render_idx < self.zeilen.len() {
+            if area.size().height < genpdf::Mm::from(6.0_f32) {
+                break;
+            }
+            let (text, fett, sz) = &self.zeilen[self.render_idx];
+            let mut st = style::Style::new().with_font_size(*sz);
+            if *fett {
+                st = st.bold();
+            }
+            let mut p = elements::Paragraph::new(text.as_str()).styled(st);
+            let r = p.render(context, area.clone(), style)?;
+            area.add_offset(genpdf::Position::new(0, r.size.height));
+            result.size.height += r.size.height;
+            self.render_idx += 1;
+            if r.has_more {
+                break;
+            }
+        }
+
+        result.has_more = self.render_idx < self.zeilen.len();
+        Ok(result)
+    }
+}
+
 fn tabelle_einfuegen(doc: &mut Document, zeilen: &[Vec<String>]) {
     let spalten = zeilen.iter().map(|z| z.len()).max().unwrap_or(0);
     if spalten == 0 {
@@ -320,7 +379,25 @@ fn vorblatt_fuellen(
     }
     doc.push(elements::Break::new(1.0));
 
-    for a in abschnitte {
+    let letzter = abschnitte.len().saturating_sub(1);
+    for (i, a) in abschnitte.iter().enumerate() {
+        // Letzter, reiner Text-Abschnitt (z. B. die „Anhaenge"-Liste) bleibt als
+        // Block zusammen – kein Seitenumbruch mitten in der Aufzaehlung.
+        if i == letzter && a.tabelle.is_empty() && !a.absaetze.is_empty() {
+            let mut zeilen: Vec<(String, bool, u8)> = Vec::new();
+            if !a.ueberschrift.is_empty() {
+                zeilen.push((a.ueberschrift.clone(), true, 12));
+                zeilen.push((String::new(), false, 4)); // kleine Luft
+            }
+            for absatz in &a.absaetze {
+                for zeile in absatz.lines() {
+                    zeilen.push((zeile.to_string(), false, 10));
+                }
+            }
+            doc.push(Zusammenblock { zeilen, render_idx: 0 });
+            doc.push(elements::Break::new(0.6));
+            continue;
+        }
         if !a.ueberschrift.is_empty() {
             doc.push(
                 elements::Paragraph::new(a.ueberschrift.as_str())
@@ -1036,9 +1113,9 @@ mod tests {
             PdfAbschnitt {
                 ueberschrift: "Anhänge".into(),
                 absaetze: vec![
+                    z("• Bankauszug · Stadt Zürich – Kulturförderung — Bankauszug_Stadt-Zuerich.pdf"),
                     z("• Beleg 1.1.1 · 1.1 Material — Bühnenbau-Rohmaterial_2026-03-05_1.1.pdf"),
                     z("• Beleg 1.2.1 · 1.2 Technik — Tonstudio-Aufnahme_2026-03-12_1.2.pdf"),
-                    z("• Bankauszug · Stadt Zürich – Kulturförderung — Bankauszug_Stadt-Zuerich.pdf"),
                 ],
                 tabelle: vec![],
             },
@@ -1131,7 +1208,8 @@ mod tests {
             ),
             "Bankauszug · Stadt Zürich – Kulturförderung",
         );
-        let bytes = zusammenfuegen(vec![vorblatt, beleg1, beleg2, bankauszug]).unwrap();
+        // Bankauszug kommt ZUERST im Anhang, danach die Belege.
+        let bytes = zusammenfuegen(vec![vorblatt, bankauszug, beleg1, beleg2]).unwrap();
 
         let pfad = std::env::temp_dir().join("antrag3000-verwendungsnachweis.pdf");
         std::fs::write(&pfad, &bytes).unwrap();
