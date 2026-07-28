@@ -595,10 +595,10 @@ fn stempel_auf_block(block: &[u8], text: &str) -> Vec<u8> {
 
     for page_id in seiten {
         let hoehe = seite_hoehe(&doc, page_id);
-        // Roter Text, 12 pt, 28 pt vom linken und oberen Blattrand.
+        // Roter Text, 15 pt, ca. 42 pt (~15 mm) vom linken und oberen Blattrand.
         let mut inhalt: Vec<u8> = Vec::new();
-        inhalt.extend_from_slice(b"q 1 0 0 rg BT /A3Stamp 12 Tf ");
-        inhalt.extend_from_slice(format!("28 {:.1} Td (", hoehe - 28.0).as_bytes());
+        inhalt.extend_from_slice(b"q 1 0 0 rg BT /A3Stamp 15 Tf ");
+        inhalt.extend_from_slice(format!("42 {:.1} Td (", hoehe - 48.0).as_bytes());
         inhalt.extend_from_slice(&escaped);
         inhalt.extend_from_slice(b") Tj ET Q\n");
         let stream_id = doc.add_object(Stream::new(Dictionary::new(), inhalt));
