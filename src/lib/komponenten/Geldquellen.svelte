@@ -10,6 +10,7 @@
     zugeordnetJeQuelle,
     betragFormat,
     betragParsen,
+    groesseText,
   } from "$lib/abrechnung";
 
   let {
@@ -19,6 +20,11 @@
     kfp = { kosten: [], finanzierung: [] },
     belege = [],
     projektName = "",
+    // Datei-Callbacks (wie bei den Belegen) – für den Bankauszug/Nachweis je
+    // Geldquelle. Kommen aus +page.svelte (Klartext-Ablage im Belegordner).
+    dateiHinzufuegen,
+    dateiOeffnen,
+    dateiEntfernen,
   } = $props();
 
   let liste = $state(structuredClone($state.snapshot(quellen)));
@@ -28,6 +34,11 @@
   let bearbeiteId = $state(null);
   let form = $state(null);
   let formFehler = $state("");
+
+  // Welcher Geldquelle ist gerade das Nachweis-/Bankauszug-Panel offen?
+  let nachweisOffenId = $state(null);
+  let dateiBeschaeftigt = $state(false);
+  let nachweisQuelle = $derived(liste.find((q) => q.id === nachweisOffenId) ?? null);
 
   let zugeordnet = $derived(zugeordnetJeQuelle(belege));
   let sollGesamt = $derived(liste.reduce((s, q) => s + quelleSoll(q), 0));
@@ -87,10 +98,54 @@
     if (!confirm(text)) return;
     beschaeftigt = true;
     try {
+      // Hochgeladene Nachweise (Bankauszug) der Quelle mit entfernen.
+      for (const d of q.dateien ?? []) {
+        try {
+          await dateiEntfernen?.(d.name);
+        } catch {
+          // nicht kritisch – verwaiste Datei bleibt im Belegordner
+        }
+      }
+      if (nachweisOffenId === q.id) nachweisOffenId = null;
       await entfernen(q.id);
       liste = liste.filter((x) => x.id !== q.id);
     } finally {
       beschaeftigt = false;
+    }
+  }
+
+  // --- Bankauszug / Nachweis je Geldquelle ---
+  function nachweisUmschalten(q) {
+    nachweisOffenId = nachweisOffenId === q.id ? null : q.id;
+  }
+
+  async function bankauszugHochladen(q) {
+    if (dateiBeschaeftigt || !dateiHinzufuegen) return;
+    dateiBeschaeftigt = true;
+    try {
+      const d = await dateiHinzufuegen(`Bankauszug_${q.name || "Foerderer"}`);
+      if (d) {
+        q.dateien = [...(q.dateien ?? []), d];
+        await sichern();
+      }
+    } finally {
+      dateiBeschaeftigt = false;
+    }
+  }
+
+  async function nachweisAnsehen(d) {
+    await dateiOeffnen?.(d.name);
+  }
+
+  async function nachweisLoeschen(q, d) {
+    if (!confirm(`Datei „${d.name}" löschen?`)) return;
+    dateiBeschaeftigt = true;
+    try {
+      await dateiEntfernen?.(d.name);
+      q.dateien = (q.dateien ?? []).filter((x) => x.name !== d.name);
+      await sichern();
+    } finally {
+      dateiBeschaeftigt = false;
     }
   }
 
@@ -151,6 +206,11 @@
             <td class="betrag">{betragFormat(zu)}</td>
             <td class="betrag" class:ueber={rest < -0.005}>{betragFormat(rest)}</td>
             <td class="akt">
+              <button
+                class="leise"
+                class:aktiv={nachweisOffenId === q.id}
+                onclick={() => nachweisUmschalten(q)}
+                title="Bankauszug / Nachweis anhängen">📎 {q.dateien?.length || 0}</button>
               <button class="leise" onclick={() => bearbeiten(q)}>bearbeiten</button>
               <button class="leise gefahr" onclick={() => quelleLoeschen(q)} disabled={beschaeftigt}>löschen</button>
             </td>
@@ -169,6 +229,45 @@
         </tr>
       </tfoot>
     </table>
+  {/if}
+
+  {#if nachweisQuelle}
+    <div class="datei-panel" transition:fade={{ duration: 120 }}>
+      <div class="dp-kopf">
+        <h3>📎 Bankauszug / Nachweis – {nachweisQuelle.name}</h3>
+        <button class="leise" onclick={() => (nachweisOffenId = null)}>schließen</button>
+      </div>
+
+      {#if nachweisQuelle.dateien?.length}
+        <ul class="datei-liste">
+          {#each nachweisQuelle.dateien as d (d.name)}
+            <li>
+              <span class="dn" title={d.name}>{d.name}</span>
+              <span class="dg">{groesseText(d.groesse)}</span>
+              <button class="leise" onclick={() => nachweisAnsehen(d)}>ansehen</button>
+              <button
+                class="leise gefahr"
+                onclick={() => nachweisLoeschen(nachweisQuelle, d)}
+                disabled={dateiBeschaeftigt}>löschen</button>
+            </li>
+          {/each}
+        </ul>
+      {:else}
+        <p class="dp-leer">
+          Noch kein Nachweis. Lade den passenden <strong>Bankauszug</strong> (PDF, JPG oder PNG)
+          hoch – er wird an den Verwendungsnachweis dieser Geldquelle angehängt.
+        </p>
+      {/if}
+
+      <button class="zweit" onclick={() => bankauszugHochladen(nachweisQuelle)} disabled={dateiBeschaeftigt}>
+        {dateiBeschaeftigt ? "Bitte warten …" : "+ Bankauszug hochladen"}
+      </button>
+      <p class="dp-hinweis">
+        Die Datei wird lesbar benannt in den Belegordner deines Projekts kopiert und beim
+        PDF-Export ans Ende angehängt (mit rotem Stempel „Bankauszug"). Sie bleibt lokal auf
+        deinem Gerät.
+      </p>
+    </div>
   {/if}
 </div>
 
@@ -447,5 +546,67 @@
     justify-content: flex-end;
     gap: 10px;
     margin-top: 20px;
+  }
+
+  button.leise.aktiv {
+    color: var(--akzent-text);
+    font-weight: 700;
+  }
+
+  /* Nachweis-/Bankauszug-Panel */
+  .datei-panel {
+    margin-top: 18px;
+    border: 1px solid var(--rand);
+    border-radius: 12px;
+    padding: 16px 18px;
+    background: var(--flaeche-b);
+  }
+  .dp-kopf {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .dp-kopf h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text);
+  }
+  .datei-liste {
+    list-style: none;
+    margin: 0 0 12px;
+    padding: 0;
+  }
+  .datei-liste li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--flaeche-3);
+  }
+  .datei-liste .dn {
+    flex: 1;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .datei-liste .dg {
+    color: var(--text-leise);
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .dp-leer {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    margin: 0 0 12px;
+  }
+  .dp-hinweis {
+    margin: 12px 0 0;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    line-height: 1.5;
   }
 </style>

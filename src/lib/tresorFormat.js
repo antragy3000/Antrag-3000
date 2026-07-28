@@ -267,6 +267,13 @@ export function normalisieren(d) {
         p.abrechnung.quellen = [];
         veraendert = true;
       }
+      // Geldquellen älterer Stände um das Nachweis-/Bankauszug-Dateifeld ergänzen.
+      for (const q of p.abrechnung.quellen) {
+        if (q && !Array.isArray(q.dateien)) {
+          q.dateien = [];
+          veraendert = true;
+        }
+      }
       if (typeof p.abrechnung.sachbericht !== "string") {
         p.abrechnung.sachbericht = "";
         veraendert = true;

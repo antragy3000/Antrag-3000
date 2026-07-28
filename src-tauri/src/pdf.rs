@@ -1036,9 +1036,9 @@ mod tests {
             PdfAbschnitt {
                 ueberschrift: "Anhänge".into(),
                 absaetze: vec![
-                    z("Die folgenden Belege liegen diesem Nachweis als Kopie bei:"),
                     z("• Beleg 1.1.1 · 1.1 Material — Bühnenbau-Rohmaterial_2026-03-05_1.1.pdf"),
                     z("• Beleg 1.2.1 · 1.2 Technik — Tonstudio-Aufnahme_2026-03-12_1.2.pdf"),
+                    z("• Bankauszug · Stadt Zürich – Kulturförderung — Bankauszug_Stadt-Zuerich.pdf"),
                 ],
                 tabelle: vec![],
             },
@@ -1119,7 +1119,19 @@ mod tests {
             ),
             "Beleg 1.2.1 · 1.2 Technik",
         );
-        let bytes = zusammenfuegen(vec![vorblatt, beleg1, beleg2]).unwrap();
+        // Bankauszug dieser Geldquelle (letzter Anhang), mit Bankauszug-Stempel.
+        let bankauszug = stempel_auf_block(
+            &beispiel_beleg(
+                "Musterbank AG",
+                "Kontoauszug · IBAN CH00 0000 0000 0000 0000 0",
+                "Auszug 3/2026",
+                "31.03.2026",
+                &[("Gutschrift Förderung Stadt Zürich", "8.000,00 €")],
+                "Saldo: 8.240,00 €",
+            ),
+            "Bankauszug · Stadt Zürich – Kulturförderung",
+        );
+        let bytes = zusammenfuegen(vec![vorblatt, beleg1, beleg2, bankauszug]).unwrap();
 
         let pfad = std::env::temp_dir().join("antrag3000-verwendungsnachweis.pdf");
         std::fs::write(&pfad, &bytes).unwrap();

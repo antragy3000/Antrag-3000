@@ -131,8 +131,10 @@ function neueQuelleId() {
 }
 
 /// Frische Geldquelle. (Der Sachbericht ist projektweit, nicht je Quelle.)
+/// `dateien` sind hochgeladene Nachweise (z. B. Bankauszug), die dem
+/// Verwendungsnachweis dieser Quelle angehängt werden.
 export function neueQuelle(typ = "foerderung") {
-  return { id: neueQuelleId(), typ, foerderId: "", name: "", soll: "" };
+  return { id: neueQuelleId(), typ, foerderId: "", name: "", soll: "", dateien: [] };
 }
 
 /// Soll-Betrag einer Quelle als Zahl.
@@ -277,6 +279,7 @@ export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName, 
 
   const abschnitte = [];
   const anhaenge = [];
+  const anhangliste = [];
 
   // Sachbericht (projektweit, falls hinterlegt).
   if ((sachbericht ?? "").trim()) {
@@ -308,7 +311,6 @@ export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName, 
     // (Zeile mit nur EINER Zelle → über die volle Breite fett), darunter ihre
     // Belege und eine Zwischensumme; am Ende die Gesamtsumme.
     const tab = [["Nr.", "Datum", "Beleg", "Summe", "Anteil"]];
-    const anhangliste = [];
     let gesamt = 0;
     for (const key of keys) {
       const ksLabel = key ? kostenstelleLabel(kfp, key) || "(entfernt)" : "";
@@ -340,21 +342,26 @@ export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName, 
     }
     tab.push(["", "", "**Summe gesamt", "", "**" + betragFormat(gesamt)]);
     abschnitte.push({ ueberschrift: "Belegliste", absaetze: [], tabelle: tab });
-
-    // Anhangsliste: welche Belege diesem Nachweis als Kopie beiliegen.
-    if (anhangliste.length) {
-      abschnitte.push({
-        ueberschrift: "Anhänge",
-        absaetze: ["Die folgenden Belege liegen diesem Nachweis als Kopie bei:", ...anhangliste],
-        tabelle: [],
-      });
-    }
   } else {
     abschnitte.push({
       ueberschrift: "Belege",
       absaetze: ["Dieser Geldquelle sind noch keine Belege zugeordnet."],
       tabelle: [],
     });
+  }
+
+  // Nachweise dieser Geldquelle (z. B. Bankauszug) hinten anhängen und in der
+  // Anhangsliste aufführen – mit rotem Stempel „Bankauszug · <Förderer>".
+  for (const d of quelle.dateien ?? []) {
+    if (!d?.name) continue;
+    const stempel = `Bankauszug · ${quelle.name || ""}`.trim();
+    anhaenge.push({ datei: d.name, stempel });
+    anhangliste.push(`• ${stempel} — ${d.name}`);
+  }
+
+  // Anhangsliste: welche Dateien diesem Nachweis als Kopie beiliegen.
+  if (anhangliste.length) {
+    abschnitte.push({ ueberschrift: "Anhänge", absaetze: anhangliste, tabelle: [] });
   }
 
   return { titel, untertitel, abschnitte, anhaenge };

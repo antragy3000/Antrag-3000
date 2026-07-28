@@ -2153,6 +2153,9 @@
             kfp={aktivesProjekt.kfp}
             belege={aktivesProjekt.abrechnung.belege}
             projektName={aktivesProjekt.name}
+            dateiHinzufuegen={belegDateiHinzufuegen}
+            dateiOeffnen={belegDateiOeffnen}
+            dateiEntfernen={belegDateiEntfernen}
           />
         {/key}
       {:else if bereich === "zuteilung"}
