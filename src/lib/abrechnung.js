@@ -324,6 +324,36 @@ export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName, 
   return { titel, abschnitte };
 }
 
+/// Nur die Nummer einer Kostenstelle (z. B. "1.2"), oder "" wenn keine bzw.
+/// der Posten nicht mehr existiert. Für den Beleg-Dateinamen.
+export function kostenstelleNummer(kfp, id) {
+  if (!id) return "";
+  let ki = 0;
+  for (const k of kfp?.kosten ?? []) {
+    ki += 1;
+    let pi = 0;
+    for (const p of k.posten ?? []) {
+      pi += 1;
+      if (p.id === id) return `${ki}.${pi}`;
+    }
+  }
+  return "";
+}
+
+/// Baut den lesbaren Datei-Basisnamen für einen Beleg (OHNE Endung):
+/// „Empfänger-Zweck_Datum_Kostenstelle", z. B. „Bauhaus-Materialkauf_2026-07-15_1.2".
+/// Leere Teile werden weggelassen; fehlt alles, bleibt „Beleg". Die endgültige
+/// Bereinigung (verbotene Zeichen) macht der Rust-Kern beim Ablegen.
+export function belegDateiBasis(beleg, kfp) {
+  const titel = [beleg?.empfaenger, beleg?.zweck]
+    .map((s) => (s || "").trim())
+    .filter(Boolean)
+    .join("-");
+  const datum = String(beleg?.datum ?? "").trim();
+  const ks = kostenstelleNummer(kfp, beleg?.kostenstelle);
+  return [titel || "Beleg", datum, ks].filter(Boolean).join("_");
+}
+
 /// Lesbares Etikett einer Kostenstelle (z. B. "1.2 Honorar Regie"), oder
 /// "" wenn keine, bzw. "(entfernt)" wenn der Posten nicht mehr existiert.
 export function kostenstelleLabel(kfp, id) {

@@ -20,6 +20,7 @@
     kostenstellenNachKategorie,
     kostenstelleLabel,
     belegNummern,
+    belegDateiBasis,
   } from "$lib/abrechnung";
 
   let {
@@ -30,13 +31,13 @@
     // Callback zum Anlegen eines neuen Kosten-Postens.
     kfp = { kosten: [], finanzierung: [] },
     kostenstelleAnlegen,
-    // Beleg-Dateien (Phase A2) – kommen als Callbacks aus +page.svelte,
-    // die das Rust-Backend (Verschlüsseln/Ablegen/Öffnen/Löschen) aufrufen.
+    // Beleg-Dateien – kommen als Callbacks aus +page.svelte, die das
+    // Rust-Backend (Datei in den Belegordner kopieren / öffnen / löschen /
+    // Ordner öffnen) aufrufen.
     dateiHinzufuegen,
     dateiOeffnen,
-    dateiHerunterladen,
     dateiEntfernen,
-    ordnerEntfernen,
+    belegOrdnerOeffnen,
   } = $props();
 
   // Lokale Arbeitskopie; jede Aenderung wird sofort verschluesselt
@@ -142,14 +143,20 @@
 
   async function entfernen(b) {
     if (!confirm(`Beleg ${anzeigeNr(b)} wirklich löschen?`)) return;
-    // Erst die (verschlüsselten) Dateien des Belegs entfernen, dann den Beleg.
-    if (b.dateien?.length) await ordnerEntfernen(b.id);
+    // Erst die Dateien des Belegs aus dem Belegordner entfernen, dann den Beleg.
+    for (const d of b.dateien ?? []) {
+      try {
+        await dateiEntfernen(d.name);
+      } catch {
+        // Nicht kritisch: bleibt eine verwaiste Datei im Belegordner.
+      }
+    }
     if (dateienOffenId === b.id) dateienOffenId = null;
     liste = liste.filter((x) => x.id !== b.id);
     await sichern();
   }
 
-  // --- Beleg-Dateien (Phase A2) ---
+  // --- Beleg-Dateien ---
   function dateienUmschalten(b) {
     dateienOffenId = dateienOffenId === b.id ? null : b.id;
   }
@@ -158,7 +165,8 @@
     if (dateiBeschaeftigt) return;
     dateiBeschaeftigt = true;
     try {
-      const d = await dateiHinzufuegen(b.id);
+      // Lesbarer Zielname aus Empfänger/Zweck/Datum/Kostenstelle.
+      const d = await dateiHinzufuegen(belegDateiBasis(b, kfp));
       if (d) {
         b.dateien = [...(b.dateien ?? []), d];
         await sichern();
@@ -168,24 +176,24 @@
     }
   }
 
-  async function dateiAnsehen(b, d) {
-    await dateiOeffnen(b.id, d.ref, d.name);
-  }
-
-  async function dateiSpeichernUnter(b, d) {
-    await dateiHerunterladen(b.id, d.ref, d.name);
+  async function dateiAnsehen(d) {
+    await dateiOeffnen(d.name);
   }
 
   async function dateiLoeschen(b, d) {
     if (!confirm(`Datei „${d.name}" löschen?`)) return;
     dateiBeschaeftigt = true;
     try {
-      await dateiEntfernen(b.id, d.ref);
-      b.dateien = (b.dateien ?? []).filter((x) => x.ref !== d.ref);
+      await dateiEntfernen(d.name);
+      b.dateien = (b.dateien ?? []).filter((x) => x.name !== d.name);
       await sichern();
     } finally {
       dateiBeschaeftigt = false;
     }
+  }
+
+  async function ordnerOeffnen() {
+    if (belegOrdnerOeffnen) await belegOrdnerOeffnen();
   }
 
   // Belege nach Datum sortiert (neueste zuletzt), Nummer als Zweitschluessel.
@@ -207,7 +215,12 @@
         Förderern zu. Alle Angaben bleiben lokal verschlüsselt auf deinem Gerät.
       </p>
     </div>
-    <button class="primaer" onclick={neu} disabled={beschaeftigt}>+ Neuer Beleg</button>
+    <div class="kopf-knoepfe">
+      <button class="zweit" onclick={ordnerOeffnen} title="Den Ordner mit den Beleg-Dateien im Explorer öffnen">
+        📂 Belegordner öffnen
+      </button>
+      <button class="primaer" onclick={neu} disabled={beschaeftigt}>+ Neuer Beleg</button>
+    </div>
   </div>
 
   {#if liste.length === 0}
@@ -278,12 +291,11 @@
 
       {#if dateienBeleg.dateien?.length}
         <ul class="datei-liste">
-          {#each dateienBeleg.dateien as d (d.ref)}
+          {#each dateienBeleg.dateien as d (d.name)}
             <li>
               <span class="dn" title={d.name}>{d.name}</span>
               <span class="dg">{groesseText(d.groesse)}</span>
-              <button class="leise" onclick={() => dateiAnsehen(dateienBeleg, d)}>ansehen</button>
-              <button class="leise" onclick={() => dateiSpeichernUnter(dateienBeleg, d)}>herunterladen</button>
+              <button class="leise" onclick={() => dateiAnsehen(d)}>ansehen</button>
               <button
                 class="leise gefahr"
                 onclick={() => dateiLoeschen(dateienBeleg, d)}
@@ -300,8 +312,9 @@
         {dateiBeschaeftigt ? "Bitte warten …" : "+ Datei hinzufügen"}
       </button>
       <p class="dp-hinweis">
-        Dateien werden <strong>verschlüsselt</strong> im Projektordner gespeichert
-        (PDF, JPG oder PNG, max. 30 MB). Sie verlassen dein Gerät nie.
+        Die Datei wird lesbar benannt (Empfänger&#8202;·&#8202;Zweck&#8202;·&#8202;Datum&#8202;·&#8202;Kostenstelle)
+        in den <strong>Belegordner</strong> deines Projekts kopiert (PDF, JPG oder PNG, max. 30 MB) und
+        bleibt lokal auf deinem Gerät. Mit „📂 Belegordner öffnen" siehst du alle Belege im Explorer.
       </p>
     </div>
   {/if}
@@ -435,6 +448,12 @@
   .titel-block {
     flex: 1 1 300px;
     min-width: 260px;
+  }
+  .kopf-knoepfe {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
   }
   h2 {
     margin: 0 0 4px;

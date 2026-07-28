@@ -442,10 +442,11 @@
     return id;
   }
 
-  // --- Beleg-Dateien (Phase A2): verschlüsselt im Projektordner ---
-  // Datei wählen und verschlüsselt ablegen. Gibt den Verweis
-  // { ref, name, ext, groesse } zurück, den die Komponente am Beleg merkt.
-  async function belegDateiHinzufuegen(belegId) {
+  // --- Beleg-Dateien: lesbar benannt im Belegordner des Projekts ---
+  // Datei wählen und (mit dem von der Komponente gebauten Namen) in den
+  // Belegordner kopieren. Gibt { name, ext, groesse } zurück – die Komponente
+  // merkt sich den Dateinamen am Beleg.
+  async function belegDateiHinzufuegen(wunschname) {
     const pfad = await dateiWaehlen({
       title: "Beleg auswählen (PDF oder Bild)",
       multiple: false,
@@ -455,8 +456,8 @@
     try {
       return await invoke("beleg_datei_hinzufuegen", {
         projekt: aktivesProjekt.name,
-        belegId,
         quelle: pfad,
+        wunschname,
       });
     } catch (e) {
       alert("Die Datei konnte nicht hinzugefügt werden.\n" + e);
@@ -464,12 +465,10 @@
     }
   }
 
-  async function belegDateiOeffnen(belegId, dateiRef, name) {
+  async function belegDateiOeffnen(name) {
     try {
       await invoke("beleg_datei_oeffnen", {
         projekt: aktivesProjekt.name,
-        belegId,
-        dateiRef,
         name,
       });
     } catch (e) {
@@ -477,42 +476,21 @@
     }
   }
 
-  // Eine Beleg-Datei entschlüsselt an einen selbst gewählten Ort speichern.
-  async function belegDateiHerunterladen(belegId, dateiRef, name) {
-    const ziel = await dateiSpeichern({
-      title: "Beleg speichern unter",
-      defaultPath: name,
-    });
-    if (!ziel) return; // abgebrochen
-    try {
-      await invoke("beleg_datei_exportieren", {
-        projekt: aktivesProjekt.name,
-        belegId,
-        dateiRef,
-        ziel,
-      });
-    } catch (e) {
-      alert("Die Datei konnte nicht gespeichert werden.\n" + e);
-    }
-  }
-
-  async function belegDateiEntfernen(belegId, dateiRef) {
+  async function belegDateiEntfernen(name) {
     await invoke("beleg_datei_entfernen", {
       projekt: aktivesProjekt.name,
-      belegId,
-      dateiRef,
+      name,
     });
   }
 
-  // Beim Löschen eines Belegs auch seinen Datei-Ordner entfernen.
-  async function belegOrdnerEntfernen(belegId) {
+  // Den Belegordner des Projekts im Explorer öffnen.
+  async function belegOrdnerOeffnen() {
     try {
-      await invoke("beleg_ordner_entfernen", {
+      await invoke("beleg_ordner_oeffnen", {
         projekt: aktivesProjekt.name,
-        belegId,
       });
-    } catch {
-      // Nicht kritisch: bleibt ein verwaister, verschlüsselter Ordner.
+    } catch (e) {
+      alert("Der Belegordner konnte nicht geöffnet werden.\n" + e);
     }
   }
 
@@ -2135,9 +2113,8 @@
             {kostenstelleAnlegen}
             dateiHinzufuegen={belegDateiHinzufuegen}
             dateiOeffnen={belegDateiOeffnen}
-            dateiHerunterladen={belegDateiHerunterladen}
             dateiEntfernen={belegDateiEntfernen}
-            ordnerEntfernen={belegOrdnerEntfernen}
+            belegOrdnerOeffnen={belegOrdnerOeffnen}
           />
         {/key}
       {:else if bereich === "kostenstellen"}

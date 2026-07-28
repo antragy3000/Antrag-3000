@@ -1,75 +1,98 @@
 // ============================================================
-// Abrechnungs-Modus, Phase A2: Beleg-Dateien.
+// Abrechnungs-Modus: Beleg-Dateien (Fotos/Scans/PDF).
 //
-// Belege (Fotos/Scans/PDF) sind hochsensibel. Sie werden mit dem
-// Tresor-Schluessel VERSCHLUESSELT im Projektordner abgelegt:
-//   [Dokumente]\Antrag 3000\[Projekt]\_Belege\[Beleg-ID]\[ref].enc
-// Im Tresor steht nur ein Verweis ({ ref, name, ext, groesse }). Der
-// Klartext liegt nie unverschluesselt auf der Platte – ausser kurz beim
-// Ansehen, wenn die Datei in einen Temp-Ordner entschluesselt und im
-// System-Betrachter geoeffnet wird (beleg_datei_oeffnen).
+// Belege werden als LESBARE Dateien im Projektordner abgelegt:
+//   [Dokumente]\Antrag 3000\[Projekt]\Belege\[Empfaenger-Zweck_Datum_KS].pdf
+// So kann man den Ordner im Explorer oeffnen, die Belege ansehen, drucken
+// und (z. B. fuer die Pruefung) weitergeben. Das ist eine bewusste,
+// vom Nutzer gewaehlte Ablage – wie die Checklisten-Dokumente beim Antrag
+// und der KFP-Excel-Export: die Dateien bleiben rein lokal und verlassen
+// das Geraet NIE ueber eine Netzwerkverbindung (die Sync-Ebene fasst den
+// Projektordner nicht an). Die hochsensiblen Beleg-ANGABEN (Betraege,
+// Lieferanten, Kostenstellen) liegen weiter verschluesselt im Tresor; hier
+// geht es nur um die dazugehoerige Bild-/PDF-Datei.
 //
-// Der Rust-Kern macht nur die Systemarbeit (lesen, ver-/entschluesseln,
-// schreiben, oeffnen). Welche Belege es gibt, verwaltet das Frontend im
-// Tresor.
+// Der Rust-Kern macht nur die Systemarbeit (Datei kopieren, oeffnen,
+// loeschen, Ordner oeffnen). Welche Datei zu welchem Beleg gehoert, merkt
+// sich das Frontend im Tresor (nur der Dateiname).
 // ============================================================
 
 use std::fs;
 use std::path::PathBuf;
 
-use aes_gcm::aead::rand_core::RngCore;
-use aes_gcm::aead::OsRng;
 use serde::Serialize;
 
 use crate::ordner;
-use crate::tresor::TresorZustand;
 
 const ERLAUBT: [&str; 4] = ["pdf", "jpg", "jpeg", "png"];
 const MAX_BYTES: u64 = 30 * 1024 * 1024; // 30 MB je Datei
 
 /// Verweis auf eine gespeicherte Beleg-Datei (das merkt sich das Frontend
-/// im Tresor; serde serialisiert das Feld `r#ref` als "ref").
+/// im Tresor). Der Dateiname ist zugleich die Kennung im Belegordner.
 #[derive(Serialize)]
 pub struct BelegDatei {
-    pub r#ref: String,
     pub name: String,
     pub ext: String,
     pub groesse: u64,
 }
 
-/// Zufaellige 32-stellige Hex-Kennung (keine Rueckschluesse auf den Inhalt).
-fn neue_kennung() -> String {
-    let mut b = [0u8; 16];
-    OsRng.fill_bytes(&mut b);
-    b.iter().map(|x| format!("{x:02x}")).collect()
-}
-
-/// Ordner fuer die Dateien EINES Belegs.
-fn beleg_ordner(app: &tauri::AppHandle, projekt: &str, beleg_id: &str) -> Result<PathBuf, String> {
+/// Der (lesbare) Belegordner EINES Projekts.
+fn belegordner(app: &tauri::AppHandle, projekt: &str) -> Result<PathBuf, String> {
     Ok(ordner::wurzel(app)?
         .join(ordner::bereinigen(projekt)?)
-        .join("_Belege")
-        .join(ordner::bereinigen(beleg_id)?))
+        .join("Belege"))
 }
 
-/// Schuetzt vor Pfad-Tricks im Datei-Verweis (er kommt aus dem Tresor,
-/// wir pruefen aber trotzdem).
-fn pruefe_ref(r: &str) -> Result<&str, String> {
-    if r.is_empty() || r.contains('/') || r.contains('\\') || r.contains("..") {
-        return Err("Ungueltiger Datei-Verweis.".into());
+/// Schuetzt vor Pfad-Tricks im Dateinamen (er kommt aus dem Tresor, wir
+/// pruefen aber trotzdem): kein Verzeichniswechsel erlaubt.
+fn pruefe_name(n: &str) -> Result<&str, String> {
+    if n.is_empty() || n.contains('/') || n.contains('\\') || n.contains("..") {
+        return Err("Ungueltiger Dateiname.".into());
     }
-    Ok(r)
+    Ok(n)
 }
 
-/// Eine gewaehlte Datei verschluesselt im Beleg-Ordner ablegen. Gibt den
-/// Verweis zurueck, den das Frontend im Beleg speichert.
+/// Findet einen freien Dateinamen im Ordner: gibt es "Name.pdf" schon,
+/// wird "Name (2).pdf", "Name (3).pdf" usw. probiert. So ueberschreibt ein
+/// zweiter Beleg mit gleichem Empfaenger/Zweck/Datum nie den ersten.
+fn freier_name(ordner_pfad: &std::path::Path, basis: &str, ext: &str) -> String {
+    let voll = |name: &str| {
+        if ext.is_empty() {
+            name.to_string()
+        } else {
+            format!("{name}.{ext}")
+        }
+    };
+    let erster = voll(basis);
+    if !ordner_pfad.join(&erster).exists() {
+        return erster;
+    }
+    for i in 2..1000 {
+        let kandidat = voll(&format!("{basis} ({i})"));
+        if !ordner_pfad.join(&kandidat).exists() {
+            return kandidat;
+        }
+    }
+    // Fallback (praktisch unerreichbar): eindeutig ueber Zeitstempel.
+    voll(&format!(
+        "{basis} ({})",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0)
+    ))
+}
+
+/// Eine gewaehlte Datei lesbar benannt in den Belegordner kopieren. `wunschname`
+/// ist der vom Frontend gebaute Name OHNE Endung (Empfaenger-Zweck_Datum_KS);
+/// die Endung uebernimmt der Kern von der Quelldatei. Gibt den tatsaechlich
+/// vergebenen Dateinamen zurueck, den das Frontend im Beleg speichert.
 #[tauri::command]
 pub fn beleg_datei_hinzufuegen(
     app: tauri::AppHandle,
-    state: tauri::State<TresorZustand>,
     projekt: String,
-    beleg_id: String,
     quelle: String,
+    wunschname: String,
 ) -> Result<BelegDatei, String> {
     let quell_pfad = std::path::Path::new(&quelle);
     let ext = quell_pfad
@@ -85,67 +108,33 @@ pub fn beleg_datei_hinzufuegen(
         return Err("Die Datei ist zu groß (max. 30 MB).".into());
     }
 
-    let klar = fs::read(quell_pfad).map_err(|e| format!("Datei nicht lesbar: {e}"))?;
-    let verschluesselt = crate::tresor::datei_verschluesseln(&state, &klar)?;
+    let ordner_pfad = belegordner(&app, &projekt)?;
+    fs::create_dir_all(&ordner_pfad).map_err(|e| format!("Belegordner nicht anlegbar: {e}"))?;
 
-    let ordner_pfad = beleg_ordner(&app, &projekt, &beleg_id)?;
-    fs::create_dir_all(&ordner_pfad).map_err(|e| format!("Ordner nicht anlegbar: {e}"))?;
+    // Wunschnamen zu einem gueltigen Dateinamen bereinigen (verbotene Zeichen
+    // -> _), leere Eingabe faellt auf "Beleg" zurueck.
+    let basis = ordner::bereinigen(&wunschname).unwrap_or_else(|_| "Beleg".into());
+    let name = freier_name(&ordner_pfad, &basis, &ext);
 
-    let datei_ref = format!("{}.enc", neue_kennung());
-    let ziel = ordner_pfad.join(&datei_ref);
-    fs::write(&ziel, &verschluesselt).map_err(|e| format!("Datei nicht speicherbar: {e}"))?;
+    let ziel = ordner_pfad.join(&name);
+    fs::copy(quell_pfad, &ziel).map_err(|e| format!("Datei nicht kopierbar: {e}"))?;
 
-    let name = quell_pfad
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("Beleg")
-        .to_string();
-    Ok(BelegDatei { r#ref: datei_ref, name, ext, groesse: meta.len() })
+    Ok(BelegDatei { name, ext, groesse: meta.len() })
 }
 
-/// Eine Beleg-Datei zum Ansehen entschluesseln und im System-Betrachter
-/// oeffnen (in einen Temp-Ordner; dort liegt sie kurzzeitig im Klartext).
+/// Eine Beleg-Datei im System-Betrachter oeffnen.
 #[tauri::command]
 pub fn beleg_datei_oeffnen(
     app: tauri::AppHandle,
-    state: tauri::State<TresorZustand>,
     projekt: String,
-    beleg_id: String,
-    datei_ref: String,
     name: String,
 ) -> Result<(), String> {
-    let pfad = beleg_ordner(&app, &projekt, &beleg_id)?.join(pruefe_ref(&datei_ref)?);
-    let roh = fs::read(&pfad).map_err(|e| format!("Beleg-Datei nicht lesbar: {e}"))?;
-    let klar = crate::tresor::datei_entschluesseln(&state, &roh)?;
-
-    let temp = std::env::temp_dir().join("Antrag3000-Belege");
-    fs::create_dir_all(&temp).map_err(|e| format!("Temp-Ordner nicht anlegbar: {e}"))?;
-    let sicher_name = ordner::bereinigen(&name).unwrap_or_else(|_| "Beleg".into());
-    let ziel = temp.join(&sicher_name);
-    fs::write(&ziel, &klar).map_err(|e| format!("Temp-Datei nicht schreibbar: {e}"))?;
-
-    tauri_plugin_opener::open_path(ziel, None::<&str>)
+    let pfad = belegordner(&app, &projekt)?.join(pruefe_name(&name)?);
+    if !pfad.exists() {
+        return Err("Die Datei wurde im Belegordner nicht gefunden.".into());
+    }
+    tauri_plugin_opener::open_path(pfad, None::<&str>)
         .map_err(|e| format!("Datei laesst sich nicht oeffnen: {e}"))?;
-    Ok(())
-}
-
-/// Eine Beleg-Datei entschluesselt an einen selbst gewaehlten Ort
-/// speichern („herunterladen"). Das Ziel kommt aus dem Speichern-Dialog
-/// des Frontends; ab da liegt die Datei dort im Klartext (bewusste,
-/// vom Nutzer gewaehlte Ausgabe – wie beim Excel/Word-Export).
-#[tauri::command]
-pub fn beleg_datei_exportieren(
-    app: tauri::AppHandle,
-    state: tauri::State<TresorZustand>,
-    projekt: String,
-    beleg_id: String,
-    datei_ref: String,
-    ziel: String,
-) -> Result<(), String> {
-    let pfad = beleg_ordner(&app, &projekt, &beleg_id)?.join(pruefe_ref(&datei_ref)?);
-    let roh = fs::read(&pfad).map_err(|e| format!("Beleg-Datei nicht lesbar: {e}"))?;
-    let klar = crate::tresor::datei_entschluesseln(&state, &roh)?;
-    fs::write(&ziel, &klar).map_err(|e| format!("Datei nicht speicherbar: {e}"))?;
     Ok(())
 }
 
@@ -154,26 +143,21 @@ pub fn beleg_datei_exportieren(
 pub fn beleg_datei_entfernen(
     app: tauri::AppHandle,
     projekt: String,
-    beleg_id: String,
-    datei_ref: String,
+    name: String,
 ) -> Result<(), String> {
-    let pfad = beleg_ordner(&app, &projekt, &beleg_id)?.join(pruefe_ref(&datei_ref)?);
+    let pfad = belegordner(&app, &projekt)?.join(pruefe_name(&name)?);
     if pfad.exists() {
         fs::remove_file(&pfad).map_err(|e| format!("Datei nicht loeschbar: {e}"))?;
     }
     Ok(())
 }
 
-/// Den ganzen Datei-Ordner eines Belegs loeschen (beim Loeschen des Belegs).
+/// Den Belegordner des Projekts im Explorer oeffnen (legt ihn bei Bedarf an).
 #[tauri::command]
-pub fn beleg_ordner_entfernen(
-    app: tauri::AppHandle,
-    projekt: String,
-    beleg_id: String,
-) -> Result<(), String> {
-    let pfad = beleg_ordner(&app, &projekt, &beleg_id)?;
-    if pfad.exists() {
-        fs::remove_dir_all(&pfad).map_err(|e| format!("Beleg-Ordner nicht loeschbar: {e}"))?;
-    }
-    Ok(())
+pub fn beleg_ordner_oeffnen(app: tauri::AppHandle, projekt: String) -> Result<String, String> {
+    let pfad = belegordner(&app, &projekt)?;
+    fs::create_dir_all(&pfad).map_err(|e| format!("Belegordner nicht anlegbar: {e}"))?;
+    tauri_plugin_opener::open_path(pfad.clone(), None::<&str>)
+        .map_err(|e| format!("Belegordner laesst sich nicht oeffnen: {e}"))?;
+    Ok(pfad.to_string_lossy().to_string())
 }

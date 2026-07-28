@@ -271,6 +271,16 @@ export function normalisieren(d) {
         p.abrechnung.sachbericht = "";
         veraendert = true;
       }
+      // Frühere Beleg-Dateien lagen verschlüsselt (Verweis mit `ref` auf eine
+      // .enc-Datei). Seit der lesbaren Belegordner-Ablage gibt es diese Dateien
+      // nicht mehr entschlüsselbar; solche Alt-Verweise entfernen, damit keine
+      // toten „ansehen"-Links bleiben (betrifft nur sehr frühe Pilot-Stände).
+      for (const b of p.abrechnung.belege) {
+        if (Array.isArray(b?.dateien) && b.dateien.some((d) => d && "ref" in d)) {
+          b.dateien = b.dateien.filter((d) => d && !("ref" in d));
+          veraendert = true;
+        }
+      }
     }
     // Antrag-Einträge älterer Stände um eigene Fristen ergänzen.
     const alleFoerd = [
