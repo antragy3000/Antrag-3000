@@ -106,6 +106,8 @@ impl KopfTabelle {
     /// Rendert EINE Zeile (Zellen nebeneinander) an der aktuellen Position;
     /// gibt Zeilenhoehe und has_more (Zelle passte nicht ganz) zurueck.
     /// ** am Zellanfang = fett; Kopfzeile (zeilen_idx == 0) immer fett.
+    /// Eine Zeile mit GENAU EINER Zelle ist eine Gruppen-Ueberschrift und wird
+    /// fett ueber die volle Breite gezogen (Kostenstelle als Titel in der Tabelle).
     #[allow(clippy::too_many_arguments)]
     fn zeile_rendern(
         gewichte: &[usize],
@@ -116,6 +118,20 @@ impl KopfTabelle {
         area: genpdf::render::Area<'_>,
         style: style::Style,
     ) -> Result<(genpdf::Mm, bool), genpdf::error::Error> {
+        // Gruppen-Ueberschrift (eine Zelle) -> volle Breite, fett, ohne
+        // Spalten-Trennlinien.
+        if zellen.len() == 1 {
+            let roh = zellen[0].as_str();
+            let text = roh.strip_prefix("**").unwrap_or(roh);
+            let mut p = elements::Paragraph::new(text)
+                .styled(style::Style::new().bold())
+                .padded(genpdf::Margins::from((2.5, 3.0, 2.5, 3.0)));
+            let r = p.render(context, area.clone(), style)?;
+            let mut bereich = area;
+            bereich.set_height(r.size.height);
+            deko.decorate_cell(0, zeilen_idx, r.has_more, bereich, style);
+            return Ok((r.size.height, r.has_more));
+        }
         let bereiche = area.split_horizontally(gewichte);
         let mut hoehe = genpdf::Mm::from(0.0_f32);
         let mut mehr = false;
@@ -984,8 +1000,9 @@ mod tests {
     #[ignore = "Werkzeug: schreibt einen Muster-Verwendungsnachweis in den Temp-Ordner"]
     fn muster_verwendungsnachweis() {
         let z = |s: &str| s.to_string();
-        // Kopf-Beleg einer Gruppe (Nr · Datum · Beleg · Summe · Anteil).
-        let kopf = || vec![z("Nr."), z("Datum"), z("Beleg"), z("Summe"), z("Anteil")];
+        // EINE Belegliste-Tabelle: Kopfzeile, dann je Kostenstelle eine
+        // Ueberschriftszeile (nur eine Zelle -> volle Breite), Belege und
+        // Zwischensumme; am Ende die Gesamtsumme.
         let abschnitte = vec![
             PdfAbschnitt {
                 ueberschrift: "Sachbericht".into(),
@@ -996,41 +1013,34 @@ mod tests {
                 tabelle: vec![],
             },
             PdfAbschnitt {
-                ueberschrift: "Kostenstelle 1.1 Material".into(),
+                ueberschrift: "Belegliste".into(),
                 absaetze: vec![],
                 tabelle: vec![
-                    kopf(),
+                    vec![z("Nr."), z("Datum"), z("Beleg"), z("Summe"), z("Anteil")],
+                    vec![z("Kostenstelle 1.1 Material")],
                     vec![z("1.1.1"), z("05.03.2026"), z("Bühnenbau GmbH · Rohmaterial"), z("1.250,00 €"), z("1.250,00 €")],
                     vec![z("1.1.2"), z("03.05.2026"), z("Bauhaus · Farben, Kleinmaterial"), z("480,00 €"), z("300,00 €")],
                     vec![z(""), z(""), z("**Zwischensumme"), z(""), z("**1.550,00 €")],
-                ],
-            },
-            PdfAbschnitt {
-                ueberschrift: "Kostenstelle 1.2 Technik".into(),
-                absaetze: vec![],
-                tabelle: vec![
-                    kopf(),
+                    vec![z("Kostenstelle 1.2 Technik")],
                     vec![z("1.2.1"), z("12.03.2026"), z("Tonstudio Klang · Aufnahme"), z("2.400,00 €"), z("2.000,00 €")],
                     vec![z(""), z(""), z("**Zwischensumme"), z(""), z("**2.000,00 €")],
-                ],
-            },
-            PdfAbschnitt {
-                ueberschrift: "Kostenstelle 2.1 Werbung".into(),
-                absaetze: vec![],
-                tabelle: vec![
-                    kopf(),
+                    vec![z("Kostenstelle 2.1 Werbung")],
                     vec![z("2.1.1"), z("20.04.2026"), z("Grafikbüro Nord · Plakate & Flyer"), z("900,00 €"), z("900,00 €")],
                     vec![z(""), z(""), z("**Zwischensumme"), z(""), z("**900,00 €")],
+                    vec![z("Kostenstelle 3.1 Honorare")],
+                    vec![z("3.1.1"), z("30.06.2026"), z("Honorar Regie · Aisha Ndiaye"), z("2.000,00 €"), z("2.000,00 €")],
+                    vec![z(""), z(""), z("**Zwischensumme"), z(""), z("**2.000,00 €")],
+                    vec![z(""), z(""), z("**Summe gesamt"), z(""), z("**6.450,00 €")],
                 ],
             },
             PdfAbschnitt {
-                ueberschrift: "Kostenstelle 3.1 Honorare".into(),
-                absaetze: vec![],
-                tabelle: vec![
-                    kopf(),
-                    vec![z("3.1.1"), z("30.06.2026"), z("Honorar Regie · Aisha Ndiaye"), z("2.000,00 €"), z("2.000,00 €")],
-                    vec![z(""), z(""), z("**Zwischensumme"), z(""), z("**2.000,00 €")],
+                ueberschrift: "Anhänge".into(),
+                absaetze: vec![
+                    z("Die folgenden Belege liegen diesem Nachweis als Kopie bei:"),
+                    z("• Beleg 1.1.1 · 1.1 Material — Bühnenbau-Rohmaterial_2026-03-05_1.1.pdf"),
+                    z("• Beleg 1.2.1 · 1.2 Technik — Tonstudio-Aufnahme_2026-03-12_1.2.pdf"),
                 ],
+                tabelle: vec![],
             },
         ];
         let absender = vec![

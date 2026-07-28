@@ -284,8 +284,7 @@ export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName, 
   }
 
   if (zugeordnet.length) {
-    // Belege nach Kostenstelle gruppieren – jede Kostenstelle wird zur
-    // Überschrift ihrer eigenen kleinen Belegliste (keine separate Übersicht).
+    // Belege nach Kostenstelle gruppieren.
     const gruppen = new Map(); // key: ks-id oder "" (ohne) -> Belege
     for (const b of zugeordnet) {
       const key = b.kostenstelle || "";
@@ -305,32 +304,50 @@ export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName, 
       return ax - ay || bx - by;
     });
 
+    // EINE Belegliste-Tabelle. Jede Kostenstelle ist eine Überschriftszeile
+    // (Zeile mit nur EINER Zelle → über die volle Breite fett), darunter ihre
+    // Belege und eine Zwischensumme; am Ende die Gesamtsumme.
+    const tab = [["Nr.", "Datum", "Beleg", "Summe", "Anteil"]];
+    const anhangliste = [];
+    let gesamt = 0;
     for (const key of keys) {
       const ksLabel = key ? kostenstelleLabel(kfp, key) || "(entfernt)" : "";
-      const ueberschrift = key ? `Kostenstelle ${ksLabel}` : "Ohne Kostenstelle";
-      const zeilen = [["Nr.", "Datum", "Beleg", "Summe", "Anteil"]];
+      tab.push([key ? `Kostenstelle ${ksLabel}` : "Ohne Kostenstelle"]);
       let gruppenSumme = 0;
       for (const b of gruppen.get(key)) {
         const nr = nummern.get(b.id) ?? `#${b.nr}`;
         const belegText = [b.empfaenger, b.zweck].filter(Boolean).join(" · ") || "—";
         gruppenSumme += anteil(b);
-        zeilen.push([
+        tab.push([
           nr,
           datumText(b.datum),
           belegText,
           betragFormat(belegBrutto(b)),
           betragFormat(anteil(b)),
         ]);
-        // Roter Stempel für die angehängten Dateien dieses Belegs.
+        // Roter Stempel + Anhangslisten-Eintrag je angehängter Datei.
         const stempel = key ? `Beleg ${nr} · ${ksLabel}` : `Beleg ${nr} · ohne Kostenstelle`;
         for (const d of b.dateien ?? []) {
-          if (d?.name) anhaenge.push({ datei: d.name, stempel });
+          if (d?.name) {
+            anhaenge.push({ datei: d.name, stempel });
+            anhangliste.push(`• ${stempel} — ${d.name}`);
+          }
         }
       }
-      // Label in der breiten „Beleg"-Spalte (die schmale Nr.-Spalte würde das
-      // lange Wort verwerfen); Betrag in der „Anteil"-Spalte.
-      zeilen.push(["", "", "**Zwischensumme", "", "**" + betragFormat(gruppenSumme)]);
-      abschnitte.push({ ueberschrift, absaetze: [], tabelle: zeilen });
+      // Zwischensumme: Label in der breiten „Beleg"-Spalte, Betrag in „Anteil".
+      tab.push(["", "", "**Zwischensumme", "", "**" + betragFormat(gruppenSumme)]);
+      gesamt += gruppenSumme;
+    }
+    tab.push(["", "", "**Summe gesamt", "", "**" + betragFormat(gesamt)]);
+    abschnitte.push({ ueberschrift: "Belegliste", absaetze: [], tabelle: tab });
+
+    // Anhangsliste: welche Belege diesem Nachweis als Kopie beiliegen.
+    if (anhangliste.length) {
+      abschnitte.push({
+        ueberschrift: "Anhänge",
+        absaetze: ["Die folgenden Belege liegen diesem Nachweis als Kopie bei:", ...anhangliste],
+        tabelle: [],
+      });
     }
   } else {
     abschnitte.push({
