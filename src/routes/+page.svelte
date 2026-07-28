@@ -88,6 +88,9 @@
   // macOS: Hinweis auf eine neuere Version (kein Auto-Update dort). Objekt
   // { version, url, sha256, notes } oder null.
   let macUpdate = $state(null);
+  // Läuft die App auf macOS? Dort gibt es KEIN Tauri-Selbstupdate (latest.json
+  // kennt nur Windows) – der „⬆ Update"-Knopf nutzt dann den macOS-Hinweis.
+  let istMac = $state(false);
   let updateGeprueft = false; // Auto-Prüfung nur einmal pro Sitzung.
   // "Was ist neu?"-Meldung nach einem Update: { version, notes } oder null.
   let wasIstNeu = $state(null);
@@ -182,9 +185,11 @@
     ansicht = "offen";
     // Server-Erreichbarkeit einmal prüfen, damit der Status-Punkt stimmt.
     if (daten?.sync && online) verbindungPruefen().catch(() => {});
+    // Betriebssystem einmal ermitteln (macOS nutzt den Hinweis statt Auto-Update).
+    istMac = await invoke("ist_macos").catch(() => false);
     // Nach einem gerade installierten Update einmalig "Was ist neu?" zeigen.
     await wasIstNeuPruefen();
-    // Einmal still nach einer neuen App-Version schauen (Etappe 5).
+    // Einmal still nach einer neuen App-Version schauen (Etappe 5) – nur Windows.
     updateStillPruefen();
     // macOS: still auf eine neuere Version hinweisen (kein Auto-Update dort).
     macUpdatePruefen();
@@ -881,6 +886,11 @@
 
   async function updateStillPruefen() {
     if (updateGeprueft) return;
+    // Auf macOS gibt es kein Tauri-Selbstupdate (latest.json kennt nur Windows);
+    // der macOS-Hinweis läuft separat über macUpdatePruefen(). OS notfalls hier
+    // ermitteln, falls diese Prüfung vor nachEntsperren läuft (Erst-Aktivierung).
+    if (!istMac) istMac = await invoke("ist_macos").catch(() => false);
+    if (istMac) return;
     updateGeprueft = true;
     try {
       const u = await appUpdateCheck();
@@ -897,13 +907,30 @@
   // die TLS-verifizierte Verbindung nach einer neueren Version schauen und –
   // falls vorhanden – einen Hinweis mit Download-Link + Pruefsumme zeigen.
   // Auf Windows/Linux liefert der Rust-Befehl immer null (kein Hinweis).
-  async function macUpdatePruefen() {
+  async function macUpdatePruefen(manuell = false) {
     try {
       const info = await invoke("mac_update_pruefen");
       // Nur zeigen, wenn Version da UND der Download-Link sicher ist.
-      if (info && info.version && sichereWebUrl(info.url)) macUpdate = info;
+      if (info && info.version && sichereWebUrl(info.url)) {
+        macUpdate = info;
+      } else if (manuell) {
+        alert("Du hast die neueste Version. Auf macOS meldet sich ein Update als Hinweis mit Download-Link, sobald eine neuere Version vorliegt.");
+      }
     } catch {
-      /* still: kein Popup bei Netz-/Serverfehler */
+      if (manuell) {
+        alert("Der Update-Server ist gerade nicht erreichbar. Bitte prüfe die Verbindung und versuche es später erneut.");
+      }
+      /* sonst still: kein Popup bei Netz-/Serverfehler */
+    }
+  }
+
+  // „⬆ Update"-Knopf: Windows nutzt den Tauri-Selbstupdater (UpdatePruefung),
+  // macOS den Hinweis (Download von Hand).
+  function updateSuchen() {
+    if (istMac) {
+      macUpdatePruefen(true);
+    } else {
+      updateOffen = true;
     }
   }
 
@@ -1946,7 +1973,7 @@
       </nav>
       <div class="rechts">
         <button class="leise" onclick={() => (sicherungOffen = true)}>🛡 Sicherung</button>
-        <button class="leise" onclick={() => (updateOffen = true)} title="Nach App-Updates suchen">⬆ Update</button>
+        <button class="leise" onclick={updateSuchen} title="Nach App-Updates suchen">⬆ Update</button>
         <button class="leise" onclick={sperren}>Sperren</button>
         <span
           class="status-punkt {verbindungsStatus.klasse}"

@@ -556,6 +556,13 @@ pub async fn mac_update_pruefen() -> Result<Option<MacUpdate>, String> {
     }
 }
 
+/// true, wenn die App auf macOS laeuft. Das Frontend nutzt das, um dort NICHT
+/// den (Windows-only) Tauri-Selbstupdater aufzurufen, sondern den macOS-Hinweis.
+#[tauri::command]
+pub fn ist_macos() -> bool {
+    cfg!(target_os = "macos")
+}
+
 #[cfg(test)]
 mod mac_update_tests {
     use super::version_neuer;
