@@ -77,11 +77,37 @@
   let aktivesProjekt = $derived(
     daten ? daten.projekte.find((p) => p.id === daten.aktivesProjektId) : null
   );
+  // Schreibschutz: ein archiviertes Projekt lässt sich nur ansehen, nicht ändern.
+  let schreibschutz = $derived(!!aktivesProjekt?.archiviert);
+  // Projekte für die Hauptliste (nicht archiviert) bzw. das Archiv.
+  let aktiveProjekte = $derived((daten?.projekte ?? []).filter((p) => !p.archiviert));
+  let archivierteProjekte = $derived((daten?.projekte ?? []).filter((p) => p.archiviert));
+  // Aktive Projekte nach Programmreihe gruppiert: [{ reihe:{id,name}|null, projekte:[…] }].
+  // Reihen in ihrer Reihenfolge, danach die Projekte ohne Reihe.
+  let projektGruppen = $derived.by(() => {
+    const reihen = daten?.reihen ?? [];
+    const gruppen = [];
+    for (const r of reihen) {
+      const ps = aktiveProjekte.filter((p) => p.reiheId === r.id);
+      if (ps.length) gruppen.push({ reihe: r, projekte: ps });
+    }
+    const ohne = aktiveProjekte.filter((p) => !p.reiheId);
+    if (ohne.length) gruppen.push({ reihe: null, projekte: ohne });
+    return gruppen;
+  });
   let neuesProjektOffen = $state(false);
   let neuerProjektName = $state("");
   let loeschDialogOffen = $state(false);
   let umbenennenOffen = $state(false);
   let umbenennenName = $state("");
+  // Projekt-Bearbeiten-Dialog: gewählte Programmreihe + Feld für eine neue Reihe.
+  let umbenennenReiheId = $state(null);
+  let neueReiheName = $state("");
+  let archivOffen = $state(false); // Archiv-Bereich im Projektmenü aufgeklappt?
+  // Programmreihe umbenennen (eigener kleiner Dialog).
+  let reiheUmbOffen = $state(false);
+  let reiheUmbId = $state(null);
+  let reiheUmbName = $state("");
   let sicherungOffen = $state(false);
   let katalogOffen = $state(false);
   let updateOffen = $state(false);
@@ -1653,6 +1679,8 @@
 
   function umbenennenOeffnen() {
     umbenennenName = aktivesProjekt.name;
+    umbenennenReiheId = aktivesProjekt.reiheId ?? null;
+    neueReiheName = "";
     umbenennenOffen = true;
   }
 
@@ -1665,6 +1693,8 @@
   function umbenennenOeffnenFuer(p) {
     daten.aktivesProjektId = p.id;
     umbenennenName = p.name;
+    umbenennenReiheId = p.reiheId ?? null;
+    neueReiheName = "";
     umbenennenOffen = true;
     projektMenuOffen = false;
   }
@@ -1680,6 +1710,15 @@
     if (!name) return;
     const alterName = aktivesProjekt.name;
     aktivesProjekt.name = name;
+    // Programmreihe zuordnen: entweder eine neu eingetippte anlegen oder die
+    // im Auswahlfeld gewählte (bzw. „keine").
+    const neu = neueReiheName.trim();
+    if (neu) {
+      aktivesProjekt.reiheId = reiheAnlegen(neu);
+    } else {
+      aktivesProjekt.reiheId = umbenennenReiheId ?? null;
+    }
+    neueReiheName = "";
     umbenennenOffen = false;
     await tresorSpeichern();
     // Falls es schon einen Projektordner gibt, zieht er mit um.
@@ -1688,6 +1727,58 @@
     } catch (e) {
       alert("Hinweis: Der Projektordner konnte nicht umbenannt werden.\n" + e);
     }
+  }
+
+  // --- Programmreihen (Übertitel für mehrere Projekte) ---
+  // Legt eine Reihe an (oder gibt eine gleichnamige bestehende zurück) und
+  // liefert ihre id. Speichert NICHT selbst – der Aufrufer speichert.
+  function reiheAnlegen(name) {
+    const sauber = name.trim();
+    if (!sauber) return null;
+    const schon = daten.reihen.find((r) => r.name.toLowerCase() === sauber.toLowerCase());
+    if (schon) return schon.id;
+    const r = { id: neueId(), name: sauber };
+    daten.reihen.push(r);
+    return r.id;
+  }
+  function reiheUmbenennenOeffnen(reihe) {
+    reiheUmbId = reihe.id;
+    reiheUmbName = reihe.name;
+    reiheUmbOffen = true;
+    projektMenuOffen = false;
+  }
+  async function reiheUmbenennenSpeichern(event) {
+    event.preventDefault();
+    const name = reiheUmbName.trim();
+    if (!name) return;
+    const r = daten.reihen.find((x) => x.id === reiheUmbId);
+    if (r) r.name = name;
+    reiheUmbOffen = false;
+    await tresorSpeichern();
+  }
+  // Eine Reihe löschen: die Projekte darin bleiben, verlieren nur die Zuordnung.
+  async function reiheLoeschenFuer(reihe) {
+    if (!confirm(`Programmreihe „${reihe.name}" auflösen? Die Projekte bleiben erhalten (ohne Reihe).`)) return;
+    for (const p of daten.projekte) if (p.reiheId === reihe.id) p.reiheId = null;
+    daten.reihen = daten.reihen.filter((r) => r.id !== reihe.id);
+    await tresorSpeichern();
+  }
+
+  // --- Archiv (abgeschlossene Projekte, schreibgeschützt) ---
+  async function projektArchivieren(p) {
+    p.archiviert = true;
+    // War es aktiv, auf ein nicht-archiviertes Projekt umschalten.
+    if (daten.aktivesProjektId === p.id) {
+      daten.aktivesProjektId = daten.projekte.find((x) => !x.archiviert)?.id ?? null;
+    }
+    projektMenuOffen = false;
+    await tresorSpeichern();
+  }
+  async function projektEntarchivieren(p) {
+    p.archiviert = false;
+    daten.aktivesProjektId = p.id; // zurückgeholt = gleich aktiv
+    projektMenuOffen = false;
+    await tresorSpeichern();
   }
 
   // Legt den Ordner des aktiven Projekts (optional mit Foerderungs-
@@ -1899,23 +1990,51 @@
                 aria-expanded={projektMenuOffen}
                 title="Projekt wechseln, umbenennen oder löschen"
               >
-                {aktivesProjekt?.name ?? "Projekt wählen"}<span class="pfeil">▾</span>
+                {#if schreibschutz}🔒 {/if}{aktivesProjekt?.name ?? "Projekt wählen"}<span class="pfeil">▾</span>
               </button>
               {#if projektMenuOffen}
                 <div class="menu-backdrop" onclick={() => (projektMenuOffen = false)} role="presentation"></div>
                 <div class="projekt-liste" role="menu">
-                  {#each daten.projekte as p (p.id)}
-                    <div class="projekt-zeile" class:aktiv={p.id === daten.aktivesProjektId}>
-                      <button class="projekt-name" onclick={() => projektWaehlen(p.id)}>
-                        {p.name}
-                      </button>
-                      <button class="zeile-icon" title="Umbenennen" aria-label={`Projekt „${p.name}" umbenennen`} onclick={() => umbenennenOeffnenFuer(p)}>✏️</button>
-                      <button class="zeile-icon" title="Löschen" aria-label={`Projekt „${p.name}" löschen`} onclick={() => loeschenOeffnenFuer(p)}>🗑</button>
-                    </div>
+                  {#each projektGruppen as g (g.reihe?.id ?? "_ohne")}
+                    {#if g.reihe}
+                      <div class="reihe-kopf">
+                        <span class="reihe-name" title="Programmreihe">📚 {g.reihe.name}</span>
+                        <button class="zeile-icon" title="Programmreihe umbenennen" aria-label={`Programmreihe „${g.reihe.name}" umbenennen`} onclick={() => reiheUmbenennenOeffnen(g.reihe)}>✏️</button>
+                        <button class="zeile-icon" title="Programmreihe auflösen" aria-label={`Programmreihe „${g.reihe.name}" auflösen`} onclick={() => reiheLoeschenFuer(g.reihe)}>✕</button>
+                      </div>
+                    {/if}
+                    {#each g.projekte as p (p.id)}
+                      <div class="projekt-zeile" class:aktiv={p.id === daten.aktivesProjektId} class:in-reihe={!!g.reihe}>
+                        <button class="projekt-name" onclick={() => projektWaehlen(p.id)}>
+                          {p.name}
+                        </button>
+                        <button class="zeile-icon" title="Bearbeiten (Name, Reihe)" aria-label={`Projekt „${p.name}" bearbeiten`} onclick={() => umbenennenOeffnenFuer(p)}>✏️</button>
+                        <button class="zeile-icon" title="Archivieren" aria-label={`Projekt „${p.name}" archivieren`} onclick={() => projektArchivieren(p)}>📥</button>
+                        <button class="zeile-icon" title="Löschen" aria-label={`Projekt „${p.name}" löschen`} onclick={() => loeschenOeffnenFuer(p)}>🗑</button>
+                      </div>
+                    {/each}
                   {/each}
+                  {#if aktiveProjekte.length === 0}
+                    <div class="menu-leer">Alle Projekte sind archiviert.</div>
+                  {/if}
                   <button class="projekt-neu" onclick={() => { projektMenuOffen = false; neuesProjektOffen = true; }}>
                     + Neues Projekt
                   </button>
+
+                  {#if archivierteProjekte.length}
+                    <button class="archiv-kopf" onclick={() => (archivOffen = !archivOffen)} aria-expanded={archivOffen}>
+                      <span class="pfeil-klein">{archivOffen ? "▾" : "▸"}</span> Archiv ({archivierteProjekte.length})
+                    </button>
+                    {#if archivOffen}
+                      {#each archivierteProjekte as p (p.id)}
+                        <div class="projekt-zeile archiviert" class:aktiv={p.id === daten.aktivesProjektId}>
+                          <button class="projekt-name" onclick={() => projektWaehlen(p.id)} title="Archiviert – nur ansehen">🔒 {p.name}</button>
+                          <button class="zeile-icon" title="Aus dem Archiv holen" aria-label={`Projekt „${p.name}" aus dem Archiv holen`} onclick={() => projektEntarchivieren(p)}>↩︎</button>
+                          <button class="zeile-icon" title="Löschen" aria-label={`Projekt „${p.name}" löschen`} onclick={() => loeschenOeffnenFuer(p)}>🗑</button>
+                        </div>
+                      {/each}
+                    {/if}
+                  {/if}
                 </div>
               {/if}
             </div>
@@ -1983,7 +2102,13 @@
         ></span>
       </div>
     </header>
-    <main>
+    {#if schreibschutz}
+      <div class="archiv-banner" role="status">
+        <span>🔒 Dieses Projekt ist <strong>archiviert</strong> und wird nur angezeigt – Änderungen sind gesperrt.</span>
+        <button class="archiv-holen" onclick={() => projektEntarchivieren(aktivesProjekt)}>Aus dem Archiv holen</button>
+      </div>
+    {/if}
+    <main inert={schreibschutz}>
       {#if bereich === "foerderungen"}
         <div class="unter-reiter">
           <button class:aktiv={foerderAnsicht === "alle"} onclick={() => (foerderAnsicht = "alle")}>
@@ -2329,13 +2454,40 @@
     {#if umbenennenOffen}
       <div class="schleier" onclick={() => (umbenennenOffen = false)} role="presentation">
         <form class="karte" onsubmit={projektUmbenennen} onclick={(e) => e.stopPropagation()}>
-          <h1>Projekt umbenennen</h1>
-          <label for="umbenennen">Neuer Name</label>
+          <h1>Projekt bearbeiten</h1>
+          <label for="umbenennen">Name</label>
           <input id="umbenennen" type="text" bind:value={umbenennenName} />
-          <button type="submit" disabled={!umbenennenName.trim()}>Umbenennen</button>
-          <button type="button" class="leise" onclick={() => (umbenennenOffen = false)}>
+
+          <label for="reihe-wahl">Programmreihe <span class="feld-optional">(optional)</span></label>
+          <select id="reihe-wahl" bind:value={umbenennenReiheId} disabled={!!neueReiheName.trim()}>
+            <option value={null}>— keine —</option>
+            {#each daten.reihen as r (r.id)}
+              <option value={r.id}>{r.name}</option>
+            {/each}
+          </select>
+          <input
+            type="text"
+            class="reihe-neu-feld"
+            bind:value={neueReiheName}
+            placeholder="… oder neue Programmreihe anlegen"
+          />
+
+          <button type="submit" disabled={!umbenennenName.trim()}>Speichern</button>
+          <button type="button" class="leise" onclick={() => { umbenennenOffen = false; neueReiheName = ''; }}>
             Abbrechen
           </button>
+        </form>
+      </div>
+    {/if}
+
+    {#if reiheUmbOffen}
+      <div class="schleier" onclick={() => (reiheUmbOffen = false)} role="presentation">
+        <form class="karte" onsubmit={reiheUmbenennenSpeichern} onclick={(e) => e.stopPropagation()}>
+          <h1>Programmreihe umbenennen</h1>
+          <label for="reihe-umb">Name</label>
+          <input id="reihe-umb" type="text" bind:value={reiheUmbName} />
+          <button type="submit" disabled={!reiheUmbName.trim()}>Speichern</button>
+          <button type="button" class="leise" onclick={() => (reiheUmbOffen = false)}>Abbrechen</button>
         </form>
       </div>
     {/if}
@@ -2520,6 +2672,93 @@
   }
   .projekt-neu:hover {
     background: var(--lila-bg5);
+  }
+  /* Programmreihe: Gruppen-Kopf im Projektmenü. */
+  .reihe-kopf {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 6px 3px;
+    margin-top: 2px;
+  }
+  .reihe-name {
+    flex: 1 1 auto;
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .projekt-zeile.in-reihe .projekt-name {
+    padding-left: 20px;
+  }
+  .menu-leer {
+    padding: 8px 10px;
+    font-size: 0.86rem;
+    color: var(--text-leise);
+  }
+  /* Archiv-Bereich im Projektmenü. */
+  .archiv-kopf {
+    width: 100%;
+    text-align: left;
+    margin-top: 4px;
+    padding: 8px 10px;
+    font-size: 0.86rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    border-top: 1px solid var(--flaeche-2b);
+    cursor: pointer;
+  }
+  .archiv-kopf:hover {
+    background: var(--lila-bg5);
+  }
+  .pfeil-klein {
+    display: inline-block;
+    width: 1em;
+    color: var(--text-leise);
+  }
+  .projekt-zeile.archiviert .projekt-name {
+    color: var(--text-muted);
+  }
+  /* Schreibschutz-Banner über einem archivierten Projekt. */
+  .archiv-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    padding: 9px 16px;
+    background: var(--warnung-bg);
+    color: var(--warnung-text3);
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--rand);
+  }
+  .archiv-holen {
+    padding: 5px 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: var(--auf-farbe);
+    background: var(--akzent);
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+  }
+  .archiv-holen:hover {
+    background: var(--akzent-d);
+  }
+  .feld-optional {
+    color: var(--text-leise);
+    font-weight: 400;
+  }
+  .reihe-neu-feld {
+    margin-top: 6px;
   }
 
   /* Unter-Umschalter im Reiter „Förderungen" (Alle / Passende) */

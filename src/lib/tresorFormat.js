@@ -39,6 +39,11 @@ export function neuesProjekt(name) {
     id: neueId(),
     name,
     erstellt: new Date().toISOString().slice(0, 10),
+    // Zugehörige Programmreihe (Übertitel) – id aus daten.reihen oder null.
+    reiheId: null,
+    // Archiviert = abgeschlossen, aus der Hauptliste ausgeblendet und
+    // schreibgeschützt (nur ansehen), bis es aus dem Archiv geholt wird.
+    archiviert: false,
     fragebogen: null,
     merkliste: [],
     formular: leeresFormular(),
@@ -87,6 +92,8 @@ export function frischerTresor() {
     version: 2,
     stammdaten: leereStammdaten(),
     projekte: [],
+    // Programmreihen (Übertitel), denen Projekte zugeordnet werden: [{id,name}].
+    reihen: [],
     aktivesProjektId: null,
     modus: "einzel", // "einzel" (ohne Team) oder "team"
     einzelServer: STANDARD_SERVER, // Update-/Katalog-Server (Einzelplatz), eingebacken
@@ -104,6 +111,11 @@ export function normalisieren(d) {
   let veraendert = false;
   if (!Array.isArray(d.projekte)) {
     d.projekte = [];
+    veraendert = true;
+  }
+  // Programmreihen-Liste (Übertitel) sicherstellen.
+  if (!Array.isArray(d.reihen)) {
+    d.reihen = [];
     veraendert = true;
   }
   // Schritt-3-Stand: ein einzelner Fragebogen ohne Projekt.
@@ -146,7 +158,22 @@ export function normalisieren(d) {
 
   // Projekte aus aelteren Staenden bekommen eine leere Merkliste
   // und ein leeres Sammel-Formular.
+  const reihenIds = new Set(d.reihen.map((r) => r?.id));
   for (const p of d.projekte) {
+    // Programmreihe + Archiv-Status (aus älteren Ständen ergänzen). Ein
+    // Reihen-Verweis auf eine gelöschte Reihe fällt auf „keine Reihe" zurück.
+    if (p.reiheId !== null && !reihenIds.has(p.reiheId)) {
+      p.reiheId = null;
+      veraendert = true;
+    }
+    if (typeof p.reiheId === "undefined") {
+      p.reiheId = null;
+      veraendert = true;
+    }
+    if (typeof p.archiviert !== "boolean") {
+      p.archiviert = false;
+      veraendert = true;
+    }
     if (!Array.isArray(p.merkliste)) {
       p.merkliste = [];
       veraendert = true;
@@ -333,12 +360,16 @@ export function normalisieren(d) {
       }
     }
   }
+  // Beim Auto-Wählen ein nicht-archiviertes Projekt bevorzugen (das Archiv
+  // ist schreibgeschützt und soll nicht ungewollt aktiv sein).
+  const ersterAktiv = () =>
+    (d.projekte.find((p) => !p.archiviert) ?? d.projekte[0])?.id ?? null;
   if (d.aktivesProjektId && !d.projekte.some((p) => p.id === d.aktivesProjektId)) {
-    d.aktivesProjektId = d.projekte[0]?.id ?? null;
+    d.aktivesProjektId = ersterAktiv();
     veraendert = true;
   }
   if (!d.aktivesProjektId && d.projekte.length > 0) {
-    d.aktivesProjektId = d.projekte[0].id;
+    d.aktivesProjektId = ersterAktiv();
     veraendert = true;
   }
   if (d.sync === undefined) {
