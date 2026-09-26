@@ -62,11 +62,9 @@ export function vorlageKfp() {
       kat("Versicherungen, Rechte & Abgaben (GEMA, KSK …)"),
       kat("Logistik / Transport"),
     ],
-    finanzierung: [
-      kat("Öffentliche Mittel"),
-      kat("Stiftungen und Sponsoren"),
-      kat("Eigenmittel / Einnahmen"),
-    ],
+    // Finanzierung ist eine flache Förderer-Liste (keine Kategorien) – sie
+    // wird über „+ Förderer" aus der Merkliste befüllt, daher leer.
+    finanzierung: [],
   };
 }
 
@@ -281,13 +279,12 @@ export function kfpAbschnitte(kfp) {
     abschnitte.push({ ueberschrift: "Kostenplan", absaetze: [], tabelle: zeilen });
   }
 
-  if (kfp.finanzierung.length) {
+  // Finanzierung = flache Förderer-Liste (keine Kategorie-Zwischenüberschriften).
+  const finanzPosten = kfp.finanzierung.flatMap((k) => k.posten ?? []);
+  if (finanzPosten.length) {
     const zeilen = [["Finanzierung", "Betrag"]];
-    kfp.finanzierung.forEach((k, i) => {
-      zeilen.push([`**${i + 1} ${k.name}`, "**" + betragFormat(kategorieSumme(k))]);
-      k.posten.forEach((p, j) => {
-        zeilen.push([`${i + 1}.${j + 1}  ${finanzBezeichnung(p)}`, betragFormat(postenBetrag(p))]);
-      });
+    finanzPosten.forEach((p, j) => {
+      zeilen.push([`${j + 1}  ${finanzBezeichnung(p)}`, betragFormat(postenBetrag(p))]);
     });
     zeilen.push(["**Gesamtfinanzierung", "**" + betragFormat(seitenSumme(kfp.finanzierung))]);
     abschnitte.push({ ueberschrift: "Finanzierungsplan", absaetze: [], tabelle: zeilen });
@@ -335,29 +332,24 @@ export function kfpAbschnitteFuerAntrag(kfp, foerderungId, foerderName = "") {
     abschnitte.push({ ueberschrift: "Kostenplan", absaetze: [], tabelle: zeilen });
   }
 
-  // 2. Andere Mittel (alles außer der aktuellen Förderung)
+  // 2. Andere Mittel (alle Förderer/Quellen außer der aktuellen Förderung),
+  //    als flache Liste (keine Kategorien).
   const gesamtKosten = seitenSumme(kfp.kosten);
-  const zeilen = [["Finanzierung (andere Mittel)", "Betrag"]];
-  let summeAndere = 0;
-  let nr = 0;
-  for (const k of kfp.finanzierung) {
-    const posten = k.posten.filter((p) => (p.foerderId || "") !== foerderungId);
-    if (posten.length === 0) continue;
-    nr += 1;
-    const katSumme = posten.reduce((s, p) => s + postenBetrag(p), 0);
-    summeAndere += katSumme;
-    zeilen.push([`**${nr} ${k.name}`, "**" + betragFormat(katSumme)]);
-    for (const p of posten) {
-      zeilen.push([finanzBezeichnung(p), betragFormat(postenBetrag(p))]);
-    }
-  }
-  if (nr === 0) {
+  const anderePosten = kfp.finanzierung
+    .flatMap((k) => k.posten ?? [])
+    .filter((p) => (p.foerderId || "") !== foerderungId);
+  const summeAndere = anderePosten.reduce((s, p) => s + postenBetrag(p), 0);
+  if (anderePosten.length === 0) {
     abschnitte.push({
       ueberschrift: "Bereits vorhandene / beantragte Mittel",
       absaetze: ["Keine weiteren Mittel beantragt."],
       tabelle: [],
     });
   } else {
+    const zeilen = [["Finanzierung (andere Mittel)", "Betrag"]];
+    for (const p of anderePosten) {
+      zeilen.push([finanzBezeichnung(p), betragFormat(postenBetrag(p))]);
+    }
     zeilen.push(["**Summe andere Mittel", "**" + betragFormat(summeAndere)]);
     abschnitte.push({
       ueberschrift: "Bereits vorhandene / beantragte Mittel",

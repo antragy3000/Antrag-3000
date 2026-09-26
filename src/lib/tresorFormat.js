@@ -207,6 +207,14 @@ export function normalisieren(d) {
       p.kfp = leererKfp();
       veraendert = true;
     }
+    // Finanzierung ist jetzt eine flache Förderer-Liste (keine Kategorien mehr).
+    // Frühere Stände mit mehreren Finanzierungs-Kategorien in EINE Sammel-Ebene
+    // zusammenführen (die Positionen/Förderer-Verknüpfungen bleiben erhalten).
+    if (Array.isArray(p.kfp?.finanzierung) && p.kfp.finanzierung.length > 1) {
+      const allePosten = p.kfp.finanzierung.flatMap((k) => k?.posten ?? []);
+      p.kfp.finanzierung = [{ name: "", posten: allePosten }];
+      veraendert = true;
+    }
     if (typeof p.formular.kosten === "string") {
       if (p.formular.kosten.trim()) {
         p.kfp.kosten.push({

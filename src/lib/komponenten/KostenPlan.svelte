@@ -86,6 +86,21 @@
     kategorie.posten.splice(index, 1);
   }
 
+  // --- Finanzierung als flache Förderer-Liste (intern EINE Sammel-Ebene) ---
+  // Alle Finanzierungs-Positionen (Förderer/Quellen) als eine Liste. Kategorien
+  // gibt es hier nicht mehr; die einzelne Sammel-Kategorie trägt sie nur.
+  let finanzPosten = $derived(kopie.finanzierung[0]?.posten ?? []);
+  function finanzKategorie() {
+    if (kopie.finanzierung.length === 0) kopie.finanzierung.push({ name: "", posten: [] });
+    return kopie.finanzierung[0];
+  }
+  function foerdererHinzufuegen() {
+    finanzKategorie().posten.push({ bezeichnung: "", betrag: "", foerderId: "" });
+  }
+  function foerdererEntfernen(pi) {
+    kopie.finanzierung[0]?.posten.splice(pi, 1);
+  }
+
   // Reihenfolge verschieben (Position in der Kategorie bzw. Kategorie
   // auf ihrer Seite); richtung = -1 (hoch) oder +1 (runter).
   function verschieben(liste, i, richtung) {
@@ -232,119 +247,168 @@
       {/if}
     </div>
 
-    {#each [["kosten", "Ausgaben"], ["finanzierung", "Finanzierung"]] as [seite, seitenTitel] (seite)}
-      <section>
-        <div class="seiten-kopf">
-          <h3>
-            {seitenTitel}
-            <span class="summe">{betragFormat(seitenSumme(kopie[seite]))}</span>
-          </h3>
-          <button class="leise" onclick={() => kategorieHinzufuegen(seite)}>
-            + Kategorie
-          </button>
-        </div>
+    <!-- Ausgaben: Kategorien mit Positionen -->
+    <section>
+      <div class="seiten-kopf">
+        <h3>
+          Ausgaben
+          <span class="summe">{betragFormat(seitenSumme(kopie.kosten))}</span>
+        </h3>
+        <button class="leise" onclick={() => kategorieHinzufuegen("kosten")}>
+          + Kategorie
+        </button>
+      </div>
 
-        {#each kopie[seite] as kategorie, ki (kategorie)}
-          <div class="karte kategorie">
-            <div class="kategorie-kopf">
-              <span class="nummer">{ki + 1}</span>
+      {#each kopie.kosten as kategorie, ki (kategorie)}
+        <div class="karte kategorie">
+          <div class="kategorie-kopf">
+            <span class="nummer">{ki + 1}</span>
+            <span class="verschieben">
+              <button class="pfeil" title="Kategorie nach oben" disabled={ki === 0}
+                onclick={() => verschieben(kopie.kosten, ki, -1)}>▲</button>
+              <button class="pfeil" title="Kategorie nach unten" disabled={ki === kopie.kosten.length - 1}
+                onclick={() => verschieben(kopie.kosten, ki, 1)}>▼</button>
+            </span>
+            <input
+              class="kategorie-name"
+              type="text"
+              placeholder="Name der Kategorie (z. B. Personalkosten)"
+              bind:value={kategorie.name}
+            />
+            <span class="summe">{betragFormat(kategorieSumme(kategorie))}</span>
+            <button
+              class="entfernen"
+              title="Kategorie entfernen"
+              onclick={() => kategorieEntfernen("kosten", ki)}
+            >
+              ✕
+            </button>
+          </div>
+
+          {#each kategorie.posten as posten, pi (posten)}
+            <div class="posten">
+              <span class="nummer klein">{ki + 1}.{pi + 1}</span>
               <span class="verschieben">
-                <button class="pfeil" title="Kategorie nach oben" disabled={ki === 0}
-                  onclick={() => verschieben(kopie[seite], ki, -1)}>▲</button>
-                <button class="pfeil" title="Kategorie nach unten" disabled={ki === kopie[seite].length - 1}
-                  onclick={() => verschieben(kopie[seite], ki, 1)}>▼</button>
+                <button class="pfeil" title="Position nach oben" disabled={pi === 0}
+                  onclick={() => verschieben(kategorie.posten, pi, -1)}>▲</button>
+                <button class="pfeil" title="Position nach unten" disabled={pi === kategorie.posten.length - 1}
+                  onclick={() => verschieben(kategorie.posten, pi, 1)}>▼</button>
               </span>
               <input
-                class="kategorie-name"
+                class="bezeichnung"
                 type="text"
-                placeholder="Name der Kategorie (z. B. Personalkosten)"
-                bind:value={kategorie.name}
+                placeholder="Bezeichnung"
+                bind:value={posten.bezeichnung}
               />
-              <span class="summe">{betragFormat(kategorieSumme(kategorie))}</span>
+              <input
+                class="erlaeuterung"
+                type="text"
+                placeholder="Erläuterung (z. B. 625 € pro Woche)"
+                bind:value={posten.erlaeuterung}
+              />
+              <div class="betrag-feld">
+                <input
+                  class="betrag"
+                  type="text"
+                  placeholder="0,00 oder 50 × 4 × 3"
+                  bind:value={posten.betrag}
+                />
+                {#if rechenHinweis(posten.betrag)}
+                  <span class="rechen-hinweis">{rechenHinweis(posten.betrag)}</span>
+                {/if}
+              </div>
               <button
                 class="entfernen"
-                title="Kategorie entfernen"
-                onclick={() => kategorieEntfernen(seite, ki)}
+                title="Position entfernen"
+                onclick={() => postenEntfernen(kategorie, pi)}
               >
                 ✕
               </button>
             </div>
+          {/each}
 
-            {#each kategorie.posten as posten, pi (posten)}
-              <div class="posten">
-                <span class="nummer klein">{ki + 1}.{pi + 1}</span>
-                <span class="verschieben">
-                  <button class="pfeil" title="Position nach oben" disabled={pi === 0}
-                    onclick={() => verschieben(kategorie.posten, pi, -1)}>▲</button>
-                  <button class="pfeil" title="Position nach unten" disabled={pi === kategorie.posten.length - 1}
-                    onclick={() => verschieben(kategorie.posten, pi, 1)}>▼</button>
-                </span>
-                {#if seite === "finanzierung"}
-                  <select
-                    class="quelle"
-                    bind:value={posten.foerderId}
-                    onchange={() => quelleGewechselt(posten)}
-                  >
-                    <option value="">Eigene Drittmittel / Einnahmen …</option>
-                    {#if posten.foerderId && !merkliste.includes(posten.foerderId)}
-                      <option value={posten.foerderId}>
-                        {foerderName(posten.foerderId) ?? "(nicht mehr gemerkt)"}
-                      </option>
-                    {/if}
-                    {#each merklisteFoerderungen as f (f.id)}
-                      <option value={f.id}>{f.name} ({f.foerdergeber})</option>
-                    {/each}
-                  </select>
-                  {#if !posten.foerderId}
-                    <input
-                      class="bezeichnung"
-                      type="text"
-                      placeholder="z. B. Eigenmittel, Ticketeinnahmen"
-                      bind:value={posten.bezeichnung}
-                    />
-                  {/if}
-                {:else}
-                  <input
-                    class="bezeichnung"
-                    type="text"
-                    placeholder="Bezeichnung"
-                    bind:value={posten.bezeichnung}
-                  />
-                  <input
-                    class="erlaeuterung"
-                    type="text"
-                    placeholder="Erläuterung (z. B. 625 € pro Woche)"
-                    bind:value={posten.erlaeuterung}
-                  />
-                {/if}
-                <div class="betrag-feld">
-                  <input
-                    class="betrag"
-                    type="text"
-                    placeholder="0,00 oder 50 × 4 × 3"
-                    bind:value={posten.betrag}
-                  />
-                  {#if rechenHinweis(posten.betrag)}
-                    <span class="rechen-hinweis">{rechenHinweis(posten.betrag)}</span>
-                  {/if}
-                </div>
-                <button
-                  class="entfernen"
-                  title="Position entfernen"
-                  onclick={() => postenEntfernen(kategorie, pi)}
-                >
-                  ✕
-                </button>
-              </div>
-            {/each}
+          <button class="leise" onclick={() => postenHinzufuegen("kosten", kategorie)}>
+            + Position
+          </button>
+        </div>
+      {/each}
+    </section>
 
-            <button class="leise" onclick={() => postenHinzufuegen(seite, kategorie)}>
-              + Position
+    <!-- Finanzierung: flache Förderer-Liste (Förderer aus der Merkliste + Betrag) -->
+    <section>
+      <div class="seiten-kopf">
+        <h3>
+          Finanzierung
+          <span class="summe">{betragFormat(seitenSumme(kopie.finanzierung))}</span>
+        </h3>
+        <button class="leise" onclick={foerdererHinzufuegen}>+ Förderer</button>
+      </div>
+
+      <div class="karte kategorie">
+        {#if finanzPosten.length === 0}
+          <p class="finanz-leer">
+            Noch keine Finanzierung. Über <strong>„+ Förderer"</strong> wählst du einen
+            Förderer aus deiner <strong>Merkliste</strong> (oder trägst Eigenmittel /
+            Einnahmen ein) und den Betrag, den du dort beantragst.
+          </p>
+        {/if}
+
+        {#each finanzPosten as posten, pi (posten)}
+          <div class="posten">
+            <span class="nummer klein">{pi + 1}</span>
+            <span class="verschieben">
+              <button class="pfeil" title="nach oben" disabled={pi === 0}
+                onclick={() => verschieben(finanzPosten, pi, -1)}>▲</button>
+              <button class="pfeil" title="nach unten" disabled={pi === finanzPosten.length - 1}
+                onclick={() => verschieben(finanzPosten, pi, 1)}>▼</button>
+            </span>
+            <select
+              class="quelle"
+              bind:value={posten.foerderId}
+              onchange={() => quelleGewechselt(posten)}
+            >
+              <option value="">Eigenmittel / Einnahmen …</option>
+              {#if posten.foerderId && !merkliste.includes(posten.foerderId)}
+                <option value={posten.foerderId}>
+                  {foerderName(posten.foerderId) ?? "(nicht mehr gemerkt)"}
+                </option>
+              {/if}
+              {#each merklisteFoerderungen as f (f.id)}
+                <option value={f.id}>{f.name} ({f.foerdergeber})</option>
+              {/each}
+            </select>
+            {#if !posten.foerderId}
+              <input
+                class="bezeichnung"
+                type="text"
+                placeholder="z. B. Eigenmittel, Ticketeinnahmen"
+                bind:value={posten.bezeichnung}
+              />
+            {/if}
+            <div class="betrag-feld">
+              <input
+                class="betrag"
+                type="text"
+                placeholder="beantragter Betrag"
+                bind:value={posten.betrag}
+              />
+              {#if rechenHinweis(posten.betrag)}
+                <span class="rechen-hinweis">{rechenHinweis(posten.betrag)}</span>
+              {/if}
+            </div>
+            <button
+              class="entfernen"
+              title="Förderer entfernen"
+              onclick={() => foerdererEntfernen(pi)}
+            >
+              ✕
             </button>
           </div>
         {/each}
-      </section>
-    {/each}
+
+        <button class="leise" onclick={foerdererHinzufuegen}>+ Förderer</button>
+      </div>
+    </section>
   {/if}
 </div>
 
@@ -419,25 +483,19 @@
         </table>
       {/if}
 
-      {#if kopie.finanzierung.length}
+      {#if finanzPosten.length}
         <h3>Finanzierungsplan</h3>
         <table>
           <thead>
-            <tr><th>Nr.</th><th>Finanzierung</th><th class="r">Betrag</th></tr>
+            <tr><th>Nr.</th><th>Förderer / Quelle</th><th class="r">Beantragt</th></tr>
           </thead>
           <tbody>
-            {#each kopie.finanzierung as k, i (k)}
-              <tr class="kat">
-                <td>{i + 1}</td><td>{k.name || "(ohne Name)"}</td>
-                <td class="r">{betragFormat(kategorieSumme(k))}</td>
+            {#each finanzPosten as p, j (p)}
+              <tr>
+                <td>{j + 1}</td>
+                <td>{finanzBezeichnung(p)}</td>
+                <td class="r">{betragFormat(postenBetrag(p))}</td>
               </tr>
-              {#each k.posten as p, j (p)}
-                <tr>
-                  <td>{i + 1}.{j + 1}</td>
-                  <td>{finanzBezeichnung(p)}</td>
-                  <td class="r">{betragFormat(postenBetrag(p))}</td>
-                </tr>
-              {/each}
             {/each}
             <tr class="summe-zeile">
               <td colspan="2">Gesamtfinanzierung</td>
@@ -666,6 +724,12 @@
 
   .kategorie {
     margin-bottom: 14px;
+  }
+  .finanz-leer {
+    margin: 2px 0 12px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
   }
   .kategorie-kopf {
     display: flex;
