@@ -70,6 +70,12 @@ services:
       - KATALOG_PFAD=/srv/foerderungen.json
       - CERT_HEADER_MODE=caddy
       - ADMIN_TOTP_SECRET=${ADMIN_TOTP_SECRET:-}
+      # Unbekannte (aber CA-geprüfte) Geräte NICHT mehr automatisch aufnehmen.
+      # Im gehosteten Modell kommen neue Geräte nur über Einladung (/api/enroll)
+      # bzw. „Team erstellen" (/api/team); bekannte Geräte sind nicht betroffen.
+      # Härtung aus dem Delta-Pentest 09/2026 (Befund D-03). Rückweg: in .env
+      # AUTO_ENROLL=1 setzen und die api neu starten.
+      - AUTO_ENROLL=${AUTO_ENROLL:-0}
       # Ordner der Service-CA (gehostetes Modell, Schritt 2). Die api erzeugt
       # dort service-ca.crt (öffentlich, von Caddy gemountet) + service-ca.key
       # (geheim, bleibt im Volume).
