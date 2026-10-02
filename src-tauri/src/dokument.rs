@@ -247,3 +247,38 @@ pub fn verwendungsnachweis_word(
         .map_err(|e| format!("Datei laesst sich nicht oeffnen: {e}"))?;
     Ok(pfad.to_string_lossy().to_string())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Absicherung fuer Abhaengigkeits-Updates (docx-rs/zip/quick-xml, Delta-
+    // Pentest 09/2026): Das Word-Dokument muss sich weiter bauen lassen und
+    // eine gueltige .docx (ZIP mit word/document.xml) ergeben – auch mit
+    // Umlauten, Euro-Zeichen und Tabelle. Die Datei landet zusaetzlich im
+    // Temp-Ordner (antrag3000-word-test.docx), falls man sie ansehen will.
+    #[test]
+    fn word_dokument_ist_gueltiges_docx() {
+        let abschnitte = vec![DocAbschnitt {
+            ueberschrift: "Belegliste".into(),
+            absaetze: vec!["Ärger über Größe – 100 €".into()],
+            tabelle: vec![
+                vec!["Nr.".into(), "Beleg".into(), "Betrag".into()],
+                vec!["1.1.1".into(), "Bühnenbau GmbH".into(), "1.250,00 €".into()],
+                vec!["**Summe".into(), "".into(), "**1.250,00 €".into()],
+            ],
+        }];
+        let docx = docx_bauen("Verwendungsnachweis – Test", "Hinweis: nur eine Kopie", &abschnitte, None);
+        let mut puffer = std::io::Cursor::new(Vec::new());
+        docx.build().pack(&mut puffer).expect("Word-Datei muss sich packen lassen");
+        let bytes = puffer.into_inner();
+
+        assert!(bytes.starts_with(b"PK\x03\x04"), "keine ZIP-Datei");
+        // Dateinamen stehen in den ZIP-Kopfdaten unkomprimiert.
+        let roh = String::from_utf8_lossy(&bytes);
+        assert!(roh.contains("word/document.xml"), "word/document.xml fehlt");
+        assert!(roh.contains("[Content_Types].xml"), "[Content_Types].xml fehlt");
+
+        let _ = fs::write(std::env::temp_dir().join("antrag3000-word-test.docx"), &bytes);
+    }
+}
