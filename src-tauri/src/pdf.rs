@@ -620,11 +620,23 @@ fn als_dict(doc: &LoDocument, o: &Object) -> Option<Dictionary> {
     }
 }
 
+/// Hoechstens so viele Ebenen laufen wir die /Parent-Kette einer Seite hoch.
+/// Echte Seitenbaeume sind flach; ein praepariertes PDF mit zyklischer Kette
+/// (Seite -> sich selbst, oder A -> B -> A) wuerde ohne Grenze eine
+/// Endlosschleife ausloesen und die App einfrieren (Sicherheitsbefund D-02,
+/// Delta-Pentest 09/2026). Belege und Bankauszuege sind fremde Dateien.
+const MAX_PARENT_TIEFE: usize = 64;
+
 /// Seitenhoehe (in PDF-Punkten) aus der MediaBox der Seite oder eines
 /// Eltern-Knotens; Fallback A4-Hoehe (842 pt).
 fn seite_hoehe(doc: &LoDocument, page_id: ObjectId) -> f32 {
     let mut cur = Some(page_id);
+    let mut tiefe = 0;
     while let Some(id) = cur {
+        tiefe += 1;
+        if tiefe > MAX_PARENT_TIEFE {
+            break; // Zyklus oder absurd tiefe Kette -> Fallback
+        }
         let Ok(d) = doc.get_object(id).and_then(|o| o.as_dict()) else {
             break;
         };
@@ -650,7 +662,12 @@ fn seite_hoehe(doc: &LoDocument, page_id: ObjectId) -> f32 {
 /// klonbares Dictionary.
 fn effektive_resources(doc: &LoDocument, page_id: ObjectId) -> Dictionary {
     let mut cur = Some(page_id);
+    let mut tiefe = 0;
     while let Some(id) = cur {
+        tiefe += 1;
+        if tiefe > MAX_PARENT_TIEFE {
+            break; // Zyklus oder absurd tiefe Kette -> leere Resources
+        }
         let Ok(d) = doc.get_object(id).and_then(|o| o.as_dict()) else {
             break;
         };
@@ -993,6 +1010,63 @@ mod tests {
         // PNG mit Alphakanal (RGBA) - muss auf Weiss geglaettet werden.
         let pdf = bild_pdf(PNG_1X1.to_vec()).unwrap();
         assert!(pdf.starts_with(b"%PDF"), "Bild-PDF ist kein PDF");
+    }
+
+    // Sicherheitsbefund D-02 (Delta-Pentest 09/2026): Ein fremdes Beleg-PDF,
+    // dessen /Parent-Kette im Kreis zeigt, darf das Stempeln nicht in eine
+    // Endlosschleife schicken (sonst friert der Verwendungsnachweis ein).
+    #[test]
+    fn stempel_ueberlebt_zyklische_parent_kette() {
+        let mut doc = LoDocument::with_version("1.5");
+        let pages_id = doc.new_object_id();
+        let seite_a = doc.new_object_id();
+        let seite_b = doc.new_object_id();
+        let knoten_x = doc.new_object_id();
+        let inhalt = doc.add_object(Stream::new(Dictionary::new(), Vec::new()));
+
+        // Seite A: /Parent zeigt auf sich selbst, keine MediaBox/Resources.
+        let mut a = Dictionary::new();
+        a.set("Type", Object::Name(b"Page".to_vec()));
+        a.set("Parent", Object::Reference(seite_a));
+        a.set("Contents", Object::Reference(inhalt));
+        doc.objects.insert(seite_a, Object::Dictionary(a));
+
+        // Seite B: /Parent -> Knoten X, X zeigt zurueck auf B (A -> B -> A).
+        let mut b = Dictionary::new();
+        b.set("Type", Object::Name(b"Page".to_vec()));
+        b.set("Parent", Object::Reference(knoten_x));
+        b.set("Contents", Object::Reference(inhalt));
+        doc.objects.insert(seite_b, Object::Dictionary(b));
+        let mut x = Dictionary::new();
+        x.set("Parent", Object::Reference(seite_b));
+        doc.objects.insert(knoten_x, Object::Dictionary(x));
+
+        let mut pages = Dictionary::new();
+        pages.set("Type", Object::Name(b"Pages".to_vec()));
+        pages.set(
+            "Kids",
+            Object::Array(vec![Object::Reference(seite_a), Object::Reference(seite_b)]),
+        );
+        pages.set("Count", Object::Integer(2));
+        doc.objects.insert(pages_id, Object::Dictionary(pages));
+        let mut katalog = Dictionary::new();
+        katalog.set("Type", Object::Name(b"Catalog".to_vec()));
+        katalog.set("Pages", Object::Reference(pages_id));
+        let katalog_id = doc.add_object(Object::Dictionary(katalog));
+        doc.trailer.set("Root", Object::Reference(katalog_id));
+        let mut pdf = Vec::new();
+        doc.save_to(&mut pdf).unwrap();
+
+        // Im eigenen Thread stempeln: haengt es, schlaegt der Test nach 10 s
+        // fehl, statt die ganze Test-Suite einzufrieren.
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let _ = tx.send(stempel_auf_block(&pdf, "Beleg 1.1.1 · 1.1 Material"));
+        });
+        let ergebnis = rx
+            .recv_timeout(std::time::Duration::from_secs(10))
+            .expect("Endlosschleife: stempel_auf_block kehrt bei zyklischer /Parent-Kette nicht zurueck");
+        assert!(ergebnis.starts_with(b"%PDF"), "Ergebnis ist kein PDF");
     }
 
     // Erzeugt ein mehrseitiges Muster-Antrags-PDF zum Sichten (Zell-Abstand,
