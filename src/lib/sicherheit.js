@@ -64,6 +64,38 @@ export function sichereWebUrl(roh) {
   return u.href;
 }
 
+/// Strengere Pruefung NUR fuer den macOS-Update-Download: erlaubt ist
+/// ausschliesslich https://sync.antrag3000.de/updates/mac/<datei>.dmg
+/// (ohne Port, Zugangsdaten, Query, Fragment, Unterordner). WARUM: Die
+/// macOS-Builds sind unsigniert; zeigte ein manipuliertes Update-Manifest auf
+/// eine fremde https-Seite, gaebe es sonst keine Bremse (Befund D-04, 09/2026).
+/// Der Rust-Befehl prueft dasselbe – das hier ist die zweite Sicherung.
+/// Gibt die normalisierte Adresse zurueck oder null (dann NICHT oeffnen).
+export function macDownloadUrl(roh) {
+  const s = (roh ?? "").toString().trim();
+  if (!s || hatSteuerzeichen(s)) return null;
+  let u;
+  try {
+    u = new URL(s);
+  } catch {
+    return null;
+  }
+  const pfad = "/updates/mac/";
+  const datei = u.pathname.startsWith(pfad) ? u.pathname.slice(pfad.length) : "";
+  const ok =
+    u.protocol === "https:" &&
+    u.hostname === "sync.antrag3000.de" &&
+    u.port === "" &&
+    u.username === "" &&
+    u.password === "" &&
+    u.search === "" &&
+    u.hash === "" &&
+    datei.length > 0 &&
+    !datei.includes("/") &&
+    datei.toLowerCase().endsWith(".dmg");
+  return ok ? u.href : null;
+}
+
 /// Baut aus einer E-Mail-Adresse eine sichere mailto:-URL. Die Adresse
 /// wird streng geprueft (genau eine Adresse, keine Steuerzeichen/Leer-
 /// raeume) und kodiert, damit niemand ueber die Adresse zusaetzliche

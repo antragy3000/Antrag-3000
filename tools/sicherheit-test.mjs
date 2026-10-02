@@ -12,7 +12,7 @@
 // Ausfuehren:  npm run sicherheit   (oder: node tools/sicherheit-test.mjs)
 // ============================================================
 
-import { sichereWebUrl, sichereMailUrl, kappen } from "../src/lib/sicherheit.js";
+import { sichereWebUrl, sichereMailUrl, kappen, macDownloadUrl } from "../src/lib/sicherheit.js";
 
 let fehler = 0;
 function pruefe(bedingung, beschreibung) {
@@ -75,6 +75,33 @@ pruefe(sichereMailUrl("a@b.de?cc=opfer@x.de") === null, "versteckte mailto-Felde
 pruefe(sichereMailUrl("a@b.de\nBcc: opfer@x.de") === null, "Zeilenumbruch (Header-Injection) → null");
 pruefe(sichereMailUrl("kein-mail") === null, "keine Adresse → null");
 pruefe(sichereMailUrl("") === null, "leer → null");
+
+console.log("\nmacOS-Download – nur der eigene Update-Ort (Befund D-04):");
+pruefe(
+  macDownloadUrl("https://sync.antrag3000.de/updates/mac/Antrag-3000_0.4.18_universal.dmg") ===
+    "https://sync.antrag3000.de/updates/mac/Antrag-3000_0.4.18_universal.dmg",
+  "eigener Download-Ort bleibt"
+);
+const macMussNull = [
+  "http://sync.antrag3000.de/updates/mac/a.dmg",
+  "https://evil.example/updates/mac/a.dmg",
+  "https://sync.antrag3000.de.evil.example/updates/mac/a.dmg",
+  "https://sync.antrag3000.de@evil.example/updates/mac/a.dmg",
+  "https://x@sync.antrag3000.de/updates/mac/a.dmg",
+  "https://sync.antrag3000.de:8443/updates/mac/a.dmg",
+  "https://sync.antrag3000.de/updates/mac/../../api/a.dmg",
+  "https://sync.antrag3000.de/updates/mac/sub/a.dmg",
+  "https://sync.antrag3000.de/updates/mac/a.dmg?x=1",
+  "https://sync.antrag3000.de/updates/mac/a.dmg#x",
+  "https://sync.antrag3000.de/updates/mac/a.pkg",
+  "https://sync.antrag3000.de/updates/mac/",
+  "javascript:alert(1)",
+  "",
+  null,
+];
+for (const u of macMussNull) {
+  pruefe(macDownloadUrl(u) === null, `abgewiesen: ${JSON.stringify(u)}`);
+}
 
 console.log("\nText-Kappung:");
 pruefe(kappen("x".repeat(1000), 200).length === 200, "lange Texte werden gekappt");

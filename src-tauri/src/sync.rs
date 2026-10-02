@@ -486,6 +486,38 @@ pub async fn sync_foerderer_loeschen(
 // installiert wird dann von Hand (Download-Link + Pruefsumme im Frontend).
 
 const MAC_UPDATE_URL: &str = "https://sync.antrag3000.de/updates/mac.json";
+/// Einziger erlaubter Ort fuer den macOS-Download (dorthin laedt die CI).
+const MAC_DOWNLOAD_HOST: &str = "sync.antrag3000.de";
+const MAC_DOWNLOAD_PFAD: &str = "/updates/mac/";
+
+/// Darf der Download-Link aus der mac.json angezeigt/geoeffnet werden?
+/// Nur `https://sync.antrag3000.de/updates/mac/<datei>.dmg` – ohne Port,
+/// Zugangsdaten, Query oder Fragment. Die URL wird geparst (und dabei
+/// normalisiert), damit Tricks wie `sync.antrag3000.de@fremd.de`,
+/// `sync.antrag3000.de.fremd.de` oder `../` nicht durchrutschen. Hintergrund:
+/// macOS-Builds sind unsigniert; ein manipuliertes Manifest duerfte sonst auf
+/// einen fremden Installer zeigen (Sicherheitsbefund D-04, 09/2026).
+fn mac_download_url_erlaubt(url: &str) -> bool {
+    let Ok(u) = reqwest::Url::parse(url) else {
+        return false;
+    };
+    u.scheme() == "https"
+        && u.host_str() == Some(MAC_DOWNLOAD_HOST)
+        && u.port().is_none()
+        && u.username().is_empty()
+        && u.password().is_none()
+        && u.query().is_none()
+        && u.fragment().is_none()
+        && u.path().starts_with(MAC_DOWNLOAD_PFAD)
+        && u.path().len() > MAC_DOWNLOAD_PFAD.len()
+        && !u.path()[MAC_DOWNLOAD_PFAD.len()..].contains('/')
+        && u.path().to_ascii_lowercase().ends_with(".dmg")
+}
+
+/// Pruefsumme muss leer oder genau 64 Hex-Zeichen (SHA-256) sein.
+fn sha256_format_ok(s: &str) -> bool {
+    s.is_empty() || (s.len() == 64 && s.chars().all(|c| c.is_ascii_hexdigit()))
+}
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct MacUpdate {
@@ -545,10 +577,16 @@ pub async fn mac_update_pruefen() -> Result<Option<MacUpdate>, String> {
         Ok(t) => t,
         Err(_) => return Ok(None),
     };
-    let info: MacUpdate = match serde_json::from_str(&body) {
+    let mut info: MacUpdate = match serde_json::from_str(&body) {
         Ok(i) => i,
         Err(_) => return Ok(None),
     };
+    // Verdaechtiges Manifest (fremder Download-Ort, kaputte Pruefsumme) still
+    // verwerfen – lieber kein Hinweis als ein Hinweis auf einen fremden Installer.
+    if !mac_download_url_erlaubt(&info.url) || !sha256_format_ok(&info.sha256) {
+        return Ok(None);
+    }
+    info.notes = info.notes.chars().take(2000).collect();
     if version_neuer(&info.version, env!("CARGO_PKG_VERSION")) {
         Ok(Some(info))
     } else {
@@ -565,7 +603,7 @@ pub fn ist_macos() -> bool {
 
 #[cfg(test)]
 mod mac_update_tests {
-    use super::version_neuer;
+    use super::{mac_download_url_erlaubt, sha256_format_ok, version_neuer};
     #[test]
     fn versionen_vergleichen() {
         assert!(version_neuer("0.4.15", "0.4.14"));
@@ -573,6 +611,43 @@ mod mac_update_tests {
         assert!(version_neuer("1.0.0", "0.9.9"));
         assert!(!version_neuer("0.4.14", "0.4.14"));
         assert!(!version_neuer("0.4.13", "0.4.14"));
+    }
+
+    // Sicherheitsbefund D-04: nur der eigene Download-Ort ist erlaubt.
+    #[test]
+    fn mac_download_nur_eigene_domain() {
+        // So legt die CI den Installer ab -> erlaubt.
+        assert!(mac_download_url_erlaubt(
+            "https://sync.antrag3000.de/updates/mac/Antrag-3000_0.4.18_universal.dmg"
+        ));
+        // Alles andere -> abgelehnt.
+        for boese in [
+            "http://sync.antrag3000.de/updates/mac/a.dmg",          // kein TLS
+            "https://evil.example/updates/mac/a.dmg",               // fremde Domain
+            "https://sync.antrag3000.de.evil.example/updates/mac/a.dmg", // Subdomain-Trick
+            "https://sync.antrag3000.de@evil.example/updates/mac/a.dmg", // Zugangsdaten-Trick
+            "https://x@sync.antrag3000.de/updates/mac/a.dmg",       // Zugangsdaten
+            "https://sync.antrag3000.de:8443/updates/mac/a.dmg",    // anderer Port
+            "https://sync.antrag3000.de/updates/mac/../../api/a.dmg", // Pfad-Ausbruch
+            "https://sync.antrag3000.de/updates/mac/sub/a.dmg",     // Unterordner
+            "https://sync.antrag3000.de/updates/mac/a.dmg?x=1",     // Query
+            "https://sync.antrag3000.de/updates/mac/a.dmg#x",       // Fragment
+            "https://sync.antrag3000.de/updates/mac/a.pkg",         // kein .dmg
+            "https://sync.antrag3000.de/updates/mac/",              // kein Dateiname
+            "javascript:alert(1)",
+            "",
+        ] {
+            assert!(!mac_download_url_erlaubt(boese), "haette abgelehnt werden muessen: {boese}");
+        }
+    }
+
+    #[test]
+    fn sha256_format() {
+        assert!(sha256_format_ok(""));
+        assert!(sha256_format_ok(&"a".repeat(64)));
+        assert!(!sha256_format_ok(&"a".repeat(63)));
+        assert!(!sha256_format_ok(&"g".repeat(64)));
+        assert!(!sha256_format_ok("Bitte hier klicken: https://evil.example"));
     }
 }
 
@@ -1020,17 +1095,39 @@ pub async fn mitglied_status_setzen(
 mod tests {
     use super::*;
 
-    const FIXTURE: &str = r#"{
-    "typ":  "antrag3000-zugangspaket",
-    "version":  1,
-    "adresse":  "demoteam.synology.me",
-    "ausweis_pem":  "-----BEGIN EC PRIVATE KEY-----\r\nMHcCAQEEIJpR2GSmQWCUqxJQ80QwRryaW4eoJRPFRR/Mp0D51VoxoAoGCCqGSM49\r\nAwEHoUQDQgAEcUmeIX+sUqoaMSlZsVIy0iEtHvCkk/kLEw5V9vQgsci3KbyN8XYj\r\nYpGHsWz1uUW4p5jselGewjEw6Mq7tXC5MQ==\r\n-----END EC PRIVATE KEY-----\r\n-----BEGIN CERTIFICATE-----\r\nMIIBrzCCAVSgAwIBAgIUS5q/ghmnXUYVA+WMMPTo87BJcRMwCgYIKoZIzj0EAwIw\r\nOTEZMBcGA1UECgwQQW50cmFnIDMwMDAgVGVhbTEcMBoGA1UEAwwTQW50cmFnIDMw\r\nMDAgVGVhbSBDQTAeFw0yNjA3MDIxMzU1MzhaFw0yODEyMTgxMzU1MzhaMDExGTAX\r\nBgNVBAoMEEFudHJhZyAzMDAwIFRlYW0xFDASBgNVBAMMC0xhcHRvcC1UZXN0MFkw\r\nEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEcUmeIX+sUqoaMSlZsVIy0iEtHvCkk/kL\r\nEw5V9vQgsci3KbyN8XYjYpGHsWz1uUW4p5jselGewjEw6Mq7tXC5MaNCMEAwHQYD\r\nVR0OBBYEFMg8TvGOOugRtN9gP5rrukqBJVddMB8GA1UdIwQYMBaAFAYZut6cFPxY\r\nYNMyChKiV/1r3l6dMAoGCCqGSM49BAMCA0kAMEYCIQCXWJa6qmFl82LwEvsyu8tc\r\nu1laMmLUqPTaqaw1jsapZgIhANinjSoE7lFOfdBjdzKOW6Lm3Egh/KhzbCYM6q2s\r\nM7Tm\r\n-----END CERTIFICATE-----\r\n"
-}"#;
+    /// Baut ein Test-Zugangspaket zur LAUFZEIT: frischer Schluessel + passendes
+    /// Zertifikat. Frueher stand hier ein fest eingetragener Ausweis samt
+    /// privatem Schluessel im Quellcode (Wegwerf-CA, nicht die echte Team-CA) -
+    /// im oeffentlichen Repo trotzdem schlechte Praxis und fuer Scanner ein
+    /// Fehlalarm (Befund D-01, Delta-Pentest 09/2026). Der Schluessel wird
+    /// bewusst im aelteren SEC1-Format ("EC PRIVATE KEY") ausgegeben, wie ihn das
+    /// fruehere Einrichtungs-Skript erzeugt hat: bestehende Tresore koennen
+    /// Ausweise in diesem Format enthalten, der mTLS-Client muss sie weiter lesen.
+    fn test_paket() -> String {
+        use p256::pkcs8::DecodePrivateKey;
+        let key = rcgen::KeyPair::generate().unwrap(); // ECDSA P-256
+        let geheim = p256::SecretKey::from_pkcs8_der(&key.serialize_der()).unwrap();
+        let sec1_pem = geheim.to_sec1_pem(p256::pkcs8::LineEnding::LF).unwrap();
+
+        let mut p = rcgen::CertificateParams::new(Vec::<String>::new()).unwrap();
+        p.distinguished_name.push(rcgen::DnType::CommonName, "Laptop-Test");
+        p.distinguished_name
+            .push(rcgen::DnType::OrganizationName, "Antrag 3000 Team");
+        let cert_pem = p.self_signed(&key).unwrap().pem();
+
+        serde_json::json!({
+            "typ": "antrag3000-zugangspaket",
+            "version": 1,
+            "adresse": "demoteam.synology.me",
+            "ausweis_pem": format!("{}{}", sec1_pem.as_str(), cert_pem),
+        })
+        .to_string()
+    }
 
     #[test]
     fn paket_pruefen_liest_name_und_adresse() {
         let pfad = std::env::temp_dir().join("a3000-test-paket.a3kpaket");
-        std::fs::write(&pfad, FIXTURE).unwrap();
+        std::fs::write(&pfad, test_paket()).unwrap();
         let info = zugangspaket_pruefen(pfad.to_string_lossy().to_string()).unwrap();
         assert_eq!(info.adresse, "demoteam.synology.me");
         assert_eq!(info.geraet_name, "Laptop-Test");
@@ -1042,8 +1139,9 @@ mod tests {
     fn reqwest_akzeptiert_den_ausweis() {
         // Stellt sicher, dass das EC-PEM-Format des Skripts vom mTLS-Client
         // angenommen wird (ohne Netzwerk).
-        let paket: serde_json::Value = serde_json::from_str(FIXTURE).unwrap();
+        let paket: serde_json::Value = serde_json::from_str(&test_paket()).unwrap();
         let pem = paket["ausweis_pem"].as_str().unwrap();
+        assert!(pem.contains("BEGIN EC PRIVATE KEY"), "Test muss das alte SEC1-Format pruefen");
         client_mit_ausweis(pem, "").expect("Client sollte mit dem Ausweis baubar sein");
     }
 

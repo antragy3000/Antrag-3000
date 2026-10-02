@@ -21,7 +21,7 @@
   import UpdatePruefung from "$lib/komponenten/UpdatePruefung.svelte";
   import { check as appUpdateCheck } from "@tauri-apps/plugin-updater";
   import { openUrl } from "@tauri-apps/plugin-opener";
-  import { sichereWebUrl } from "$lib/sicherheit";
+  import { macDownloadUrl } from "$lib/sicherheit";
   import { getVersion } from "@tauri-apps/api/app";
   import { formularWordBauen } from "$lib/antrag";
   import { antragsPdfBauen, absenderZeilen } from "$lib/antragsPdf";
@@ -936,8 +936,9 @@
   async function macUpdatePruefen(manuell = false) {
     try {
       const info = await invoke("mac_update_pruefen");
-      // Nur zeigen, wenn Version da UND der Download-Link sicher ist.
-      if (info && info.version && sichereWebUrl(info.url)) {
+      // Nur zeigen, wenn Version da UND der Download-Link auf den eigenen
+      // Update-Ort zeigt (macOS-Builds sind unsigniert, Befund D-04).
+      if (info && info.version && macDownloadUrl(info.url)) {
         macUpdate = info;
       } else if (manuell) {
         alert("Du hast die neueste Version. Auf macOS meldet sich ein Update als Hinweis mit Download-Link, sobald eine neuere Version vorliegt.");
@@ -961,7 +962,7 @@
   }
 
   function macHerunterladen() {
-    const u = sichereWebUrl(macUpdate?.url);
+    const u = macDownloadUrl(macUpdate?.url);
     if (u) openUrl(u);
   }
 
