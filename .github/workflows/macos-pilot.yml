@@ -27,25 +27,32 @@ on:
       - "src-tauri/tauri.conf.json"
   workflow_dispatch:
 
+# Die Actions sind auf einen festen Commit-Hash gepinnt (nicht auf ein
+# bewegliches Tag wie @v4 oder @stable): Eine spaeter kompromittierte
+# Action-Version laeuft so nicht automatisch mit Zugriff auf den Deploy-
+# Schluessel mit (Befund D-10, Delta-Pentest 09/2026). Aktualisieren =
+# bewusst neuen Hash eintragen; die Version steht jeweils im Kommentar.
 jobs:
   build:
     runs-on: macos-latest
     steps:
       - name: Quellcode auschecken
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Node einrichten
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
 
       - name: Rust einrichten (beide Apple-Architekturen)
-        uses: dtolnay/rust-toolchain@stable
+        # Bei gepinntem Hash muss die Toolchain ausdruecklich genannt werden.
+        uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # Zweig "stable", Stand 10/2026
         with:
+          toolchain: stable
           targets: aarch64-apple-darwin,x86_64-apple-darwin
 
       - name: Rust-Build-Cache (macht spaetere Laeufe schneller)
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: src-tauri
 
@@ -62,7 +69,7 @@ jobs:
         run: npm run tauri build -- --target universal-apple-darwin --bundles dmg --config '{"bundle":{"createUpdaterArtifacts":false}}'
 
       - name: .dmg als Artefakt hochladen
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: Antrag-3000-macOS-universal
           path: src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
