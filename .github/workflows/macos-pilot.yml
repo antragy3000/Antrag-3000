@@ -79,32 +79,54 @@ jobs:
       # Legt die .dmg + eine mac.json (Version, Download-URL, SHA-256, Notiz)
       # nach /updates/ auf den Server. Aeltere Mac-Installationen sehen dann den
       # Hinweis. Laeuft NUR, wenn das Repo-Secret MAC_DEPLOY_SSH_KEY gesetzt ist;
-      # sonst wird der Upload uebersprungen (Build/Artefakt bleiben erhalten).
+      # sonst wird der Upload uebersprungen (mit sichtbarer Warnung).
       - name: Pruefen, ob Deploy-Schluessel vorhanden ist
         id: deploy
-        run: echo "vorhanden=${{ secrets.MAC_DEPLOY_SSH_KEY != '' }}" >> "$GITHUB_OUTPUT"
+        run: |
+          if [ "${{ secrets.MAC_DEPLOY_SSH_KEY != '' }}" = "true" ]; then
+            echo "vorhanden=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "vorhanden=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Kein Upload::Secret MAC_DEPLOY_SSH_KEY fehlt - .dmg nur als Artefakt, mac.json wurde NICHT aktualisiert."
+          fi
 
+      # Sicherheit (Befund D-08, Delta-Pentest 09/2026):
+      # - Der Host-Schluessel des Servers ist FEST hinterlegt (statt ssh-keyscan):
+      #   die CI laedt nur zu genau diesem Server hoch, nicht zu jemandem, der
+      #   sich unterwegs als er ausgibt. Er ist oeffentlich, kein Geheimnis.
+      #   Gegenpruefen auf dem VPS:  ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+      #   -> SHA256:AXN//bvd+XDO9TDZmJA715lpvCQTQ15LT5I/LLT2TBY
+      #   Neuer Server / neuer Host-Schluessel => HOST_KEY unten anpassen.
+      # - Der Deploy-Schluessel hat auf dem Server KEINE Shell mehr: ein
+      #   erzwungener Befehl (server/mac-upload.sh) nimmt nur "dmg <name>" und
+      #   "manifest" entgegen und prueft Name, Groesse und Inhalt.
       - name: .dmg + mac.json auf den Update-Server hochladen
         if: steps.deploy.outputs.vorhanden == 'true'
         env:
           SSH_KEY: ${{ secrets.MAC_DEPLOY_SSH_KEY }}
+          HOST_KEY: "sync.antrag3000.de ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBZVYEgO0IsgZ8TzaY7i2Bl4gzi6XZuh3H6tTGAGVR9J"
         run: |
-          set -e
+          set -euo pipefail
           VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
           DMG=$(ls src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg | head -1)
           ZIEL="Antrag-3000_${VERSION}_universal.dmg"
           HASH=$(shasum -a 256 "$DMG" | awk '{print $1}')
           NOTES=$(git log -1 --pretty=%s | sed 's/["\\]/\\&/g')
-          cp "$DMG" "$ZIEL"
           printf '{\n  "version": "%s",\n  "url": "https://sync.antrag3000.de/updates/mac/%s",\n  "sha256": "%s",\n  "notes": "%s"\n}\n' \
             "$VERSION" "$ZIEL" "$HASH" "$NOTES" > mac.json
           echo "mac.json:"; cat mac.json
-          mkdir -p ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H sync.antrag3000.de >> ~/.ssh/known_hosts 2>/dev/null
-          BASIS=/home/antrag/Antrag-3000/server/updates
-          ssh -i ~/.ssh/id_ed25519 antrag@sync.antrag3000.de "mkdir -p $BASIS/mac"
-          scp -i ~/.ssh/id_ed25519 "$ZIEL" "antrag@sync.antrag3000.de:$BASIS/mac/"
-          scp -i ~/.ssh/id_ed25519 mac.json "antrag@sync.antrag3000.de:$BASIS/mac.json"
+
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          trap 'rm -f ~/.ssh/deploy_key' EXIT
+          printf '%s\n' "$HOST_KEY" > ~/.ssh/known_hosts_deploy
+          SSH=(ssh -i "$HOME/.ssh/deploy_key" -o IdentitiesOnly=yes -o BatchMode=yes
+               -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts_deploy"
+               -o HostKeyAlgorithms=ssh-ed25519 antrag@sync.antrag3000.de)
+
+          # Erst die .dmg, dann die mac.json – so zeigt der Hinweis nie auf
+          # eine Datei, die noch nicht da ist.
+          "${SSH[@]}" "dmg $ZIEL" < "$DMG"
+          "${SSH[@]}" "manifest" < mac.json
           echo "OK: $ZIEL (SHA-256 $HASH) und mac.json hochgeladen."
