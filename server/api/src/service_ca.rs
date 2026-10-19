@@ -39,7 +39,20 @@ impl Ca {
     /// ab. Idempotent: existiert sie schon, wird sie nur gelesen (der
     /// bestehende Schlüssel bleibt – sonst würden alle bisher ausgestellten
     /// Ausweise ungültig).
+    /// Für einstufige CAs (Förderer-CA): signiert Ausweise direkt, keine Unterstufe.
     pub fn laden_oder_erzeugen(dir: &Path, stamm: &str, ca_cn: &str) -> Result<Self, String> {
+        Self::laden_oder_erzeugen_mit(dir, stamm, ca_cn, 0)
+    }
+
+    /// Wie `laden_oder_erzeugen`, aber eine NEU erzeugte CA erlaubt `unterstufen`
+    /// Zwischen-CAs unter sich (pathLenConstraint). Eine bestehende CA wird nur
+    /// gelesen – ihr Wert bleibt, wie er beim Erzeugen war.
+    fn laden_oder_erzeugen_mit(
+        dir: &Path,
+        stamm: &str,
+        ca_cn: &str,
+        unterstufen: u8,
+    ) -> Result<Self, String> {
         let cert_pfad = dir.join(format!("{stamm}.crt"));
         let key_pfad = dir.join(format!("{stamm}.key"));
 
@@ -52,7 +65,7 @@ impl Ca {
             }
         }
 
-        let ca = Self::erzeugen(ca_cn)?;
+        let ca = Self::erzeugen(ca_cn, unterstufen)?;
         std::fs::create_dir_all(dir)
             .map_err(|e| format!("CA-Ordner {dir:?} nicht anlegbar: {e}"))?;
         schreibe_geschuetzt(&key_pfad, &ca.key_pem, 0o600)
@@ -64,7 +77,7 @@ impl Ca {
 
     /// Erzeugt frisch eine selbstsignierte CA (nur im Speicher) mit CN `ca_cn`.
     /// Gleiche rcgen-0.13-Bausteine wie die Förderer-CA in der Admin-App.
-    fn erzeugen(ca_cn: &str) -> Result<Self, String> {
+    fn erzeugen(ca_cn: &str, unterstufen: u8) -> Result<Self, String> {
         let key = rcgen::KeyPair::generate().map_err(|e| format!("Schlüssel nicht erzeugbar: {e}"))?;
         let mut p = rcgen::CertificateParams::new(Vec::<String>::new())
             .map_err(|e| format!("CA-Parameter fehlerhaft: {e}"))?;
@@ -72,8 +85,11 @@ impl Ca {
             .push(rcgen::DnType::OrganizationName, "Antrag 3000");
         p.distinguished_name
             .push(rcgen::DnType::CommonName, ca_cn);
-        // Constrained(0): darf Ausweise signieren, aber keine weiteren (Unter-)CAs.
-        p.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Constrained(0));
+        // Constrained(n): höchstens n Zwischen-CAs darunter. 0 = signiert Ausweise
+        // nur direkt (Förderer-CA); die Wurzel der StufenCa braucht 1, sonst
+        // lehnt jede Prüfung nach RFC 5280 (Go/Caddy, openssl) die Kette
+        // Blatt → Zwischen → Wurzel ab.
+        p.is_ca = rcgen::IsCa::Ca(rcgen::BasicConstraints::Constrained(unterstufen));
         p.key_usages = vec![
             rcgen::KeyUsagePurpose::KeyCertSign,
             rcgen::KeyUsagePurpose::CrlSign,
@@ -130,6 +146,8 @@ impl Ca {
             .push(rcgen::DnType::CommonName, cn);
         p.is_ca = rcgen::IsCa::NoCa;
         p.key_usages = vec![rcgen::KeyUsagePurpose::DigitalSignature];
+        // Nur zum Anmelden (mTLS-Client) – nicht als Server-Zertifikat nutzbar.
+        p.extended_key_usages = vec![rcgen::ExtendedKeyUsagePurpose::ClientAuth];
         // Kurzlebig (Roadmap 10): ein geklauter Ausweis verfällt von selbst; die
         // App erneuert rechtzeitig über die bestehende mTLS-Verbindung. Kleine
         // Rückdatierung als Uhr-Toleranz zwischen Server und Gerät.
@@ -200,9 +218,15 @@ impl Ca {
 
 /// Zweistufige Service-CA (Roadmap 10): **Wurzel** (Vertrauensanker; ihr Schlüssel
 /// darf offline verwahrt werden) + **Zwischen-CA** (signiert die Blatt-Ausweise am
-/// Server). Caddy vertraut weiter der Wurzel; jeder ausgestellte Ausweis trägt die
-/// Kette Blatt→Zwischen. Wird der Server geknackt, ist nur die Zwischen-CA
-/// betroffen – aus der (offline) Wurzel stellt man eine neue aus, statt „alles neu".
+/// Server). Jeder ausgestellte Ausweis trägt die Kette Blatt→Zwischen. Wird der
+/// Server geknackt, ist nur die Zwischen-CA betroffen – aus der (offline) Wurzel
+/// stellt man eine neue aus, statt „alles neu".
+///
+/// Caddy vertraut der Wurzel UND der Zwischen-CA direkt (Caddyfile.netcup). Grund:
+/// Die 2026-07 erzeugte Produktiv-Wurzel trägt pathLenConstraint 0 und erlaubt
+/// keine Zwischen-CA unter sich – Go/Caddy lehnt Blatt→Zwischen→Wurzel deshalb ab
+/// („too many intermediates"). Mit der Zwischen-CA als eigenem Vertrauensanker
+/// endet die Kette dort. Neu erzeugte Wurzeln erlauben eine Zwischen-CA.
 pub struct StufenCa {
     /// Wurzel-Zertifikat (öffentlich; Caddy-Trust-Anker + `service_ca_pem` in Antworten).
     pub wurzel_cert_pem: String,
@@ -243,7 +267,7 @@ impl StufenCa {
 
         // Erststart (noch keine Zwischen-CA): Wurzel laden/erzeugen (braucht den
         // Wurzel-Schlüssel) und die Zwischen-CA einmalig daraus ableiten.
-        let wurzel = Ca::laden_oder_erzeugen(dir, "service-ca", "Antrag 3000 Service-CA")?;
+        let wurzel = Ca::laden_oder_erzeugen_mit(dir, "service-ca", "Antrag 3000 Service-CA", 1)?;
         let (zc, zk) = wurzel.erzeuge_zwischen_ca("Antrag 3000 Service-CA (Zwischen)")?;
         schreibe_geschuetzt(&int_key, &zk, 0o600)
             .map_err(|e| format!("Zwischen-Schlüssel nicht speicherbar: {e}"))?;
@@ -291,6 +315,8 @@ impl StufenCa {
         p.distinguished_name.push(rcgen::DnType::CommonName, cn);
         p.is_ca = rcgen::IsCa::NoCa;
         p.key_usages = vec![rcgen::KeyUsagePurpose::DigitalSignature];
+        // Nur zum Anmelden (mTLS-Client) – nicht als Server-Zertifikat nutzbar.
+        p.extended_key_usages = vec![rcgen::ExtendedKeyUsagePurpose::ClientAuth];
         let jetzt = time::OffsetDateTime::now_utc();
         p.not_before = jetzt - time::Duration::hours(1);
         p.not_after = jetzt + time::Duration::days(gueltig_tage.max(1));
@@ -424,6 +450,116 @@ mod tests {
         let foerderer = Ca::laden_oder_erzeugen(&dir, "foerderer-ca", "Antrag 3000 Förderer-CA").unwrap();
         assert_ne!(service.cert_pem, foerderer.cert_pem);
         assert_ne!(service.fingerprint(), foerderer.fingerprint());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// D-12: Blatt-Ausweise taugen nur zum Anmelden (EKU clientAuth, kein
+    /// serverAuth); die CAs selbst tragen keine EKU-Einschränkung. Ist
+    /// `A3K_EKU_DIR` gesetzt, landen die Zertifikate (ohne Schlüssel) als PEM dort –
+    /// für die Gegenprobe mit `openssl verify -purpose sslclient|sslserver`.
+    #[test]
+    fn ausweise_nur_zum_anmelden() {
+        use x509_parser::pem::parse_x509_pem;
+        // (clientAuth, serverAuth, any) des ERSTEN Zertifikats; None = keine EKU.
+        fn eku(pem: &str) -> Option<(bool, bool, bool)> {
+            let (_, p) = parse_x509_pem(pem.as_bytes()).unwrap();
+            let c = p.parse_x509().unwrap();
+            c.extended_key_usage()
+                .unwrap()
+                .map(|e| (e.value.client_auth, e.value.server_auth, e.value.any))
+        }
+        let dir = std::env::temp_dir().join(format!("a3k-eku-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let key = rcgen::KeyPair::generate().unwrap();
+
+        // Zweistufig (Team-Geräte): Blatt aus der Zwischen-CA.
+        let stufen = StufenCa::laden_oder_erzeugen(&dir).unwrap();
+        let kette = stufen
+            .ausweis_kette(&key.public_key_pem(), "Test-Gerät", "Antrag 3000 Team-Gerät", 90)
+            .unwrap();
+        assert_eq!(eku(&kette), Some((true, false, false)), "Blatt: nur clientAuth");
+        assert_eq!(eku(&stufen.zwischen_cert_pem), None, "Zwischen-CA ohne EKU");
+        assert_eq!(eku(&stufen.wurzel_cert_pem), None, "Wurzel ohne EKU");
+
+        // Einstufig (Förderer-CA).
+        let foerderer = Ca::laden_oder_erzeugen(&dir, "foerderer-ca", "Antrag 3000 Förderer-CA").unwrap();
+        let ausweis = foerderer
+            .signiere(&key.public_key_pem(), "Test-Förderer", "Antrag 3000 Förderer", 90)
+            .unwrap();
+        assert_eq!(eku(&ausweis), Some((true, false, false)), "Förderer: nur clientAuth");
+        assert_eq!(eku(&foerderer.cert_pem), None, "Förderer-CA ohne EKU");
+
+        if let Some(aus) = std::env::var_os("A3K_EKU_DIR") {
+            let aus = PathBuf::from(aus);
+            std::fs::create_dir_all(&aus).unwrap();
+            for (name, inhalt) in [
+                ("wurzel.pem", &stufen.wurzel_cert_pem),
+                ("zwischen.pem", &stufen.zwischen_cert_pem),
+                ("blatt-team.pem", &kette),
+                ("foerderer-ca.pem", &foerderer.cert_pem),
+                ("blatt-foerderer.pem", &ausweis),
+            ] {
+                std::fs::write(aus.join(name), inhalt).unwrap();
+            }
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Pfadlängen-Regel wie Go/Caddy (crypto/x509/verify.go, `isValid`): jede CA
+    /// der Kette darf höchstens so viele Zwischen-CAs unter sich haben, wie ihr
+    /// pathLenConstraint erlaubt – auch der Vertrauensanker. `kette` = Blatt
+    /// zuerst, Anker zuletzt; je Eintrag zählt das erste Zertifikat im PEM.
+    fn pfadlaenge_ok(kette: &[&str]) -> bool {
+        use x509_parser::pem::parse_x509_pem;
+        kette.iter().enumerate().skip(1).all(|(i, pem)| {
+            let (_, p) = parse_x509_pem(pem.as_bytes()).unwrap();
+            let c = p.parse_x509().unwrap();
+            let darunter = (i - 1) as u32; // Zwischen-CAs zwischen Blatt und dieser CA
+            match c.basic_constraints().unwrap() {
+                Some(bc) => {
+                    bc.value.ca && bc.value.path_len_constraint.map_or(true, |n| darunter <= n)
+                }
+                None => false,
+            }
+        })
+    }
+
+    /// Regression zur Störung seit 2026-07-17: Ausweise aus der Zwischen-CA müssen
+    /// die Kettenprüfung von Caddy bestehen. Neue Wurzel: erlaubt eine Zwischen-CA.
+    /// Bestehende Wurzel mit pathlen 0 (Produktion): nur über die Zwischen-CA als
+    /// eigenen Anker (Caddyfile.netcup) – genau das bildet der zweite Teil nach.
+    #[test]
+    fn kette_besteht_pfadlaengen_pruefung() {
+        let key = rcgen::KeyPair::generate().unwrap();
+
+        let dir = std::env::temp_dir().join(format!("a3k-pfad-neu-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let neu = StufenCa::laden_oder_erzeugen(&dir).unwrap();
+        let kette = neu
+            .ausweis_kette(&key.public_key_pem(), "Laptop", "Antrag 3000 Team-Gerät", 90)
+            .unwrap();
+        assert!(
+            pfadlaenge_ok(&[&kette, &neu.zwischen_cert_pem, &neu.wurzel_cert_pem]),
+            "neue Wurzel muss eine Zwischen-CA erlauben"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+
+        // Wie in Produktion: Wurzel existiert schon (pathlen 0), Zwischen-CA kommt dazu.
+        let dir = std::env::temp_dir().join(format!("a3k-pfad-alt-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        Ca::laden_oder_erzeugen(&dir, "service-ca", "Antrag 3000 Service-CA").unwrap();
+        let alt = StufenCa::laden_oder_erzeugen(&dir).unwrap();
+        let kette = alt
+            .ausweis_kette(&key.public_key_pem(), "Laptop", "Antrag 3000 Team-Gerät", 90)
+            .unwrap();
+        assert!(
+            !pfadlaenge_ok(&[&kette, &alt.zwischen_cert_pem, &alt.wurzel_cert_pem]),
+            "pathlen-0-Wurzel lehnt die Kette ab (so wie Caddy)"
+        );
+        assert!(
+            pfadlaenge_ok(&[&kette, &alt.zwischen_cert_pem]),
+            "mit der Zwischen-CA als Anker besteht die Kette"
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 
