@@ -12,6 +12,7 @@
 // Ausfuehren:  npm run sicherheit   (oder: node tools/sicherheit-test.mjs)
 // ============================================================
 
+import { readFileSync } from "node:fs";
 import { sichereWebUrl, sichereMailUrl, kappen, macDownloadUrl } from "../src/lib/sicherheit.js";
 
 let fehler = 0;
@@ -107,6 +108,37 @@ console.log("\nText-Kappung:");
 pruefe(kappen("x".repeat(1000), 200).length === 200, "lange Texte werden gekappt");
 pruefe(kappen("ab\tcd") === "abcd", "Steuerzeichen (Tab) werden entfernt");
 pruefe(kappen(null) === "", "null → leerer String");
+
+// CSP der Nutzer-App (src-tauri/tauri.conf.json). Zweite Verteidigungslinie
+// hinter der Schleuse oben: selbst wenn fremder Text doch als HTML im Fenster
+// landet, darf er kein Skript ausfuehren und nichts nach aussen schicken.
+// Das Start-Skript von SvelteKit erlaubt Tauri beim Bauen per Hash
+// ('sha256-…'), dafuer braucht es kein 'unsafe-inline' (Befund D-11, 09/2026).
+console.log("\nCSP der Nutzer-App:");
+const conf = JSON.parse(readFileSync(new URL("../src-tauri/tauri.conf.json", import.meta.url), "utf8"));
+const csp = conf?.app?.security?.csp;
+pruefe(typeof csp === "string" && csp.length > 0, "CSP ist gesetzt (nicht null)");
+const direktiven = Object.fromEntries(
+  String(csp ?? "")
+    .split(";")
+    .map((d) => d.trim().split(/\s+/))
+    .filter((t) => t[0])
+    .map(([name, ...quellen]) => [name, quellen]),
+);
+const skript = direktiven["script-src"] ?? direktiven["default-src"] ?? [];
+pruefe(skript.length > 0, "script-src (bzw. default-src) vorhanden");
+for (const verboten of ["'unsafe-inline'", "'unsafe-eval'", "*", "http:", "https:", "data:"]) {
+  pruefe(!skript.includes(verboten), `script-src ohne ${verboten}`);
+}
+pruefe((direktiven["default-src"] ?? []).join(" ") === "'self'", "default-src nur 'self'");
+// Datensouveraenitaet: das Fenster selbst darf nur mit der App (IPC) reden;
+// Netzverkehr laeuft ausschliesslich ueber das Rust-Backend.
+const erlaubtConnect = new Set(["'self'", "ipc:", "http://ipc.localhost"]);
+const connect = direktiven["connect-src"] ?? [];
+pruefe(
+  connect.length > 0 && connect.every((q) => erlaubtConnect.has(q)),
+  `connect-src nur 'self'/ipc (ist: ${connect.join(" ") || "–"})`,
+);
 
 if (fehler === 0) {
   console.log("\n✅ Sicherheits-Test bestanden: die URL-Schleuse haelt dicht.");
