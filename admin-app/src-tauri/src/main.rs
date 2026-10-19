@@ -780,6 +780,8 @@ fn foerderer_aktivierung_erstellen(
         .push(rcgen::DnType::CommonName, name.as_str());
     p.is_ca = rcgen::IsCa::NoCa;
     p.key_usages = vec![rcgen::KeyUsagePurpose::DigitalSignature];
+    // Nur zum Anmelden (mTLS-Client) – nicht als Server-Zertifikat nutzbar.
+    p.extended_key_usages = vec![rcgen::ExtendedKeyUsagePurpose::ClientAuth];
     p.not_before = rcgen::date_time_ymd(2024, 1, 1);
     p.not_after = rcgen::date_time_ymd(2035, 1, 1);
     let f_cert = p
