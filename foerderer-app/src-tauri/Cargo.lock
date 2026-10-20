@@ -43,7 +43,7 @@ dependencies = [
 
 [[package]]
 name = "antrag3000-foerderer"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "p256",
  "rcgen",
