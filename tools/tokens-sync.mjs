@@ -31,8 +31,8 @@ const quelle = path.join(wurzel, "design", "tokens.css");
 // Alle Oberflaechen, die die Tokens brauchen.
 const ziele = [
   "src/theme.css",
-  "foerderer-app/ui/index.html",
-  "admin-app/ui/index.html",
+  "foerderer-app/ui/style.css",
+  "admin-app/ui/style.css",
   "website/index.html",
   "website/impressum.html",
   "website/datenschutz.html",

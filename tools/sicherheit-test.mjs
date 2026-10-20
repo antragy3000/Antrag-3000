@@ -109,36 +109,49 @@ pruefe(kappen("x".repeat(1000), 200).length === 200, "lange Texte werden gekappt
 pruefe(kappen("ab\tcd") === "abcd", "Steuerzeichen (Tab) werden entfernt");
 pruefe(kappen(null) === "", "null → leerer String");
 
-// CSP der Nutzer-App (src-tauri/tauri.conf.json). Zweite Verteidigungslinie
-// hinter der Schleuse oben: selbst wenn fremder Text doch als HTML im Fenster
-// landet, darf er kein Skript ausfuehren und nichts nach aussen schicken.
-// Das Start-Skript von SvelteKit erlaubt Tauri beim Bauen per Hash
-// ('sha256-…'), dafuer braucht es kein 'unsafe-inline' (Befund D-11, 09/2026).
-console.log("\nCSP der Nutzer-App:");
-const conf = JSON.parse(readFileSync(new URL("../src-tauri/tauri.conf.json", import.meta.url), "utf8"));
-const csp = conf?.app?.security?.csp;
-pruefe(typeof csp === "string" && csp.length > 0, "CSP ist gesetzt (nicht null)");
-const direktiven = Object.fromEntries(
-  String(csp ?? "")
-    .split(";")
-    .map((d) => d.trim().split(/\s+/))
-    .filter((t) => t[0])
-    .map(([name, ...quellen]) => [name, quellen]),
-);
-const skript = direktiven["script-src"] ?? direktiven["default-src"] ?? [];
-pruefe(skript.length > 0, "script-src (bzw. default-src) vorhanden");
-for (const verboten of ["'unsafe-inline'", "'unsafe-eval'", "*", "http:", "https:", "data:"]) {
-  pruefe(!skript.includes(verboten), `script-src ohne ${verboten}`);
-}
-pruefe((direktiven["default-src"] ?? []).join(" ") === "'self'", "default-src nur 'self'");
-// Datensouveraenitaet: das Fenster selbst darf nur mit der App (IPC) reden;
-// Netzverkehr laeuft ausschliesslich ueber das Rust-Backend.
+// CSP aller drei Apps (tauri.conf.json). Zweite Verteidigungslinie hinter der
+// Schleuse oben: selbst wenn fremder Text doch als HTML im Fenster landet, darf
+// er kein Skript ausfuehren und nichts nach aussen schicken. Inline-Skripte
+// (Start-Skript von SvelteKit bzw. der <script>-Block in ui/index.html) erlaubt
+// Tauri beim Bauen per Hash ('sha256-…'), dafuer braucht es kein
+// 'unsafe-inline' (Befund D-11, Delta-Pentest 09/2026).
 const erlaubtConnect = new Set(["'self'", "ipc:", "http://ipc.localhost"]);
-const connect = direktiven["connect-src"] ?? [];
-pruefe(
-  connect.length > 0 && connect.every((q) => erlaubtConnect.has(q)),
-  `connect-src nur 'self'/ipc (ist: ${connect.join(" ") || "–"})`,
-);
+for (const app of ["src-tauri", "admin-app/src-tauri", "foerderer-app/src-tauri"]) {
+  console.log(`\nCSP ${app}:`);
+  const conf = JSON.parse(readFileSync(new URL(`../${app}/tauri.conf.json`, import.meta.url), "utf8"));
+  const csp = conf?.app?.security?.csp;
+  pruefe(typeof csp === "string" && csp.length > 0, "CSP ist gesetzt (nicht null)");
+  const direktiven = Object.fromEntries(
+    String(csp ?? "")
+      .split(";")
+      .map((d) => d.trim().split(/\s+/))
+      .filter((t) => t[0])
+      .map(([name, ...quellen]) => [name, quellen]),
+  );
+  const skript = direktiven["script-src"] ?? direktiven["default-src"] ?? [];
+  pruefe(skript.length > 0, "script-src (bzw. default-src) vorhanden");
+  for (const verboten of ["'unsafe-inline'", "'unsafe-eval'", "*", "http:", "https:", "data:"]) {
+    pruefe(!skript.includes(verboten), `script-src ohne ${verboten}`);
+  }
+  pruefe((direktiven["default-src"] ?? []).join(" ") === "'self'", "default-src nur 'self'");
+  // Datensouveraenitaet: das Fenster selbst darf nur mit der App (IPC) reden;
+  // Netzverkehr laeuft ausschliesslich ueber das Rust-Backend.
+  const connect = direktiven["connect-src"] ?? [];
+  pruefe(
+    connect.length > 0 && connect.every((q) => erlaubtConnect.has(q)),
+    `connect-src nur 'self'/ipc (ist: ${connect.join(" ") || "–"})`,
+  );
+}
+
+// Admin-/Foerderer-Oberflaeche: KEIN <style>-Block in index.html. Tauri haengt
+// an <style> beim Bauen eine Nonce; dann ignoriert die CSP 'unsafe-inline' und
+// jede style="…"-Angabe der Oberflaeche wird geblockt (Layout kaputt). Die
+// Gestaltung gehoert deshalb in ui/style.css.
+console.log("\nOberflaechen ohne <style>-Block:");
+for (const ui of ["admin-app/ui/index.html", "foerderer-app/ui/index.html"]) {
+  const html = readFileSync(new URL(`../${ui}`, import.meta.url), "utf8");
+  pruefe(!/<style[\s>]/i.test(html), `${ui} ohne <style> (Gestaltung in style.css)`);
+}
 
 if (fehler === 0) {
   console.log("\n✅ Sicherheits-Test bestanden: die URL-Schleuse haelt dicht.");
