@@ -4,7 +4,7 @@
   // ihrem Status. Klick auf eine Zeile öffnet die Detailansicht mit dem
   // Status-/Checklisten-Block. Warnung bei unverträglichen Förderungen.
   import { openUrl } from "@tauri-apps/plugin-opener";
-  import { sichereMailUrl } from "$lib/sicherheit";
+  import { sichereMailUrl, foerdererKontakt } from "$lib/sicherheit";
   import FoerderDetail from "./FoerderDetail.svelte";
   import EigeneFoerderung from "./EigeneFoerderung.svelte";
   import { LAENDER, SPARTEN, fristText } from "$lib/begriffe";
@@ -116,16 +116,23 @@
     ausgewaehlt = f;
   }
 
-  // Kontaktperson / E-Mail einer Förderung (aus dem Antrag-Eintrag).
-  function kontaktName(id) {
-    return (antraege[id]?.kontakt?.ansprechpartner ?? "").trim();
+  // Kontaktperson / E-Mail einer Förderung: zuerst die eigene Angabe im
+  // Antrag. Ist dort gar nichts eingetragen, die Kontaktperson laut
+  // Förderer aus dem Katalog – als GANZE Person, nie gemischt (sonst stünde
+  // der eigene Name neben der E-Mail einer anderen Person).
+  function kontaktFuer(f) {
+    const eigen = antraege[f.id]?.kontakt ?? {};
+    const name = (eigen.ansprechpartner ?? "").trim();
+    const email = (eigen.email ?? "").trim();
+    const telefon = (eigen.telefon ?? "").trim();
+    if (name || email || telefon) return { name, email, laut: false };
+    const k = foerdererKontakt(f);
+    if (!k) return { name: "", email: "", laut: false };
+    return { name: k.name || k.email || k.telefon, email: k.email, laut: true };
   }
-  function kontaktEmail(id) {
-    return (antraege[id]?.kontakt?.email ?? "").trim();
-  }
-  function mailSchreiben(id) {
+  function mailSchreiben(f) {
     // Adresse absichern, statt sie roh hinter „mailto:" zu hängen.
-    const mailto = sichereMailUrl(kontaktEmail(id));
+    const mailto = sichereMailUrl(kontaktFuer(f).email);
     if (mailto) openUrl(mailto);
   }
 
@@ -248,14 +255,14 @@
             </button>
             <button
               class="mail"
-              class:aus={!kontaktEmail(f.id)}
-              title={kontaktEmail(f.id)
-                ? "E-Mail an " + (kontaktName(f.id) || "Kontaktperson") + " schreiben"
+              class:aus={!kontaktFuer(f).email}
+              title={kontaktFuer(f).email
+                ? "E-Mail an " + (kontaktFuer(f).name || "Kontaktperson") + " schreiben"
                 : "noch keine Emailadresse eingetragen"}
               aria-label="E-Mail an Kontaktperson"
               onclick={(e) => {
                 e.stopPropagation();
-                mailSchreiben(f.id);
+                mailSchreiben(f);
               }}
             >
               ✉
@@ -311,8 +318,8 @@
               </div>
             </div>
 
-            <p class="kontaktperson" class:leer-kontakt={!kontaktName(f.id)}>
-              👤 {kontaktName(f.id) || "keine Kontaktperson"}
+            <p class="kontaktperson" class:leer-kontakt={!kontaktFuer(f).name}>
+              👤 {kontaktFuer(f).name || "keine Kontaktperson"}{#if kontaktFuer(f).laut}<span class="laut"> · laut Förderer</span>{/if}{#if neu(f.id, "kontakt") && kontaktFuer(f).laut}<span class="neu-feld">NEU</span>{/if}
             </p>
 
             {#if konfliktNamen(f).length}
@@ -618,6 +625,10 @@
   }
   .kontaktperson.leer-kontakt {
     color: var(--grau-4);
+  }
+  .kontaktperson .laut {
+    color: var(--text-muted);
+    font-style: italic;
   }
   .konflikt-zeile {
     margin: 8px 0 0;

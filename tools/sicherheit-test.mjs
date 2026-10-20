@@ -13,7 +13,7 @@
 // ============================================================
 
 import { readFileSync } from "node:fs";
-import { sichereWebUrl, sichereMailUrl, kappen, macDownloadUrl } from "../src/lib/sicherheit.js";
+import { sichereWebUrl, sichereMailUrl, kappen, macDownloadUrl, foerdererKontakt } from "../src/lib/sicherheit.js";
 
 let fehler = 0;
 function pruefe(bedingung, beschreibung) {
@@ -108,6 +108,27 @@ console.log("\nText-Kappung:");
 pruefe(kappen("x".repeat(1000), 200).length === 200, "lange Texte werden gekappt");
 pruefe(kappen("ab\tcd") === "abcd", "Steuerzeichen (Tab) werden entfernt");
 pruefe(kappen(null) === "", "null → leerer String");
+
+// Kontaktperson laut Foerderer (Katalog-Feld `kontakt`, Fremddaten).
+console.log("\nKontaktperson laut Foerderer:");
+const kOk = foerdererKontakt({ kontakt: { name: "Dr. A. Berg", email: "berg@fonds.example", telefon: "030 123" } });
+pruefe(kOk?.name === "Dr. A. Berg" && kOk?.email === "berg@fonds.example" && kOk?.telefon === "030 123", "gueltiger Kontakt bleibt erhalten");
+pruefe(foerdererKontakt({}) === null, "ohne kontakt → null");
+pruefe(foerdererKontakt({ kontakt: { name: " ", email: "", telefon: "" } }) === null, "nur Leerzeichen → null");
+pruefe(foerdererKontakt({ kontakt: "Berg" }) === null, "kontakt als Text statt Objekt → null");
+pruefe(foerdererKontakt({ kontakt: ["x"] }) === null, "kontakt als Liste → null");
+for (const boese of [
+  "javascript:alert(1)",
+  "a@b.de?subject=x&body=y",
+  "a@b.de,c@d.de",
+  "a@b.de\nBcc: x@y.de",
+  "<a@b.de>",
+]) {
+  pruefe(foerdererKontakt({ kontakt: { name: "X", email: boese } })?.email === "", `E-Mail verworfen: ${JSON.stringify(boese)}`);
+}
+pruefe(foerdererKontakt({ kontakt: { name: "x".repeat(500) } })?.name.length === 120, "Name auf 120 Zeichen gekappt");
+pruefe(foerdererKontakt({ kontakt: { telefon: "1".repeat(200) } })?.telefon.length === 50, "Telefon auf 50 Zeichen gekappt");
+pruefe(foerdererKontakt({ kontakt: { name: "A\u0007B" } })?.name === "AB", "Steuerzeichen im Namen entfernt");
 
 // CSP aller drei Apps (tauri.conf.json). Zweite Verteidigungslinie hinter der
 // Schleuse oben: selbst wenn fremder Text doch als HTML im Fenster landet, darf

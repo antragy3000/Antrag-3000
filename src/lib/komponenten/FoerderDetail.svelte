@@ -3,7 +3,7 @@
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { LAENDER, SPARTEN, PROJEKTARTEN, TRAEGERSCHAFT, fristText, anteilText } from "$lib/begriffe";
   import { regionName } from "$lib/daten/orte.js";
-  import { sichereWebUrl } from "$lib/sicherheit";
+  import { sichereWebUrl, sichereMailUrl, foerdererKontakt } from "$lib/sicherheit";
   import AntragBlock from "./AntragBlock.svelte";
 
   let {
@@ -38,6 +38,14 @@
   // ist deshalb nicht vertrauenswürdig: nur eine echte http/https-Adresse
   // wird ans Betriebssystem zum Öffnen gegeben (sonst null).
   let webseiteSicher = $derived(sichereWebUrl(f.webseite));
+
+  // Kontaktperson laut Förderer (aus der Förderer-App, über den Katalog) –
+  // ebenfalls Fremddaten, daher gekappt und mit geprüfter E-Mail.
+  let kontakt = $derived(foerdererKontakt(f));
+  function mailAnKontakt() {
+    const mailto = sichereMailUrl(kontakt?.email);
+    if (mailto) openUrl(mailto);
+  }
 </script>
 
 <div class="schleier" onclick={schliessen} role="presentation">
@@ -84,6 +92,18 @@
 
       <dt>Einreichung</dt>
       <dd>{fristText(f)}{#if neu("fristen", "weiche_kriterien.zeitpunkt")}<span class="neu-feld">NEU</span>{/if}</dd>
+
+      {#if kontakt}
+        <dt>Kontakt laut Förderer</dt>
+        <dd class="kontakt">
+          {#if kontakt.name}<span>{kontakt.name}</span>{/if}
+          {#if kontakt.email}
+            <button class="mail-link" onclick={mailAnKontakt} title="E-Mail schreiben">✉ {kontakt.email}</button>
+          {/if}
+          {#if kontakt.telefon}<span>☎ {kontakt.telefon}</span>{/if}
+          {#if neu("kontakt")}<span class="neu-feld">NEU</span>{/if}
+        </dd>
+      {/if}
 
       <dt>Wohnsitz-Anforderung</dt>
       <dd>
@@ -327,6 +347,25 @@
   }
   .warn {
     color: var(--gefahr-text);
+  }
+  .kontakt {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .mail-link {
+    padding: 0;
+    font: inherit;
+    color: var(--link);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+  .mail-link:hover {
+    text-decoration: underline;
   }
 
   .datenstand {

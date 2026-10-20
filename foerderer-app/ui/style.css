@@ -142,6 +142,7 @@ button.mini.gefahr { color: var(--gefahr-text); border-color: #f2c7c1; }
 .karte.voll { grid-column: 1 / -1; }
 h3 { font-size: 1.02rem; margin: 0 0 4px; font-weight: 600; }
 .karte .hinweis { color: var(--leise); font-size: 0.85rem; margin: 0 0 6px; }
+.karte .hinweis.vorbelegt { padding: 6px 10px; border-left: 3px solid var(--gold-tint); }
 
 label.feld { display: block; font-size: 0.82rem; font-weight: 600; color: var(--grau); margin: 14px 0 5px; }
 label.feld .stern { color: var(--gold-text); }

@@ -118,3 +118,19 @@ export function kappen(roh, max = 500) {
   if (s.length > max) s = s.slice(0, max);
   return s;
 }
+
+/// Kontaktperson eines Programms laut Foerderer (Feld `kontakt` im Katalog,
+/// gepflegt in der Foerderer-App). Fremddaten: Texte werden gekappt, die
+/// E-Mail bleibt nur, wenn sie die strenge mailto-Pruefung besteht (sonst
+/// leer – kein Knopf, der ins Leere oder woanders hin fuehrt). Gibt
+/// {name, email, telefon} oder null, wenn nichts Brauchbares da ist.
+export function foerdererKontakt(f) {
+  const k = f?.kontakt;
+  if (!k || typeof k !== "object" || Array.isArray(k)) return null;
+  const name = kappen(k.name, 120).trim();
+  const rohMail = kappen(k.email, 200).trim();
+  const email = sichereMailUrl(rohMail) ? rohMail : "";
+  const telefon = kappen(k.telefon, 50).trim();
+  if (!name && !email && !telefon) return null;
+  return { name, email, telefon };
+}

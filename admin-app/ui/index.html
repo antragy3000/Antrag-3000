@@ -464,11 +464,17 @@
         const badge = zurueck ? farbBadge("zurückgezogen", "#ca3521")
           : (p.offen ? farbBadge("offen", "#b26a00") : farbBadge("freigegeben", "#0a7d43"));
         const btnText = zurueck ? "Aus Katalog entfernen" : "In Katalog freigeben";
+        // Kontaktperson wird mit dem Programm veröffentlicht – vor der Freigabe zeigen.
+        const k = (p.inhalt && p.inhalt.kontakt && typeof p.inhalt.kontakt === "object") ? p.inhalt.kontakt : {};
+        const kTeile = [k.name, k.email, k.telefon].map((x) => String(x || "").trim()).filter(Boolean);
+        const kontaktZeile = kTeile.length
+          ? '<div class="dezent">Kontakt: ' + kTeile.map((x) => escape(x)).join(" · ") + "</div>" : "";
         const knopf = (p.offen || zurueck)
           ? '<button class="zweit" data-frei="' + p.foerderer_id + "|" + escape(p.programm_id) + '">' + btnText + "</button>"
           : "";
         return '<div style="' + _reihe + '"><div style="flex:1"><strong>' + name + "</strong>" + badge +
-          '<div class="dezent">' + escape(p.foerderer_name) + " · geändert: " + zeit(p.geaendert_am) + "</div></div>" +
+          '<div class="dezent">' + escape(p.foerderer_name) + " · geändert: " + zeit(p.geaendert_am) + "</div>" +
+          kontaktZeile + "</div>" +
           knopf + "</div>";
       }).join("");
     }

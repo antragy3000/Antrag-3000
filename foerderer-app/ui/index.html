@@ -153,6 +153,22 @@
       </section>
 
       <section class="karte">
+        <h3>Kontaktperson für dieses Programm</h3>
+        <p class="hinweis">An wen können sich Antragstellende mit Fragen wenden? Alle Felder optional.
+          <strong>Diese Angaben werden mit dem Programm veröffentlicht</strong> und sind für alle
+          Nutzer:innen von Antrag 3000 sichtbar – bitte nur mit Einverständnis der Person eintragen.</p>
+        <p class="hinweis vorbelegt" id="kontakt-vorbelegt" hidden>Aus Ihren Stammdaten übernommen. Bitte prüfen
+          und anpassen, falls für dieses Programm jemand anderes zuständig ist.</p>
+        <label class="feld" for="p-kontakt-name">Name</label>
+        <input type="text" id="p-kontakt-name" maxlength="120" placeholder="z. B. Dr. Anna Berg" />
+        <label class="feld" for="p-kontakt-email">E-Mail</label>
+        <input type="email" id="p-kontakt-email" maxlength="200" placeholder="name@…" />
+        <p class="feld-fehler" id="fehler-p-kontakt-email">Bitte eine gültige E-Mail-Adresse angeben (z. B. name@foerderer.de) oder das Feld leer lassen.</p>
+        <label class="feld" for="p-kontakt-telefon">Telefon</label>
+        <input type="text" id="p-kontakt-telefon" maxlength="50" placeholder="z. B. 030 123 456" />
+      </section>
+
+      <section class="karte">
         <h3>Wer kann sich bewerben?</h3>
         <p class="hinweis">Mehrfachauswahl möglich. Nichts angehakt = keine Einschränkung.</p>
         <label class="feld">Trägerschaft</label>
@@ -423,6 +439,7 @@
     function progSpeichern() { localStorage.setItem(K_PROG, JSON.stringify(programme)); }
     function neueId() { return "p-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,7); }
     function leeresProgramm() { return { id:neueId(), name:"", webseite:"", beschreibung:"",
+      kontakt:{ name:"", email:"", telefon:"" },
       harte_kriterien:{ wohnsitz:[], wohnsitz_regionen:[], wohnsitz_staedte:[], durchfuehrungsort:[], durchfuehrungsort_regionen:[], durchfuehrungsort_staedte:[], traegerschaft:[], studentisch_erlaubt:true },
       weiche_kriterien:{ sparten:[], projektarten:[], budget_min:null, budget_max:null, zeitpunkt:"laufend" },
       fristen:[], frist_hinweis:"", foerderhoehe_text:"", max_anteil_prozent:null, anteil_ausnahme:false, checkliste_vorschlag:[] }; }
@@ -566,6 +583,18 @@
       $("editorTitel").textContent = index == null ? "Neues Förderprogramm" : "Förderprogramm bearbeiten";
       $("p-name").value = p.name || ""; $("p-name").classList.remove("fehlt"); $("fehler-p-name").classList.remove("zeigen");
       $("p-webseite").value = p.webseite || ""; $("p-beschreibung").value = p.beschreibung || "";
+      // Kontaktperson: bei einem NEUEN Programm aus den Stammdaten vorbelegen
+      // (mit sichtbarem Hinweis); bestehende Programme behalten ihre Angabe.
+      const k = { name:"", email:"", telefon:"", ...(p.kontakt || {}) };
+      let vorbelegt = false;
+      if (index == null) {
+        const w = orgLaden().web;
+        k.name = w.ansprechperson || ""; k.email = w.email || ""; k.telefon = w.telefon || "";
+        vorbelegt = !!(k.name || k.email || k.telefon);
+      }
+      $("p-kontakt-name").value = k.name; $("p-kontakt-email").value = k.email; $("p-kontakt-telefon").value = k.telefon;
+      $("kontakt-vorbelegt").hidden = !vorbelegt;
+      $("p-kontakt-email").classList.remove("fehlt"); $("fehler-p-kontakt-email").classList.remove("zeigen");
       $("p-foerderhoehe").value = p.foerderhoehe_text || "";
       $("p-budget-min").value = p.weiche_kriterien.budget_min ?? "";
       $("p-budget-max").value = p.weiche_kriterien.budget_max ?? "";
@@ -596,6 +625,7 @@
     function sammleProgramm() {
       const p = editIndex == null ? leeresProgramm() : structuredClone(programme[editIndex]);
       p.name = $("p-name").value.trim(); p.webseite = $("p-webseite").value.trim(); p.beschreibung = $("p-beschreibung").value.trim();
+      p.kontakt = { name: $("p-kontakt-name").value.trim(), email: $("p-kontakt-email").value.trim(), telefon: $("p-kontakt-telefon").value.trim() };
       p.foerderhoehe_text = $("p-foerderhoehe").value.trim();
       p.checkliste_vorschlag = [...editorDok];
       p.max_anteil_prozent = zahlOderNull($("p-anteil").value); p.anteil_ausnahme = $("p-anteil-ausnahme").checked;
@@ -624,8 +654,13 @@
       p.fristen = fristen;
       return p;
     }
+    // Gleiche strenge Form wie die Nutzer-App (sichereMailUrl): eine Adresse,
+    // die hier durchgeht, bekommt dort auch ihren E-Mail-Knopf.
+    const MAIL_FORM = /^[^@\s,;?&<>"']+@[^@\s,;?&<>"']+\.[^@\s,;?&<>"']+$/;
     function speichernProgramm() {
       if ($("p-name").value.trim() === "") { $("p-name").classList.add("fehlt"); $("fehler-p-name").classList.add("zeigen"); $("p-name").scrollIntoView({behavior:"smooth",block:"center"}); return; }
+      const mail = $("p-kontakt-email").value.trim();
+      if (mail && !MAIL_FORM.test(mail)) { $("p-kontakt-email").classList.add("fehlt"); $("fehler-p-kontakt-email").classList.add("zeigen"); $("p-kontakt-email").scrollIntoView({behavior:"smooth",block:"center"}); return; }
       const p = sammleProgramm();
       if (editIndex == null) programme.push(p); else programme[editIndex] = p;
       progSpeichern(); zeigeEditor(false); renderListe();
@@ -634,6 +669,7 @@
     $("abbrechenBtn").addEventListener("click", () => zeigeEditor(false));
     $("speichernProg").addEventListener("click", speichernProgramm);
     $("p-name").addEventListener("input", () => { $("p-name").classList.remove("fehlt"); $("fehler-p-name").classList.remove("zeigen"); });
+    $("p-kontakt-email").addEventListener("input", () => { $("p-kontakt-email").classList.remove("fehlt"); $("fehler-p-kontakt-email").classList.remove("zeigen"); });
 
     // ================= Verbindung (gehostetes Modell) =================
     function tauriCore() { const t = window.__TAURI__; return (t && t.core) ? t.core : null; }
