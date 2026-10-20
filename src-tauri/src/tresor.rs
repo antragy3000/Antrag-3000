@@ -43,6 +43,10 @@ const KOPF_LAENGE: usize = 8 + 1 + SALT_LAENGE + NONCE_LAENGE;
 pub struct Geheimnis {
     schluessel: [u8; 32],
     salt: [u8; SALT_LAENGE],
+    /// true, wenn diese Sitzung ueber "Auf diesem Geraet merken" (ohne
+    /// Passwort) geoeffnet wurde. Nur dann darf ein neues Passwort ohne das
+    /// alte gesetzt werden (tresor_passwort_neu_setzen).
+    ueber_merken: bool,
 }
 
 /// Beim Verwerfen (Sperren oder Programmende) den Schluessel sicher mit
@@ -159,7 +163,7 @@ pub fn tresor_erstellen(
 
     // Schluessel im Arbeitsspeicher behalten, damit Speichern ohne
     // erneute Passworteingabe moeglich ist.
-    *state.geheim.lock().unwrap() = Some(Geheimnis { schluessel, salt });
+    *state.geheim.lock().unwrap() = Some(Geheimnis { schluessel, salt, ueber_merken: false });
     // Lokale Kopien von Schluessel und Passwort ueberschreiben (Audit A1);
     // der Schluessel im Tresor-Zustand bleibt erhalten.
     schluessel.zeroize();
@@ -206,7 +210,7 @@ pub fn tresor_entsperren(
     let daten = String::from_utf8(klartext)
         .map_err(|_| "Tresor-Inhalt ist kein gueltiger Text.".to_string())?;
 
-    *state.geheim.lock().unwrap() = Some(Geheimnis { schluessel, salt });
+    *state.geheim.lock().unwrap() = Some(Geheimnis { schluessel, salt, ueber_merken: false });
     schluessel.zeroize(); // lokale Kopie ueberschreiben (Audit A1).
     Ok(daten)
 }
@@ -232,6 +236,184 @@ pub fn tresor_speichern(
 #[tauri::command]
 pub fn tresor_sperren(state: tauri::State<TresorZustand>) {
     *state.geheim.lock().unwrap() = None;
+}
+
+/// Womit der Zugang vor einem Passwortwechsel nachgewiesen wird.
+enum Nachweis<'a> {
+    /// Das bisherige Passwort (normaler Weg).
+    Passwort(&'a str),
+    /// Der Schluessel der offenen Sitzung – nur erlaubt, wenn sie ueber
+    /// "Auf diesem Geraet merken" geoeffnet wurde (Passwort vergessen).
+    Schluessel(&'a [u8; 32]),
+}
+
+/// Kern von "Passwort aendern" (ohne Dateisystem, damit testbar):
+/// prueft den Nachweis am vorhandenen Dateiinhalt (das AES-GCM-Siegel
+/// muss passen) und verschluesselt `daten` mit einem NEUEN Salt und dem aus
+/// dem NEUEN Passwort abgeleiteten Schluessel. Liefert den neuen Dateiinhalt
+/// samt Schluessel und Salt. Fehlercode "falsches_passwort" wie beim
+/// Entsperren.
+fn mit_neuem_passwort(
+    inhalt_alt: &[u8],
+    nachweis: Nachweis,
+    neues_passwort: &str,
+    daten: &str,
+) -> Result<(Vec<u8>, [u8; 32], [u8; SALT_LAENGE]), String> {
+    if neues_passwort.chars().count() < 8 {
+        return Err("Das neue Passwort muss mindestens 8 Zeichen haben.".into());
+    }
+    if inhalt_alt.len() < KOPF_LAENGE || &inhalt_alt[..8] != MAGIC || inhalt_alt[8] != VERSION {
+        return Err("Die Tresor-Datei ist beschaedigt oder kein Antrag-3000-Tresor.".into());
+    }
+    let salt_alt = &inhalt_alt[9..9 + SALT_LAENGE];
+    let nonce = &inhalt_alt[9 + SALT_LAENGE..KOPF_LAENGE];
+    let mut schluessel_alt = match nachweis {
+        Nachweis::Passwort(p) => schluessel_ableiten(p, salt_alt)?,
+        Nachweis::Schluessel(k) => *k,
+    };
+    let pruefung = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&schluessel_alt))
+        .decrypt(Nonce::from_slice(nonce), &inhalt_alt[KOPF_LAENGE..]);
+    schluessel_alt.zeroize();
+    if let Ok(mut klartext) = pruefung {
+        klartext.zeroize();
+    } else {
+        return Err("falsches_passwort".into());
+    }
+
+    // Frisches Salt: der neue Schluessel hat nichts mit dem alten gemein.
+    let mut salt = [0u8; SALT_LAENGE];
+    OsRng.fill_bytes(&mut salt);
+    let schluessel = schluessel_ableiten(neues_passwort, &salt)?;
+    let inhalt = verschluesseln(daten, &schluessel, &salt)?;
+    Ok((inhalt, schluessel, salt))
+}
+
+/// Tresor-Passwort aendern (Tresor muss offen sein) – mit dem bisherigen
+/// Passwort als Nachweis. `daten` ist der aktuelle Datenstand (wie bei
+/// tresor_speichern). Rueckgabe siehe passwort_abschliessen.
+#[tauri::command]
+pub fn tresor_passwort_aendern(
+    app: tauri::AppHandle,
+    state: tauri::State<TresorZustand>,
+    mut altes_passwort: String,
+    mut neues_passwort: String,
+    daten: String,
+) -> Result<bool, String> {
+    let mut geheim = state.geheim.lock().unwrap();
+    if geheim.is_none() {
+        altes_passwort.zeroize();
+        neues_passwort.zeroize();
+        return Err("Der Tresor ist nicht entsperrt.".into());
+    }
+    let pfad = tresor_pfad(&app)?;
+    let inhalt_alt = fs::read(&pfad).map_err(|e| format!("Tresor nicht lesbar: {e}"))?;
+    let ergebnis =
+        mit_neuem_passwort(&inhalt_alt, Nachweis::Passwort(&altes_passwort), &neues_passwort, &daten);
+    altes_passwort.zeroize();
+    neues_passwort.zeroize();
+    let (inhalt, schluessel, salt) = ergebnis?;
+    passwort_abschliessen(&app, &mut geheim, &pfad, inhalt, schluessel, salt)
+}
+
+/// Wurde die aktuelle Sitzung ueber "Auf diesem Geraet merken" geoeffnet?
+/// (Nur fuer die Anzeige – erzwungen wird es in tresor_passwort_neu_setzen.)
+#[tauri::command]
+pub fn tresor_ueber_merken(state: tauri::State<TresorZustand>) -> bool {
+    state.geheim.lock().unwrap().as_ref().map(|g| g.ueber_merken).unwrap_or(false)
+}
+
+/// Passwort vergessen, aber per "Auf diesem Geraet merken" entsperrt: neues
+/// Passwort festlegen OHNE das alte. Nur erlaubt, wenn diese Sitzung
+/// tatsaechlich ueber das Merken geoeffnet wurde. Begruendung: Wer an diesem
+/// Windows-Konto sitzt, kommt ueber das Merken ohnehin an alle Daten (die
+/// bewusste Abwaegung von "Auf diesem Geraet merken") – die Abfrage des alten
+/// Passworts schuetzt in genau dieser Lage nicht zusaetzlich. Als Nachweis
+/// dient der Schluessel der offenen Sitzung; er muss die Tresor-Datei oeffnen.
+#[tauri::command]
+pub fn tresor_passwort_neu_setzen(
+    app: tauri::AppHandle,
+    state: tauri::State<TresorZustand>,
+    mut neues_passwort: String,
+    daten: String,
+) -> Result<bool, String> {
+    let mut geheim = state.geheim.lock().unwrap();
+    let mut sitzungs_schluessel = match geheim.as_ref() {
+        Some(g) if g.ueber_merken => g.schluessel,
+        Some(_) => {
+            neues_passwort.zeroize();
+            return Err("nur_ueber_merken".into());
+        }
+        None => {
+            neues_passwort.zeroize();
+            return Err("Der Tresor ist nicht entsperrt.".into());
+        }
+    };
+    let ergebnis = tresor_pfad(&app).and_then(|pfad| {
+        let alt = fs::read(&pfad).map_err(|e| format!("Tresor nicht lesbar: {e}"))?;
+        let neu = mit_neuem_passwort(&alt, Nachweis::Schluessel(&sitzungs_schluessel), &neues_passwort, &daten)?;
+        Ok((pfad, neu))
+    });
+    sitzungs_schluessel.zeroize();
+    neues_passwort.zeroize();
+    let (pfad, (inhalt, schluessel, salt)) = ergebnis?;
+    passwort_abschliessen(&app, &mut geheim, &pfad, inhalt, schluessel, salt)
+}
+
+/// Gemeinsamer Abschluss beider Wege:
+///  - neue Datei schreiben und zur Kontrolle mit dem neuen Schluessel oeffnen,
+///  - die Vorversion .bak LOESCHEN – sie waere noch mit dem alten Passwort
+///    lesbar, und genau das soll ein Passwortwechsel verhindern,
+///  - "Auf diesem Geraet merken" mit dem neuen Schluessel erneuern,
+///  - den Schluessel der Sitzung austauschen.
+/// Rueckgabe: true, wenn das Merken erneuert wurde (bzw. keins aktiv war);
+/// false, wenn es entfernt werden musste.
+fn passwort_abschliessen(
+    app: &tauri::AppHandle,
+    geheim: &mut Option<Geheimnis>,
+    pfad: &PathBuf,
+    inhalt: Vec<u8>,
+    mut schluessel: [u8; 32],
+    salt: [u8; SALT_LAENGE],
+) -> Result<bool, String> {
+    sicher_schreiben(pfad, &inhalt)?;
+    // Kontrolle: die geschriebene Datei muss sich mit dem neuen Schluessel oeffnen.
+    let geschrieben = fs::read(pfad).map_err(|e| format!("Kontrolle nicht lesbar: {e}"))?;
+    let kontrolle = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&schluessel)).decrypt(
+        Nonce::from_slice(&geschrieben[9 + SALT_LAENGE..KOPF_LAENGE]),
+        &geschrieben[KOPF_LAENGE..],
+    );
+    match kontrolle {
+        Ok(mut k) => k.zeroize(),
+        Err(_) => {
+            // Sollte nie passieren: alte Fassung aus der .bak zurueckholen.
+            let bak = pfad.with_extension("enc.bak");
+            let _ = fs::rename(&bak, pfad);
+            schluessel.zeroize();
+            return Err("Kontrolle fehlgeschlagen – das alte Passwort gilt weiter.".into());
+        }
+    }
+    let bak = pfad.with_extension("enc.bak");
+    if bak.exists() {
+        fs::remove_file(&bak).map_err(|e| format!("Alte Vorversion nicht loeschbar: {e}"))?;
+    }
+
+    // "Merken" erneuern, falls aktiv – sonst passte es nicht mehr zum Tresor.
+    let m_pfad = merken_pfad(app)?;
+    let mut merken_ok = true;
+    if m_pfad.exists() {
+        let erneuert = dpapi_schuetzen(&schluessel)
+            .and_then(|geschuetzt| fs::write(&m_pfad, geschuetzt).map_err(|e| e.to_string()));
+        if erneuert.is_err() {
+            let _ = fs::remove_file(&m_pfad);
+            merken_ok = false;
+        }
+    }
+
+    // Der "vergessen"-Weg bleibt offen, solange das Merken noch gilt.
+    let ueber_merken = geheim.as_ref().map(|g| g.ueber_merken).unwrap_or(false) && merken_ok;
+    *geheim = Some(Geheimnis { schluessel, salt, ueber_merken });
+    schluessel.zeroize(); // lokale Kopie (Audit A1)
+    Ok(merken_ok)
 }
 
 /// "Neu aufsetzen" bei Passwortverlust: Die alte Datei wird NICHT
@@ -379,7 +561,7 @@ pub fn merken_entsperren(
     let daten = String::from_utf8(klartext)
         .map_err(|_| "Tresor-Inhalt ist kein gueltiger Text.".to_string())?;
 
-    *state.geheim.lock().unwrap() = Some(Geheimnis { schluessel, salt });
+    *state.geheim.lock().unwrap() = Some(Geheimnis { schluessel, salt, ueber_merken: true });
     Ok(daten)
 }
 
@@ -463,4 +645,82 @@ fn dpapi_schuetzen(_daten: &[u8]) -> Result<Vec<u8>, String> {
 #[cfg(not(target_os = "windows"))]
 fn dpapi_entschuetzen(_daten: &[u8]) -> Result<Vec<u8>, String> {
     Err("\"Auf diesem Geraet merken\" ist derzeit nur unter Windows verfuegbar.".into())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Hilfsfunktion: Dateiinhalt wie tresor_erstellen ihn schreibt.
+    fn tresor_inhalt(passwort: &str, daten: &str) -> Vec<u8> {
+        let mut salt = [0u8; SALT_LAENGE];
+        OsRng.fill_bytes(&mut salt);
+        let schluessel = schluessel_ableiten(passwort, &salt).unwrap();
+        verschluesseln(daten, &schluessel, &salt).unwrap()
+    }
+
+    /// Entschluesselt einen Dateiinhalt mit einem Passwort (wie tresor_entsperren).
+    fn oeffnen(inhalt: &[u8], passwort: &str) -> Option<String> {
+        let salt = &inhalt[9..9 + SALT_LAENGE];
+        let nonce = &inhalt[9 + SALT_LAENGE..KOPF_LAENGE];
+        let schluessel = schluessel_ableiten(passwort, salt).ok()?;
+        let klar = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&schluessel))
+            .decrypt(Nonce::from_slice(nonce), &inhalt[KOPF_LAENGE..])
+            .ok()?;
+        String::from_utf8(klar).ok()
+    }
+
+    #[test]
+    fn passwort_aendern_neues_gilt_altes_nicht_mehr() {
+        let alt = tresor_inhalt("altes-passwort", "{\"stand\":1}");
+        let (neu, _schluessel, salt) =
+            mit_neuem_passwort(&alt, Nachweis::Passwort("altes-passwort"), "neues-passwort", "{\"stand\":2}")
+                .unwrap();
+        assert_eq!(oeffnen(&neu, "neues-passwort").as_deref(), Some("{\"stand\":2}"));
+        assert!(oeffnen(&neu, "altes-passwort").is_none(), "altes Passwort darf nicht mehr gehen");
+        assert_ne!(&alt[9..9 + SALT_LAENGE], &salt[..], "neues Salt");
+        assert_eq!(&neu[9..9 + SALT_LAENGE], &salt[..]);
+    }
+
+    #[test]
+    fn passwort_aendern_mit_falschem_alten_passwort_scheitert() {
+        let alt = tresor_inhalt("altes-passwort", "{}");
+        let fehler =
+            mit_neuem_passwort(&alt, Nachweis::Passwort("falsch-geraten"), "neues-passwort", "{}").unwrap_err();
+        assert_eq!(fehler, "falsches_passwort");
+    }
+
+    #[test]
+    fn passwort_aendern_verlangt_mindestlaenge() {
+        let alt = tresor_inhalt("altes-passwort", "{}");
+        assert!(mit_neuem_passwort(&alt, Nachweis::Passwort("altes-passwort"), "kurz", "{}").is_err());
+    }
+
+    #[test]
+    fn passwort_aendern_weist_fremde_datei_ab() {
+        let fremd = b"keine tresor-datei, viel zu kurz";
+        assert!(mit_neuem_passwort(fremd, Nachweis::Passwort("a"), "neues-passwort", "{}").is_err());
+    }
+
+    #[test]
+    fn passwort_neu_setzen_mit_sitzungsschluessel() {
+        // Wie nach "Auf diesem Geraet merken": Schluessel bekannt, Passwort
+        // vergessen. Der richtige Schluessel erlaubt den Wechsel, ein
+        // falscher nicht.
+        let mut salt = [0u8; SALT_LAENGE];
+        OsRng.fill_bytes(&mut salt);
+        let schluessel = schluessel_ableiten("vergessenes-passwort", &salt).unwrap();
+        let alt = verschluesseln("{\"stand\":1}", &schluessel, &salt).unwrap();
+
+        let (neu, _, _) =
+            mit_neuem_passwort(&alt, Nachweis::Schluessel(&schluessel), "neues-passwort", "{\"stand\":1}")
+                .unwrap();
+        assert_eq!(oeffnen(&neu, "neues-passwort").as_deref(), Some("{\"stand\":1}"));
+        assert!(oeffnen(&neu, "vergessenes-passwort").is_none());
+
+        let falsch = [7u8; 32];
+        let fehler =
+            mit_neuem_passwort(&alt, Nachweis::Schluessel(&falsch), "neues-passwort", "{}").unwrap_err();
+        assert_eq!(fehler, "falsches_passwort");
+    }
 }

@@ -20,6 +20,7 @@
   import KatalogUpdate from "$lib/komponenten/KatalogUpdate.svelte";
   import BetriebsartHinweis from "$lib/komponenten/BetriebsartHinweis.svelte";
   import Zusammenarbeit from "$lib/komponenten/Zusammenarbeit.svelte";
+  import PasswortAendern from "$lib/komponenten/PasswortAendern.svelte";
   import { dokumentAnlegen } from "$lib/arbeitsdokumente";
   import UpdatePruefung from "$lib/komponenten/UpdatePruefung.svelte";
   import { check as appUpdateCheck } from "@tauri-apps/plugin-updater";
@@ -1457,6 +1458,7 @@
   // Vor dem Umstellen erklären, was die Betriebsart bedeutet – außer der
   // Hinweis wurde mit „nicht mehr anzeigen" abgeschaltet (Merker im Tresor).
   let modusHinweisZiel = $state(null);
+  let passwortOffen = $state(false); // Dialog „Tresor-Passwort ändern"
   function modusWaehlen(m) {
     if (daten.modus === m) return;
     if (daten.modusHinweisAus) {
@@ -2297,6 +2299,14 @@
               foerderungLabel={boardFoerderungLabel}
             />
             {/if}
+
+            <div class="einzel-panel passwort-karte">
+              <h2>Tresor-Passwort</h2>
+              <p class="dezent">Dein Passwort schützt alle Daten in diesem Tresor. Hier kannst du es
+                ändern – normalerweise mit deinem aktuellen Passwort. Hast du es vergessen und die
+                App über „Auf diesem Gerät merken“ geöffnet, geht es auch ohne.</p>
+              <button class="primaer" onclick={() => (passwortOffen = true)}>🔑 Passwort ändern</button>
+            </div>
           </div>
         </div>
       {:else if !aktivesProjekt}
@@ -2504,6 +2514,13 @@
           </div>
         </div>
       </div>
+    {/if}
+
+    {#if passwortOffen}
+      <PasswortAendern
+        aktuelleDaten={() => JSON.stringify($state.snapshot(daten))}
+        schliessen={() => (passwortOffen = false)}
+      />
     {/if}
 
     {#if modusHinweisZiel}
@@ -2930,6 +2947,9 @@
   .modus-hinweis-an:hover {
     color: var(--text);
     text-decoration: underline;
+  }
+  .passwort-karte {
+    margin-top: 16px;
   }
   .einzel-panel {
     background: var(--weiss);
