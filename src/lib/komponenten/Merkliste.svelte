@@ -319,7 +319,7 @@
             </div>
 
             <p class="kontaktperson" class:leer-kontakt={!kontaktFuer(f).name}>
-              👤 {kontaktFuer(f).name || "keine Kontaktperson"}{#if kontaktFuer(f).laut}<span class="laut"> · laut Förderer</span>{/if}{#if neu(f.id, "kontakt") && kontaktFuer(f).laut}<span class="neu-feld">NEU</span>{/if}
+              👤 {kontaktFuer(f).name || "keine Kontaktperson"}{#if kontaktFuer(f).laut}<span class="laut">{" · laut Förderer"}</span>{/if}{#if neu(f.id, "kontakt") && kontaktFuer(f).laut}<span class="neu-feld">NEU</span>{/if}
             </p>
 
             {#if konfliktNamen(f).length}
