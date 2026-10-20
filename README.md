@@ -49,8 +49,11 @@ npm run tauri build
 
 ## Code-Signing
 
-Die Windows-Installer werden mit einem Zertifikat der SignPath Foundation
-signiert. Details in der [Code-Signing-Richtlinie](CODE_SIGNING.md).
+Code-Signing der Windows-Installer über die SignPath Foundation ist
+**beantragt, aber noch nicht aktiv** – bis dahin zeigt Windows beim ersten
+Installieren eine Warnung. App-Updates sind unabhängig davon signiert
+(minisign-Signatur, von der App vor der Installation geprüft).
+Details in der [Code-Signing-Richtlinie](CODE_SIGNING.md).
 
 > Free code signing provided by [SignPath.io](https://signpath.io), certificate by
 > [SignPath Foundation](https://signpath.org).

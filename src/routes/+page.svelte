@@ -2576,8 +2576,10 @@
           <h1>Projekt löschen?</h1>
           <p class="untertitel">
             Das Projekt <strong>„{aktivesProjekt?.name}"</strong> wird endgültig
-            entfernt – samt seinem Fragebogen und Matching-Ergebnis.
-            Das lässt sich nicht rückgängig machen.
+            aus dem Tresor entfernt – mit Merkliste, Anträgen, Kostenplan und
+            Abrechnung. Das lässt sich nicht rückgängig machen.
+            Der Ordner <strong>Dokumente\Antrag 3000\{aktivesProjekt?.name}</strong>
+            mit deinen Dateien und Belegen bleibt stehen.
           </p>
           <button class="gefahr" onclick={projektLoeschen}>Ja, löschen</button>
           <button class="leise" onclick={() => (loeschDialogOffen = false)}>

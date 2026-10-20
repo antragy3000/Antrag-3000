@@ -350,7 +350,7 @@
         <div class="karte" style="border-top:4px solid #22a06b">
           <div style="font-weight:700;margin-bottom:5px">🔒 Sensibel – nur im Tresor</div>
           <div class="geber">Name, Adresse, IBAN, Steuerangaben, Projekt&shy;beschreibungen,
-          Budget, Kostenfinanzplan, Notizen, Belege, Links zu Arbeitsdokumenten.</div>
+          Budget, Kostenfinanzplan, Notizen, Beleg-Angaben, Links zu Arbeitsdokumenten.</div>
           <div style="margin-top:8px"><span class="badge b-gruen"><span class="dot"></span>verschlüsselt, verlässt das Gerät nie</span></div>
         </div>
         <div class="karte" style="border-top:4px solid #e2a400">
@@ -385,7 +385,8 @@
   <div class="warn"><strong>Wichtig, sobald du Dateien erzeugst.</strong> Wenn du
   ein Word, eine Excel-Tabelle oder ein Antrags-PDF erstellst, legt die App diese
   Datei <strong>unverschlüsselt</strong> im Projektordner ab (Kap. 12) – damit du sie
-  einreichen kannst. Damit verlässt der Tresor-Schutz diese Datei. Liegt dein
+  einreichen kannst. Genauso liegen hochgeladene Dokumente (Kap. 11) und Beleg-Dateien
+  (Kap. 22) als normale Dateien dort. Damit verlässt der Tresor-Schutz diese Datei. Liegt dein
   Projektordner in einem <strong>Cloud-Ordner</strong> (z. B. OneDrive, Dropbox,
   iCloud), wird die Datei – samt enthaltener Stamm- und Finanzdaten – automatisch
   <strong>in die Cloud synchronisiert</strong> (Kap. 18). Wenn du das nicht willst,
@@ -515,7 +516,11 @@
     <li><strong>📥</strong> in der Zeile: dieses Projekt <strong>archivieren</strong>
     (siehe unten).</li>
     <li><strong>🗑</strong> in der Zeile: <strong>genau dieses</strong> Projekt endgültig
-    löschen (mit Rückfrage).</li>
+    löschen (mit Rückfrage). Dabei verschwinden alle Angaben des Projekts aus dem Tresor
+    (Merkliste, Anträge, Kostenplan, Abrechnung). Der Ordner
+    <span class="pfad">Dokumente\Antrag 3000\[Projekt]</span> mit deinen Dateien und Belegen
+    <strong>bleibt stehen</strong> – lösch ihn bei Bedarf von Hand, denk aber vorher an die
+    Aufbewahrung der Belege.</li>
     <li><strong>+ Neues Projekt</strong>: ein weiteres Projekt anlegen.</li>
   </ul>
 
@@ -804,7 +809,7 @@
 
   <ul>
     <li>Punkte <strong>hinzufügen / entfernen</strong>; erledigte sind durchgestrichen.</li>
-    <li><strong>⬆ Datei hochladen</strong>: wähle die Datei (<strong>nur PDF, JPG oder PNG</strong>). Sie wird umbenannt zu <span class="pfad">[Dokumentart]_Antrag_[Projekt]</span> und nach <span class="pfad">…/[Förderer]/Dateien/</span> kopiert.</li>
+    <li><strong>⬆ Datei hochladen</strong>: wähle die Datei (<strong>nur PDF, JPG oder PNG</strong>, höchstens <strong>30 MB</strong>). Sie wird umbenannt zu <span class="pfad">[Dokumentart]_Antrag_[Projekt]</span> und nach <span class="pfad">…/[Förderer]/Dateien/</span> kopiert.</li>
     <li><strong>ersetzen</strong>: eine neue Datei laden (überschreibt die alte). <strong>✕</strong>: nur die Verknüpfung lösen (die Datei bleibt im Ordner).</li>
   </ul>
   <div class="tipp">Diese hochgeladenen Dokumente landen später automatisch im
@@ -862,6 +867,8 @@
   </figure>
 
   <p>Beim Klick öffnet sich zuerst eine <strong>Vorschau</strong> im PDF-Programm.
+  Diese Vorschau ist eine unverschlüsselte Zwischendatei im temporären Windows-Ordner;
+  die App löscht sie beim Sperren und beim nächsten Start automatisch.
   Mit <strong>✓ Speichern</strong> wird die Datei als
   <span class="pfad">Antrag_[Projekt]_[Förderer].pdf</span> im Förderer-Ordner
   abgelegt und der Ordner geöffnet.</p>
@@ -1227,7 +1234,8 @@
   liegen als normale Dateien im Ordner <code>Dokumente\Antrag 3000</code> (Kap. 18). Sichere
   diesen Ordner <strong>zusätzlich</strong>, z. B. indem du ihn regelmäßig auf einen USB-Stick
   kopierst. Besonders wichtig sind die <strong>Belege</strong>: Sie musst du für den
-  Verwendungsnachweis meist mehrere Jahre aufbewahren.</div>
+  Verwendungsnachweis aufbewahren – wie lange, steht in deinem Zuwendungsbescheid bzw.
+  dessen Nebenbestimmungen; steuerliche Aufbewahrungspflichten können länger sein.</div>
   <div class="tipp">Mach eine Sicherung besonders vor wichtigen Schritten und
   bewahre eine Kopie an einem zweiten Ort auf.</div>
 </section>
@@ -1419,7 +1427,8 @@
   dorthin synchronisiert (Kap. 18). Und die <strong>Sicherung</strong> (Kap. 19) enthält
   sie <strong>nicht</strong> – kopiere den Ordner <span class="pfad">Dokumente\Antrag 3000</span>
   regelmäßig zusätzlich, z. B. auf einen USB-Stick. Belege musst du für den
-  Verwendungsnachweis meist mehrere Jahre aufbewahren.</div>
+  Verwendungsnachweis aufbewahren – wie lange, steht in deinem Zuwendungsbescheid bzw.
+  dessen Nebenbestimmungen; steuerliche Aufbewahrungspflichten können länger sein.</div>
 </section>
 
 <!-- ===== 23 ===== -->
@@ -1464,6 +1473,14 @@
     „Weitere Informationen" → „Trotzdem ausführen" fortfahren.
     <em>Hinweis: Spätere App-Updates sind digital signiert (Kap. 21) und werden
     automatisch geprüft – diese Warnung betrifft nur die erste Installation.</em></dd>
+
+    <dt>Was bleibt beim Deinstallieren?</dt>
+    <dd>Die App selbst wird entfernt. <strong>Bestehen bleiben</strong> deine Dateien unter
+    <span class="pfad">Dokumente\Antrag 3000</span> und – sofern du im Deinstaller nicht
+    ausdrücklich das Löschen der App-Daten wählst – dein verschlüsselter Tresor im
+    App-Datenordner (<span class="pfad">%APPDATA%\com.antrag3000.app</span>). So kannst du
+    nach einer Neuinstallation einfach weiterarbeiten. Willst du wirklich alles entfernen,
+    lösch beide Ordner – vorher eine Sicherung machen (Kap. 19).</dd>
 
     <dt>Wo liegen meine Dateien?</dt>
     <dd>Unter <span class="pfad">Dokumente\Antrag 3000\[Projekt]\…</span>
@@ -1554,7 +1571,7 @@
         </div>
       </div>
     </div>
-    <figcaption><b>Abb. 24.1</b> – Nur die rechte Spalte verlässt dein Gerät – und nur zu deinem eigenen Team-Server.</figcaption>
+    <figcaption><b>Abb. 24.1</b> – Nur die rechte Spalte verlässt dein Gerät – und nur zum Team-Server (Standard: der Antrag-3000-Server, bei Self-Hosting euer eigener).</figcaption>
   </figure>
 
   <div class="merke">Zusätzlich zum Board werden die <strong>öffentlichen
@@ -1586,10 +1603,14 @@
     <div class="stp"><span class="num">3</span><div><b>Verbinden &amp; fertig.</b> Die App meldet <b>„verbunden"</b>. Ab jetzt brauchst du nichts mehr zu tun – kein zweites Passwort, kein erneutes Einrichten.</div></div>
   </div>
 
-  <div class="warn"><strong>Wichtig:</strong> Gib die Einladung <strong>nicht</strong>
-  per E-Mail oder Chat weiter – der Code darin ist <strong>einmal</strong> gültig und
-  wirkt wie ein Schlüssel. Nur persönlich/offline weitergeben (USB-Stick). Jedes
-  Gerät bekommt seine <strong>eigene</strong> Einladung.</div>
+  <div class="warn"><strong>Wichtig:</strong> Die Einladung wirkt wie ein Schlüssel. Sie ist
+  <strong>nur einmal</strong> nutzbar und <strong>24 Stunden</strong> gültig; jedes Gerät
+  bekommt seine <strong>eigene</strong>. Am sichersten übergibst du sie persönlich
+  (USB-Stick). Sitzt ihr nicht am selben Ort, ist ein Ende-zu-Ende-verschlüsselter
+  Messenger wie <strong>Signal</strong> vertretbar – eine <strong>normale E-Mail nicht</strong>,
+  weil sie unterwegs mitgelesen werden kann. Wurde eine Einladung abgefangen, merkst du
+  es daran, dass sie beim Einlösen schon verbraucht ist: dann sofort eine neue erstellen
+  und das fremde Gerät unter „Mitglieder verwalten" sperren.</div>
 
   <div class="merke"><strong>Alternative: Zugangs-Paket.</strong> Betreibt dein Team
   einen <strong>eigenen</strong> Server (Self-Hosting), bekommst du statt einer
@@ -1845,7 +1866,7 @@
   Leitung</strong> geht – mit einem kleinen Mithör-Programm, unabhängig von der
   App und ohne echten Server:</p>
   <div class="struktur">
-    <div class="stp"><span class="num">1</span><div>Das Mithör-Programm gehört zum <strong>Quellcode</strong> von Antrag 3000 (öffentlich auf GitHub, <span class="pfad">github.com/antragy3000/Antrag-3000</span>) – nicht zu deinem Projektordner. Im heruntergeladenen Quellcode-Ordner ein Terminal öffnen und <code>node tools/echo-server.mjs</code> starten.</div></div>
+    <div class="stp"><span class="num">1</span><div>Das Mithör-Programm gehört zum <strong>Quellcode</strong> von Antrag 3000 (öffentlich auf GitHub, <span class="pfad" style="white-space:nowrap;word-break:normal">github.com/antragy3000/Antrag-3000</span>) – nicht zu deinem Projektordner. Im heruntergeladenen Quellcode-Ordner ein Terminal öffnen und <code>node tools/echo-server.mjs</code> starten.</div></div>
     <div class="stp"><span class="num">2</span><div>In der App unter „Prüfen &amp; Protokoll" auf <b>„An lokalen Mitschnitt senden"</b> klicken (Adresse <span class="pfad">http://127.0.0.1:8099</span>).</div></div>
     <div class="stp"><span class="num">3</span><div>Im Terminal erscheint jeder gesendete Datensatz vollständig – Zeile für Zeile prüfbar.</div></div>
   </div>
@@ -1893,7 +1914,7 @@
 
     <dt>CA / Team-CA (Zertifizierungsstelle)</dt><dd>Der „Aussteller-Stempel", mit dem
     der <strong>Server</strong> die Geräte-Ausweise ausstellt; nur so ausgestellte
-    Ausweise gelten (Kap. 25/24).</dd>
+    Ausweise gelten (Kap. 24/25).</dd>
 
     <dt>NAS</dt><dd>Ein kleiner, immer laufender Server-Computer im Netzwerk (z. B. von
     Synology). Nur relevant, wenn du den Server <strong>selbst</strong> betreibst
@@ -1923,7 +1944,8 @@
 
     <dt>2FA / TOTP</dt><dd>Zwei-Faktor-Anmeldung: zusätzlich ein laufend wechselnder
     6-stelliger Code aus einer Authenticator-App. In Antrag 3000 nur für die
-    Administration relevant, nicht für deinen Tresor: Er ist mit deinem Passwort
+    Admin-App relevant, mit der der Anbieter die Förder-Datenbank pflegt – nicht für
+    deinen Tresor: Er ist mit deinem Passwort
     verschlüsselt, und ein 6-stelliger Code kann eine verschlüsselte Datei nicht öffnen.</dd>
 
     <dt>Reiter</dt><dd>Die Bereiche oben in der App, zwischen denen du wechselst
