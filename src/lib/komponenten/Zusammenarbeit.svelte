@@ -1,5 +1,5 @@
 <script>
-  // Zusammenarbeit im Projekt (Reiter „Formular", oben): Arbeitsdokumente
+  // Zusammenarbeit im Projekt (Reiter „Dateien", oben): Arbeitsdokumente
   // zum gemeinsamen Schreiben + ein geteilter Ablageort für Dateien.
   // Die App lädt NICHTS hoch: Sie merkt sich nur die Links (verschlüsselt,
   // nur auf diesem Gerät) und öffnet den Projektordner, damit Dateien von

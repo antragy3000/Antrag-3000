@@ -2104,8 +2104,10 @@
           <button class:aktiv={bereich === "fristen"} onclick={() => (bereich = "fristen")}>
             Fristen
           </button>
+          <!-- Reiter „Dateien" (intern weiter "formular"): Arbeitsdokumente,
+               Dateien teilen und Sammel-Formular. -->
           <button class:aktiv={bereich === "formular"} onclick={() => (bereich = "formular")}>
-            Formular
+            Dateien
           </button>
           <button class:aktiv={bereich === "kostenplan"} onclick={() => (bereich = "kostenplan")}>
             Kostenplan
