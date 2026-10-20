@@ -78,6 +78,13 @@
           deiner Wahl (z. B. USB-Stick oder Cloud-Ordner). Sie ist nur mit
           deinem Passwort lesbar.
         </p>
+        <p class="warn">
+          <strong>Nicht enthalten sind deine Dateien:</strong> Belege, hochgeladene
+          Dokumente, Antrags-PDFs und Word-Dateien liegen als normale Dateien im
+          Ordner <code>Dokumente\Antrag 3000</code>. Sichere diesen Ordner zusätzlich,
+          z. B. indem du ihn auf einen USB-Stick kopierst – besonders die Belege,
+          die du für den Verwendungsnachweis aufbewahren musst.
+        </p>
         <button class="primaer" disabled={beschaeftigt} onclick={erstellen}>
           Sicherung speichern …
         </button>
