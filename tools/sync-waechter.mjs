@@ -31,6 +31,10 @@ const S = {
   belegBetrag: "SENSIBEL_BELEG_BETRAG_777",
   belegNotiz: "SENSIBEL_BELEG_NOTIZ_nur_fuer_mich",
   belegDatei: "SENSIBEL_BELEG_DATEI_Rechnung42.pdf",
+  // Arbeitsdokumente: der CryptPad-Link enthaelt den Schluessel zum Dokument.
+  dokLink: "https://cryptpad.fr/pad/#/2/pad/edit/SENSIBEL_CRYPTPAD_SCHLUESSEL/",
+  dokTitel: "SENSIBEL_ARBEITSDOKUMENT_TITEL",
+  ablageLink: "https://cryptpad.fr/drive/#/SENSIBEL_ABLAGE_SCHLUESSEL",
 };
 
 // Verbotene Feldnamen (dürfen als Schlüssel nie im Board stehen).
@@ -41,6 +45,8 @@ const VERBOTENE_FELDNAMEN = [
   // Abrechnungs-Modus: nichts davon darf je das Geraet verlassen.
   "abrechnung", "belege", "quellen", "empfaenger", "brutto",
   "mwst_satz", "zahlungsart", "zuordnungen", "dateien", "sachbericht",
+  // Arbeitsdokumente / geteilter Ablageort: Links bleiben auf dem Geraet.
+  "arbeitsdokumente", "ablageurl",
 ];
 
 // Tresor mit erfundenen sensiblen Daten.
@@ -98,6 +104,12 @@ const daten = {
         ],
         quellen: [],
       },
+      // Links zu gemeinsam geschriebenen Texten – auch einer Foerderung
+      // zugeordnet, die im Board steht. Duerfen trotzdem NIE ins Board.
+      arbeitsdokumente: [
+        { id: "dok-1", titel: S.dokTitel, url: S.dokLink, foerderungen: ["de-musikfonds"] },
+      ],
+      ablageUrl: S.ablageLink,
     },
   ],
   aktivesProjektId: "p1",

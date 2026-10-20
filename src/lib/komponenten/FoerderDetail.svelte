@@ -5,6 +5,7 @@
   import { regionName } from "$lib/daten/orte.js";
   import { sichereWebUrl, sichereMailUrl, foerdererKontakt } from "$lib/sicherheit";
   import AntragBlock from "./AntragBlock.svelte";
+  import Arbeitsdokumente from "./Arbeitsdokumente.svelte";
 
   let {
     foerderung: f,
@@ -22,6 +23,9 @@
     antragAendern = null,
     stand = null,
     geaenderteFelder = [],
+    // Projekt für die Arbeitsdokumente dieses Antrags (nur aus Merkliste/Fristen).
+    projekt = null,
+    teamModus = false,
   } = $props();
 
   function nameVon(id) {
@@ -161,6 +165,9 @@
     {#if antrag}
       <AntragBlock {antrag} aendern={antragAendern} {hochladen} {pdfVorschau} {pdfSpeichern}
         einreichOnline={f.einreichung_online} einreichUrl={f.einreich_url} />
+      {#if projekt && antragAendern}
+        <Arbeitsdokumente {projekt} speichern={antragAendern} {teamModus} foerderungId={f.id} />
+      {/if}
     {/if}
 
     <p class="datenstand">{hinweis}</p>

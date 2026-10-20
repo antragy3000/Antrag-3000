@@ -19,6 +19,7 @@
   import { katalog, setzeKatalog, setzeStandardKatalog, standardKatalog, pruefeKatalog, vergleicheKataloge, geaenderteFelder, setzeGeteilteFoerderer } from "$lib/katalog.svelte.js";
   import KatalogUpdate from "$lib/komponenten/KatalogUpdate.svelte";
   import BetriebsartHinweis from "$lib/komponenten/BetriebsartHinweis.svelte";
+  import Zusammenarbeit from "$lib/komponenten/Zusammenarbeit.svelte";
   import UpdatePruefung from "$lib/komponenten/UpdatePruefung.svelte";
   import { check as appUpdateCheck } from "@tauri-apps/plugin-updater";
   import { openUrl } from "@tauri-apps/plugin-opener";
@@ -1806,6 +1807,12 @@
 
   // Legt den Ordner des aktiven Projekts (optional mit Foerderungs-
   // Unterordner) bei Bedarf an und oeffnet ihn im Explorer.
+  // Klarname einer Förderung (Katalog, eigene, „nicht mehr im Katalog")
+  // – z. B. für die Zuordnungen der Arbeitsdokumente.
+  function foerderungName(id) {
+    return alleFoerderungen.find((f) => f.id === id)?.name ?? "";
+  }
+
   async function ordnerOeffnen(foerderungsName = null) {
     try {
       await invoke("ordner_oeffnen", {
@@ -2287,7 +2294,17 @@
             formular={aktivesProjekt.formular}
             speichern={formularSpeichern}
             wordErzeugen={formularWordErzeugen}
-          />
+          >
+            {#snippet oben()}
+              <Zusammenarbeit
+                projekt={aktivesProjekt}
+                speichern={tresorSpeichern}
+                teamModus={daten.modus === "team"}
+                ordnerOeffnen={() => ordnerOeffnen()}
+                {foerderungName}
+              />
+            {/snippet}
+          </SammelFormular>
         {/key}
       {:else if bereich === "kostenplan"}
         {#key daten.aktivesProjektId}
@@ -2371,6 +2388,8 @@
           antraege={aktivesProjekt.antraege}
           {antragHolen}
           antragSpeichern={tresorSpeichern}
+          projekt={aktivesProjekt}
+          teamModus={daten.modus === "team"}
           interneFristen={aktivesProjekt.interneFristen}
           interneAnlegen={interneFristAnlegen}
           interneEntfernen={interneFristEntfernen}
@@ -2392,6 +2411,8 @@
           antraege={aktivesProjekt.antraege}
           {antragHolen}
           antragSpeichern={tresorSpeichern}
+          projekt={aktivesProjekt}
+          teamModus={daten.modus === "team"}
           eigeneAnlegen={eigeneFoerderungAnlegen}
           oeffneKatalog={() => (katalogOffen = true)}
           aktualisierteIds={aktivesProjekt.katalogAktualisiert ?? []}

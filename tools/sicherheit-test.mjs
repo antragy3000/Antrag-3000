@@ -14,6 +14,10 @@
 
 import { readFileSync } from "node:fs";
 import { sichereWebUrl, sichereMailUrl, kappen, macDownloadUrl, foerdererKontakt } from "../src/lib/sicherheit.js";
+import {
+  linkPruefen, dokumentPruefen, dokumentAnlegen, dokumentAendern, dokumentLoeschen,
+  zuordnen, zuordnungLoesen, fuerFoerderung, nochNichtZugeordnet,
+} from "../src/lib/arbeitsdokumente.js";
 
 let fehler = 0;
 function pruefe(bedingung, beschreibung) {
@@ -129,6 +133,33 @@ for (const boese of [
 pruefe(foerdererKontakt({ kontakt: { name: "x".repeat(500) } })?.name.length === 120, "Name auf 120 Zeichen gekappt");
 pruefe(foerdererKontakt({ kontakt: { telefon: "1".repeat(200) } })?.telefon.length === 50, "Telefon auf 50 Zeichen gekappt");
 pruefe(foerdererKontakt({ kontakt: { name: "A\u0007B" } })?.name === "AB", "Steuerzeichen im Namen entfernt");
+
+// Arbeitsdokumente (Links zu gemeinsam geschriebenen Texten, z. B. CryptPad).
+// Nur https-Links; die Zuordnung zu Foerderungen ist eine Referenz, keine Kopie.
+console.log("\nArbeitsdokumente:");
+const cp = "https://cryptpad.fr/pad/#/2/pad/edit/AbC-dEf+gHi/";
+pruefe(linkPruefen(cp) === cp, "CryptPad-Link mit Schluessel im #-Teil bleibt unveraendert");
+pruefe(linkPruefen("cryptpad.fr/pad/#/2/x") === "https://cryptpad.fr/pad/#/2/x", "Adresse ohne Schema bekommt https://");
+for (const boese of ["http://cryptpad.fr/pad/", "javascript:alert(1)", "file:///C:/x", "data:text/html,x", "ftp://x.de", "", "https://x.de/" + "a".repeat(2100)]) {
+  pruefe(linkPruefen(boese) === null, `Link abgewiesen: ${JSON.stringify(boese.slice(0, 40))}`);
+}
+pruefe(!dokumentPruefen("", cp).ok, "ohne Titel abgewiesen");
+pruefe(dokumentPruefen("x".repeat(300), cp).titel?.length === 120, "Titel auf 120 Zeichen gekappt");
+{
+  const p = {};
+  const d1 = dokumentAnlegen(p, "Projektbeschreibung", cp);
+  const d2 = dokumentAnlegen(p, "Antragstext Musikfonds", cp, "f-musik");
+  pruefe(p.arbeitsdokumente.length === 2 && d2.foerderungen[0] === "f-musik", "anlegen (mit und ohne Zuordnung)");
+  zuordnen(p, d1.id, "f-musik"); zuordnen(p, d1.id, "f-musik");
+  pruefe(d1.foerderungen.length === 1, "doppelte Zuordnung wird vermieden");
+  pruefe(fuerFoerderung(p, "f-musik").length === 2 && nochNichtZugeordnet(p, "f-kultur").length === 2, "Auswahl je Foerderung stimmt");
+  zuordnungLoesen(p, d1.id, "f-musik");
+  pruefe(p.arbeitsdokumente.length === 2 && fuerFoerderung(p, "f-musik").length === 1, "Zuordnung loesen laesst das Dokument im Projekt");
+  dokumentAendern(p, d2.id, "Neuer Titel", cp);
+  pruefe(fuerFoerderung(p, "f-musik")[0].titel === "Neuer Titel", "Aenderung wirkt ueberall (Referenz, keine Kopie)");
+  dokumentLoeschen(p, d2.id);
+  pruefe(fuerFoerderung(p, "f-musik").length === 0 && p.arbeitsdokumente.length === 1, "Loeschen entfernt auch die Zuordnungen");
+}
 
 // CSP aller drei Apps (tauri.conf.json). Zweite Verteidigungslinie hinter der
 // Schleuse oben: selbst wenn fremder Text doch als HTML im Fenster landet, darf

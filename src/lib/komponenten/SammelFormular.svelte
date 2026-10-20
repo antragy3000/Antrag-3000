@@ -5,7 +5,9 @@
   // und die Word-Datei.
   import { FORMULAR_FELDER } from "$lib/antrag";
 
-  let { formular, speichern, wordErzeugen = null } = $props();
+  // `oben`: optionaler Bereich über dem Formular (Zusammenarbeit:
+  // Arbeitsdokumente + geteilter Ablageort), von +page.svelte gefüllt.
+  let { formular, speichern, wordErzeugen = null, oben = null } = $props();
 
   let kopie = $state(structuredClone($state.snapshot(formular)));
   // Aeltere Projekte kennen die Liste der eigenen Felder evtl. noch nicht.
@@ -61,6 +63,7 @@
 </script>
 
 <div class="bereich">
+  {#if oben}{@render oben()}{/if}
   <div class="kopfzeile">
     <div>
       <h2>Sammel-Formular</h2>

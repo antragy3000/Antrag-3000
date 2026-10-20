@@ -5,6 +5,7 @@
   // Status-/Checklisten-Block. Warnung bei unverträglichen Förderungen.
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { sichereMailUrl, foerdererKontakt } from "$lib/sicherheit";
+  import { fuerFoerderung } from "$lib/arbeitsdokumente";
   import FoerderDetail from "./FoerderDetail.svelte";
   import EigeneFoerderung from "./EigeneFoerderung.svelte";
   import { LAENDER, SPARTEN, fristText } from "$lib/begriffe";
@@ -36,7 +37,14 @@
     standFuer = null,
     neuFelderFuer = null,
     logoHerunterladen = null,
+    projekt = null,
+    teamModus = false,
   } = $props();
+
+  // Wie viele Arbeitsdokumente sind dieser Förderung zugeordnet?
+  function dokAnzahl(id) {
+    return projekt ? fuerFoerderung(projekt, id).length : 0;
+  }
 
   let ausgewaehlt = $state(null);
   let aktuellerAntrag = $state(null);
@@ -322,6 +330,10 @@
               👤 {kontaktFuer(f).name || "keine Kontaktperson"}{#if kontaktFuer(f).laut}<span class="laut">{" · laut Förderer"}</span>{/if}{#if neu(f.id, "kontakt") && kontaktFuer(f).laut}<span class="neu-feld">NEU</span>{/if}
             </p>
 
+            {#if dokAnzahl(f.id)}
+              <p class="dok-zeile">📄 {dokAnzahl(f.id)} {dokAnzahl(f.id) === 1 ? "Arbeitsdokument" : "Arbeitsdokumente"}</p>
+            {/if}
+
             {#if konfliktNamen(f).length}
               <p class="konflikt-zeile">
                 ⚠ Unverträglich mit: {konfliktNamen(f).join(", ")}
@@ -371,6 +383,8 @@
     pdfSpeichern={antragsPdfSpeichern ? () => antragsPdfSpeichern(ausgewaehlt) : null}
     antrag={aktuellerAntrag}
     antragAendern={antragSpeichern}
+    {projekt}
+    {teamModus}
     stand={standFuer ? standFuer(ausgewaehlt.id) : null}
     geaenderteFelder={neuFelderFuer ? neuFelderFuer(ausgewaehlt.id) : []}
     {logoHerunterladen}
@@ -625,6 +639,11 @@
   }
   .kontaktperson.leer-kontakt {
     color: var(--grau-4);
+  }
+  .dok-zeile {
+    margin: 4px 0 0;
+    font-size: 0.82rem;
+    color: var(--link);
   }
   .kontaktperson .laut {
     color: var(--text-muted);

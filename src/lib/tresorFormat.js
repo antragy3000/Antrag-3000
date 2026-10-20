@@ -55,6 +55,11 @@ export function neuesProjekt(name) {
     interneFristen: [],
     katalogGhosts: [],
     katalogAktualisiert: [],
+    // Links zu gemeinsam geschriebenen Texten (z. B. CryptPad) und zum
+    // geteilten Ablageort – nur auf diesem Gerät, nie im Team-Board
+    // (siehe arbeitsdokumente.js).
+    arbeitsdokumente: [],
+    ablageUrl: "",
   };
 }
 
@@ -267,6 +272,20 @@ export function normalisieren(d) {
     }
     if (typeof p.kfpHinweisAusblenden !== "boolean") {
       p.kfpHinweisAusblenden = false;
+      veraendert = true;
+    }
+    if (!Array.isArray(p.arbeitsdokumente)) {
+      p.arbeitsdokumente = [];
+      veraendert = true;
+    }
+    for (const d of p.arbeitsdokumente) {
+      if (!Array.isArray(d.foerderungen)) {
+        d.foerderungen = [];
+        veraendert = true;
+      }
+    }
+    if (typeof p.ablageUrl !== "string") {
+      p.ablageUrl = "";
       veraendert = true;
     }
     if (!p.antraege || typeof p.antraege !== "object" || Array.isArray(p.antraege)) {

@@ -23,6 +23,8 @@
     antraege = {},
     antragHolen = null,
     antragSpeichern = null,
+    projekt = null,
+    teamModus = false,
     interneFristen = [],
     interneAnlegen = null,
     interneEntfernen = null,
@@ -429,6 +431,8 @@
     {logoHerunterladen}
     antrag={aktuellerAntrag}
     antragAendern={antragSpeichern}
+    {projekt}
+    {teamModus}
     schliessen={() => {
       ausgewaehlt = null;
       aktuellerAntrag = null;
