@@ -6,6 +6,7 @@
   import { sichereWebUrl, sichereMailUrl, foerdererKontakt } from "$lib/sicherheit";
   import AntragBlock from "./AntragBlock.svelte";
   import Arbeitsdokumente from "./Arbeitsdokumente.svelte";
+  import { differenz, seitenSumme } from "$lib/kfp";
 
   let {
     foerderung: f,
@@ -26,7 +27,15 @@
     // Projekt für die Arbeitsdokumente dieses Antrags (nur aus Merkliste/Fristen).
     projekt = null,
     teamModus = false,
+    zumKostenplan = null,
   } = $props();
+
+  // Kostenplan-Bilanz für die Warnung vor dem Antrags-PDF (null = kein Plan).
+  let kfpDifferenz = $derived.by(() => {
+    const k = projekt?.kfp;
+    if (!k || (seitenSumme(k.kosten ?? []) === 0 && seitenSumme(k.finanzierung ?? []) === 0)) return null;
+    return differenz(k);
+  });
 
   function nameVon(id) {
     const x = alle.find((e) => e.id === id);
@@ -164,7 +173,8 @@
 
     {#if antrag}
       <AntragBlock {antrag} aendern={antragAendern} {hochladen} {pdfVorschau} {pdfSpeichern}
-        einreichOnline={f.einreichung_online} einreichUrl={f.einreich_url} />
+        einreichOnline={f.einreichung_online} einreichUrl={f.einreich_url}
+        {kfpDifferenz} {zumKostenplan} />
       {#if projekt && antragAendern}
         <Arbeitsdokumente {projekt} speichern={antragAendern} {teamModus} foerderungId={f.id} />
       {/if}

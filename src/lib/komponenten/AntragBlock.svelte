@@ -6,6 +6,7 @@
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { ANTRAG_STATUS, CHECK_STATUS, statusFarbe } from "$lib/status";
   import { sichereWebUrl, sichereMailUrl } from "$lib/sicherheit";
+  import { betragFormat } from "$lib/kfp";
 
   let {
     antrag,
@@ -17,6 +18,10 @@
     // entgegen. Dann gibt es statt „per Mail senden" einen Verweis dorthin.
     einreichOnline = false,
     einreichUrl = "",
+    // Kostenplan-Bilanz (Finanzierung − Kosten) bzw. null ohne Kostenplan.
+    // Ist sie nicht 0, warnt der PDF-Knopf vorher (blockiert aber nichts).
+    kfpDifferenz = null,
+    zumKostenplan = null,
   } = $props();
 
   // Die Einreich-Adresse kann aus dem (synchronisierten) Katalog stammen
@@ -59,7 +64,22 @@
   let pdfBeschaeftigt = $state(false);
   let pdfGespeichert = $state("");
 
-  async function pdfErstellenKlick() {
+  // Kostenplan nicht ausgeglichen? Erst ein Hinweis, dann auf Wunsch trotzdem.
+  let kfpWarnungOffen = $state(false);
+  let kfpUnausgeglichen = $derived(kfpDifferenz != null && Math.abs(kfpDifferenz) >= 0.005);
+  function pdfErstellenKlick() {
+    if (!pdfVorschau || !pdfBereit) return;
+    if (kfpUnausgeglichen) {
+      kfpWarnungOffen = true;
+      return;
+    }
+    pdfErzeugen();
+  }
+  function trotzdemErstellen() {
+    kfpWarnungOffen = false;
+    pdfErzeugen();
+  }
+  async function pdfErzeugen() {
     if (!pdfVorschau || !pdfBereit) return;
     pdfBeschaeftigt = true;
     pdfGespeichert = "";
@@ -365,6 +385,30 @@
     </div>
   {/if}
 </section>
+
+{#if kfpWarnungOffen}
+  <div class="pdf-schleier" onclick={() => (kfpWarnungOffen = false)} role="presentation">
+    <div class="pdf-dialog" onclick={(e) => e.stopPropagation()} role="presentation">
+      <h3>Kostenplan nicht ausgeglichen</h3>
+      {#if kfpDifferenz < 0}
+        <p>Es fehlen noch <strong>{betragFormat(-kfpDifferenz)}</strong>: Dieser Teil der
+          Kosten ist durch keine Quelle gedeckt.</p>
+      {:else}
+        <p><strong>Überdeckung:</strong> Die Finanzierung übersteigt die Kosten um
+          <strong>{betragFormat(kfpDifferenz)}</strong>.</p>
+      {/if}
+      <p>Ein eingereichter Kostenfinanzplan muss in der Regel <strong>ausgeglichen</strong>
+        sein. Gleiche ihn im Kostenplan aus – oder erstelle das PDF trotzdem, z. B. als Entwurf.</p>
+      <div class="pdf-aktionen">
+        {#if zumKostenplan}
+          <button class="zweit" onclick={() => { kfpWarnungOffen = false; zumKostenplan(); }}>Zum Kostenplan</button>
+        {/if}
+        <button class="zweit" onclick={trotzdemErstellen}>Trotzdem erstellen</button>
+        <button class="leise" onclick={() => (kfpWarnungOffen = false)}>Abbrechen</button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 {#if pdfModalOffen}
   <div class="pdf-schleier" onclick={() => (pdfModalOffen = false)} role="presentation">

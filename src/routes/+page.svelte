@@ -1537,7 +1537,10 @@
   // der NAS). Client-Schutz: Grund-Pflicht, Längenlimit, keine doppelte
   // offene Meldung zur selben Förderung + Art.
   const MELDUNG_MAX = 500;
-  function meldungAnlegen(foerderungId, foerderungName, art, text) {
+  // kanal "mail" (Einzelplatz): Die Meldung geht als vorbereitete E-Mail raus
+  // (KatalogUpdate öffnet sie) und gilt damit als erledigt – sie wartet nicht
+  // auf einen Team-Abgleich, den es nicht gibt.
+  function meldungAnlegen(foerderungId, foerderungName, art, text, kanal = "sync") {
     const t = (text ?? "").trim().slice(0, MELDUNG_MAX);
     if (!foerderungId || !art) return { ok: false, fehler: "Bitte Förderung und Art angeben." };
     if ((daten.katalogMeldungen ?? []).length >= MELDUNG_CAP) {
@@ -1555,12 +1558,20 @@
         art,
         text: t,
         zeit: new Date().toISOString(),
-        gesendet: false,
+        gesendet: kanal === "mail",
+        ...(kanal === "mail" ? { kanal: "mail" } : {}),
       },
       ...(daten.katalogMeldungen ?? []),
     ];
     tresorSpeichern();
     return { ok: true };
+  }
+  // Ältere, nie gesendete Meldung wurde nachträglich per E-Mail gemeldet.
+  function meldungPerMail(id) {
+    daten.katalogMeldungen = (daten.katalogMeldungen ?? []).map((m) =>
+      m.id === id ? { ...m, gesendet: true, kanal: "mail" } : m,
+    );
+    tresorSpeichern();
   }
   function meldungEntfernen(id) {
     daten.katalogMeldungen = (daten.katalogMeldungen ?? []).filter((m) => m.id !== id);
@@ -2410,6 +2421,7 @@
           antragSpeichern={tresorSpeichern}
           projekt={aktivesProjekt}
           teamModus={daten.modus === "team"}
+          zumKostenplan={() => (bereich = "kostenplan")}
           interneFristen={aktivesProjekt.interneFristen}
           interneAnlegen={interneFristAnlegen}
           interneEntfernen={interneFristEntfernen}
@@ -2433,6 +2445,7 @@
           antragSpeichern={tresorSpeichern}
           projekt={aktivesProjekt}
           teamModus={daten.modus === "team"}
+          zumKostenplan={() => (bereich = "kostenplan")}
           eigeneAnlegen={eigeneFoerderungAnlegen}
           oeffneKatalog={() => (katalogOffen = true)}
           aktualisierteIds={aktivesProjekt.katalogAktualisiert ?? []}
@@ -2512,6 +2525,8 @@
         meldungen={daten.katalogMeldungen ?? []}
         {meldungAnlegen}
         {meldungEntfernen}
+        perMail={!(daten.modus === "team" && daten.sync)}
+        {meldungPerMail}
       />
     {/if}
 

@@ -5,8 +5,13 @@
   //  - Auf Werkszustand zurücksetzen.
   //  - Fehler/veraltete Daten melden (lokale Warteschlange; Versand an
   //    den Server kommt mit der NAS in Etappe 3).
+  import { openUrl } from "@tauri-apps/plugin-opener";
   import { katalog } from "$lib/katalog.svelte.js";
+  import { meldungMailUrl, MELDE_ADRESSE } from "$lib/meldung";
 
+  // perMail: kein Team-Abgleich eingerichtet → Meldungen gehen als vorbereitete
+  // E-Mail raus (der Nutzer schickt sie selbst ab), statt dauerhaft auf
+  // „noch nicht gesendet" zu stehen. meldungPerMail(id) vermerkt das.
   let {
     schliessen,
     updateAusDatei,
@@ -16,6 +21,8 @@
     meldungen = [],
     meldungAnlegen,
     meldungEntfernen,
+    perMail = false,
+    meldungPerMail = null,
   } = $props();
 
   let beschaeftigt = $state(false);
@@ -86,10 +93,30 @@
   function melden() {
     mFehler = null;
     const f = foerderListe.find((x) => x.id === mFoerderung);
-    const r = meldungAnlegen(mFoerderung, f?.name ?? "", mArt, mText);
+    const r = meldungAnlegen(mFoerderung, f?.name ?? "", mArt, mText, perMail ? "mail" : "sync");
     if (!r.ok) { mFehler = r.fehler; return; }
+    if (perMail) {
+      openUrl(meldungMailUrl({
+        foerderungId: mFoerderung, foerderungName: f?.name ?? "", art: ART_LABEL[mArt] ?? mArt,
+        text: mText, stand: katalog.daten.stand,
+      }));
+    }
     mText = "";
     mFoerderung = "";
+  }
+
+  // Ältere, nie gesendete Meldung nachträglich per E-Mail melden.
+  function altePerMail(m) {
+    openUrl(meldungMailUrl({
+      foerderungId: m.foerderungId, foerderungName: m.foerderungName, art: ART_LABEL[m.art] ?? m.art,
+      text: m.text, stand: katalog.daten.stand,
+    }));
+    meldungPerMail?.(m.id);
+  }
+
+  function statusText(m) {
+    if (m.kanal === "mail") return "per E-Mail vorbereitet";
+    return m.gesendet ? "gesendet" : "noch nicht gesendet";
   }
 
   let summe = $derived(
@@ -180,12 +207,21 @@
 
     <section>
       <h3>Problem melden</h3>
-      <p class="dezent">
-        Stimmt etwas nicht (veraltete Frist, falscher Geber, Förderung gibt es
-        nicht mehr)? Melde es – die Meldung wird beim <strong>laufenden
-        Synchronisieren</strong> automatisch ans Team/an die Pflege gesendet
-        (sonst bleibt sie „noch nicht gesendet").
-      </p>
+      {#if perMail}
+        <p class="dezent">
+          Stimmt etwas nicht (veraltete Frist, falscher Geber, Förderung gibt es
+          nicht mehr)? Melde es per E-Mail: Die App öffnet eine
+          <strong>vorbereitete Nachricht</strong> an {MELDE_ADRESSE} in deinem
+          Mailprogramm – du siehst sie vor dem Absenden und schickst sie selbst ab.
+        </p>
+      {:else}
+        <p class="dezent">
+          Stimmt etwas nicht (veraltete Frist, falscher Geber, Förderung gibt es
+          nicht mehr)? Melde es – die Meldung wird beim <strong>laufenden
+          Synchronisieren</strong> automatisch ans Team/an die Pflege gesendet
+          (sonst bleibt sie „noch nicht gesendet").
+        </p>
+      {/if}
       <label for="m-f">Förderung</label>
       <select id="m-f" bind:value={mFoerderung}>
         <option value="">– bitte wählen –</option>
@@ -197,11 +233,11 @@
       </select>
       <label for="m-t">Anmerkung (optional)</label>
       <textarea id="m-t" rows="2" maxlength="500" bind:value={mText} placeholder="Was stimmt nicht?"></textarea>
-      <p class="hinweis klein">Diese Anmerkung wird ans Team gesendet – bitte
+      <p class="hinweis klein">Diese Anmerkung {perMail ? "steht in der E-Mail" : "wird ans Team gesendet"} – bitte
         <strong>keine persönlichen Daten</strong> (Namen, Adresse, Budget) hineinschreiben.</p>
       {#if mFehler}<p class="fehler klein">⚠ {mFehler}</p>{/if}
       <div class="knoepfe">
-        <button class="zweit" disabled={!mFoerderung} onclick={melden}>Melden</button>
+        <button class="zweit" disabled={!mFoerderung} onclick={melden}>{perMail ? "✉ Per Mail melden" : "Melden"}</button>
       </div>
 
       {#if meldungen.length > 0}
@@ -211,8 +247,11 @@
               <div>
                 <span class="m-art">{ART_LABEL[m.art] ?? m.art}</span> · {m.foerderungName || m.foerderungId}
                 {#if m.text}<div class="dezent klein">„{m.text}"</div>{/if}
-                <div class="dezent klein">{zeitText(m.zeit)} · {m.gesendet ? "gesendet" : "noch nicht gesendet"}</div>
+                <div class="dezent klein">{zeitText(m.zeit)} · {statusText(m)}</div>
               </div>
+              {#if perMail && !m.gesendet}
+                <button class="zweit klein-knopf" onclick={() => altePerMail(m)} title="Diese Meldung per E-Mail melden">✉ Per Mail</button>
+              {/if}
               <button class="loeschen" onclick={() => meldungEntfernen(m.id)} title="Meldung entfernen">✕</button>
             </div>
           {/each}
@@ -271,6 +310,8 @@
     display: flex; justify-content: space-between; gap: 10px; align-items: flex-start;
     border: 1px solid var(--flaeche-2b); border-radius: 8px; padding: 8px 10px; font-size: 0.9rem;
   }
+  .m-zeile > div { flex: 1; }
+  .zweit.klein-knopf { padding: 4px 10px; font-size: 0.82rem; white-space: nowrap; }
   .m-art { font-weight: 600; color: var(--text); }
   .loeschen { background: none; border: none; color: var(--text-leise); cursor: pointer; font-size: 0.95rem; }
   .loeschen:hover { color: var(--gefahr-text); }

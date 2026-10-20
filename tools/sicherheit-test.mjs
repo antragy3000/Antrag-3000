@@ -19,6 +19,7 @@ import {
   zuordnen, zuordnungLoesen, fuerFoerderung, nochNichtZugeordnet,
 } from "../src/lib/arbeitsdokumente.js";
 import { formularAlsText, textEinlesen, aenderungenAnwenden } from "../src/lib/cryptpadBruecke.js";
+import { meldungMailUrl } from "../src/lib/meldung.js";
 
 let fehler = 0;
 function pruefe(bedingung, beschreibung) {
@@ -196,6 +197,22 @@ console.log("\nCryptPad-Bruecke (Sammel-Formular):");
   const kopie = structuredClone(form);
   aenderungenAnwenden(kopie, textEinlesen(text.replace("Rampe", "Rampe und Leitsystem"), form).aenderungen);
   pruefe(kopie._eigeneFelder[0].wert === "Rampe und Leitsystem" && kopie.projekttitel === "Klangraum", "Anwenden aendert nur das geaenderte Feld");
+}
+
+// Problem-Meldung per E-Mail (Einzelplatz): fester Empfaenger, keine
+// eingeschleusten mailto-Felder aus Katalog-Namen oder Anmerkung.
+console.log("\nMeldung per E-Mail:");
+{
+  const url = meldungMailUrl({
+    foerderungId: "f1-p9", foerderungName: "Kulturfonds&bcc=boese@x.de", art: "veraltete Angaben",
+    text: "Frist\nfalsch?cc=a@b.de", stand: "2026-07-10",
+  });
+  pruefe(url.startsWith("mailto:pilot%40antrag3000.de?subject="), "fester Empfaenger pilot@antrag3000.de");
+  const felder = url.slice(url.indexOf("?") + 1).split("&").map((f) => f.split("=")[0]);
+  pruefe(felder.join(",") === "subject,body", `nur subject und body (ist: ${felder.join(",")})`);
+  const body = decodeURIComponent(url.split("&body=")[1]);
+  pruefe(body.includes("Kulturfonds&bcc=boese@x.de") && body.includes("Datenbank-Stand: 2026-07-10"), "Inhalte stehen kodiert im Text");
+  pruefe(!body.includes("\nfalsch"), "Zeilenumbruch in der Anmerkung entfernt");
 }
 
 // CSP aller drei Apps (tauri.conf.json). Zweite Verteidigungslinie hinter der

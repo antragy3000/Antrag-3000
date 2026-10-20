@@ -25,6 +25,7 @@
     antragSpeichern = null,
     projekt = null,
     teamModus = false,
+    zumKostenplan = null,
     interneFristen = [],
     interneAnlegen = null,
     interneEntfernen = null,
@@ -433,6 +434,7 @@
     antragAendern={antragSpeichern}
     {projekt}
     {teamModus}
+    {zumKostenplan}
     schliessen={() => {
       ausgewaehlt = null;
       aktuellerAntrag = null;

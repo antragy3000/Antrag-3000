@@ -39,6 +39,7 @@
     logoHerunterladen = null,
     projekt = null,
     teamModus = false,
+    zumKostenplan = null,
   } = $props();
 
   // Wie viele Arbeitsdokumente sind dieser Förderung zugeordnet?
@@ -385,6 +386,7 @@
     antragAendern={antragSpeichern}
     {projekt}
     {teamModus}
+    {zumKostenplan}
     stand={standFuer ? standFuer(ausgewaehlt.id) : null}
     geaenderteFelder={neuFelderFuer ? neuFelderFuer(ausgewaehlt.id) : []}
     {logoHerunterladen}
