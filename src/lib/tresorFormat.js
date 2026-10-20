@@ -60,6 +60,8 @@ export function neuesProjekt(name) {
     // (siehe arbeitsdokumente.js).
     arbeitsdokumente: [],
     ablageUrl: "",
+    // true = Hinweis vor „In CryptPad öffnen" bei diesem Projekt nicht mehr zeigen.
+    cryptpadHinweisAus: false,
   };
 }
 
@@ -286,6 +288,10 @@ export function normalisieren(d) {
     }
     if (typeof p.ablageUrl !== "string") {
       p.ablageUrl = "";
+      veraendert = true;
+    }
+    if (typeof p.cryptpadHinweisAus !== "boolean") {
+      p.cryptpadHinweisAus = false;
       veraendert = true;
     }
     if (!p.antraege || typeof p.antraege !== "object" || Array.isArray(p.antraege)) {

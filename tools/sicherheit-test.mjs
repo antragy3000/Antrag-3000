@@ -18,6 +18,7 @@ import {
   linkPruefen, dokumentPruefen, dokumentAnlegen, dokumentAendern, dokumentLoeschen,
   zuordnen, zuordnungLoesen, fuerFoerderung, nochNichtZugeordnet,
 } from "../src/lib/arbeitsdokumente.js";
+import { formularAlsText, textEinlesen, aenderungenAnwenden } from "../src/lib/cryptpadBruecke.js";
 
 let fehler = 0;
 function pruefe(bedingung, beschreibung) {
@@ -159,6 +160,42 @@ pruefe(dokumentPruefen("x".repeat(300), cp).titel?.length === 120, "Titel auf 12
   pruefe(fuerFoerderung(p, "f-musik")[0].titel === "Neuer Titel", "Aenderung wirkt ueberall (Referenz, keine Kopie)");
   dokumentLoeschen(p, d2.id);
   pruefe(fuerFoerderung(p, "f-musik").length === 0 && p.arbeitsdokumente.length === 1, "Loeschen entfernt auch die Zuordnungen");
+}
+
+// CryptPad-Bruecke: Hin- und Rueckweg ueber die Zwischenablage. Rueckweg
+// liest NUR markierte Abschnitte (kein freies Einlesen von Fliesstext).
+console.log("\nCryptPad-Bruecke (Sammel-Formular):");
+{
+  const form = {
+    projekttitel: "Klangraum", kurzbeschreibung: "Ein Festival.", beschreibung: "Absatz 1\n\nAbsatz 2",
+    ziele: "", zeitraum: "Mai 2027", ort: "Basel", beteiligte: "Ensemble X",
+    _eigeneFelder: [{ id: "e1", beschriftung: "Barrierefreiheit", typ: "textarea", wert: "Rampe" }, { id: "e2", beschriftung: " ", typ: "input", wert: "x" }],
+  };
+  const text = formularAlsText(form, "Klangraum");
+  pruefe(text.includes("=== Projekttitel ===") && text.includes("=== Eigenes Feld: Barrierefreiheit ==="), "Export enthaelt Marker fuer Standard- und eigene Felder");
+  pruefe(!text.includes("Eigenes Feld:  ==="), "eigene Felder ohne Namen werden nicht exportiert");
+  const r0 = textEinlesen(text, form);
+  pruefe(r0.aenderungen.length === 0 && r0.fehlend.length === 0 && r0.unveraendert === 8, "Rundreise ohne Aenderung: nichts zu uebernehmen");
+  const bearbeitet = text.replace("Ein Festival.", "Ein viertaegiges Festival.\nMit Klangkunst.")
+    .replace("=== Beteiligte / Mitwirkende / Partner*innen ===\nEnsemble X", "Beteiligte (Marker geloescht)\nEnsemble Y")
+    .replace("Mai 2027", "Mai\n2027") + "\n=== Erfundenes Feld ===\nboese\n=== Projekttitel ===\nZweiter Titel\n";
+  const r1 = textEinlesen(bearbeitet.replace(/\n/g, "\r\n"), form);
+  const kurz = r1.aenderungen.find((a) => a.ziel.key === "kurzbeschreibung");
+  pruefe(kurz?.neu === "Ein viertaegiges Festival.\nMit Klangkunst.", "geaenderter Abschnitt wird erkannt (auch mit CRLF)");
+  // "Mai\n2027" in einem einzeiligen Feld wird zu "Mai 2027" = unveraendert.
+  pruefe(!r1.aenderungen.some((a) => a.ziel.key === "zeitraum"), "einzeiliges Feld: Zeilenumbruch wird zu Leerzeichen");
+  pruefe(r1.fehlend.includes("Beteiligte / Mitwirkende / Partner*innen"), "fehlender Marker wird gemeldet");
+  pruefe(!r1.aenderungen.some((a) => a.ziel.key === "beteiligte"), "Abschnitt ohne Marker wird NICHT uebernommen");
+  pruefe(r1.unbekannt.includes("Erfundenes Feld"), "unbekannter Marker wird gemeldet und ignoriert");
+  pruefe(r1.doppelt.includes("Projekttitel") && !r1.aenderungen.some((a) => a.ziel.key === "projekttitel"), "doppelter Marker: nur das erste Vorkommen zaehlt");
+  // Rich Text in CryptPad: Absaetze statt Zeilenumbrueche, geschuetzte Leerzeichen.
+  const richText = text.replace(/\n/g, "\n\n").replace("Ein Festival.", "Ein Festival.");
+  pruefe(textEinlesen(richText, form).aenderungen.length === 0, "nur Leerraum anders (Rich-Text-Kopie) = keine Aenderung");
+  const r2 = textEinlesen("=== Kurzbeschreibung ===\nA\u0007B\u0000C\tD", form);
+  pruefe(r2.aenderungen[0]?.neu === "ABC\tD", "Steuerzeichen raus, Tab bleibt");
+  const kopie = structuredClone(form);
+  aenderungenAnwenden(kopie, textEinlesen(text.replace("Rampe", "Rampe und Leitsystem"), form).aenderungen);
+  pruefe(kopie._eigeneFelder[0].wert === "Rampe und Leitsystem" && kopie.projekttitel === "Klangraum", "Anwenden aendert nur das geaenderte Feld");
 }
 
 // CSP aller drei Apps (tauri.conf.json). Zweite Verteidigungslinie hinter der

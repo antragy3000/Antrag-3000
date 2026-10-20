@@ -20,6 +20,7 @@
   import KatalogUpdate from "$lib/komponenten/KatalogUpdate.svelte";
   import BetriebsartHinweis from "$lib/komponenten/BetriebsartHinweis.svelte";
   import Zusammenarbeit from "$lib/komponenten/Zusammenarbeit.svelte";
+  import { dokumentAnlegen } from "$lib/arbeitsdokumente";
   import UpdatePruefung from "$lib/komponenten/UpdatePruefung.svelte";
   import { check as appUpdateCheck } from "@tauri-apps/plugin-updater";
   import { openUrl } from "@tauri-apps/plugin-opener";
@@ -1807,6 +1808,17 @@
 
   // Legt den Ordner des aktiven Projekts (optional mit Foerderungs-
   // Unterordner) bei Bedarf an und oeffnet ihn im Explorer.
+  // Formular ↔ CryptPad (CryptpadBruecke.svelte): Hinweis pro Projekt
+  // abschalten bzw. den CryptPad-Link als Arbeitsdokument merken.
+  async function cryptpadHinweisMerken() {
+    aktivesProjekt.cryptpadHinweisAus = true;
+    await tresorSpeichern();
+  }
+  async function cryptpadDokumentSpeichern(titel, url) {
+    dokumentAnlegen(aktivesProjekt, titel, url);
+    await tresorSpeichern();
+  }
+
   // Klarname einer Förderung (Katalog, eigene, „nicht mehr im Katalog")
   // – z. B. für die Zuordnungen der Arbeitsdokumente.
   function foerderungName(id) {
@@ -2294,6 +2306,12 @@
             formular={aktivesProjekt.formular}
             speichern={formularSpeichern}
             wordErzeugen={formularWordErzeugen}
+            cryptpad={{
+              projektName: aktivesProjekt.name,
+              hinweisAus: !!aktivesProjekt.cryptpadHinweisAus,
+              hinweisMerken: cryptpadHinweisMerken,
+              dokumentSpeichern: cryptpadDokumentSpeichern,
+            }}
           >
             {#snippet oben()}
               <Zusammenarbeit

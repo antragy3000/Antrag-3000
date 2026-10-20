@@ -4,10 +4,14 @@
   // Aus diesen Antworten entstehen pro Foerderung antworten.json
   // und die Word-Datei.
   import { FORMULAR_FELDER } from "$lib/antrag";
+  import { aenderungenAnwenden } from "$lib/cryptpadBruecke";
+  import CryptpadBruecke from "./CryptpadBruecke.svelte";
 
   // `oben`: optionaler Bereich über dem Formular (Zusammenarbeit:
   // Arbeitsdokumente + geteilter Ablageort), von +page.svelte gefüllt.
-  let { formular, speichern, wordErzeugen = null, oben = null } = $props();
+  // `cryptpad`: Hin-/Rückweg zu CryptPad über die Zwischenablage (siehe
+  // CryptpadBruecke.svelte); null = Knöpfe ausblenden.
+  let { formular, speichern, wordErzeugen = null, oben = null, cryptpad = null } = $props();
 
   let kopie = $state(structuredClone($state.snapshot(formular)));
   // Aeltere Projekte kennen die Liste der eigenen Felder evtl. noch nicht.
@@ -90,6 +94,13 @@
               ? "✓ Word erstellt – neu erstellen"
               : "📄 Word erstellen"}
         </button>
+      {/if}
+      {#if cryptpad}
+        <CryptpadBruecke
+          aktuell={() => $state.snapshot(kopie)}
+          uebernehmen={(aenderungen) => aenderungenAnwenden(kopie, aenderungen)}
+          {cryptpad}
+        />
       {/if}
     </div>
   </div>
@@ -185,7 +196,9 @@
   .speichern-bereich {
     display: flex;
     align-items: center;
-    gap: 14px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px 14px;
   }
   .ok {
     color: var(--erfolg-text);

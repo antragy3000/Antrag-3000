@@ -84,6 +84,10 @@ p256 = { version = "0.13", features = ["ecdsa", "pkcs8", "pem"] }
 # erlaubt den Neustart der App nach dem Update.
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
+# Offizielles Tauri-Plugin fuer die Zwischenablage: Formular-Texte fuer
+# CryptPad zuverlaessig kopieren (nativ statt navigator.clipboard).
+# Freigegeben ist nur das Schreiben von Text (capabilities/default.json).
+tauri-plugin-clipboard-manager = "2"
 
 # Windows-Anmeldedatenschutz (DPAPI) fuer "Auf diesem Geraet merken":
 # bindet den Tresor-Schluessel an das Windows-Konto, ohne ihn im Klartext

@@ -21,6 +21,11 @@ pub fn run() {
         // Etappe 5: signiertes Selbstupdate + Neustart nach dem Update.
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        // Zwischenablage (nur SCHREIBEN, siehe capabilities/default.json):
+        // Formular-Texte für CryptPad kopieren. Nativ über das Betriebs-
+        // system – der Browser-Weg (navigator.clipboard) war im Fenster
+        // unzuverlässig. Lesen ist bewusst NICHT erlaubt.
+        .plugin(tauri_plugin_clipboard_manager::init())
         .manage(tresor::TresorZustand::default())
         .invoke_handler(tauri::generate_handler![
             tresor::tresor_status,
