@@ -63,11 +63,16 @@
 
   /* ---------- Inhaltsverzeichnis ---------- */
   .toc { break-after: page; }
-  .toc h2 { font-size: 19pt; margin: 0 0 16px; }
+  .teil-seite { break-before: page; break-after: page; padding-top: 180px; }
+  .teil-seite .teil-nr { font-size: 13pt; font-weight: 700; color: #4f6df5; letter-spacing: .05em; text-transform: uppercase; }
+  .teil-seite .teil-titel { font-size: 26pt; margin: 6px 0 18px; border: none; }
+  .teil-seite p { font-size: 11.5pt; max-width: 520px; }
+  .toc li.teil { display: block; font-weight: 700; color: #4f6df5; border: none; padding: 6px 0 1px; font-size: 9.8pt; letter-spacing: .03em; }
+  .toc h2 { font-size: 19pt; margin: 0 0 8px; }
   .toc ol { list-style: none; padding: 0; margin: 0; columns: 1; }
   .toc li {
     display: flex; gap: 10px; align-items: baseline;
-    padding: 5px 0; border-bottom: 1px solid #f1f2f4; font-size: 10.5pt;
+    padding: 2px 0; border-bottom: 1px solid #f1f2f4; font-size: 9.8pt;
   }
   .toc .nr { color: #4f6df5; font-weight: 700; width: 22px; flex: 0 0 22px; }
   .toc .t { flex: 1; }
@@ -228,9 +233,10 @@
 <section class="toc">
   <h2>Inhalt</h2>
   <ol>
+    <li class="teil">Teil A · Allein arbeiten (Einzelplatz)</li>
     <li><span class="nr">0</span><span class="t">Installation &amp; Systemvoraussetzungen</span><span class="pg" data-ch="0">4</span></li>
     <li><span class="nr">1</span><span class="t">Einführung – was Antrag 3000 ist</span><span class="pg" data-ch="1">5</span></li>
-    <li><span class="nr">2</span><span class="t">Datensouveränität: was bleibt, was geteilt wird</span><span class="pg" data-ch="2">6</span></li>
+    <li><span class="nr">2</span><span class="t">Datensouveränität: deine Daten bleiben bei dir</span><span class="pg" data-ch="2">6</span></li>
     <li><span class="nr">3</span><span class="t">Erster Start: Tresor anlegen</span><span class="pg" data-ch="3">7</span></li>
     <li><span class="nr">4</span><span class="t">Entsperren, Sperren, Neu aufsetzen</span><span class="pg" data-ch="4">8</span></li>
     <li><span class="nr">5</span><span class="t">Projekte verwalten</span><span class="pg" data-ch="5">9</span></li>
@@ -248,15 +254,26 @@
     <li><span class="nr">17</span><span class="t">Stammdaten</span><span class="pg" data-ch="17">25</span></li>
     <li><span class="nr">18</span><span class="t">Ordner und Dateien auf dem Computer</span><span class="pg" data-ch="18">26</span></li>
     <li><span class="nr">19</span><span class="t">Sicherung (Backup)</span><span class="pg" data-ch="19">27</span></li>
-    <li><span class="nr">20</span><span class="t">Anmelden &amp; Schlüssel im Überblick</span><span class="pg" data-ch="20">28</span></li>
-    <li><span class="nr">21</span><span class="t">Team &amp; Server (Einzelplatz oder Team)</span><span class="pg" data-ch="21">29</span></li>
-    <li><span class="nr">22</span><span class="t">Selbst prüfen: Was verlässt das Gerät?</span><span class="pg" data-ch="22">33</span></li>
-    <li><span class="nr">23</span><span class="t">Förder-Datenbank aktuell halten</span><span class="pg" data-ch="23">34</span></li>
-    <li><span class="nr">24</span><span class="t">App-Updates</span><span class="pg" data-ch="24">36</span></li>
-    <li><span class="nr">25</span><span class="t">Abrechnung (Verwendungsnachweis)</span><span class="pg" data-ch="25">37</span></li>
-    <li><span class="nr">26</span><span class="t">Tipps &amp; häufige Fragen</span><span class="pg" data-ch="26">40</span></li>
-    <li><span class="nr">27</span><span class="t">Glossar (Fachbegriffe erklärt)</span><span class="pg" data-ch="27">42</span></li>
+    <li><span class="nr">20</span><span class="t">Förder-Datenbank aktuell halten</span><span class="pg" data-ch="20">28</span></li>
+    <li><span class="nr">21</span><span class="t">App-Updates</span><span class="pg" data-ch="21">29</span></li>
+    <li><span class="nr">22</span><span class="t">Abrechnung (Verwendungsnachweis)</span><span class="pg" data-ch="22">30</span></li>
+    <li><span class="nr">23</span><span class="t">Tipps &amp; häufige Fragen</span><span class="pg" data-ch="23">33</span></li>
+    <li class="teil">Teil B · Im Team arbeiten</li>
+    <li><span class="nr">24</span><span class="t">Team &amp; Server (Einzelplatz oder Team)</span><span class="pg" data-ch="24">35</span></li>
+    <li><span class="nr">25</span><span class="t">Anmelden &amp; Schlüssel im Überblick</span><span class="pg" data-ch="25">41</span></li>
+    <li><span class="nr">26</span><span class="t">Selbst prüfen: Was verlässt das Gerät?</span><span class="pg" data-ch="26">42</span></li>
+    <li class="teil">Anhang</li>
+    <li><span class="nr">27</span><span class="t">Glossar (Fachbegriffe erklärt)</span><span class="pg" data-ch="27">43</span></li>
   </ol>
+</section>
+
+<!-- ================= TEIL A ================= -->
+<section class="teil-seite">
+  <div class="teil-nr">Teil A</div>
+  <h2 class="teil-titel">Allein arbeiten (Einzelplatz)</h2>
+  <p>Alles, was du brauchst, wenn du Antrag 3000 <strong>für dich allein</strong> nutzt –
+  von der Installation bis zur Abrechnung. Das ist die Voreinstellung der App.</p>
+  <p class="dezent">Arbeitest du mit anderen zusammen, lies zusätzlich Teil B ab Kapitel 24.</p>
 </section>
 
 <!-- ===== 0 ===== -->
@@ -270,23 +287,22 @@
     <li><strong>Windows 10 oder 11</strong> (64-Bit).</li>
     <li>Rund <strong>150 MB</strong> freier Speicherplatz.</li>
     <li><strong>Kein Internet nötig</strong> für die tägliche Arbeit – eine
-    Verbindung braucht es nur für App- und Datenbank-Updates (Kap. 23 und 24).</li>
+    Verbindung braucht es nur für App- und Datenbank-Updates (Kap. 20 und 21).</li>
   </ul>
 
   <h3>Installieren</h3>
   <ol>
     <li>Du erhältst die Installationsdatei <code>Antrag 3000_…_x64-setup.exe</code>
-    vom <strong>Anbieter</strong> (Antrag 3000) – meist als Download-Link per E-Mail.
-    Arbeitet ihr als Team, kann sie auch eure Team-Verwalter:in weitergeben.</li>
+    vom <strong>Anbieter</strong> (Antrag 3000) – meist als Download-Link per E-Mail.</li>
     <li>Datei doppelklicken und den Schritten folgen.</li>
     <li>Zeigt Windows eine Warnung („Der Computer wurde durch Windows geschützt"),
     liegt das daran, dass der Installer noch nicht von Microsoft zertifiziert ist.
-    Wie du vorher die <strong>Echtheit prüfst</strong>, steht in Kap. 26.</li>
+    Wie du vorher die <strong>Echtheit prüfst</strong>, steht in Kap. 23.</li>
   </ol>
 
   <div class="merke">Nach der Installation liegt <strong>dieses Handbuch</strong> als
   PDF unter <code>Dokumente\Antrag 3000\</code> und öffnet sich einmalig automatisch.
-  Künftige Aktualisierungen kommen bequem über die App selbst (Kap. 24) – du musst
+  Künftige Aktualisierungen kommen bequem über die App selbst (Kap. 21) – du musst
   nicht jedes Mal neu installieren.</div>
 </section>
 
@@ -302,9 +318,9 @@
   zum fertigen, einreichfertigen <strong>Antrags-PDF</strong>. Deine
   <strong>sensiblen Daten bleiben dabei offline</strong> auf deinem Windows-Computer
   – ohne Konto, ohne Cloud-Zwang. Für App- und Datenbank-Updates kontaktiert die App
-  einen Server (Kap. 23/24); deine vertraulichen Inhalte werden dabei nie übertragen.
-  Nur wenn du im <strong>Team-Modus</strong> arbeitest, teilt sie zusätzlich ausgewählte
-  Arbeitsstände mit deinem Team (Kap. 2 und 21).</p>
+  einen Server (Kap. 20/21); deine vertraulichen Inhalte werden dabei nie übertragen.
+  Arbeitest du mit anderen zusammen, steht alles zum Team-Modus in
+  <strong>Teil B</strong> (ab Kap. 24).</p>
 
   <h3>Der typische Ablauf</h3>
   <div class="struktur">
@@ -322,7 +338,7 @@
 
 <!-- ===== 2 ===== -->
 <section class="chapter">
-  <h2><span class="kn">2</span>Datensouveränität: was bleibt, was geteilt wird</h2>
+  <h2><span class="kn">2</span>Datensouveränität: deine Daten bleiben bei dir</h2>
   <p class="lead">Das wichtigste Grundprinzip: Deine sensiblen Daten gehören dir
   und bleiben auf deinem Gerät.</p>
 
@@ -338,10 +354,10 @@
           <div style="margin-top:8px"><span class="badge b-gruen"><span class="dot"></span>verschlüsselt, verlässt das Gerät nie</span></div>
         </div>
         <div class="karte" style="border-top:4px solid #e2a400">
-          <div style="font-weight:700;margin-bottom:5px">👥 Arbeitsstand – im Team geteilt</div>
+          <div style="font-weight:700;margin-bottom:5px">📋 Arbeitsstand – im Tresor</div>
           <div class="geber">Projektname, gemerkte Förderungen, Antrag-Status, Fristen,
           Förderer-Kontakt (ohne Notiz), Dokument-Checklisten, eigene Förderungen (ohne Beschreibung).</div>
-          <div style="margin-top:8px"><span class="badge b-gelb"><span class="dot"></span>im Tresor; nur im Team-Modus geteilt</span></div>
+          <div style="margin-top:8px"><span class="badge b-gelb"><span class="dot"></span>bleibt bei dir · nur im Team geteilt (Teil B)</span></div>
         </div>
         <div class="karte" style="border-top:4px solid #4f6df5">
           <div style="font-weight:700;margin-bottom:5px">🌐 Unkritisch</div>
@@ -351,15 +367,15 @@
         </div>
       </div>
     </div>
-    <figcaption><b>Abb. 2.1</b> – Drei Arten von Daten. Im Einzelplatz-Modus bleibt auch der Arbeitsstand nur auf deinem Gerät.</figcaption>
+    <figcaption><b>Abb. 2.1</b> – Drei Arten von Daten. Wenn du allein arbeitest, bleiben die ersten beiden vollständig auf deinem Gerät.</figcaption>
   </figure>
 
   <p>Alles in den ersten beiden Spalten liegt in einem <strong>verschlüsselten Tresor</strong>
-  auf deinem Computer, geschützt durch dein Passwort. Die <strong>sensiblen</strong> Daten
-  sendet die App <strong>nie</strong> über das Netz – auch nicht bei den Updates
-  (Kap. 23/24), die nur die öffentliche Ebene betreffen. Den <strong>Arbeitsstand</strong>
-  teilt sie nur, wenn du im Team-Modus arbeitest – damit dein Team weiß, wer woran ist
-  (Kap. 21). Im Einzelplatz-Modus bleibt auch er nur bei dir.</p>
+  auf deinem Computer, geschützt durch dein Passwort. Arbeitest du allein, verlässt
+  <strong>nichts davon</strong> dein Gerät: Die App spricht nur mit dem Server, um
+  App-Updates und die öffentliche Förder-Datenbank zu holen (Kap. 20/21). Erst wer
+  im Team arbeitet, teilt den <strong>Arbeitsstand</strong> mit seinem Team (Teil B, Kap. 24) –
+  die sensiblen Daten nie.</p>
 
   <div class="merke"><strong>Wann Inhalte dein Gerät doch verlassen – immer nur durch dich:</strong>
   wenn du ein Antrags-PDF per Mail versendest (Kap. 13), Formular-Texte nach CryptPad
@@ -558,11 +574,11 @@
     Die Zahl hinter <em>„Merkliste (3)"</em> zeigt, wie viele Förderungen du im aktuellen
     Projekt gemerkt hast.</li>
     <li><strong>Block 3 – Du:</strong> „Stammdaten &amp; Team" (projektübergreifend):
-    links deine Stammdaten, rechts die Betriebsart Einzelplatz/Team und – im Team-Modus –
-    die Team-Synchronisation (Kap. 21).</li>
+    links deine Stammdaten, rechts die Betriebsart – Voreinstellung <em>Einzelplatz</em>.
+    Den Team-Modus erklärt Teil B (Kap. 24).</li>
   </ul>
   <p>Oben rechts liegen außerdem <strong>🛡 Sicherung</strong>, <strong>⬆ Update</strong>
-  (Kap. 24), <strong>Sperren</strong> und der farbige <strong>Verbindungspunkt</strong>.</p>
+  (Kap. 21), <strong>Sperren</strong> und der farbige <strong>Verbindungspunkt</strong>.</p>
 </section>
 
 <!-- ===== 7 ===== -->
@@ -914,7 +930,7 @@
       <div class="zeile" style="align-items:center">
         <div style="width:48px;height:48px;border-radius:9px;background:#eae6ff;color:#5e44b0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1">
           <span style="font-size:13pt;font-weight:700">15</span><span style="font-size:7pt;font-weight:600">JUL</span></div>
-        <div style="flex:1"><div style="display:flex;gap:7px;align-items:center"><span class="chip" style="background:#eae6ff;color:#5e44b0">📌 Intern</span><b>Teamabgabe Entwurf</b></div></div>
+        <div style="flex:1"><div style="display:flex;gap:7px;align-items:center"><span class="chip" style="background:#eae6ff;color:#5e44b0">📌 Intern</span><b>Entwurf fertig</b></div></div>
         <div class="badge b-gelb"><span class="dot"></span>noch 22 Tage</div>
       </div>
     </div>
@@ -926,7 +942,7 @@
   <span style="color:#216e4e;font-weight:700">grün</span>. Gruppen: anstehend,
   „laufend / ohne feste Frist", bereits vergangen.</p>
   <p><strong>+ Interne Frist</strong>: ein eigener Termin ohne Förderung
-  (z. B. „Teamabgabe Entwurf") mit Datum und Titel.</p>
+  (z. B. „Entwurf fertig") mit Datum und Titel.</p>
 
   <h3>Drei Arten von Einreichfristen</h3>
   <p>Eine Förderung hat eine von drei Frist-Arten:</p>
@@ -1048,13 +1064,9 @@
   weiterschreibt, holt den Stand mit „Aus CryptPad übernehmen" zurück. Abschnitte, deren
   Marker gelöscht wurden, werden nicht übernommen – die Vorschau sagt dir, welche.</div>
 
-  <div class="merke"><strong>Warum werden die Links nicht mit dem Team geteilt?</strong>
-  Ein CryptPad-Link enthält den <strong>Schlüssel zum Dokument</strong> – wer ihn hat,
-  kann mitlesen. Läge er im Team-Abgleich, wäre er auch auf dem Antrag-3000-Server
-  gespeichert. Darum bleiben die Links verschlüsselt <strong>nur auf deinem Gerät</strong>,
-  auch im Team-Modus. Gib Dokumente und Ordner stattdessen direkt in CryptPad frei
-  (Knopf „Teilen") – so bestimmst du selbst, wer Zugriff hat. Jede Person im Team trägt
-  den Link danach bei sich ein.</div>
+  <div class="merke"><strong>Wer bekommt die Links?</strong> Nur du: Antrag 3000 speichert
+  sie verschlüsselt auf deinem Gerät. Wer mitschreiben soll, bekommt den Link direkt von
+  dir – in CryptPad über den Knopf „Teilen". So bestimmst du selbst, wer Zugriff hat.</div>
 </section>
 
 <!-- ===== 16 ===== -->
@@ -1211,7 +1223,7 @@
     (nicht gelöscht).</li>
   </ul>
   <div class="warn"><strong>Die Sicherung enthält nur deinen Tresor – nicht deine Dateien.</strong>
-  Belege (Kap. 25), hochgeladene Dokumente (Kap. 11), Antrags-PDFs, Word- und Excel-Dateien
+  Belege (Kap. 22), hochgeladene Dokumente (Kap. 11), Antrags-PDFs, Word- und Excel-Dateien
   liegen als normale Dateien im Ordner <code>Dokumente\Antrag 3000</code> (Kap. 18). Sichere
   diesen Ordner <strong>zusätzlich</strong>, z. B. indem du ihn regelmäßig auf einen USB-Stick
   kopierst. Besonders wichtig sind die <strong>Belege</strong>: Sie musst du für den
@@ -1222,305 +1234,12 @@
 
 <!-- ===== 20 ===== -->
 <section class="chapter">
-  <h2><span class="kn">20</span>Anmelden &amp; Schlüssel im Überblick</h2>
-  <p class="lead">Es gibt zwei ganz verschiedene „Schlösser" – verwechsle sie nicht.
-  Das eine schützt deine Daten auf dem Gerät, das andere regelt den Zugang zum Team.</p>
-
-  <figure>
-    <div class="screen">
-      <div class="karten">
-        <div class="karte" style="border-top:4px solid #22a06b">
-          <div style="font-weight:700;margin-bottom:5px">🔑 Tresor-Passwort</div>
-          <div class="geber">Dein persönliches Passwort. Schließt deinen
-          <strong>verschlüsselten Tresor</strong> auf diesem Gerät auf
-          (Stammdaten, Budget, Projektbeschreibungen …).</div>
-          <div style="margin-top:8px"><span class="badge b-gruen"><span class="dot"></span>nur lokal, bei jedem Start</span></div>
-        </div>
-        <div class="karte" style="border-top:4px solid #4f6df5">
-          <div style="font-weight:700;margin-bottom:5px">🪪 Geräte-Ausweis</div>
-          <div class="geber">Ein Zertifikat auf deinem Gerät. Erlaubt der App,
-          mit dem <strong>Team-Server</strong> zu reden (nur unkritische Daten).
-          Du tippst dafür nichts – die App weist sich automatisch aus.</div>
-          <div style="margin-top:8px"><span class="badge b-blau"><span class="dot"></span>für die Team-Synchronisation</span></div>
-        </div>
-      </div>
-    </div>
-    <figcaption><b>Abb. 20.1</b> – Zwei getrennte Zugänge: das Passwort schützt deine Daten, der Ausweis regelt den Team-Zugang.</figcaption>
-  </figure>
-
-  <h3>Die Schlüssel dahinter – einfach erklärt</h3>
-  <div class="struktur">
-    <div class="stp"><span class="num">1</span><div><b>Tresor-Passwort → Schlüssel:</b> Aus deinem Passwort wird ein Schlüssel berechnet, der deinen lokalen Tresor verschlüsselt. <b>Passwort weg = Daten weg</b> (so gewollt) – siehe Kapitel 3.</div></div>
-    <div class="stp"><span class="num">2</span><div><b>Einladung → Geräte-Ausweis:</b> Beim Verbinden erzeugt dein Gerät <b>lokal</b> ein Schlüsselpaar. Nur der <b>öffentliche</b> Teil geht mit der Einladung an den Server; dieser stellt daraus deinen <b>Ausweis</b> aus. Dein privater Schlüssel <b>verlässt das Gerät nie</b>. Nur Geräte mit gültigem Ausweis dürfen mit dem Server reden.</div></div>
-  </div>
-  <div class="merke">Wichtig: Diese beiden Dinge sind <strong>komplett getrennt</strong>.
-  Dein Tresor-Passwort verlässt dein Gerät <strong>nie</strong>. Der Geräte-Ausweis
-  öffnet nur die Tür zum Team-Server – und dort liegen ohnehin nur unkritische Daten.</div>
-</section>
-
-<!-- ===== 21 ===== -->
-<section class="chapter">
-  <h2><span class="kn">21</span>Team &amp; Server (Einzelplatz oder Team)</h2>
-  <p class="lead">Damit ein kleines Team gemeinsam den Überblick behält, werden
-  ausgewählte <strong>unkritische</strong> Daten über den Antrag-3000-Server
-  geteilt. Diese Funktion ist völlig <strong>optional</strong>.</p>
-
-  <h3>Zwei Betriebsarten: Einzelplatz oder Team</h3>
-  <p>Im Reiter <strong>„Stammdaten &amp; Team"</strong> wählst du oben die Betriebsart:</p>
-  <ul>
-    <li><strong>Einzelplatz</strong> (Voreinstellung): Du nutzt Antrag 3000 allein.
-    Du bekommst trotzdem <strong>App-Updates</strong> und Aktualisierungen der
-    <strong>Förder-Datenbank</strong> vom Server. Es wird <strong>nichts
-    synchronisiert</strong>; Status, Fristen und eigene Förderer bleiben rein auf
-    deinem Gerät. Die <strong>Server-Adresse ist fest in der App eingebaut</strong> –
-    du musst nichts eintragen. Mit <em>„Förder-Datenbank aktualisieren"</em> holst
-    du jederzeit von Hand die neueste Fassung.</li>
-    <li><strong>Team</strong>: Zusätzlich werden im Team die unkritischen Daten
-    <strong>synchronisiert</strong> (Projektname, verfolgte Förderungen, Status,
-    Fristen, geteilte Förderer). Dafür verbindest du dein Gerät <strong>einmalig</strong>
-    – am einfachsten mit einer <strong>Einladung</strong> (siehe unten).</li>
-  </ul>
-  <p>Beim <strong>Umstellen</strong> erklärt dir ein kurzer Hinweis, was die gewählte
-  Betriebsart bedeutet. Mit <em>„Diesen Hinweis nicht mehr anzeigen"</em> stellst du
-  künftig ohne Rückfrage um; über <em>„Erklärung beim Umstellen wieder zeigen"</em>
-  neben den Knöpfen holst du ihn zurück.</p>
-  <div class="warn"><strong>Falle: Team-Modus ohne Team.</strong> Steht die App auf
-  <em>Team</em>, ohne dass ein Team eingerichtet ist, holt sie <strong>keine
-  Aktualisierungen der Förder-Datenbank</strong> mehr. Arbeitest du allein, stell sie unter
-  „Stammdaten &amp; Team" auf <strong>Einzelplatz</strong>.</div>
-  <div class="merke">Sensible Daten (Tresor) bleiben in <strong>beiden</strong>
-  Betriebsarten ausschließlich lokal. Der Unterschied ist nur, ob die unkritischen
-  Status-/Fristen-Daten mit einem Team geteilt werden.</div>
-
-  <div class="merke"><strong>Die Verbindung entsteht von selbst.</strong> Sobald du
-  die App das erste Mal aktivierst (Tresor angelegt), stellt sie die Verbindung zum
-  Server automatisch her und lädt die Förder-Datenbank – ganz ohne Knopfdruck. Ohne
-  Internet arbeitet die App <strong>vollständig offline</strong> weiter; du erhältst
-  dann nur keine automatischen Aktualisierungen. Ein Datenverlust droht dabei nie.</div>
-
-  <div class="merke"><strong>Welcher Server ist das?</strong> Standardmäßig der von
-  Antrag 3000 betriebene Dienst – seine Adresse steckt fest in der App. Wer einen
-  <strong>eigenen Server</strong> betreiben will (Self-Hosting), kann die Adresse
-  unter <strong>„Erweitert (Self-Hosting)"</strong> ändern. Das ist ein Sonderfall
-  für technisch Versierte und für den normalen Gebrauch nicht nötig.</div>
-
-  <p>Der Rest dieses Kapitels beschreibt den <strong>Team-Modus</strong>.</p>
-
-  <h3>Was geteilt wird – und was nicht</h3>
-  <figure>
-    <div class="screen">
-      <div class="karten">
-        <div class="karte" style="border-top:4px solid #22a06b">
-          <div style="font-weight:700;margin-bottom:5px">🔒 Bleibt lokal (Tresor)</div>
-          <div class="geber">Stammdaten, IBAN, Steuer, Projektbeschreibungen,
-          Budget/Kostenfinanzplan, freie Notizen, hochgeladene Dateien,
-          Links zu Arbeitsdokumenten und zum geteilten Ablageort.</div>
-        </div>
-        <div class="karte" style="border-top:4px solid #4f6df5">
-          <div style="font-weight:700;margin-bottom:5px">🌐 Wird geteilt (Board)</div>
-          <div class="geber">Projektname, verfolgte Förderungen, Antrag-Status,
-          Fristen/Termine, Förderer-Kontakt (ohne Notiz), Dokument-Status.</div>
-        </div>
-      </div>
-    </div>
-    <figcaption><b>Abb. 21.1</b> – Nur die rechte Spalte verlässt dein Gerät – und nur zu deinem eigenen Team-Server.</figcaption>
-  </figure>
-
-  <div class="merke">Zusätzlich zum Board werden die <strong>öffentlichen
-  Felder selbst recherchierter Förderer</strong> mit dem Team geteilt (deren
-  freie Beschreibung bleibt lokal). Auch Katalog-<strong>Meldungen</strong>
-  gehen über diesen Weg an die Pflege – Einzelheiten in Kapitel 23.</div>
-
-  <h3>Dein Gerät einrichten – Schritt für Schritt</h3>
-  <p>Das machst du <strong>einmalig</strong> pro Gerät. Danach läuft alles von allein.
-  Der normale Weg ist eine <strong>Einladung</strong>, die dir die Team-Verwalter:in gibt.</p>
-
-  <figure>
-    <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap">
-      <div style="background:#fff;border:2px solid #dfe1e6;border-radius:10px;padding:10px 12px;text-align:center;font-size:8.6pt;min-width:118px">
-        <div style="font-size:15pt">✉️</div><b>Einladung</b><br><span style="color:#8590a2;font-size:7.8pt">eine Datei vom Team</span></div>
-      <div style="color:#8590a2;font-weight:700;font-size:14pt">→</div>
-      <div style="background:#fff;border:2px solid #dfe1e6;border-radius:10px;padding:10px 12px;text-align:center;font-size:8.6pt;min-width:118px">
-        <div style="font-size:15pt">✓</div><b>Annehmen</b><br><span style="color:#8590a2;font-size:7.8pt">Schlüssel entsteht lokal</span></div>
-      <div style="color:#8590a2;font-weight:700;font-size:14pt">→</div>
-      <div style="background:#f6fffb;border:2px solid #22a06b;border-radius:10px;padding:10px 12px;text-align:center;font-size:8.6pt;min-width:118px">
-        <div style="font-size:15pt">🔗</div><b>Verbunden</b><br><span style="color:#8590a2;font-size:7.8pt">läuft von allein</span></div>
-    </div>
-    <figcaption><b>Abb. 21.2</b> – Eine Einladung, ein Klick – die App richtet sich selbst ein.</figcaption>
-  </figure>
-
-  <div class="struktur">
-    <div class="stp"><span class="num">1</span><div><b>Einladung bekommen.</b> Du bekommst von der „Verwalter:in" deines Teams <b>eine Datei</b> (endet auf <span class="pfad">.a3keinladung</span>). Sie ist <b>einmal</b> nutzbar. Du bekommst sie <b>persönlich/offline</b> – z. B. auf einem USB-Stick.</div></div>
-    <div class="stp"><span class="num">2</span><div><b>Einladung annehmen.</b> Im Bereich <b>Team-Sync</b> unter <b>„Mit einer Einladung verbinden"</b> deinem Gerät einen Namen geben, auf <b>„Einladung annehmen"</b> klicken und die <span class="pfad">.a3keinladung</span>-Datei wählen. <b>Dein Geräteschlüssel entsteht dabei nur auf diesem Gerät und verlässt es nie</b> – nach außen geht nur der öffentliche Teil, zurück kommt dein fertiger Ausweis. Alles landet <b>verschlüsselt in deinem Tresor</b>.</div></div>
-    <div class="stp"><span class="num">3</span><div><b>Verbinden &amp; fertig.</b> Die App meldet <b>„verbunden"</b>. Ab jetzt brauchst du nichts mehr zu tun – kein zweites Passwort, kein erneutes Einrichten.</div></div>
-  </div>
-
-  <div class="warn"><strong>Wichtig:</strong> Gib die Einladung <strong>nicht</strong>
-  per E-Mail oder Chat weiter – der Code darin ist <strong>einmal</strong> gültig und
-  wirkt wie ein Schlüssel. Nur persönlich/offline weitergeben (USB-Stick). Jedes
-  Gerät bekommt seine <strong>eigene</strong> Einladung.</div>
-
-  <div class="merke"><strong>Alternative: Zugangs-Paket.</strong> Betreibt dein Team
-  einen <strong>eigenen</strong> Server (Self-Hosting), bekommst du statt einer
-  Einladung evtl. ein fertiges <strong>Zugangs-Paket</strong> (Datei
-  <span class="pfad">.a3kpaket</span>). Das lädst du im selben Bereich unter
-  <em>„Zugangs-Paket wählen"</em> – der Rest ist identisch.</div>
-
-  <h3>Synchronisieren starten und stoppen</h3>
-  <p>Das Abgleichen läuft nicht ständig im Hintergrund, sondern <strong>nur,
-  wenn du es einschaltest</strong>. So behältst du die Kontrolle.</p>
-
-  <figure>
-    <div class="screen">
-      <div class="karte">
-        <div style="font-weight:700;margin-bottom:8px">Team-Übersicht</div>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <span class="btn pri">▶ Synchronisieren starten</span>
-          <span class="dot9" style="background:#36b37e"></span>
-          <span class="geber">Live – synchronisiert fortlaufend</span>
-        </div>
-        <div style="font-size:8pt;color:#8590a2;margin-top:8px">Letzte Änderung übernommen: 15.06.2026, 14:02 · zuletzt geprüft: 14:03</div>
-      </div>
-    </div>
-    <figcaption><b>Abb. 21.3</b> – Ein Schalter: „Synchronisieren starten" wird zu „… stoppen". Das Lämpchen zeigt den Zustand.</figcaption>
-  </figure>
-
-  <ul>
-    <li><strong>▶ Synchronisieren starten</strong> ist erst aktiv, wenn die
-    Verbindung steht (sonst ausgegraut, mit Hinweis). Danach gleicht die App
-    <strong>fortlaufend von selbst</strong> ab – etwa alle 10 Sekunden.</li>
-    <li>Läuft der Sync, heißt der Knopf <strong>■ Synchronisieren stoppen</strong>.
-    Das <strong>Lämpchen</strong> ist grün (live), gelb (Verbindung kurz weg,
-    versucht weiter) oder grau (aus).</li>
-    <li>Beim <strong>Sperren</strong> des Tresors stoppt der Sync automatisch.</li>
-  </ul>
-  <p>Geteilt wird sparsam: Hochgeladen wird nur ein Projekt, dessen Board-Stand
-  sich <strong>tatsächlich geändert</strong> hat. Löschst du ein Projekt, wird es
-  auch vom Team-Board entfernt. Ändern zwei Personen dasselbe Projekt zugleich,
-  wird der Konflikt gemeldet und übersprungen (nichts wird überschrieben).</p>
-
-  <h3>Die Team-Übersicht</h3>
-  <p>Darunter zeigt die App eine <strong>schreibgeschützte</strong> Liste aller
-  Team-Projekte mit ihren verfolgten Förderungen und dem jeweiligen
-  Antrag-Status. Deine eigenen Projekte sind mit „dieses Team-Gerät" markiert.
-  Auch hier erscheinen <strong>nur unkritische</strong> Board-Felder.</p>
-
-  <div class="warn"><strong>Ab hier nur für die <em>eine</em> Person, die das Team
-  aufsetzt.</strong> Als normales Teammitglied brauchst du das Folgende nicht; für
-  dich genügen die drei Schritte oben (Einladung annehmen → fertig).</div>
-
-  <h3>Für die Verwalter:in: Team erstellen &amp; Mitglieder einladen</h3>
-  <p>Eine Person im Team richtet das Team <strong>einmalig</strong> ein – komplett
-  in der App, ohne Kommandozeile und ohne eigenen Server. Im Bereich Team-Sync:</p>
-  <div class="struktur">
-    <div class="stp"><span class="num">1</span><div><b>Eigenes Team erstellen.</b> Unter <b>„▸ Oder: eigenes Team erstellen"</b> einen Team-Namen und einen Namen für dieses Gerät eingeben und auf <b>„Team erstellen"</b> klicken. Der Dienst legt das Team an, dieses Gerät wird <b>Eigentümer</b>. Dein Schlüssel entsteht nur auf deinem Gerät. Kein Konto, keine E-Mail nötig.</div></div>
-    <div class="stp"><span class="num">2</span><div><b>Mitglieder einladen.</b> Unter <b>„▸ Mitglied einladen"</b> für jedes weitere Gerät eine <span class="pfad">.a3keinladung</span>-Datei erzeugen und offline (USB) weitergeben. Jede Einladung ist <b>einmal</b> nutzbar.</div></div>
-    <div class="stp"><span class="num">3</span><div><b>Mitglieder verwalten.</b> Unter <b>„▸ Mitglieder verwalten"</b> siehst du alle Geräte des Teams und kannst einzelne bei Bedarf <b>sperren</b> oder wieder freigeben.</div></div>
-  </div>
-  <div class="merke">Nur der/die Eigentümer:in kann einladen und verwalten. Alle
-  anderen bekommen eine fertige Einladung und folgen den drei Schritten oben.</div>
-
-  <h3>Wenn „nicht erreichbar" erscheint – Virenscanner (HTTPS-Scan)</h3>
-  <p>Die häufigste Stolperfalle ist <strong>nicht</strong> der Server, sondern ein
-  <strong>Virenscanner auf deinem PC</strong>. Viele Schutzprogramme (z. B.
-  <strong>Norton</strong>, aber auch andere mit „SSL-Scan" / „Web-Schutz")
-  klinken sich heimlich in jede verschlüsselte Verbindung ein, um sie zu
-  durchleuchten. Dabei <strong>tauschen sie das Server-Zertifikat aus</strong> –
-  und genau das verträgt sich nicht mit der gegenseitigen Ausweis-Prüfung (mTLS)
-  von Antrag&nbsp;3000.</p>
-
-  <div class="warn"><strong>Typisches Fehlerbild:</strong> Die App meldet
-  „⚠&nbsp;Nicht erreichbar … <span class="pfad">invalid peer certificate:
-  UnknownIssuer</span>", obwohl der Server läuft und deine Internet-Verbindung
-  steht. Das bedeutet: Das Zertifikat, das bei der App ankommt, stammt
-  <strong>nicht</strong> vom echten Server, sondern wurde vom Virenscanner
-  ersetzt (z.&nbsp;B. Aussteller „Norton Web/Mail Shield").</div>
-
-  <p><strong>So behebst du es</strong> – am besten gezielt, ohne den Virenscanner
-  ganz abzuschalten:</p>
-  <div class="struktur">
-    <div class="stp"><span class="num">1</span><div>Im Virenscanner die Funktion zum <b>Scannen verschlüsselter Verbindungen</b> suchen (bei Norton z.&nbsp;B. unter <i>Einstellungen → Firewall</i> bzw. <i>„Sicheres Surfen"</i>, Stichworte „HTTPS-Scan", „Verschlüsselte Verbindungen scannen", „Web/Mail-Shield").</div></div>
-    <div class="stp"><span class="num">2</span><div>Dort eine <b>Ausnahme</b> für die Team-Adresse eintragen (z.&nbsp;B. <span class="pfad">team.antrag3000.de</span>). <b>Besser als alles abschalten</b>, weil der übrige Schutz erhalten bleibt.</div></div>
-    <div class="stp"><span class="num">3</span><div>In der App erneut <b>„Verbindung testen"</b> – jetzt sollte <b>✓ Verbunden</b> erscheinen.</div></div>
-  </div>
-  <div class="merke">Wer keinen solchen HTTPS-Scan aktiv hat, ist davon nicht
-  betroffen. Bei anderen Schutzprogrammen mit „SSL-Scan" gilt dasselbe Vorgehen:
-  eine Ausnahme für die Team-Adresse setzen.</div>
-
-  <h3>Warum das sicher ist</h3>
-  <ul>
-    <li>Nur Geräte mit gültigem <strong>Team-Ausweis</strong> kommen überhaupt an den Server (mTLS).</li>
-    <li>Der Server kennt <strong>nur Board-Daten</strong> – nie deine sensiblen Inhalte.</li>
-    <li>Übertragen wird <strong>nur die unkritische Ebene</strong> – deine sensiblen Inhalte (Tresor) verlassen das Gerät technisch <strong>nie</strong>, auch nicht zum Server.</li>
-  </ul>
-
-  <div class="tipp"><strong>Ausblick (in Prüfung):</strong> Ein <strong>Ende-zu-Ende
-  verschlüsselter Team-Chat</strong> würde auf genau dieser Grundlage aufsetzen:
-  jedes Gerät bekäme zusätzlich ein Schlüsselpaar (privater Teil im Tresor),
-  Nachrichten lägen auf dem Server nur als Geheimtext. Ob und wie wir das bauen,
-  entscheiden wir separat.</div>
-</section>
-
-<!-- ===== 22 ===== -->
-<section class="chapter">
-  <h2><span class="kn">22</span>Selbst prüfen: Was verlässt das Gerät?</h2>
-  <p class="lead">Du musst dem Versprechen „nur unkritische Daten" nicht blind
-  glauben – du kannst es <strong>selbst nachprüfen</strong>. Dafür gibt es im
-  Bereich Team-Sync den Abschnitt <strong>„▸ Prüfen &amp; Protokoll"</strong>.</p>
-
-  <h3>1 · Sende-Vorschau (Trockenlauf)</h3>
-  <p>Ein Klick auf <strong>„Sende-Vorschau anzeigen"</strong> zeigt dir die
-  <strong>exakten</strong> Daten, die der Sync hochladen würde – <strong>ohne
-  etwas zu senden</strong>. Du siehst nur Board-Felder: Projektname,
-  Förderungs-Kürzel, Status, Fristen, öffentlicher Kontakt.</p>
-
-  <figure>
-    <div class="screen">
-      <div class="tree" style="background:#0b1020;color:#d7e0ff;border:none">
-{ "inhalt": {<br>
-&nbsp;&nbsp;"id": "p1", "name": "Klangraum Festival",<br>
-&nbsp;&nbsp;"eintraege": [ { "foerderungId": "de-musikfonds",<br>
-&nbsp;&nbsp;&nbsp;&nbsp;"status": "abgeschickt", "offizielleFristen": ["2026-06-30"] } ]<br>
-}, "basis_version": null }
-      </div>
-    </div>
-    <figcaption><b>Abb. 22.1</b> – So sieht ein Sende-Körper aus: keine Stammdaten, keine IBAN, kein Budget, keine Beschreibung.</figcaption>
-  </figure>
-
-  <h3>2 · Unabhängiger Mitschnitt <span style="font-weight:400;color:#5e6c84">(optional, für technisch Versierte)</span></h3>
-  <div class="merke">Für den Alltag genügt die <strong>Sende-Vorschau</strong> oben –
-  sie ist der einfache, empfohlene Weg. Der folgende Mitschnitt ist ein zusätzlicher
-  Beweis für alle, die es ganz genau wissen wollen; er setzt <strong>Node.js</strong>
-  und die <strong>Kommandozeile</strong> voraus.</div>
-  <p>Wer ganz sichergehen will, schaut sich an, was <strong>wirklich über die
-  Leitung</strong> geht – mit einem kleinen Mithör-Programm, unabhängig von der
-  App und ohne echten Server:</p>
-  <div class="struktur">
-    <div class="stp"><span class="num">1</span><div>Das Mithör-Programm gehört zum <strong>Quellcode</strong> von Antrag 3000 (öffentlich auf GitHub, <span class="pfad">github.com/antragy3000/Antrag-3000</span>) – nicht zu deinem Projektordner. Im heruntergeladenen Quellcode-Ordner ein Terminal öffnen und <code>node tools/echo-server.mjs</code> starten.</div></div>
-    <div class="stp"><span class="num">2</span><div>In der App unter „Prüfen &amp; Protokoll" auf <b>„An lokalen Mitschnitt senden"</b> klicken (Adresse <span class="pfad">http://127.0.0.1:8099</span>).</div></div>
-    <div class="stp"><span class="num">3</span><div>Im Terminal erscheint jeder gesendete Datensatz vollständig – Zeile für Zeile prüfbar.</div></div>
-  </div>
-
-  <h3>3 · Sync-Protokoll</h3>
-  <p>Während die Synchronisation läuft, listet das <strong>Protokoll</strong>,
-  was tatsächlich gesendet oder gelöscht wurde – mit Uhrzeit und Größe. So bleibt
-  jeder Abgleich nachvollziehbar.</p>
-
-  <div class="tipp"><strong>Eingebaute Garantie.</strong> Die App baut die
-  Sende-Daten an <strong>einer einzigen Stelle</strong> zusammen, die nur
-  unkritische Felder kennt. Ein automatischer Test wacht bei jeder Programm­änderung
-  darüber, dass dort nie ein sensibles Feld hineingerät.</div>
-</section>
-
-<!-- ===== 23 ===== -->
-<section class="chapter">
-  <h2><span class="kn">23</span>Förder-Datenbank aktuell halten</h2>
+  <h2><span class="kn">20</span>Förder-Datenbank aktuell halten</h2>
   <p class="lead">Die <strong>Förder-Datenbank</strong> (in der App stellenweise
   auch kurz <strong>„Katalog"</strong> genannt) ist die Liste aller Förderungen mit
   ihren öffentlichen Programm-Infos. Sie ist <strong>unkritisch</strong> (keine
   Tresor-Daten) und lässt sich aktuell halten – über einen Server oder eine Datei.
-  Hier erfährst du auch, wie du <strong>Fehler meldest</strong> und
-  <strong>eigene Förderer mit dem Team teilst</strong>.</p>
+  Hier erfährst du auch, wie du <strong>Fehler meldest</strong>.</p>
 
   <div class="merke">Du öffnest das alles über den Knopf
   <strong>🗂 Förder-Datenbank</strong>, der im Bereich <em>Förderungen</em> und in
@@ -1531,10 +1250,9 @@
   übernommen</strong>; danach siehst du, was sich geändert hat. Drei Wege:</p>
   <ul>
     <li><strong>🔄 Vom Server holen</strong> – die zentral gepflegte Fassung vom
-    Server. Im <em>Team</em>-Modus über deinen Geräte-Ausweis, im <em>Einzelplatz</em>
-    über den eingebauten Server (Kap. 21). Gleichwertig im Einzelplatz-Modus: der Knopf
-    <strong>„Förder-Datenbank aktualisieren"</strong> unter „Stammdaten &amp; Team". Außerdem
-    holt die App die neueste Fassung bei jedem Start still im Hintergrund.</li>
+    Antrag-3000-Server. Gleichwertig: der Knopf <strong>„Förder-Datenbank
+    aktualisieren"</strong> unter „Stammdaten &amp; Team". Außerdem holt die App die
+    neueste Fassung bei jedem Start still im Hintergrund.</li>
     <li><strong>Update aus Datei laden</strong> – eine Katalog-Datei, die du
     z. B. per USB bekommen hast.</li>
     <li><strong>Auf Werkszustand zurücksetzen</strong> – zurück zur
@@ -1556,55 +1274,20 @@
   <p>Stimmt etwas nicht (veraltete Frist, falscher Geber, Förderung gibt es
   nicht mehr)? Melde es im Fenster <strong>Förder-Datenbank</strong> unter
   <strong>„Problem melden"</strong>: Förderung wählen, Art angeben, optional eine
-  kurze Anmerkung. Im <strong>Team-Modus</strong> wird die Meldung beim laufenden
-  Synchronisieren automatisch an die Pflege gesendet – vorher steht sie auf
-  <em>„noch nicht gesendet"</em>, danach auf <em>„gesendet"</em>.</p>
-  <div class="warn"><strong>Im Einzelplatz-Modus</strong> sammelt die App deine Meldungen
-  derzeit nur – sie werden <strong>noch nicht versendet</strong>. Ist dir ein Fehler wichtig,
-  schreib bitte direkt an <strong>pilot@antrag3000.de</strong>.</div>
+  kurze Anmerkung.</p>
+  <div class="warn"><strong>Wichtig:</strong> Wenn du allein arbeitest, sammelt die App deine
+  Meldungen derzeit nur – sie werden <strong>noch nicht versendet</strong> (sie stehen auf
+  „noch nicht gesendet"). Ist dir ein Fehler wichtig, schreib bitte direkt an
+  <strong>pilot@antrag3000.de</strong>. Im Team-Modus gehen Meldungen automatisch raus (Kap. 24).</div>
   <div class="merke">Die Meldung enthält <strong>nur</strong> Förderungs-Name,
   Art und deine Anmerkung – keine Tresor-Daten. Sie fließt in die zentrale
   Pflege der Datenbank ein.</div>
 
-  <h3>Eigene Förderer mit dem Team teilen</h3>
-  <p>Legst du eine <strong>selbst recherchierte Förderung</strong> an (in der
-  Merkliste über „+ Eigene Förderung"), teilt die App beim
-  Synchronisieren automatisch deren <strong>öffentliche Programm-Infos</strong>
-  mit dem Team. Bei den anderen erscheint sie dann in der Liste mit dem Abzeichen
-  <strong>👥 vom Team geteilt</strong>.</p>
-
-  <figure>
-    <div class="screen">
-      <div class="karten">
-        <div class="karte" style="border-top:4px solid #0c5a8f">
-          <div style="font-weight:700;margin-bottom:5px">👥 Wird geteilt (öffentlich)</div>
-          <div class="geber">Name, Fördergeber, Land, Webseite, Förderhöhe,
-          Fristen, Sparten/Kriterien, vorgeschlagene Unterlagen.</div>
-        </div>
-        <div class="karte" style="border-top:4px solid #22a06b">
-          <div style="font-weight:700;margin-bottom:5px">🔒 Bleibt lokal</div>
-          <div class="geber">Deine <strong>freie Beschreibung</strong> der
-          Förderung – sie verlässt das Gerät nicht.</div>
-        </div>
-      </div>
-    </div>
-    <figcaption><b>Abb. 23.1</b> – Vom eigenen Förderer wandern nur die öffentlichen Programm-Infos ins Team; die freie Beschreibung bleibt im Tresor.</figcaption>
-  </figure>
-
-  <p>Entfernst du eine eigene Förderung wieder, wird sie beim nächsten Abgleich
-  auch beim Team zurückgezogen. Was tatsächlich gesendet wird, kannst du jederzeit
-  über die <strong>Sende-Vorschau</strong> nachprüfen (Kapitel 22) – die
-  Beschreibung taucht dort nicht auf.</p>
-
-  <div class="tipp"><strong>Schutz vor Überlastung.</strong> Damit niemand den
-  Team-Server mutwillig mit Meldungen oder Förderern fluten kann, bremst der
-  Server selbst: pro Gerät gilt ein Tempo-Limit und eine Höchstzahl. Im
-  Alltag merkst du davon nichts.</div>
 </section>
 
-<!-- ===== 24 ===== -->
+<!-- ===== 21 ===== -->
 <section class="chapter">
-  <h2><span class="kn">24</span>App-Updates</h2>
+  <h2><span class="kn">21</span>App-Updates</h2>
   <p>Neben der Förder-Datenbank kann sich auch das <strong>Programm selbst</strong>
   aktualisieren – sicher und automatisch geprüft.</p>
 
@@ -1615,7 +1298,7 @@
   jederzeit selbst suchen: oben rechts auf <strong>„⬆ Update"</strong>.</p>
   <p class="dezent">Im <strong>Einzelplatz-Modus</strong> ist das – neben der Förder-Datenbank –
   der einzige Moment, in dem die App im Alltag kurz online geht. (Im Team-Modus kommt der
-  Team-Abgleich hinzu, Kap. 21.) Deine <strong>sensiblen Tresor-Daten sind dabei
+  Team-Abgleich hinzu, Kap. 24.) Deine <strong>sensiblen Tresor-Daten sind dabei
   nie im Spiel</strong>. Ohne Server-Verbindung läuft die App normal weiter.</p>
 
   <h3>Aktualisieren</h3>
@@ -1642,9 +1325,9 @@
   erreichbar ist – prüfe die Verbindung (Status-Punkt) und versuche es später erneut.</p>
 </section>
 
-<!-- ===== 25 ===== -->
+<!-- ===== 22 ===== -->
 <section class="chapter">
-  <h2><span class="kn">25</span>Abrechnung (Verwendungsnachweis)</h2>
+  <h2><span class="kn">22</span>Abrechnung (Verwendungsnachweis)</h2>
   <p>Wenn ein Projekt durchgeführt ist, willst du den Förderern nachweisen,
   wofür das Geld ausgegeben wurde. Dafür gibt es einen <strong>eigenen
   Modus</strong>: Belege laufend erfassen und am Ende jedem Förderer die
@@ -1739,9 +1422,9 @@
   Verwendungsnachweis meist mehrere Jahre aufbewahren.</div>
 </section>
 
-<!-- ===== 26 ===== -->
+<!-- ===== 23 ===== -->
 <section class="chapter">
-  <h2><span class="kn">26</span>Tipps &amp; häufige Fragen</h2>
+  <h2><span class="kn">23</span>Tipps &amp; häufige Fragen</h2>
 
   <dl class="faq">
     <dt>Ich habe mein Passwort vergessen – was nun?</dt>
@@ -1767,8 +1450,7 @@
     <dd>Der Installer ist (noch) nicht von Microsoft zertifiziert, deshalb warnt
     Windows pauschal – das heißt nicht, dass die Datei schädlich ist.
     <strong>Prüfe vorher die Echtheit:</strong> Verwende nur den Installer aus der
-    <strong>offiziellen Bezugsquelle</strong>, die dir deine Team-Verwalter:in bzw.
-    der Anbieter genannt hat. Zu jedem Installer liegt eine kleine
+    <strong>offiziellen Bezugsquelle</strong>, die dir der Anbieter genannt hat. Zu jedem Installer liegt eine kleine
     <strong>Prüfsummen-Datei</strong> (gleicher Name, Endung <code>.sha256</code>).
     So prüfst du, ob deine heruntergeladene Datei unverändert ist:
     <ol>
@@ -1776,11 +1458,11 @@
       <li>Diesen Befehl eingeben (Pfad zur heruntergeladenen Datei anpassen):
         <br><code>Get-FileHash "Antrag 3000_…_x64-setup.exe" -Algorithm SHA256</code></li>
       <li>Den angezeigten Wert mit dem aus der <code>.sha256</code>-Datei (bzw. dem,
-        den dir die Verwalter:in genannt hat) vergleichen.</li>
+        den dir der Anbieter genannt hat) vergleichen.</li>
     </ol>
     Stimmen die Werte überein, ist die Datei echt – erst dann über
     „Weitere Informationen" → „Trotzdem ausführen" fortfahren.
-    <em>Hinweis: Spätere App-Updates sind digital signiert (Kap. 24) und werden
+    <em>Hinweis: Spätere App-Updates sind digital signiert (Kap. 21) und werden
     automatisch geprüft – diese Warnung betrifft nur die erste Installation.</em></dd>
 
     <dt>Wo liegen meine Dateien?</dt>
@@ -1788,31 +1470,395 @@
     (siehe Kapitel 18). Der verschlüsselte Tresor liegt separat im
     App-Datenordner.</dd>
 
+    <dt>Wie prüfe ich, dass keine sensiblen Daten ins Netz gehen?</dt>
+    <dd>Wenn du allein arbeitest, spricht die App nur mit dem Server, um App-Updates
+    (Kap. 21) und die öffentliche Förder-Datenbank (Kap. 20) zu holen – deine
+    Tresor-Daten sind dabei nie im Spiel. Im Team-Modus kannst du jeden gesendeten
+    Datensatz selbst nachprüfen (Kap. 26).</dd>
+  </dl>
+</section>
+
+<!-- ================= TEIL B ================= -->
+<section class="teil-seite">
+  <div class="teil-nr">Teil B</div>
+  <h2 class="teil-titel">Im Team arbeiten</h2>
+  <p>Dieser Teil ist nur wichtig, wenn ihr <strong>zu mehreren</strong> an Anträgen arbeitet
+  und euren Arbeitsstand – Merkliste, Status, Fristen – miteinander abgleichen wollt.</p>
+  <p>Alles aus Teil A gilt weiter. Hier steht, was im Team <strong>dazukommt</strong>: wie
+  ihr ein Team einrichtet, was dabei geteilt wird und wie du das selbst überprüfst.</p>
+  <p class="dezent">Arbeitest du allein, kannst du Teil B überspringen.</p>
+</section>
+
+<!-- ===== 24 ===== -->
+<section class="chapter">
+  <h2><span class="kn">24</span>Team &amp; Server (Einzelplatz oder Team)</h2>
+  <p class="lead">Damit ein kleines Team gemeinsam den Überblick behält, werden
+  ausgewählte <strong>unkritische</strong> Daten über den Antrag-3000-Server
+  geteilt. Diese Funktion ist völlig <strong>optional</strong>.</p>
+
+  <h3>Zwei Betriebsarten: Einzelplatz oder Team</h3>
+  <p>Im Reiter <strong>„Stammdaten &amp; Team"</strong> wählst du oben die Betriebsart:</p>
+  <ul>
+    <li><strong>Einzelplatz</strong> (Voreinstellung): Du nutzt Antrag 3000 allein.
+    Du bekommst trotzdem <strong>App-Updates</strong> und Aktualisierungen der
+    <strong>Förder-Datenbank</strong> vom Server. Es wird <strong>nichts
+    synchronisiert</strong>; Status, Fristen und eigene Förderer bleiben rein auf
+    deinem Gerät. Die <strong>Server-Adresse ist fest in der App eingebaut</strong> –
+    du musst nichts eintragen. Mit <em>„Förder-Datenbank aktualisieren"</em> holst
+    du jederzeit von Hand die neueste Fassung.</li>
+    <li><strong>Team</strong>: Zusätzlich werden im Team die unkritischen Daten
+    <strong>synchronisiert</strong> (Projektname, verfolgte Förderungen, Status,
+    Fristen, geteilte Förderer). Dafür verbindest du dein Gerät <strong>einmalig</strong>
+    – am einfachsten mit einer <strong>Einladung</strong> (siehe unten).</li>
+  </ul>
+  <p>Beim <strong>Umstellen</strong> erklärt dir ein kurzer Hinweis, was die gewählte
+  Betriebsart bedeutet. Mit <em>„Diesen Hinweis nicht mehr anzeigen"</em> stellst du
+  künftig ohne Rückfrage um; über <em>„Erklärung beim Umstellen wieder zeigen"</em>
+  neben den Knöpfen holst du ihn zurück.</p>
+  <div class="warn"><strong>Falle: Team-Modus ohne Team.</strong> Steht die App auf
+  <em>Team</em>, ohne dass ein Team eingerichtet ist, holt sie <strong>keine
+  Aktualisierungen der Förder-Datenbank</strong> mehr. Arbeitest du allein, stell sie unter
+  „Stammdaten &amp; Team" auf <strong>Einzelplatz</strong>.</div>
+  <div class="merke">Sensible Daten (Tresor) bleiben in <strong>beiden</strong>
+  Betriebsarten ausschließlich lokal. Der Unterschied ist nur, ob die unkritischen
+  Status-/Fristen-Daten mit einem Team geteilt werden.</div>
+
+  <div class="merke"><strong>Die Verbindung entsteht von selbst.</strong> Sobald du
+  die App das erste Mal aktivierst (Tresor angelegt), stellt sie die Verbindung zum
+  Server automatisch her und lädt die Förder-Datenbank – ganz ohne Knopfdruck. Ohne
+  Internet arbeitet die App <strong>vollständig offline</strong> weiter; du erhältst
+  dann nur keine automatischen Aktualisierungen. Ein Datenverlust droht dabei nie.</div>
+
+  <div class="merke"><strong>Welcher Server ist das?</strong> Standardmäßig der von
+  Antrag 3000 betriebene Dienst – seine Adresse steckt fest in der App. Wer einen
+  <strong>eigenen Server</strong> betreiben will (Self-Hosting), kann die Adresse
+  unter <strong>„Erweitert (Self-Hosting)"</strong> ändern. Das ist ein Sonderfall
+  für technisch Versierte und für den normalen Gebrauch nicht nötig.</div>
+
+  <p>Der Rest dieses Kapitels beschreibt den <strong>Team-Modus</strong>.</p>
+
+  <h3>Was geteilt wird – und was nicht</h3>
+  <figure>
+    <div class="screen">
+      <div class="karten">
+        <div class="karte" style="border-top:4px solid #22a06b">
+          <div style="font-weight:700;margin-bottom:5px">🔒 Bleibt lokal (Tresor)</div>
+          <div class="geber">Stammdaten, IBAN, Steuer, Projektbeschreibungen,
+          Budget/Kostenfinanzplan, freie Notizen, hochgeladene Dateien,
+          Links zu Arbeitsdokumenten und zum geteilten Ablageort.</div>
+        </div>
+        <div class="karte" style="border-top:4px solid #4f6df5">
+          <div style="font-weight:700;margin-bottom:5px">🌐 Wird geteilt (Board)</div>
+          <div class="geber">Projektname, verfolgte Förderungen, Antrag-Status,
+          Fristen/Termine, Förderer-Kontakt (ohne Notiz), Dokument-Status.</div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 24.1</b> – Nur die rechte Spalte verlässt dein Gerät – und nur zu deinem eigenen Team-Server.</figcaption>
+  </figure>
+
+  <div class="merke">Zusätzlich zum Board werden die <strong>öffentlichen
+  Felder selbst recherchierter Förderer</strong> mit dem Team geteilt (deren
+  freie Beschreibung bleibt lokal). Auch Katalog-<strong>Meldungen</strong>
+  gehen über diesen Weg an die Pflege – Einzelheiten in Kapitel 20.</div>
+
+  <h3>Dein Gerät einrichten – Schritt für Schritt</h3>
+  <p>Das machst du <strong>einmalig</strong> pro Gerät. Danach läuft alles von allein.
+  Der normale Weg ist eine <strong>Einladung</strong>, die dir die Team-Verwalter:in gibt.</p>
+
+  <figure>
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap">
+      <div style="background:#fff;border:2px solid #dfe1e6;border-radius:10px;padding:10px 12px;text-align:center;font-size:8.6pt;min-width:118px">
+        <div style="font-size:15pt">✉️</div><b>Einladung</b><br><span style="color:#8590a2;font-size:7.8pt">eine Datei vom Team</span></div>
+      <div style="color:#8590a2;font-weight:700;font-size:14pt">→</div>
+      <div style="background:#fff;border:2px solid #dfe1e6;border-radius:10px;padding:10px 12px;text-align:center;font-size:8.6pt;min-width:118px">
+        <div style="font-size:15pt">✓</div><b>Annehmen</b><br><span style="color:#8590a2;font-size:7.8pt">Schlüssel entsteht lokal</span></div>
+      <div style="color:#8590a2;font-weight:700;font-size:14pt">→</div>
+      <div style="background:#f6fffb;border:2px solid #22a06b;border-radius:10px;padding:10px 12px;text-align:center;font-size:8.6pt;min-width:118px">
+        <div style="font-size:15pt">🔗</div><b>Verbunden</b><br><span style="color:#8590a2;font-size:7.8pt">läuft von allein</span></div>
+    </div>
+    <figcaption><b>Abb. 24.2</b> – Eine Einladung, ein Klick – die App richtet sich selbst ein.</figcaption>
+  </figure>
+
+  <div class="struktur">
+    <div class="stp"><span class="num">1</span><div><b>Einladung bekommen.</b> Du bekommst von der „Verwalter:in" deines Teams <b>eine Datei</b> (endet auf <span class="pfad">.a3keinladung</span>). Sie ist <b>einmal</b> nutzbar. Du bekommst sie <b>persönlich/offline</b> – z. B. auf einem USB-Stick.</div></div>
+    <div class="stp"><span class="num">2</span><div><b>Einladung annehmen.</b> Im Bereich <b>Team-Sync</b> unter <b>„Mit einer Einladung verbinden"</b> deinem Gerät einen Namen geben, auf <b>„Einladung annehmen"</b> klicken und die <span class="pfad">.a3keinladung</span>-Datei wählen. <b>Dein Geräteschlüssel entsteht dabei nur auf diesem Gerät und verlässt es nie</b> – nach außen geht nur der öffentliche Teil, zurück kommt dein fertiger Ausweis. Alles landet <b>verschlüsselt in deinem Tresor</b>.</div></div>
+    <div class="stp"><span class="num">3</span><div><b>Verbinden &amp; fertig.</b> Die App meldet <b>„verbunden"</b>. Ab jetzt brauchst du nichts mehr zu tun – kein zweites Passwort, kein erneutes Einrichten.</div></div>
+  </div>
+
+  <div class="warn"><strong>Wichtig:</strong> Gib die Einladung <strong>nicht</strong>
+  per E-Mail oder Chat weiter – der Code darin ist <strong>einmal</strong> gültig und
+  wirkt wie ein Schlüssel. Nur persönlich/offline weitergeben (USB-Stick). Jedes
+  Gerät bekommt seine <strong>eigene</strong> Einladung.</div>
+
+  <div class="merke"><strong>Alternative: Zugangs-Paket.</strong> Betreibt dein Team
+  einen <strong>eigenen</strong> Server (Self-Hosting), bekommst du statt einer
+  Einladung evtl. ein fertiges <strong>Zugangs-Paket</strong> (Datei
+  <span class="pfad">.a3kpaket</span>). Das lädst du im selben Bereich unter
+  <em>„Zugangs-Paket wählen"</em> – der Rest ist identisch.</div>
+
+  <h3>Synchronisieren starten und stoppen</h3>
+  <p>Das Abgleichen läuft nicht ständig im Hintergrund, sondern <strong>nur,
+  wenn du es einschaltest</strong>. So behältst du die Kontrolle.</p>
+
+  <figure>
+    <div class="screen">
+      <div class="karte">
+        <div style="font-weight:700;margin-bottom:8px">Team-Übersicht</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="btn pri">▶ Synchronisieren starten</span>
+          <span class="dot9" style="background:#36b37e"></span>
+          <span class="geber">Live – synchronisiert fortlaufend</span>
+        </div>
+        <div style="font-size:8pt;color:#8590a2;margin-top:8px">Letzte Änderung übernommen: 15.06.2026, 14:02 · zuletzt geprüft: 14:03</div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 24.3</b> – Ein Schalter: „Synchronisieren starten" wird zu „… stoppen". Das Lämpchen zeigt den Zustand.</figcaption>
+  </figure>
+
+  <ul>
+    <li><strong>▶ Synchronisieren starten</strong> ist erst aktiv, wenn die
+    Verbindung steht (sonst ausgegraut, mit Hinweis). Danach gleicht die App
+    <strong>fortlaufend von selbst</strong> ab – etwa alle 10 Sekunden.</li>
+    <li>Läuft der Sync, heißt der Knopf <strong>■ Synchronisieren stoppen</strong>.
+    Das <strong>Lämpchen</strong> ist grün (live), gelb (Verbindung kurz weg,
+    versucht weiter) oder grau (aus).</li>
+    <li>Beim <strong>Sperren</strong> des Tresors stoppt der Sync automatisch.</li>
+  </ul>
+  <p>Geteilt wird sparsam: Hochgeladen wird nur ein Projekt, dessen Board-Stand
+  sich <strong>tatsächlich geändert</strong> hat. Löschst du ein Projekt, wird es
+  auch vom Team-Board entfernt. Ändern zwei Personen dasselbe Projekt zugleich,
+  wird der Konflikt gemeldet und übersprungen (nichts wird überschrieben).</p>
+
+  <h3>Die Team-Übersicht</h3>
+  <p>Darunter zeigt die App eine <strong>schreibgeschützte</strong> Liste aller
+  Team-Projekte mit ihren verfolgten Förderungen und dem jeweiligen
+  Antrag-Status. Deine eigenen Projekte sind mit „dieses Team-Gerät" markiert.
+  Auch hier erscheinen <strong>nur unkritische</strong> Board-Felder.</p>
+
+  <div class="warn"><strong>Ab hier nur für die <em>eine</em> Person, die das Team
+  aufsetzt.</strong> Als normales Teammitglied brauchst du das Folgende nicht; für
+  dich genügen die drei Schritte oben (Einladung annehmen → fertig).</div>
+
+  <h3>Für die Verwalter:in: Team erstellen &amp; Mitglieder einladen</h3>
+  <p>Eine Person im Team richtet das Team <strong>einmalig</strong> ein – komplett
+  in der App, ohne Kommandozeile und ohne eigenen Server. Im Bereich Team-Sync:</p>
+  <div class="struktur">
+    <div class="stp"><span class="num">1</span><div><b>Eigenes Team erstellen.</b> Unter <b>„▸ Oder: eigenes Team erstellen"</b> einen Team-Namen und einen Namen für dieses Gerät eingeben und auf <b>„Team erstellen"</b> klicken. Der Dienst legt das Team an, dieses Gerät wird <b>Eigentümer</b>. Dein Schlüssel entsteht nur auf deinem Gerät. Kein Konto, keine E-Mail nötig.</div></div>
+    <div class="stp"><span class="num">2</span><div><b>Mitglieder einladen.</b> Unter <b>„▸ Mitglied einladen"</b> für jedes weitere Gerät eine <span class="pfad">.a3keinladung</span>-Datei erzeugen und offline (USB) weitergeben. Jede Einladung ist <b>einmal</b> nutzbar.</div></div>
+    <div class="stp"><span class="num">3</span><div><b>Mitglieder verwalten.</b> Unter <b>„▸ Mitglieder verwalten"</b> siehst du alle Geräte des Teams und kannst einzelne bei Bedarf <b>sperren</b> oder wieder freigeben.</div></div>
+  </div>
+  <div class="merke">Nur der/die Eigentümer:in kann einladen und verwalten. Alle
+  anderen bekommen eine fertige Einladung und folgen den drei Schritten oben.</div>
+
+  <h3>Wenn „nicht erreichbar" erscheint – Virenscanner (HTTPS-Scan)</h3>
+  <p>Die häufigste Stolperfalle ist <strong>nicht</strong> der Server, sondern ein
+  <strong>Virenscanner auf deinem PC</strong>. Viele Schutzprogramme (z. B.
+  <strong>Norton</strong>, aber auch andere mit „SSL-Scan" / „Web-Schutz")
+  klinken sich heimlich in jede verschlüsselte Verbindung ein, um sie zu
+  durchleuchten. Dabei <strong>tauschen sie das Server-Zertifikat aus</strong> –
+  und genau das verträgt sich nicht mit der gegenseitigen Ausweis-Prüfung (mTLS)
+  von Antrag&nbsp;3000.</p>
+
+  <div class="warn"><strong>Typisches Fehlerbild:</strong> Die App meldet
+  „⚠&nbsp;Nicht erreichbar … <span class="pfad">invalid peer certificate:
+  UnknownIssuer</span>", obwohl der Server läuft und deine Internet-Verbindung
+  steht. Das bedeutet: Das Zertifikat, das bei der App ankommt, stammt
+  <strong>nicht</strong> vom echten Server, sondern wurde vom Virenscanner
+  ersetzt (z.&nbsp;B. Aussteller „Norton Web/Mail Shield").</div>
+
+  <p><strong>So behebst du es</strong> – am besten gezielt, ohne den Virenscanner
+  ganz abzuschalten:</p>
+  <div class="struktur">
+    <div class="stp"><span class="num">1</span><div>Im Virenscanner die Funktion zum <b>Scannen verschlüsselter Verbindungen</b> suchen (bei Norton z.&nbsp;B. unter <i>Einstellungen → Firewall</i> bzw. <i>„Sicheres Surfen"</i>, Stichworte „HTTPS-Scan", „Verschlüsselte Verbindungen scannen", „Web/Mail-Shield").</div></div>
+    <div class="stp"><span class="num">2</span><div>Dort eine <b>Ausnahme</b> für die Team-Adresse eintragen (z.&nbsp;B. <span class="pfad">team.antrag3000.de</span>). <b>Besser als alles abschalten</b>, weil der übrige Schutz erhalten bleibt.</div></div>
+    <div class="stp"><span class="num">3</span><div>In der App erneut <b>„Verbindung testen"</b> – jetzt sollte <b>✓ Verbunden</b> erscheinen.</div></div>
+  </div>
+  <div class="merke">Wer keinen solchen HTTPS-Scan aktiv hat, ist davon nicht
+  betroffen. Bei anderen Schutzprogrammen mit „SSL-Scan" gilt dasselbe Vorgehen:
+  eine Ausnahme für die Team-Adresse setzen.</div>
+
+  <h3>Warum das sicher ist</h3>
+  <ul>
+    <li>Nur Geräte mit gültigem <strong>Team-Ausweis</strong> kommen überhaupt an den Server (mTLS).</li>
+    <li>Der Server kennt <strong>nur Board-Daten</strong> – nie deine sensiblen Inhalte.</li>
+    <li>Übertragen wird <strong>nur die unkritische Ebene</strong> – deine sensiblen Inhalte (Tresor) verlassen das Gerät technisch <strong>nie</strong>, auch nicht zum Server.</li>
+  </ul>
+
+  <div class="tipp"><strong>Ausblick (in Prüfung):</strong> Ein <strong>Ende-zu-Ende
+  verschlüsselter Team-Chat</strong> würde auf genau dieser Grundlage aufsetzen:
+  jedes Gerät bekäme zusätzlich ein Schlüsselpaar (privater Teil im Tresor),
+  Nachrichten lägen auf dem Server nur als Geheimtext. Ob und wie wir das bauen,
+  entscheiden wir separat.</div>
+
+  <h3 style="font-size:14pt;margin-top:26px">Was im Team in den anderen Bereichen dazukommt</h3>
+
+  <h3>Eigene Förderer mit dem Team teilen (Kap. 9, 20)</h3>
+  <p>Legst du eine <strong>selbst recherchierte Förderung</strong> an (in der
+  Merkliste über „+ Eigene Förderung"), teilt die App beim
+  Synchronisieren automatisch deren <strong>öffentliche Programm-Infos</strong>
+  mit dem Team. Bei den anderen erscheint sie dann in der Liste mit dem Abzeichen
+  <strong>👥 vom Team geteilt</strong>.</p>
+
+  <figure>
+    <div class="screen">
+      <div class="karten">
+        <div class="karte" style="border-top:4px solid #0c5a8f">
+          <div style="font-weight:700;margin-bottom:5px">👥 Wird geteilt (öffentlich)</div>
+          <div class="geber">Name, Fördergeber, Land, Webseite, Förderhöhe,
+          Fristen, Sparten/Kriterien, vorgeschlagene Unterlagen.</div>
+        </div>
+        <div class="karte" style="border-top:4px solid #22a06b">
+          <div style="font-weight:700;margin-bottom:5px">🔒 Bleibt lokal</div>
+          <div class="geber">Deine <strong>freie Beschreibung</strong> der
+          Förderung – sie verlässt das Gerät nicht.</div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 24.4</b> – Vom eigenen Förderer wandern nur die öffentlichen Programm-Infos ins Team; die freie Beschreibung bleibt im Tresor.</figcaption>
+  </figure>
+
+  <p>Entfernst du eine eigene Förderung wieder, wird sie beim nächsten Abgleich
+  auch beim Team zurückgezogen. Was tatsächlich gesendet wird, kannst du jederzeit
+  über die <strong>Sende-Vorschau</strong> nachprüfen (Kapitel 26) – die
+  Beschreibung taucht dort nicht auf.</p>
+
+  <div class="tipp"><strong>Schutz vor Überlastung.</strong> Damit niemand den
+  Team-Server mutwillig mit Meldungen oder Förderern fluten kann, bremst der
+  Server selbst: pro Gerät gilt ein Tempo-Limit und eine Höchstzahl. Im
+  Alltag merkst du davon nichts.</div>
+
+  <h3>Problem-Meldungen im Team</h3>
+  <p>Meldungen aus dem Fenster <strong>Förder-Datenbank</strong> (Kap. 20) werden im
+  Team-Modus beim laufenden Synchronisieren automatisch an die Pflege gesendet –
+  vorher steht eine Meldung auf <em>„noch nicht gesendet"</em>, danach auf
+  <em>„gesendet"</em>.</p>
+
+  <h3>Arbeitsdokumente im Team (Kap. 15)</h3>
+  <div class="merke"><strong>Warum werden die Links nicht mit dem Team geteilt?</strong>
+  Ein CryptPad-Link enthält den <strong>Schlüssel zum Dokument</strong> – wer ihn hat,
+  kann mitlesen. Läge er im Team-Abgleich, wäre er auch auf dem Antrag-3000-Server
+  gespeichert. Darum bleiben die Links verschlüsselt <strong>nur auf deinem Gerät</strong>,
+  auch im Team-Modus. Gib Dokumente und Ordner stattdessen direkt in CryptPad frei
+  (Knopf „Teilen") – so bestimmst du selbst, wer Zugriff hat. Jede Person im Team trägt
+  den Link danach bei sich ein.</div>
+
+  <h3>Häufige Fragen im Team</h3>
+  <dl class="faq">
     <dt>Was ist der Unterschied zwischen Passwort und Geräte-Ausweis?</dt>
     <dd>Das <strong>Tresor-Passwort</strong> schützt deine Daten auf dem Gerät
     und verlässt es nie. Der <strong>Geräte-Ausweis</strong> ist ein Zertifikat,
     mit dem sich dein Gerät beim Team-Server ausweist (nur für die
-    Synchronisation unkritischer Daten). Zwei getrennte Dinge – siehe Kapitel 20.</dd>
+    Synchronisation unkritischer Daten). Zwei getrennte Dinge – siehe Kapitel 25.</dd>
 
     <dt>Ich habe das Gerät mit dem Team-Ausweis verloren – was tun?</dt>
     <dd>Kein Drama: Der/die Team-Eigentümer:in <strong>sperrt</strong> das verlorene
     Gerät unter „Mitglieder verwalten"; die anderen laufen weiter. Für ein Ersatzgerät
-    erstellt er/sie einfach eine <strong>neue Einladung</strong> (siehe Kapitel 21).
+    erstellt er/sie einfach eine <strong>neue Einladung</strong> (siehe oben in diesem Kapitel).
     Deine sensiblen Daten waren auf dem Server ohnehin nie.</dd>
 
     <dt>Die App meldet „nicht erreichbar / UnknownIssuer", obwohl der Server läuft.</dt>
     <dd>Meist ist ein <strong>Virenscanner</strong> (z.&nbsp;B. Norton) schuld, der
     verschlüsselte Verbindungen durchleuchtet und dabei das Server-Zertifikat
     austauscht. Trage in dessen HTTPS-/SSL-Scan eine <strong>Ausnahme für deine
-    Team-Adresse</strong> ein, dann klappt die Verbindung – ausführlich in
-    Kapitel 21.</dd>
+    Team-Adresse</strong> ein, dann klappt die Verbindung – ausführlich weiter oben in
+    diesem Kapitel.</dd>
 
     <dt>Wie prüfe ich, dass keine sensiblen Daten ins Netz gehen?</dt>
     <dd>Im Bereich Team-Sync unter „Prüfen &amp; Protokoll" zeigt dir die
     <strong>Sende-Vorschau</strong> die exakten Daten, und mit dem
     <strong>lokalen Mitschnitt</strong> siehst du sie unabhängig im Terminal –
-    siehe Kapitel 22.</dd>
+    siehe Kapitel 26.</dd>
   </dl>
+</section>
+
+<!-- ===== 25 ===== -->
+<section class="chapter">
+  <h2><span class="kn">25</span>Anmelden &amp; Schlüssel im Überblick</h2>
+  <p class="lead">Es gibt zwei ganz verschiedene „Schlösser" – verwechsle sie nicht.
+  Das eine schützt deine Daten auf dem Gerät, das andere regelt den Zugang zum Team.</p>
+
+  <figure>
+    <div class="screen">
+      <div class="karten">
+        <div class="karte" style="border-top:4px solid #22a06b">
+          <div style="font-weight:700;margin-bottom:5px">🔑 Tresor-Passwort</div>
+          <div class="geber">Dein persönliches Passwort. Schließt deinen
+          <strong>verschlüsselten Tresor</strong> auf diesem Gerät auf
+          (Stammdaten, Budget, Projektbeschreibungen …).</div>
+          <div style="margin-top:8px"><span class="badge b-gruen"><span class="dot"></span>nur lokal, bei jedem Start</span></div>
+        </div>
+        <div class="karte" style="border-top:4px solid #4f6df5">
+          <div style="font-weight:700;margin-bottom:5px">🪪 Geräte-Ausweis</div>
+          <div class="geber">Ein Zertifikat auf deinem Gerät. Erlaubt der App,
+          mit dem <strong>Team-Server</strong> zu reden (nur unkritische Daten).
+          Du tippst dafür nichts – die App weist sich automatisch aus.</div>
+          <div style="margin-top:8px"><span class="badge b-blau"><span class="dot"></span>für die Team-Synchronisation</span></div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 25.1</b> – Zwei getrennte Zugänge: das Passwort schützt deine Daten, der Ausweis regelt den Team-Zugang.</figcaption>
+  </figure>
+
+  <h3>Die Schlüssel dahinter – einfach erklärt</h3>
+  <div class="struktur">
+    <div class="stp"><span class="num">1</span><div><b>Tresor-Passwort → Schlüssel:</b> Aus deinem Passwort wird ein Schlüssel berechnet, der deinen lokalen Tresor verschlüsselt. <b>Passwort weg = Daten weg</b> (so gewollt) – siehe Kapitel 3.</div></div>
+    <div class="stp"><span class="num">2</span><div><b>Einladung → Geräte-Ausweis:</b> Beim Verbinden erzeugt dein Gerät <b>lokal</b> ein Schlüsselpaar. Nur der <b>öffentliche</b> Teil geht mit der Einladung an den Server; dieser stellt daraus deinen <b>Ausweis</b> aus. Dein privater Schlüssel <b>verlässt das Gerät nie</b>. Nur Geräte mit gültigem Ausweis dürfen mit dem Server reden.</div></div>
+  </div>
+  <div class="merke">Wichtig: Diese beiden Dinge sind <strong>komplett getrennt</strong>.
+  Dein Tresor-Passwort verlässt dein Gerät <strong>nie</strong>. Der Geräte-Ausweis
+  öffnet nur die Tür zum Team-Server – und dort liegen ohnehin nur unkritische Daten.</div>
+</section>
+
+<!-- ===== 26 ===== -->
+<section class="chapter">
+  <h2><span class="kn">26</span>Selbst prüfen: Was verlässt das Gerät?</h2>
+  <p class="lead">Du musst dem Versprechen „nur unkritische Daten" nicht blind
+  glauben – du kannst es <strong>selbst nachprüfen</strong>. Dafür gibt es im
+  Bereich Team-Sync den Abschnitt <strong>„▸ Prüfen &amp; Protokoll"</strong>.</p>
+
+  <h3>1 · Sende-Vorschau (Trockenlauf)</h3>
+  <p>Ein Klick auf <strong>„Sende-Vorschau anzeigen"</strong> zeigt dir die
+  <strong>exakten</strong> Daten, die der Sync hochladen würde – <strong>ohne
+  etwas zu senden</strong>. Du siehst nur Board-Felder: Projektname,
+  Förderungs-Kürzel, Status, Fristen, öffentlicher Kontakt.</p>
+
+  <figure>
+    <div class="screen">
+      <div class="tree" style="background:#0b1020;color:#d7e0ff;border:none">
+{ "inhalt": {<br>
+&nbsp;&nbsp;"id": "p1", "name": "Klangraum Festival",<br>
+&nbsp;&nbsp;"eintraege": [ { "foerderungId": "de-musikfonds",<br>
+&nbsp;&nbsp;&nbsp;&nbsp;"status": "abgeschickt", "offizielleFristen": ["2026-06-30"] } ]<br>
+}, "basis_version": null }
+      </div>
+    </div>
+    <figcaption><b>Abb. 26.1</b> – So sieht ein Sende-Körper aus: keine Stammdaten, keine IBAN, kein Budget, keine Beschreibung.</figcaption>
+  </figure>
+
+  <h3>2 · Unabhängiger Mitschnitt <span style="font-weight:400;color:#5e6c84">(optional, für technisch Versierte)</span></h3>
+  <div class="merke">Für den Alltag genügt die <strong>Sende-Vorschau</strong> oben –
+  sie ist der einfache, empfohlene Weg. Der folgende Mitschnitt ist ein zusätzlicher
+  Beweis für alle, die es ganz genau wissen wollen; er setzt <strong>Node.js</strong>
+  und die <strong>Kommandozeile</strong> voraus.</div>
+  <p>Wer ganz sichergehen will, schaut sich an, was <strong>wirklich über die
+  Leitung</strong> geht – mit einem kleinen Mithör-Programm, unabhängig von der
+  App und ohne echten Server:</p>
+  <div class="struktur">
+    <div class="stp"><span class="num">1</span><div>Das Mithör-Programm gehört zum <strong>Quellcode</strong> von Antrag 3000 (öffentlich auf GitHub, <span class="pfad">github.com/antragy3000/Antrag-3000</span>) – nicht zu deinem Projektordner. Im heruntergeladenen Quellcode-Ordner ein Terminal öffnen und <code>node tools/echo-server.mjs</code> starten.</div></div>
+    <div class="stp"><span class="num">2</span><div>In der App unter „Prüfen &amp; Protokoll" auf <b>„An lokalen Mitschnitt senden"</b> klicken (Adresse <span class="pfad">http://127.0.0.1:8099</span>).</div></div>
+    <div class="stp"><span class="num">3</span><div>Im Terminal erscheint jeder gesendete Datensatz vollständig – Zeile für Zeile prüfbar.</div></div>
+  </div>
+
+  <h3>3 · Sync-Protokoll</h3>
+  <p>Während die Synchronisation läuft, listet das <strong>Protokoll</strong>,
+  was tatsächlich gesendet oder gelöscht wurde – mit Uhrzeit und Größe. So bleibt
+  jeder Abgleich nachvollziehbar.</p>
+
+  <div class="tipp"><strong>Eingebaute Garantie.</strong> Die App baut die
+  Sende-Daten an <strong>einer einzigen Stelle</strong> zusammen, die nur
+  unkritische Felder kennt. Ein automatischer Test wacht bei jeder Programm­änderung
+  darüber, dass dort nie ein sensibles Feld hineingerät.</div>
 </section>
 
 <!-- ===== 27 ===== -->
@@ -1828,26 +1874,26 @@
 
     <dt>Förder-Datenbank / Katalog</dt><dd>Dieselbe Sache: die Liste aller
     Förderprogramme mit öffentlichen Infos. „Katalog" ist nur die kürzere
-    Bezeichnung (Kap. 23).</dd>
+    Bezeichnung (Kap. 20).</dd>
 
     <dt>KFP – Kostenfinanzplan</dt><dd>Die Gegenüberstellung aller Kosten und ihrer
     Finanzierung (Kap. 16).</dd>
 
     <dt>Einladung (<code>.a3keinladung</code>)</dt><dd>Die Datei, mit der du ein Gerät
     mit dem Team verbindest. Sie ist <strong>einmal</strong> gültig; dein
-    Geräteschlüssel entsteht beim Annehmen lokal und verlässt das Gerät nie (Kap. 21).</dd>
+    Geräteschlüssel entsteht beim Annehmen lokal und verlässt das Gerät nie (Kap. 24).</dd>
 
     <dt>Zugangs-Paket (<code>.a3kpaket</code>)</dt><dd>Ältere Alternative zur Einladung,
     vor allem für <strong>Self-Hosting</strong>: enthält den fertigen Geräte-Ausweis und
-    die Server-Adresse – einmal laden, fertig (Kap. 21).</dd>
+    die Server-Adresse – einmal laden, fertig (Kap. 24).</dd>
 
     <dt>Geräte-Ausweis (Zertifikat)</dt><dd>Der digitale Ausweis deines Geräts, mit
     dem es sich beim Team-Server anmeldet. Entsteht beim Annehmen einer Einladung –
-    der private Teil bleibt auf dem Gerät (Kap. 20).</dd>
+    der private Teil bleibt auf dem Gerät (Kap. 25).</dd>
 
     <dt>CA / Team-CA (Zertifizierungsstelle)</dt><dd>Der „Aussteller-Stempel", mit dem
     der <strong>Server</strong> die Geräte-Ausweise ausstellt; nur so ausgestellte
-    Ausweise gelten (Kap. 20/21).</dd>
+    Ausweise gelten (Kap. 25/24).</dd>
 
     <dt>NAS</dt><dd>Ein kleiner, immer laufender Server-Computer im Netzwerk (z. B. von
     Synology). Nur relevant, wenn du den Server <strong>selbst</strong> betreibst
@@ -1884,15 +1930,15 @@
     (z. B. „Merkliste", „Dateien", „Kostenplan") – wie Karteikarten-Reiter (Kap. 6).</dd>
 
     <dt>Sync (Synchronisieren / Team-Abgleich)</dt><dd>Das automatische Abgleichen des
-    Arbeitsstands mit deinem Team über den Server – nur im Team-Modus (Kap. 21).
+    Arbeitsstands mit deinem Team über den Server – nur im Team-Modus (Kap. 24).
     Im Einzelplatz-Modus wird nichts synchronisiert.</dd>
 
     <dt>Board (Team-Übersicht)</dt><dd>Der gemeinsame Arbeitsstand eines Teams auf dem
     Server: Projektnamen, gemerkte Förderungen, Status und Fristen. Was genau darin steht,
-    zeigt die Sende-Vorschau (Kap. 22). Sensible Tresor-Daten sind nie im Board.</dd>
+    zeigt die Sende-Vorschau (Kap. 26). Sensible Tresor-Daten sind nie im Board.</dd>
 
     <dt>Signatur / signiertes Update</dt><dd>Ein digitales Echtheits-Siegel. Die App
-    installiert nur Updates mit gültigem Siegel des Anbieters (Kap. 24).</dd>
+    installiert nur Updates mit gültigem Siegel des Anbieters (Kap. 21).</dd>
   </dl>
 
   <div class="ende">— Ende des Handbuchs · Antrag 3000, Version 0.5.0 —</div>
