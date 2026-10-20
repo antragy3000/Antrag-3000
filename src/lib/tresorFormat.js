@@ -96,6 +96,7 @@ export function frischerTresor() {
     reihen: [],
     aktivesProjektId: null,
     modus: "einzel", // "einzel" (ohne Team) oder "team"
+    modusHinweisAus: false, // true = Hinweis beim Umstellen der Betriebsart nicht mehr zeigen
     einzelServer: STANDARD_SERVER, // Update-/Katalog-Server (Einzelplatz), eingebacken
     sync: null,
     teamCa: null,
@@ -392,6 +393,10 @@ export function normalisieren(d) {
   // Modus, alle anderen starten als Einzelplatz.
   if (d.modus !== "team" && d.modus !== "einzel") {
     d.modus = d.sync ? "team" : "einzel";
+    veraendert = true;
+  }
+  if (typeof d.modusHinweisAus !== "boolean") {
+    d.modusHinweisAus = false;
     veraendert = true;
   }
   if (typeof d.einzelServer !== "string") {

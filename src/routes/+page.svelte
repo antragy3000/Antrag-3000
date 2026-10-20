@@ -18,6 +18,7 @@
   import TeamSync from "$lib/komponenten/TeamSync.svelte";
   import { katalog, setzeKatalog, setzeStandardKatalog, standardKatalog, pruefeKatalog, vergleicheKataloge, geaenderteFelder, setzeGeteilteFoerderer } from "$lib/katalog.svelte.js";
   import KatalogUpdate from "$lib/komponenten/KatalogUpdate.svelte";
+  import BetriebsartHinweis from "$lib/komponenten/BetriebsartHinweis.svelte";
   import UpdatePruefung from "$lib/komponenten/UpdatePruefung.svelte";
   import { check as appUpdateCheck } from "@tauri-apps/plugin-updater";
   import { openUrl } from "@tauri-apps/plugin-opener";
@@ -1451,6 +1452,27 @@
     einzelMeldung = "";
     await tresorSpeichern();
   }
+  // Vor dem Umstellen erklären, was die Betriebsart bedeutet – außer der
+  // Hinweis wurde mit „nicht mehr anzeigen" abgeschaltet (Merker im Tresor).
+  let modusHinweisZiel = $state(null);
+  function modusWaehlen(m) {
+    if (daten.modus === m) return;
+    if (daten.modusHinweisAus) {
+      modusWechseln(m);
+      return;
+    }
+    modusHinweisZiel = m;
+  }
+  async function modusHinweisBestaetigt(nichtMehrZeigen) {
+    const m = modusHinweisZiel;
+    modusHinweisZiel = null;
+    if (nichtMehrZeigen) daten.modusHinweisAus = true;
+    await modusWechseln(m); // speichert den Tresor – inkl. Merker
+  }
+  async function modusHinweisWiederAn() {
+    daten.modusHinweisAus = false;
+    await tresorSpeichern();
+  }
   async function einzelKatalogHolen() {
     einzelMeldung = "Wird geprüft …";
     const r = await katalogUpdateVomServer();
@@ -2162,13 +2184,18 @@
             <div class="modus-wahl">
               <span class="modus-titel">Betriebsart</span>
               <div class="modus-knoepfe">
-                <button class:aktiv={daten.modus === "einzel"} onclick={() => modusWechseln("einzel")}>
+                <button class:aktiv={daten.modus === "einzel"} onclick={() => modusWaehlen("einzel")}>
                   Einzelplatz
                 </button>
-                <button class:aktiv={daten.modus === "team"} onclick={() => modusWechseln("team")}>
+                <button class:aktiv={daten.modus === "team"} onclick={() => modusWaehlen("team")}>
                   Team
                 </button>
               </div>
+              {#if daten.modusHinweisAus}
+                <button class="modus-hinweis-an" onclick={modusHinweisWiederAn}>
+                  Erklärung beim Umstellen wieder zeigen
+                </button>
+              {/if}
             </div>
 
             {#if daten.modus === "einzel"}
@@ -2423,6 +2450,15 @@
           </div>
         </div>
       </div>
+    {/if}
+
+    {#if modusHinweisZiel}
+      <BetriebsartHinweis
+        ziel={modusHinweisZiel}
+        teamEingerichtet={!!daten.sync}
+        abbrechen={() => (modusHinweisZiel = null)}
+        bestaetigen={modusHinweisBestaetigt}
+      />
     {/if}
 
     {#if katalogOffen}
@@ -2823,6 +2859,19 @@
   .modus-knoepfe button.aktiv {
     background: var(--akzent);
     color: var(--auf-farbe);
+  }
+  .modus-hinweis-an {
+    border: none;
+    background: none;
+    padding: 4px;
+    font-size: 0.8rem;
+    font-family: inherit;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .modus-hinweis-an:hover {
+    color: var(--text);
+    text-decoration: underline;
   }
   .einzel-panel {
     background: var(--weiss);
