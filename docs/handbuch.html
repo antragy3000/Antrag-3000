@@ -141,6 +141,7 @@
     padding: 14px 16px; font-size: 9pt;
   }
   .karten { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .karten.drei { grid-template-columns: 1fr 1fr 1fr; }
 
   .land { font-size: 7pt; font-weight: 700; letter-spacing: .03em; padding: 2px 7px; border-radius: 99px; text-transform: uppercase; }
   .l-DE { background: #e9f2ff; color: #0055cc; }
@@ -216,9 +217,10 @@
   </div>
   <div class="hinweisbox">
     <strong>Deine Daten bleiben bei dir.</strong> Alle sensiblen Angaben
-    (Name, Adresse, IBAN, Budget, Projektbeschriebe) werden ausschließlich
-    <strong>verschlüsselt auf deinem Computer</strong> gespeichert und
-    verlassen ihn nie über das Internet.
+    (Name, Adresse, IBAN, Budget, Projektbeschreibungen) werden ausschließlich
+    <strong>verschlüsselt auf deinem Computer</strong> gespeichert. Die App selbst
+    sendet sie <strong>nie</strong> über das Internet. Was gilt, wenn <em>du</em> Dateien
+    erzeugst, per Mail versendest oder mit anderen teilst, steht in Kap. 2.
   </div>
 </section>
 
@@ -228,7 +230,7 @@
   <ol>
     <li><span class="nr">0</span><span class="t">Installation &amp; Systemvoraussetzungen</span><span class="pg" data-ch="0">4</span></li>
     <li><span class="nr">1</span><span class="t">Einführung – was Antrag 3000 ist</span><span class="pg" data-ch="1">5</span></li>
-    <li><span class="nr">2</span><span class="t">Datensouveränität: zwei Arten von Daten</span><span class="pg" data-ch="2">6</span></li>
+    <li><span class="nr">2</span><span class="t">Datensouveränität: was bleibt, was geteilt wird</span><span class="pg" data-ch="2">6</span></li>
     <li><span class="nr">3</span><span class="t">Erster Start: Tresor anlegen</span><span class="pg" data-ch="3">7</span></li>
     <li><span class="nr">4</span><span class="t">Entsperren, Sperren, Neu aufsetzen</span><span class="pg" data-ch="4">8</span></li>
     <li><span class="nr">5</span><span class="t">Projekte verwalten</span><span class="pg" data-ch="5">9</span></li>
@@ -243,17 +245,17 @@
     <li><span class="nr">14</span><span class="t">Fristen (Kalender)</span><span class="pg" data-ch="14">19</span></li>
     <li><span class="nr">15</span><span class="t">Dateien: Formular, Word &amp; Zusammenarbeit</span><span class="pg" data-ch="15">20</span></li>
     <li><span class="nr">16</span><span class="t">Kostenplan (Kostenfinanzplan)</span><span class="pg" data-ch="16">23</span></li>
-    <li><span class="nr">17</span><span class="t">Stammdaten</span><span class="pg" data-ch="17">24</span></li>
-    <li><span class="nr">18</span><span class="t">Ordner und Dateien auf dem Computer</span><span class="pg" data-ch="18">25</span></li>
-    <li><span class="nr">19</span><span class="t">Sicherung (Backup)</span><span class="pg" data-ch="19">26</span></li>
-    <li><span class="nr">20</span><span class="t">Anmelden &amp; Schlüssel im Überblick</span><span class="pg" data-ch="20">27</span></li>
-    <li><span class="nr">21</span><span class="t">Team &amp; Server (Einzelplatz oder Team)</span><span class="pg" data-ch="21">28</span></li>
-    <li><span class="nr">22</span><span class="t">Selbst prüfen: Was verlässt das Gerät?</span><span class="pg" data-ch="22">32</span></li>
-    <li><span class="nr">23</span><span class="t">Förder-Datenbank aktuell halten</span><span class="pg" data-ch="23">33</span></li>
-    <li><span class="nr">24</span><span class="t">App-Updates</span><span class="pg" data-ch="24">35</span></li>
-    <li><span class="nr">25</span><span class="t">Abrechnung (Verwendungsnachweis)</span><span class="pg" data-ch="25">36</span></li>
-    <li><span class="nr">26</span><span class="t">Tipps &amp; häufige Fragen</span><span class="pg" data-ch="26">38</span></li>
-    <li><span class="nr">27</span><span class="t">Glossar (Fachbegriffe erklärt)</span><span class="pg" data-ch="27">40</span></li>
+    <li><span class="nr">17</span><span class="t">Stammdaten</span><span class="pg" data-ch="17">25</span></li>
+    <li><span class="nr">18</span><span class="t">Ordner und Dateien auf dem Computer</span><span class="pg" data-ch="18">26</span></li>
+    <li><span class="nr">19</span><span class="t">Sicherung (Backup)</span><span class="pg" data-ch="19">27</span></li>
+    <li><span class="nr">20</span><span class="t">Anmelden &amp; Schlüssel im Überblick</span><span class="pg" data-ch="20">28</span></li>
+    <li><span class="nr">21</span><span class="t">Team &amp; Server (Einzelplatz oder Team)</span><span class="pg" data-ch="21">29</span></li>
+    <li><span class="nr">22</span><span class="t">Selbst prüfen: Was verlässt das Gerät?</span><span class="pg" data-ch="22">33</span></li>
+    <li><span class="nr">23</span><span class="t">Förder-Datenbank aktuell halten</span><span class="pg" data-ch="23">34</span></li>
+    <li><span class="nr">24</span><span class="t">App-Updates</span><span class="pg" data-ch="24">36</span></li>
+    <li><span class="nr">25</span><span class="t">Abrechnung (Verwendungsnachweis)</span><span class="pg" data-ch="25">37</span></li>
+    <li><span class="nr">26</span><span class="t">Tipps &amp; häufige Fragen</span><span class="pg" data-ch="26">40</span></li>
+    <li><span class="nr">27</span><span class="t">Glossar (Fachbegriffe erklärt)</span><span class="pg" data-ch="27">42</span></li>
   </ol>
 </section>
 
@@ -274,16 +276,16 @@
   <h3>Installieren</h3>
   <ol>
     <li>Du erhältst die Installationsdatei <code>Antrag 3000_…_x64-setup.exe</code>
-    von der Person, die Antrag 3000 für dich bzw. euer Team bereitstellt
-    (Team-Verwalter:in oder Anbieter).</li>
+    vom <strong>Anbieter</strong> (Antrag 3000) – meist als Download-Link per E-Mail.
+    Arbeitet ihr als Team, kann sie auch eure Team-Verwalter:in weitergeben.</li>
     <li>Datei doppelklicken und den Schritten folgen.</li>
     <li>Zeigt Windows eine Warnung („Der Computer wurde durch Windows geschützt"),
     liegt das daran, dass der Installer noch nicht von Microsoft zertifiziert ist.
-    Wie du vorher die <strong>Echtheit prüfst</strong>, steht in Kap. 25.</li>
+    Wie du vorher die <strong>Echtheit prüfst</strong>, steht in Kap. 26.</li>
   </ol>
 
   <div class="merke">Nach der Installation liegt <strong>dieses Handbuch</strong> als
-  PDF unter <code>Dokumente\Antrag3000\</code> und öffnet sich einmalig automatisch.
+  PDF unter <code>Dokumente\Antrag 3000\</code> und öffnet sich einmalig automatisch.
   Künftige Aktualisierungen kommen bequem über die App selbst (Kap. 24) – du musst
   nicht jedes Mal neu installieren.</div>
 </section>
@@ -300,7 +302,9 @@
   zum fertigen, einreichfertigen <strong>Antrags-PDF</strong>. Deine
   <strong>sensiblen Daten bleiben dabei offline</strong> auf deinem Windows-Computer
   – ohne Konto, ohne Cloud-Zwang. Für App- und Datenbank-Updates kontaktiert die App
-  einen Server (Kap. 23/24); deine vertraulichen Inhalte werden dabei nie übertragen.</p>
+  einen Server (Kap. 23/24); deine vertraulichen Inhalte werden dabei nie übertragen.
+  Nur wenn du im <strong>Team-Modus</strong> arbeitest, teilt sie zusätzlich ausgewählte
+  Arbeitsstände mit deinem Team (Kap. 2 und 21).</p>
 
   <h3>Der typische Ablauf</h3>
   <div class="struktur">
@@ -318,20 +322,26 @@
 
 <!-- ===== 2 ===== -->
 <section class="chapter">
-  <h2><span class="kn">2</span>Datensouveränität: zwei Arten von Daten</h2>
+  <h2><span class="kn">2</span>Datensouveränität: was bleibt, was geteilt wird</h2>
   <p class="lead">Das wichtigste Grundprinzip: Deine sensiblen Daten gehören dir
   und bleiben auf deinem Gerät.</p>
 
-  <p>Antrag 3000 trennt streng zwischen zwei Ebenen:</p>
+  <p>Antrag 3000 trennt drei Arten von Daten:</p>
 
   <figure>
     <div class="screen">
-      <div class="karten">
+      <div class="karten drei">
         <div class="karte" style="border-top:4px solid #22a06b">
-          <div style="font-weight:700;margin-bottom:5px">🔒 Sensibel – im Tresor</div>
-          <div class="geber">Name, Adresse, IBAN, Steuerangaben, Projekt&shy;beschriebe,
-          Budget, Kostenfinanzplan, Status, eigene Förderungen, Fristen.</div>
-          <div style="margin-top:8px"><span class="badge b-gruen"><span class="dot"></span>verschlüsselt auf deinem Computer</span></div>
+          <div style="font-weight:700;margin-bottom:5px">🔒 Sensibel – nur im Tresor</div>
+          <div class="geber">Name, Adresse, IBAN, Steuerangaben, Projekt&shy;beschreibungen,
+          Budget, Kostenfinanzplan, Notizen, Belege, Links zu Arbeitsdokumenten.</div>
+          <div style="margin-top:8px"><span class="badge b-gruen"><span class="dot"></span>verschlüsselt, verlässt das Gerät nie</span></div>
+        </div>
+        <div class="karte" style="border-top:4px solid #e2a400">
+          <div style="font-weight:700;margin-bottom:5px">👥 Arbeitsstand – im Team geteilt</div>
+          <div class="geber">Projektname, gemerkte Förderungen, Antrag-Status, Fristen,
+          Förderer-Kontakt (ohne Notiz), Dokument-Checklisten, eigene Förderungen (ohne Beschreibung).</div>
+          <div style="margin-top:8px"><span class="badge b-gelb"><span class="dot"></span>im Tresor; nur im Team-Modus geteilt</span></div>
         </div>
         <div class="karte" style="border-top:4px solid #4f6df5">
           <div style="font-weight:700;margin-bottom:5px">🌐 Unkritisch</div>
@@ -341,13 +351,20 @@
         </div>
       </div>
     </div>
-    <figcaption><b>Abb. 2.1</b> – Zwei Datenebenen: sensible Daten liegen verschlüsselt im Tresor.</figcaption>
+    <figcaption><b>Abb. 2.1</b> – Drei Arten von Daten. Im Einzelplatz-Modus bleibt auch der Arbeitsstand nur auf deinem Gerät.</figcaption>
   </figure>
 
-  <p>Die sensible Ebene liegt in einem <strong>verschlüsselten Tresor</strong>
-  auf deinem Computer, geschützt durch dein Passwort. <strong>Solange sie im Tresor
-  liegen</strong>, verlassen diese Daten das Gerät nie über eine Netzwerkverbindung –
-  auch nicht bei den Updates (Kap. 23/24), die nur die öffentliche Ebene betreffen.</p>
+  <p>Alles in den ersten beiden Spalten liegt in einem <strong>verschlüsselten Tresor</strong>
+  auf deinem Computer, geschützt durch dein Passwort. Die <strong>sensiblen</strong> Daten
+  sendet die App <strong>nie</strong> über das Netz – auch nicht bei den Updates
+  (Kap. 23/24), die nur die öffentliche Ebene betreffen. Den <strong>Arbeitsstand</strong>
+  teilt sie nur, wenn du im Team-Modus arbeitest – damit dein Team weiß, wer woran ist
+  (Kap. 21). Im Einzelplatz-Modus bleibt auch er nur bei dir.</p>
+
+  <div class="merke"><strong>Wann Inhalte dein Gerät doch verlassen – immer nur durch dich:</strong>
+  wenn du ein Antrags-PDF per Mail versendest (Kap. 13), Formular-Texte nach CryptPad
+  bringst (Kap. 15) oder erzeugte Dateien in einem Cloud-Ordner liegen (Kap. 18).
+  Die App selbst lädt nichts davon hoch.</div>
 
   <div class="warn"><strong>Wichtig, sobald du Dateien erzeugst.</strong> Wenn du
   ein Word, eine Excel-Tabelle oder ein Antrags-PDF erstellst, legt die App diese
@@ -419,7 +436,7 @@
     verschlüsselt. Der Schlüssel wird nur zusätzlich durch dein
     <strong>Windows-Konto</strong> geschützt auf diesem Gerät hinterlegt – über die
     Windows-eigene Schutzfunktion <strong>DPAPI</strong> (kurz erklärt im Glossar,
-    Kap. 26). Auf einem anderen Konto oder Gerät ist diese Datei nutzlos.</li>
+    Kap. 27). Auf einem anderen Konto oder Gerät ist diese Datei nutzlos.</li>
     <li><strong>Was das bedeutet:</strong> Wer Zugriff auf dein
     <strong>angemeldetes Windows-Konto</strong> hat, kann die App dann ohne Passwort
     öffnen. Nutze die Funktion also nur auf einem Gerät, das nur du benutzt, und
@@ -429,9 +446,7 @@
   </ul>
   <div class="tipp"><strong>Dein Passwort bleibt wichtig.</strong> Es ist weiterhin
   der eigentliche Schlüssel und der Rückfall – z. B. auf einem neuen Gerät oder nach
-  „Gerät vergessen". Eine 2FA-App (Zwei-Faktor-Anmeldung) kann das Passwort hier nicht ersetzen: Der Tresor
-  ist mit dem Passwort verschlüsselt, ein 6-stelliger Code kann eine verschlüsselte
-  Datei nicht öffnen.</div>
+  „Gerät vergessen".</div>
 
   <h3>Sperren</h3>
   <p>Oben rechts kannst du jederzeit auf <strong>Sperren</strong> klicken – dann
@@ -528,7 +543,7 @@
           <span>Dateien</span>
           <span>Kostenplan</span>
           <span class="sep"></span>
-          <span>Stammdaten</span>
+          <span>Stammdaten &amp; Team</span>
         </div>
       </div>
     </div>
@@ -542,8 +557,9 @@
     <li><strong>Block 2 – Dein Projekt:</strong> „Merkliste", „Fristen", „Dateien", „Kostenplan".
     Die Zahl hinter <em>„Merkliste (3)"</em> zeigt, wie viele Förderungen du im aktuellen
     Projekt gemerkt hast.</li>
-    <li><strong>Block 3 – Du:</strong> „Stammdaten" (projektübergreifend; dort richtest
-    du auch Einzelplatz/Team ein – Kap. 21).</li>
+    <li><strong>Block 3 – Du:</strong> „Stammdaten &amp; Team" (projektübergreifend):
+    links deine Stammdaten, rechts die Betriebsart Einzelplatz/Team und – im Team-Modus –
+    die Team-Synchronisation (Kap. 21).</li>
   </ul>
   <p>Oben rechts liegen außerdem <strong>🛡 Sicherung</strong>, <strong>⬆ Update</strong>
   (Kap. 24), <strong>Sperren</strong> und der farbige <strong>Verbindungspunkt</strong>.</p>
@@ -715,7 +731,7 @@
         </div>
         <div class="label">E-Mail</div><div class="feld">berg@musikfonds.example</div>
         <div style="margin-top:12px"><b>Offizielle Einreichfrist</b></div>
-        <div style="margin-top:5px"><span class="feld">15.09.2026</span> <span class="leise">+ Frist</span></div>
+        <div style="margin-top:5px"><span class="feld">30.06.2026</span> <span class="leise">+ Frist</span></div>
         <div style="font-size:8pt;color:#8590a2;margin-top:3px">Aus der Datenbank vorbefüllt – hier korrigierbar.</div>
       </div>
     </div>
@@ -789,7 +805,7 @@
   <div class="struktur">
     <div class="stp"><span class="num">1</span><div><b>Stammblatt</b> – deine Stammdaten.</div></div>
     <div class="stp"><span class="num">2</span><div><b>Daten aus dem Formular</b> – Projekttitel, Beschreibung, Ziele …</div></div>
-    <div class="stp"><span class="num">3</span><div><b>Kostenfinanzplan</b> – auf diese Förderung zugeschnitten (andere Mittel + Fehlbetrag).</div></div>
+    <div class="stp"><span class="num">3</span><div><b>Kostenfinanzplan</b> – auf diese Förderung zugeschnitten: alle Kosten, die anderen Mittel und die bei <em>dieser</em> Förderung beantragte Summe (Kap. 16).</div></div>
     <div class="stp"><span class="num">4</span><div><b>Anhang</b> – eine Liste der benötigten Dokumente.</div></div>
     <div class="stp"><span class="num">5</span><div><b>Die hochgeladenen Dokumente</b> selbst, in der Reihenfolge der Liste.</div></div>
   </div>
@@ -1056,7 +1072,7 @@
       <table class="kfp">
         <tr><th>Ausgaben</th><th>Erläuterung</th><th class="r">Betrag</th></tr>
         <tr class="kat"><td>1 Personalkosten</td><td></td><td class="r">9.000,00 €</td></tr>
-        <tr><td>1.1 Honorar Künstler:innen</td><td>50 € × 4 × 5 × 3</td><td class="r">3.000,00 €</td></tr>
+        <tr><td>1.1 Honorar Künstler:innen</td><td>50 € × 4 Pers. × 5 Tage × 3 Std.</td><td class="r">3.000,00 €</td></tr>
         <tr><td>1.2 Technik-Crew</td><td>pro Tag</td><td class="r">6.000,00 €</td></tr>
         <tr class="sum"><td>Gesamtkosten</td><td></td><td class="r">9.000,00 €</td></tr>
       </table>
@@ -1074,15 +1090,24 @@
         <tr class="kat"><td>Fehlbetrag (noch zu decken)</td><td>Gesamtkosten − Finanzierung</td><td class="r">2.000,00 €</td></tr>
       </table>
     </div>
-    <figcaption><b>Abb. 16.2</b> – Die Finanzierungsseite: Quellen, Summe und der verbleibende
-    <strong>Fehlbetrag</strong> (genau diese Zahl beantragst du in der Regel bei der Förderung).</figcaption>
+    <figcaption><b>Abb. 16.2</b> – Die Finanzierungsseite: Quellen, Summe und der
+    <strong>Fehlbetrag</strong> – der Teil der Kosten, der noch durch <em>keine</em> Quelle
+    gedeckt ist.</figcaption>
   </figure>
+
+  <div class="merke"><strong>Fehlbetrag richtig lesen.</strong> Trag bei jedem Förderer den
+  Betrag ein, den du dort <strong>beantragst</strong> – im Beispiel 5.000 € beim Musikfonds.
+  Der Fehlbetrag zeigt dann, was danach <strong>noch fehlt</strong> (hier 2.000 €). Ein
+  eingereichter Kostenfinanzplan muss in der Regel <strong>ausgeglichen</strong> sein, der
+  Fehlbetrag also 0 €: Deck ihn durch weitere Förderer, mehr Eigenmittel oder einen höheren
+  Antrag. Im Antrags-PDF (Kap. 12) stehen für jede Förderung die <em>anderen</em> Mittel und
+  als „beantragte Summe" genau der Betrag, den du bei diesem Förderer eingetragen hast.</div>
 
   <ul>
     <li><strong>Rechnen im Betragsfeld:</strong> statt einer Zahl darfst du eine
-    Rechnung eintippen, z. B. <code>50 × 4 × 5 × 3</code> – daneben steht das
-    Ergebnis. Zeichen <code>× · x à</code> = mal, <code>:</code> = geteilt, dazu
-    <code>+ −</code> und Klammern.</li>
+    Rechnung eintippen, z. B. <code>50 × 4 × 5 × 3</code> (50 € Stundensatz × 4 Personen
+    × 5 Tage × 3 Stunden) – daneben steht das Ergebnis. Zeichen <code>× · x à</code> = mal,
+    <code>:</code> = geteilt, dazu <code>+ −</code> und Klammern.</li>
     <li><strong>Finanzierung – flache Liste:</strong> mit <strong>„+ Förderer"</strong>
     fügst du je eine Zeile hinzu und wählst dort einen <strong>Förderer aus deiner
     Merkliste</strong> (oder trägst „Eigenmittel / Einnahmen" ein) plus den
@@ -1134,7 +1159,7 @@
   <div class="tree">
 📁 Dokumente\<b>Antrag 3000</b>\<br>
 &nbsp;&nbsp;└─ 📁 <b>Klangraum Festival</b>\ &nbsp;<span style="color:#8590a2">(Projektordner)</span><br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 📄 Projektbeschrieb - Klangraum Festival.docx<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 📄 Projektbeschreibung - Klangraum Festival.docx<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 📊 Kostenfinanzplan.xlsx<br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─ 📁 <b>Förderung Neue Musik</b>\ &nbsp;<span style="color:#8590a2">(Förderer-Ordner)</span><br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ 📁 Dateien\ &nbsp;<span style="color:#8590a2">(hochgeladene Dokumente)</span><br>
@@ -1185,6 +1210,12 @@
     durch eine gewählte Datei. Der bisherige Tresor wird vorher beiseitegelegt
     (nicht gelöscht).</li>
   </ul>
+  <div class="warn"><strong>Die Sicherung enthält nur deinen Tresor – nicht deine Dateien.</strong>
+  Belege (Kap. 25), hochgeladene Dokumente (Kap. 11), Antrags-PDFs, Word- und Excel-Dateien
+  liegen als normale Dateien im Ordner <code>Dokumente\Antrag 3000</code> (Kap. 18). Sichere
+  diesen Ordner <strong>zusätzlich</strong>, z. B. indem du ihn regelmäßig auf einen USB-Stick
+  kopierst. Besonders wichtig sind die <strong>Belege</strong>: Sie musst du für den
+  Verwendungsnachweis meist mehrere Jahre aufbewahren.</div>
   <div class="tipp">Mach eine Sicherung besonders vor wichtigen Schritten und
   bewahre eine Kopie an einem zweiten Ort auf.</div>
 </section>
@@ -1202,7 +1233,7 @@
           <div style="font-weight:700;margin-bottom:5px">🔑 Tresor-Passwort</div>
           <div class="geber">Dein persönliches Passwort. Schließt deinen
           <strong>verschlüsselten Tresor</strong> auf diesem Gerät auf
-          (Stammdaten, Budget, Projektbeschriebe …).</div>
+          (Stammdaten, Budget, Projektbeschreibungen …).</div>
           <div style="margin-top:8px"><span class="badge b-gruen"><span class="dot"></span>nur lokal, bei jedem Start</span></div>
         </div>
         <div class="karte" style="border-top:4px solid #4f6df5">
@@ -1252,9 +1283,11 @@
   <p>Beim <strong>Umstellen</strong> erklärt dir ein kurzer Hinweis, was die gewählte
   Betriebsart bedeutet. Mit <em>„Diesen Hinweis nicht mehr anzeigen"</em> stellst du
   künftig ohne Rückfrage um; über <em>„Erklärung beim Umstellen wieder zeigen"</em>
-  neben den Knöpfen holst du ihn zurück. Steht die App auf <em>Team</em>, ohne dass ein
-  Team eingerichtet ist, holt sie <strong>keine Aktualisierungen der
-  Förder-Datenbank</strong> – arbeitest du allein, stell sie auf <em>Einzelplatz</em>.</p>
+  neben den Knöpfen holst du ihn zurück.</p>
+  <div class="warn"><strong>Falle: Team-Modus ohne Team.</strong> Steht die App auf
+  <em>Team</em>, ohne dass ein Team eingerichtet ist, holt sie <strong>keine
+  Aktualisierungen der Förder-Datenbank</strong> mehr. Arbeitest du allein, stell sie unter
+  „Stammdaten &amp; Team" auf <strong>Einzelplatz</strong>.</div>
   <div class="merke">Sensible Daten (Tresor) bleiben in <strong>beiden</strong>
   Betriebsarten ausschließlich lokal. Der Unterschied ist nur, ob die unkritischen
   Status-/Fristen-Daten mit einem Team geteilt werden.</div>
@@ -1279,7 +1312,7 @@
       <div class="karten">
         <div class="karte" style="border-top:4px solid #22a06b">
           <div style="font-weight:700;margin-bottom:5px">🔒 Bleibt lokal (Tresor)</div>
-          <div class="geber">Stammdaten, IBAN, Steuer, Projektbeschriebe,
+          <div class="geber">Stammdaten, IBAN, Steuer, Projektbeschreibungen,
           Budget/Kostenfinanzplan, freie Notizen, hochgeladene Dateien,
           Links zu Arbeitsdokumenten und zum geteilten Ablageort.</div>
         </div>
@@ -1463,7 +1496,7 @@
   Leitung</strong> geht – mit einem kleinen Mithör-Programm, unabhängig von der
   App und ohne echten Server:</p>
   <div class="struktur">
-    <div class="stp"><span class="num">1</span><div>Im Projektordner ein Terminal öffnen und <code>node tools/echo-server.mjs</code> starten.</div></div>
+    <div class="stp"><span class="num">1</span><div>Das Mithör-Programm gehört zum <strong>Quellcode</strong> von Antrag 3000 (öffentlich auf GitHub, <span class="pfad">github.com/antragy3000/Antrag-3000</span>) – nicht zu deinem Projektordner. Im heruntergeladenen Quellcode-Ordner ein Terminal öffnen und <code>node tools/echo-server.mjs</code> starten.</div></div>
     <div class="stp"><span class="num">2</span><div>In der App unter „Prüfen &amp; Protokoll" auf <b>„An lokalen Mitschnitt senden"</b> klicken (Adresse <span class="pfad">http://127.0.0.1:8099</span>).</div></div>
     <div class="stp"><span class="num">3</span><div>Im Terminal erscheint jeder gesendete Datensatz vollständig – Zeile für Zeile prüfbar.</div></div>
   </div>
@@ -1499,7 +1532,9 @@
   <ul>
     <li><strong>🔄 Vom Server holen</strong> – die zentral gepflegte Fassung vom
     Server. Im <em>Team</em>-Modus über deinen Geräte-Ausweis, im <em>Einzelplatz</em>
-    über den eingebauten Server (Kap. 21).</li>
+    über den eingebauten Server (Kap. 21). Gleichwertig im Einzelplatz-Modus: der Knopf
+    <strong>„Förder-Datenbank aktualisieren"</strong> unter „Stammdaten &amp; Team". Außerdem
+    holt die App die neueste Fassung bei jedem Start still im Hintergrund.</li>
     <li><strong>Update aus Datei laden</strong> – eine Katalog-Datei, die du
     z. B. per USB bekommen hast.</li>
     <li><strong>Auf Werkszustand zurücksetzen</strong> – zurück zur
@@ -1521,16 +1556,19 @@
   <p>Stimmt etwas nicht (veraltete Frist, falscher Geber, Förderung gibt es
   nicht mehr)? Melde es im Fenster <strong>Förder-Datenbank</strong> unter
   <strong>„Problem melden"</strong>: Förderung wählen, Art angeben, optional eine
-  kurze Anmerkung. Die Meldung wird beim <strong>laufenden Synchronisieren</strong>
-  automatisch an die Pflege gesendet – vorher steht sie auf
+  kurze Anmerkung. Im <strong>Team-Modus</strong> wird die Meldung beim laufenden
+  Synchronisieren automatisch an die Pflege gesendet – vorher steht sie auf
   <em>„noch nicht gesendet"</em>, danach auf <em>„gesendet"</em>.</p>
+  <div class="warn"><strong>Im Einzelplatz-Modus</strong> sammelt die App deine Meldungen
+  derzeit nur – sie werden <strong>noch nicht versendet</strong>. Ist dir ein Fehler wichtig,
+  schreib bitte direkt an <strong>pilot@antrag3000.de</strong>.</div>
   <div class="merke">Die Meldung enthält <strong>nur</strong> Förderungs-Name,
   Art und deine Anmerkung – keine Tresor-Daten. Sie fließt in die zentrale
   Pflege der Datenbank ein.</div>
 
   <h3>Eigene Förderer mit dem Team teilen</h3>
   <p>Legst du eine <strong>selbst recherchierte Förderung</strong> an (in der
-  Merkliste über „Eigene Förderung hinzufügen"), teilt die App beim
+  Merkliste über „+ Eigene Förderung"), teilt die App beim
   Synchronisieren automatisch deren <strong>öffentliche Programm-Infos</strong>
   mit dem Team. Bei den anderen erscheint sie dann in der Liste mit dem Abzeichen
   <strong>👥 vom Team geteilt</strong>.</p>
@@ -1575,8 +1613,9 @@
   neuere Version liegt. Ist das der Fall, öffnet sich ein Hinweis mit der neuen
   Versionsnummer und einer kurzen Beschreibung, was neu ist. Du kannst auch
   jederzeit selbst suchen: oben rechts auf <strong>„⬆ Update"</strong>.</p>
-  <p class="dezent">Das ist – neben der Förder-Datenbank – der einzige Moment, in dem
-  die App im Alltag kurz online geht. Deine <strong>sensiblen Tresor-Daten sind dabei
+  <p class="dezent">Im <strong>Einzelplatz-Modus</strong> ist das – neben der Förder-Datenbank –
+  der einzige Moment, in dem die App im Alltag kurz online geht. (Im Team-Modus kommt der
+  Team-Abgleich hinzu, Kap. 21.) Deine <strong>sensiblen Tresor-Daten sind dabei
   nie im Spiel</strong>. Ohne Server-Verbindung läuft die App normal weiter.</p>
 
   <h3>Aktualisieren</h3>
@@ -1585,7 +1624,7 @@
     klicken.</li>
     <li>Die neue Version wird geladen (Fortschrittsbalken), installiert, und die
     App startet automatisch neu.</li>
-    <li>Nichts passiert ohne dein Zutun – findest du „Später", bleibt alles beim
+    <li>Nichts passiert ohne dein Zutun – klickst du „Später", bleibt alles beim
     Alten.</li>
   </ul>
   <p>Deine Daten bleiben dabei vollständig erhalten – ein Update tauscht nur das
@@ -1595,7 +1634,7 @@
   <strong>digital signiert</strong>. Die App installiert nur Pakete, deren Siegel
   zu ihrem fest eingebauten Prüf-Schlüssel passt. Eine manipulierte Datei – selbst
   wenn sie auf dem Server läge – würde abgelehnt. Den Signatur-Schlüssel besitzt
-  nur die Administration deines Teams.</div>
+  nur der Anbieter von Antrag 3000 (bei Self-Hosting: wer den eigenen Server betreibt).</div>
 
   <h3>Wenn nichts gefunden wird</h3>
   <p>„Alles aktuell" heißt: Du hast bereits die neueste Version. Eine Meldung
@@ -1689,9 +1728,15 @@
   dort selbst an.</p>
   <div class="merke">Die Beleg-Dateien liegen <strong>lesbar</strong> im Ordner
   <span class="pfad">Dokumente\Antrag 3000\[Projekt]\Belege\</span> – so kannst du sie
-  öffnen, drucken oder für die Prüfung weitergeben. Sie bleiben <strong>rein lokal</strong>
-  auf deinem Gerät und gehen nie ins Netz. Die sensiblen <strong>Angaben</strong>
+  öffnen, drucken oder für die Prüfung weitergeben. Die App selbst sendet sie
+  <strong>nie</strong> ins Netz. Die sensiblen <strong>Angaben</strong>
   (Beträge, Lieferanten, Kostenstellen) bleiben verschlüsselt im Tresor.</div>
+  <div class="warn"><strong>Zwei Dinge zu den Beleg-Dateien:</strong> Liegt dein
+  Dokumente-Ordner in einer <strong>Cloud</strong> (z. B. OneDrive), werden auch die Belege
+  dorthin synchronisiert (Kap. 18). Und die <strong>Sicherung</strong> (Kap. 19) enthält
+  sie <strong>nicht</strong> – kopiere den Ordner <span class="pfad">Dokumente\Antrag 3000</span>
+  regelmäßig zusätzlich, z. B. auf einen USB-Stick. Belege musst du für den
+  Verwendungsnachweis meist mehrere Jahre aufbewahren.</div>
 </section>
 
 <!-- ===== 26 ===== -->
@@ -1832,10 +1877,22 @@
 
     <dt>2FA / TOTP</dt><dd>Zwei-Faktor-Anmeldung: zusätzlich ein laufend wechselnder
     6-stelliger Code aus einer Authenticator-App. In Antrag 3000 nur für die
-    Administration relevant, nicht für deinen Tresor.</dd>
+    Administration relevant, nicht für deinen Tresor: Er ist mit deinem Passwort
+    verschlüsselt, und ein 6-stelliger Code kann eine verschlüsselte Datei nicht öffnen.</dd>
+
+    <dt>Reiter</dt><dd>Die Bereiche oben in der App, zwischen denen du wechselst
+    (z. B. „Merkliste", „Dateien", „Kostenplan") – wie Karteikarten-Reiter (Kap. 6).</dd>
+
+    <dt>Sync (Synchronisieren / Team-Abgleich)</dt><dd>Das automatische Abgleichen des
+    Arbeitsstands mit deinem Team über den Server – nur im Team-Modus (Kap. 21).
+    Im Einzelplatz-Modus wird nichts synchronisiert.</dd>
+
+    <dt>Board (Team-Übersicht)</dt><dd>Der gemeinsame Arbeitsstand eines Teams auf dem
+    Server: Projektnamen, gemerkte Förderungen, Status und Fristen. Was genau darin steht,
+    zeigt die Sende-Vorschau (Kap. 22). Sensible Tresor-Daten sind nie im Board.</dd>
 
     <dt>Signatur / signiertes Update</dt><dd>Ein digitales Echtheits-Siegel. Die App
-    installiert nur Updates mit gültigem Siegel des Teams (Kap. 24).</dd>
+    installiert nur Updates mit gültigem Siegel des Anbieters (Kap. 24).</dd>
   </dl>
 
   <div class="ende">— Ende des Handbuchs · Antrag 3000, Version 0.5.0 —</div>
