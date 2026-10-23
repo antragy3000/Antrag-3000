@@ -34,6 +34,9 @@
     letzterAbgleich,
     meineProjektIds = [],
     foerderungLabel,
+    // false bei „Nur auf Knopfdruck" (Datenschutz-Wahl): dann beim Öffnen
+    // NICHT von selbst den Server anfragen – erst über „Verbindung testen".
+    automatisch = true,
   } = $props();
 
   let beschaeftigt = $state(false);
@@ -60,7 +63,7 @@
   // Beim Öffnen des Tabs einmal die Verbindung prüfen, damit der
   // Start-Knopf den richtigen Zustand zeigt (aktiv nur, wenn erreichbar).
   onMount(() => {
-    if (sync && !syncLaeuft) verbindungPruefen();
+    if (automatisch && sync && !syncLaeuft) verbindungPruefen();
   });
 
   async function verbindungPruefen() {

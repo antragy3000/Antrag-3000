@@ -2,7 +2,8 @@
   // Hinweis vor dem Umstellen der Betriebsart (Einzelplatz ↔ Team): erklärt,
   // was die gewählte Betriebsart bedeutet. Mit „nicht mehr anzeigen" stellt die
   // App künftig ohne Rückfrage um (Merker im Tresor, siehe +page.svelte).
-  let { ziel, teamEingerichtet = false, abbrechen, bestaetigen } = $props();
+  // automatisch: Datenschutz-Wahl „Automatisch" (false = nur auf Knopfdruck).
+  let { ziel, teamEingerichtet = false, automatisch = true, abbrechen, bestaetigen } = $props();
 
   let nichtMehrZeigen = $state(false);
 </script>
@@ -14,7 +15,9 @@
       <p>Du arbeitest allein mit Antrag 3000.</p>
       <ul>
         <li>Die <strong>Förder-Datenbank</strong> kommt vom Antrag-3000-Server – ganz
-          ohne Zugangs-Paket. Die App holt sie bei jedem Start still auf den neuesten Stand.</li>
+          ohne Zugangs-Paket. {automatisch
+            ? "Die App holt sie bei jedem Start still auf den neuesten Stand."
+            : "Du holst sie per Knopf „Förder-Datenbank aktualisieren“ auf den neuesten Stand."}</li>
         <li><strong>Nichts wird geteilt:</strong> Status, Fristen, Merkliste und eigene
           Förderer bleiben nur auf diesem Gerät.</li>
         <li>Eine laufende Team-Synchronisation wird angehalten.

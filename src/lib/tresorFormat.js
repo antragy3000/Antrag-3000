@@ -104,6 +104,10 @@ export function frischerTresor() {
     aktivesProjektId: null,
     modus: "einzel", // "einzel" (ohne Team) oder "team"
     modusHinweisAus: false, // true = Hinweis beim Umstellen der Betriebsart nicht mehr zeigen
+    // Datenschutz (Paket 5): "auto" = beim Start nach Updates/Förder-Datenbank
+    // sehen, "knopf" = nur auf Knopfdruck, null = noch nicht gewählt (dann
+    // fragt die App nach dem Entsperren, bevor sie sich verbindet).
+    netzModus: null,
     einzelServer: STANDARD_SERVER, // Update-/Katalog-Server (Einzelplatz), eingebacken
     sync: null,
     teamCa: null,
@@ -422,6 +426,11 @@ export function normalisieren(d) {
   }
   if (typeof d.modusHinweisAus !== "boolean") {
     d.modusHinweisAus = false;
+    veraendert = true;
+  }
+  // Ältere Tresore kennen keine Wahl → null: die App fragt einmal nach.
+  if (d.netzModus !== "auto" && d.netzModus !== "knopf" && d.netzModus !== null) {
+    d.netzModus = null;
     veraendert = true;
   }
   if (typeof d.einzelServer !== "string") {

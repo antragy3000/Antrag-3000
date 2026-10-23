@@ -21,6 +21,9 @@ Zwei strikt getrennte Ebenen:
 - **Sync (unkritisch):** Förder-Datenbank, Merklisten, Status-Anzeigen,
   Deadlines/Kalender – optional über eine eigene NAS (HTTPS + mTLS).
 
+Wann die App ins Internet geht, was dabei übertragen wird und was der Server
+speichert, steht in der **[Datenschutz-Erklärung](DATENSCHUTZ.md)**.
+
 ## Funktionen (Auswahl)
 
 - Eingangs-Fragebogen → passende Förderungen (Matching mit harten und weichen Kriterien)

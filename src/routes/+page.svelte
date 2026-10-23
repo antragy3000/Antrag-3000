@@ -21,6 +21,7 @@
   import BetriebsartHinweis from "$lib/komponenten/BetriebsartHinweis.svelte";
   import Zusammenarbeit from "$lib/komponenten/Zusammenarbeit.svelte";
   import PasswortAendern from "$lib/komponenten/PasswortAendern.svelte";
+  import NetzHinweis from "$lib/komponenten/NetzHinweis.svelte";
   import { dokumentAnlegen } from "$lib/arbeitsdokumente";
   import UpdatePruefung from "$lib/komponenten/UpdatePruefung.svelte";
   import { check as appUpdateCheck } from "@tauri-apps/plugin-updater";
@@ -213,12 +214,24 @@
     if (normalisieren(daten)) await tresorSpeichern();
     passwort = "";
     ansicht = "offen";
-    // Server-Erreichbarkeit einmal prüfen, damit der Status-Punkt stimmt.
-    if (daten?.sync && online) verbindungPruefen().catch(() => {});
     // Betriebssystem einmal ermitteln (macOS nutzt den Hinweis statt Auto-Update).
     istMac = await invoke("ist_macos").catch(() => false);
     // Nach einem gerade installierten Update einmalig "Was ist neu?" zeigen.
     await wasIstNeuPruefen();
+    // Datenschutz (Paket 5): noch nie gewählt → erst fragen; die
+    // automatischen Verbindungen laufen dann nach der Wahl.
+    if (daten.netzModus == null) netzHinweisOffen = true;
+    else automatischVerbinden();
+  }
+
+  // Alles, was die App beim Start VON SELBST übers Internet tut – nur, wenn
+  // der Nutzer „Automatisch" gewählt hat. Bei „Nur auf Knopfdruck" passiert
+  // nichts davon; die Knöpfe (⬆ Update, Förder-Datenbank aktualisieren,
+  // Team-Synchronisation) funktionieren weiter.
+  function automatischVerbinden() {
+    if (daten?.netzModus !== "auto") return;
+    // Server-Erreichbarkeit einmal prüfen, damit der Status-Punkt stimmt.
+    if (daten?.sync && online) verbindungPruefen().catch(() => {});
     // Einmal still nach einer neuen App-Version schauen (Etappe 5) – nur Windows.
     updateStillPruefen();
     // macOS: still auf eine neuere Version hinweisen (kein Auto-Update dort).
@@ -227,6 +240,26 @@
     katalogStillPruefen();
     // Kurzlebigen Geräte-Ausweis rechtzeitig still erneuern (Roadmap 10).
     ausweisErneuernPruefen();
+  }
+
+  // Nur der Rechnername einer Server-Adresse, für die Anzeige im Hinweis.
+  /** @param {string | undefined} adresse */
+  function serverName(adresse) {
+    const a = (adresse ?? "").trim();
+    try {
+      return new URL(/^https?:\/\//i.test(a) ? a : "https://" + a).host || "sync.antrag3000.de";
+    } catch {
+      return "sync.antrag3000.de";
+    }
+  }
+
+  let netzHinweisOffen = $state(false);
+  /** @param {string} modus */
+  async function netzModusWaehlen(modus) {
+    daten.netzModus = modus === "knopf" ? "knopf" : "auto";
+    netzHinweisOffen = false;
+    await tresorSpeichern();
+    automatischVerbinden();
   }
 
   // Ein-Klick-Entsperren über den gemerkten Zugang (auf dem Sperr-Bildschirm).
@@ -274,12 +307,10 @@
       daten = frisch;
       passwort = passwortWdh = "";
       ansicht = "offen";
-      // Erstes Aktivieren: die eingebackene Server-Anbindung sofort und
-      // automatisch herstellen – Förder-Datenbank im Hintergrund holen und
-      // still nach einer neueren App-Version schauen. Kein Knopfdruck nötig.
-      // (Beim späteren Entsperren erledigt das nachEntsperren; hier fehlte es.)
-      katalogStillPruefen();
-      updateStillPruefen();
+      // Erstes Aktivieren: zuerst den Datenschutz-Hinweis zeigen. Erst nach
+      // der Wahl holt die App (bei „Automatisch") Förder-Datenbank und
+      // Update-Info – vorher verbindet sie sich mit nichts.
+      netzHinweisOffen = true;
     } catch (e) {
       fehler = String(e);
     } finally {
@@ -849,8 +880,9 @@
     if (typeof window === "undefined") return;
     const auf = () => {
       online = true;
-      // Wieder im Netz: Server-Erreichbarkeit erneut prüfen (für den Punkt).
-      if (daten?.sync && !syncLaeuft) verbindungPruefen().catch(() => {});
+      // Wieder im Netz: Server-Erreichbarkeit erneut prüfen (für den Punkt) –
+      // nur bei „Automatisch" (Datenschutz-Wahl, Paket 5).
+      if (daten?.sync && !syncLaeuft && daten.netzModus === "auto") verbindungPruefen().catch(() => {});
     };
     const ab = () => {
       online = false;
@@ -1254,6 +1286,9 @@
     syncLaeuft = true;
     syncMeldung = { art: "info", text: "Synchronisation gestartet." };
     syncTakt(); // sofort der erste Durchlauf, dann im Takt weiter
+    // Bei „Nur auf Knopfdruck" lief die Ausweis-Erneuerung nicht beim Start –
+    // dann hier (läuft je Sitzung nur einmal).
+    ausweisErneuernPruefen();
   }
 
   function autoSyncStoppen() {
@@ -2266,8 +2301,8 @@
                 {/if}
                 {#if einzelMeldung}<p class="einzel-meldung">{einzelMeldung}</p>{/if}
                 <p class="dezent klein">
-                  App-Updates findest du oben rechts unter „⬆ Update" (wird beim Start
-                  automatisch geprüft).
+                  App-Updates findest du oben rechts unter „⬆ Update"
+                  {daten.netzModus === "auto" ? "(wird beim Start automatisch geprüft)." : "(nur auf Knopfdruck)."}
                 </p>
               </div>
             {:else}
@@ -2297,8 +2332,23 @@
               letzterAbgleich={daten.sync?.letzterAbgleich ?? null}
               {meineProjektIds}
               foerderungLabel={boardFoerderungLabel}
+              automatisch={daten.netzModus === "auto"}
             />
             {/if}
+
+            <div class="einzel-panel netz-karte">
+              <h2>Internet-Verbindungen</h2>
+              <p class="dezent">
+                {#if daten.netzModus === "knopf"}
+                  <strong>Nur auf Knopfdruck:</strong> Die App verbindet sich nur, wenn du
+                  „⬆ Update" oder „Förder-Datenbank aktualisieren" drückst.
+                {:else}
+                  <strong>Automatisch:</strong> Beim Start sieht die App einmal nach App-Updates
+                  und Neuem in der Förder-Datenbank. Deine Daten bleiben dabei auf diesem Gerät.
+                {/if}
+              </p>
+              <button class="primaer" onclick={() => (netzHinweisOffen = true)}>🌐 Ändern · Was wird übertragen?</button>
+            </div>
 
             <div class="einzel-panel passwort-karte">
               <h2>Tresor-Passwort</h2>
@@ -2516,6 +2566,16 @@
       </div>
     {/if}
 
+    {#if netzHinweisOffen && !wasIstNeu}
+      <NetzHinweis
+        aktuell={daten.netzModus}
+        server={serverName(daten.einzelServer)}
+        team={daten.modus === "team"}
+        waehlen={netzModusWaehlen}
+        schliessen={() => (netzHinweisOffen = false)}
+      />
+    {/if}
+
     {#if passwortOffen}
       <PasswortAendern
         aktuelleDaten={() => JSON.stringify($state.snapshot(daten))}
@@ -2527,6 +2587,7 @@
       <BetriebsartHinweis
         ziel={modusHinweisZiel}
         teamEingerichtet={!!daten.sync}
+        automatisch={daten.netzModus === "auto"}
         abbrechen={() => (modusHinweisZiel = null)}
         bestaetigen={modusHinweisBestaetigt}
       />
@@ -2948,6 +3009,7 @@
     color: var(--text);
     text-decoration: underline;
   }
+  .netz-karte,
   .passwort-karte {
     margin-top: 16px;
   }
