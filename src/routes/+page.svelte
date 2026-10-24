@@ -27,6 +27,11 @@
   import { check as appUpdateCheck } from "@tauri-apps/plugin-updater";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { macDownloadUrl } from "$lib/sicherheit";
+  // Jede Verbindung ins Internet läuft über netzAufruf/netzMit und landet im
+  // Verbindungsprotokoll (Paket 6; erzwungen durch npm run sicherheit).
+  import { netzAufruf, netzMit, verbindungen } from "$lib/netzProtokoll.svelte.js";
+  import { UPDATE_SERVER, netzFehlerText } from "$lib/netzBefehle";
+  import Verbindungsprotokoll from "$lib/komponenten/Verbindungsprotokoll.svelte";
   import { getVersion } from "@tauri-apps/api/app";
   import { formularWordBauen } from "$lib/antrag";
   import { antragsPdfBauen, absenderZeilen } from "$lib/antragsPdf";
@@ -116,6 +121,10 @@
   let sicherungOffen = $state(false);
   let katalogOffen = $state(false);
   let updateOffen = $state(false);
+  // Wurde der Update-Dialog von der stillen Start-Prüfung geöffnet (nicht per
+  // Klick)? Nur fürs Verbindungsprotokoll.
+  let updateAutomatisch = $state(false);
+  let protokollOffen = $state(false); // Dialog „Verbindungsprotokoll"
   // macOS: Hinweis auf eine neuere Version (kein Auto-Update dort). Objekt
   // { version, url, sha256, notes } oder null.
   let macUpdate = $state(null);
@@ -231,7 +240,7 @@
   function automatischVerbinden() {
     if (daten?.netzModus !== "auto") return;
     // Server-Erreichbarkeit einmal prüfen, damit der Status-Punkt stimmt.
-    if (daten?.sync && online) verbindungPruefen().catch(() => {});
+    if (daten?.sync && online) verbindungPruefen(true).catch(() => {});
     // Einmal still nach einer neuen App-Version schauen (Etappe 5) – nur Windows.
     updateStillPruefen();
     // macOS: still auf eine neuere Version hinweisen (kein Auto-Update dort).
@@ -698,17 +707,18 @@
   }
 
   // Verbindungstest gegen den Team-Server (mTLS GET /api/health).
-  async function syncVerbindungTesten() {
+  // automatisch: true, wenn nicht durch einen Klick ausgelöst (Protokoll).
+  async function syncVerbindungTesten(automatisch = false) {
     if (!daten.sync) return { ok: false, fehler: "Kein Zugangs-Paket geladen." };
     try {
-      const ok = await invoke("sync_health", {
+      const ok = await netzAufruf("sync_health", {
         adresse: daten.sync.adresse,
         ausweisPem: daten.sync.ausweisPem,
         caPem: daten.sync.caPem ?? "",
-      });
+      }, { automatisch });
       return { ok, fehler: ok ? null : "Server erreichbar, aber unerwartete Antwort." };
     } catch (e) {
-      return { ok: false, fehler: String(e) };
+      return { ok: false, fehler: netzFehlerText(e) };
     }
   }
 
@@ -736,7 +746,7 @@
     if (!pfad) return null;
     try {
       const einl = await invoke("einladung_lesen", { pfad });
-      const info = await invoke("enroll_annehmen", {
+      const info = await netzAufruf("enroll_annehmen", {
         enrollUrl: einl.enroll_url,
         syncAdresse: einl.sync_adresse,
         caPem: einl.ca_pem ?? "",
@@ -753,7 +763,7 @@
       await tresorSpeichern();
       return info;
     } catch (e) {
-      alert("Die Einladung konnte nicht angenommen werden.\n" + e);
+      alert("Die Einladung konnte nicht angenommen werden.\n" + netzFehlerText(e));
       return null;
     }
   }
@@ -775,7 +785,7 @@
     });
     if (!ziel) return null;
     try {
-      const erg = await invoke("einladung_erstellen", {
+      const erg = await netzAufruf("einladung_erstellen", {
         syncAdresse: daten.sync.adresse,
         ausweisPem: daten.sync.ausweisPem,
         caPem: daten.sync.caPem ?? "",
@@ -799,7 +809,7 @@
   // Schlüssel, bootstrappt am Server ein neues Konto und wird dessen Eigentümer.
   async function teamErstellen(teamUrl, syncAdresse, caPem, teamName, geraetName) {
     try {
-      const info = await invoke("team_erstellen", {
+      const info = await netzAufruf("team_erstellen", {
         teamUrl,
         syncAdresse,
         caPem: caPem ?? "",
@@ -816,7 +826,7 @@
       await tresorSpeichern();
       return info;
     } catch (e) {
-      alert("Das Team konnte nicht erstellt werden.\n" + e);
+      alert("Das Team konnte nicht erstellt werden.\n" + netzFehlerText(e));
       return null;
     }
   }
@@ -825,7 +835,7 @@
   async function mitgliederHolen() {
     if (!daten.sync) return null;
     try {
-      const roh = await invoke("mitglieder_holen", {
+      const roh = await netzAufruf("mitglieder_holen", {
         syncAdresse: daten.sync.adresse,
         ausweisPem: daten.sync.ausweisPem,
         caPem: daten.sync.caPem ?? "",
@@ -839,7 +849,7 @@
   async function mitgliedStatusSetzen(geraetId, status) {
     if (!daten.sync) return false;
     try {
-      await invoke("mitglied_status_setzen", {
+      await netzAufruf("mitglied_status_setzen", {
         syncAdresse: daten.sync.adresse,
         ausweisPem: daten.sync.ausweisPem,
         caPem: daten.sync.caPem ?? "",
@@ -882,7 +892,7 @@
       online = true;
       // Wieder im Netz: Server-Erreichbarkeit erneut prüfen (für den Punkt) –
       // nur bei „Automatisch" (Datenschutz-Wahl, Paket 5).
-      if (daten?.sync && !syncLaeuft && daten.netzModus === "auto") verbindungPruefen().catch(() => {});
+      if (daten?.sync && !syncLaeuft && daten.netzModus === "auto") verbindungPruefen(true).catch(() => {});
     };
     const ab = () => {
       online = false;
@@ -910,12 +920,14 @@
 
   // Einmaliger Verbindungstest; aktualisiert syncVerbunden und gibt das
   // {ok, fehler}-Ergebnis zurück (von "Verbindung testen" genutzt).
-  async function verbindungPruefen() {
+  // Nur ein echtes true gilt als automatisch (Klick-Handler reichen sonst
+  // womöglich ein Ereignis-Objekt durch).
+  async function verbindungPruefen(automatisch = false) {
     if (!daten?.sync) {
       syncVerbunden = false;
       return { ok: false, fehler: "Kein Zugangs-Paket geladen." };
     }
-    const r = await syncVerbindungTesten();
+    const r = await syncVerbindungTesten(automatisch === true);
     syncVerbunden = !!r.ok;
     return r;
   }
@@ -955,10 +967,13 @@
     if (istMac) return;
     updateGeprueft = true;
     try {
-      const u = await appUpdateCheck();
+      const u = await netzMit("app_update_pruefen", () => appUpdateCheck(), { ziel: UPDATE_SERVER, automatisch: true });
       if (u) {
         try { await u.close(); } catch { /* Handle freigeben */ }
-        updateOffen = true; // Dialog prüft selbst erneut und zeigt Details.
+        // Dialog prüft selbst erneut und zeigt Details – diese zweite
+        // Prüfung hat ebenfalls niemand angeklickt (Protokoll: automatisch).
+        updateAutomatisch = true;
+        updateOffen = true;
       }
     } catch {
       /* still: kein Update-Server erreichbar o. Ä. */
@@ -968,10 +983,13 @@
   // macOS hat kein Selbst-Update (Pilot unsigniert). Stattdessen still ueber
   // die TLS-verifizierte Verbindung nach einer neueren Version schauen und –
   // falls vorhanden – einen Hinweis mit Download-Link + Pruefsumme zeigen.
-  // Auf Windows/Linux liefert der Rust-Befehl immer null (kein Hinweis).
+  // Auf Windows/Linux liefert der Rust-Befehl immer null (kein Hinweis) –
+  // dort gar nicht erst aufrufen, damit das Verbindungsprotokoll keine
+  // Verbindung zeigt, die nie stattfand.
   async function macUpdatePruefen(manuell = false) {
+    if (!istMac) return;
     try {
-      const info = await invoke("mac_update_pruefen");
+      const info = await netzAufruf("mac_update_pruefen", {}, { automatisch: !manuell });
       // Nur zeigen, wenn Version da UND der Download-Link auf den eigenen
       // Update-Ort zeigt (macOS-Builds sind unsigniert, Befund D-04).
       if (info && info.version && macDownloadUrl(info.url)) {
@@ -993,6 +1011,7 @@
     if (istMac) {
       macUpdatePruefen(true);
     } else {
+      updateAutomatisch = false;
       updateOffen = true;
     }
   }
@@ -1011,7 +1030,7 @@
     if (katalogGeprueft || !katalogServerBereit) return;
     katalogGeprueft = true;
     try {
-      await katalogUpdateVomServer();
+      await katalogUpdateVomServer(true);
     } catch {
       /* still: Server nicht erreichbar */
     }
@@ -1037,11 +1056,11 @@
     }
     if (Date.now() - stamp < AUSWEIS_ERNEUERN_NACH_TAGEN * tag) return;
     try {
-      const neu = await invoke("ausweis_erneuern", {
+      const neu = await netzAufruf("ausweis_erneuern", {
         syncAdresse: daten.sync.adresse,
         ausweisPem: daten.sync.ausweisPem,
         caPem: daten.sync.caPem ?? "",
-      });
+      }, { automatisch: true });
       if (typeof neu === "string" && neu.includes("CERTIFICATE")) {
         daten.sync.ausweisPem = neu;
         daten.sync.ausweisErneuertAm = new Date().toISOString();
@@ -1054,11 +1073,11 @@
       // wiederanmelden (mit Besitznachweis). Scheitert auch das (offline oder
       // zu lange abgelaufen), bleibt der bisherige Ausweis unangetastet.
       try {
-        const neu = await invoke("ausweis_grace_erneuern", {
+        const neu = await netzAufruf("ausweis_grace_erneuern", {
           publicUrl: daten.einzelServer,
           ausweisPem: daten.sync.ausweisPem,
           caPem: daten.sync.caPem ?? "",
-        });
+        }, { automatisch: true });
         if (typeof neu === "string" && neu.includes("CERTIFICATE")) {
           daten.sync.ausweisPem = neu;
           daten.sync.ausweisErneuertAm = new Date().toISOString();
@@ -1083,6 +1102,9 @@
   // eigene Projekte senden, danach das Team-Board holen. Schreibt den
   // Tresor nur bei Änderung, damit der Takt im Ruhezustand keine Datei-/
   // Krypto-Last erzeugt.
+  // Alle Verbindungen des laufenden Abgleichs gelten im Verbindungsprotokoll
+  // als „automatisch" (der Takt läuft von selbst weiter).
+  const AUTO = { automatisch: true };
   async function einAbgleich() {
     const adresse = daten.sync.adresse;
     const ausweisPem = daten.sync.ausweisPem;
@@ -1100,7 +1122,7 @@
     //    gibt, vom Team-Board entfernen (sonst bleiben sie als Leiche).
     for (const id of Object.keys(gesendet)) {
       if (aktuelleIds.has(id)) continue;
-      await invoke("sync_delete_board", { adresse, ausweisPem, caPem, projektId: id });
+      await netzAufruf("sync_delete_board", { adresse, ausweisPem, caPem, projektId: id }, AUTO);
       delete gesendet[id];
       delete versionen[id];
       protZeilen.push({ projektId: id, aktion: "gelöscht", bytes: 0, body: null });
@@ -1113,9 +1135,9 @@
       const js = JSON.stringify(p);
       if (gesendet[p.id] === js) continue; // unverändert → nicht senden
       const body = JSON.stringify({ inhalt: p, basis_version: versionen[p.id] ?? null });
-      const antwortText = await invoke("sync_put_board", {
+      const antwortText = await netzAufruf("sync_put_board", {
         adresse, ausweisPem, caPem, projektId: p.id, bodyJson: body,
-      });
+      }, AUTO);
       const antwort = JSON.parse(antwortText);
       versionen[p.id] = antwort.version;
       if (antwort.konflikt) konflikte++;
@@ -1130,7 +1152,7 @@
     }
 
     // 3. Team-Board holen.
-    const boardText = await invoke("sync_get_board", { adresse, ausweisPem, caPem });
+    const boardText = await netzAufruf("sync_get_board", { adresse, ausweisPem, caPem }, AUTO);
     const serverBoard = JSON.parse(boardText);
     for (const row of serverBoard) versionen[row.projekt_id] = row.version;
     if (JSON.stringify(daten.sync.teamBoard ?? null) !== JSON.stringify(serverBoard)) {
@@ -1150,9 +1172,9 @@
         text: m.text,
       });
       try {
-        await invoke("sync_meldung_senden", {
+        await netzAufruf("sync_meldung_senden", {
           adresse, ausweisPem, caPem, meldungId: m.id, bodyJson: body,
-        });
+        }, AUTO);
         m.gesendet = true;
         geaendert = true;
         protZeilen.push({
@@ -1182,7 +1204,7 @@
     for (const id of Object.keys(gesendetF)) {
       if (aktuelleFIds.has(id)) continue;
       try {
-        await invoke("sync_foerderer_loeschen", { adresse, ausweisPem, caPem, foerdererId: id });
+        await netzAufruf("sync_foerderer_loeschen", { adresse, ausweisPem, caPem, foerdererId: id }, AUTO);
         delete gesendetF[id];
         protZeilen.push({ projektId: `Förderer zurückgezogen: ${id}`, aktion: "gelöscht", bytes: 0, body: null });
         geaendert = true;
@@ -1195,9 +1217,9 @@
       if (gesendetF[f.id] === js) continue;
       const body = JSON.stringify({ inhalt: f.inhalt });
       try {
-        await invoke("sync_foerderer_senden", {
+        await netzAufruf("sync_foerderer_senden", {
           adresse, ausweisPem, caPem, foerdererId: f.id, bodyJson: body,
-        });
+        }, AUTO);
         gesendetF[f.id] = js;
         geaendert = true;
         protZeilen.push({
@@ -1218,7 +1240,7 @@
 
     // 6. Team-Förderer holen. Eigene (lokal vorhandene) ids ausschließen,
     //    damit man sich nicht selbst doppelt im Katalog sieht.
-    const foerdererText = await invoke("sync_foerderer_holen", { adresse, ausweisPem, caPem });
+    const foerdererText = await netzAufruf("sync_foerderer_holen", { adresse, ausweisPem, caPem }, AUTO);
     const serverFoerderer = JSON.parse(foerdererText);
     const eigeneIds = new Set();
     for (const p of daten.projekte) {
@@ -1318,7 +1340,7 @@
   async function trockenlaufSenden(zielUrl) {
     const koerper = trockenlaufKoerper().map((s) => JSON.stringify(JSON.parse(s)));
     try {
-      const n = await invoke("sync_trockenlauf", { zielUrl, koerper });
+      const n = await netzAufruf("sync_trockenlauf", { zielUrl, koerper });
       protokollEintrag({
         trockenlauf: true,
         ziel: zielUrl,
@@ -1416,14 +1438,14 @@
     try {
       let datenUrl = null;
       if (daten.modus === "team" && daten.sync) {
-        datenUrl = await invoke("sync_logo_holen", {
+        datenUrl = await netzAufruf("sync_logo_holen", {
           adresse: daten.sync.adresse,
           ausweisPem: daten.sync.ausweisPem,
           caPem: daten.sync.caPem ?? "",
           logoId: f.logo_id,
         });
       } else if (daten.einzelServer) {
-        datenUrl = await invoke("logo_oeffentlich_holen", {
+        datenUrl = await netzAufruf("logo_oeffentlich_holen", {
           adresse: daten.einzelServer,
           logoId: f.logo_id,
         });
@@ -1445,24 +1467,26 @@
   }
 
   // eingerichtetes Gerät (Zugangs-Paket geladen).
-  async function katalogUpdateVomServer() {
+  // automatisch: true beim stillen Start-Abgleich (fürs Verbindungsprotokoll;
+  // netzAufruf wertet nur ein echtes true als automatisch).
+  async function katalogUpdateVomServer(automatisch = false) {
     let roh;
     try {
       if (daten.modus === "team" && daten.sync) {
         // Team: über die mTLS-Verbindung (Zugangs-Paket).
-        roh = await invoke("sync_katalog_holen", {
+        roh = await netzAufruf("sync_katalog_holen", {
           adresse: daten.sync.adresse,
           ausweisPem: daten.sync.ausweisPem,
           caPem: daten.sync.caPem ?? "",
-        });
+        }, { automatisch });
       } else if (daten.einzelServer) {
         // Einzelplatz: über den offenen Kanal, ohne Zertifikat.
-        roh = await invoke("katalog_oeffentlich_holen", { adresse: daten.einzelServer });
+        roh = await netzAufruf("katalog_oeffentlich_holen", { adresse: daten.einzelServer }, { automatisch });
       } else {
         return { ok: false, fehler: "Kein Server eingerichtet." };
       }
     } catch (e) {
-      return { ok: false, fehler: "Vom Server nicht ladbar: " + e };
+      return { ok: false, fehler: "Vom Server nicht ladbar: " + netzFehlerText(e) };
     }
     let obj;
     try {
@@ -2347,7 +2371,12 @@
                   und Neuem in der Förder-Datenbank. Deine Daten bleiben dabei auf diesem Gerät.
                 {/if}
               </p>
-              <button class="primaer" onclick={() => (netzHinweisOffen = true)}>🌐 Ändern · Was wird übertragen?</button>
+              <div class="netz-knoepfe">
+                <button class="primaer" onclick={() => (netzHinweisOffen = true)}>🌐 Ändern · Was wird übertragen?</button>
+                <button class="primaer" onclick={() => (protokollOffen = true)}>
+                  📋 Verbindungsprotokoll ({verbindungen.reduce((s, v) => s + v.anzahl, 0)})
+                </button>
+              </div>
             </div>
 
             <div class="einzel-panel passwort-karte">
@@ -2522,7 +2551,7 @@
     {/if}
 
     {#if updateOffen}
-      <UpdatePruefung schliessen={() => (updateOffen = false)} merkeUpdate={updateHinweisMerken} />
+      <UpdatePruefung schliessen={() => (updateOffen = false)} merkeUpdate={updateHinweisMerken} automatisch={updateAutomatisch} />
     {/if}
 
     {#if wasIstNeu}
@@ -2564,6 +2593,10 @@
           </div>
         </div>
       </div>
+    {/if}
+
+    {#if protokollOffen}
+      <Verbindungsprotokoll schliessen={() => (protokollOffen = false)} />
     {/if}
 
     {#if netzHinweisOffen && !wasIstNeu}
@@ -3012,6 +3045,11 @@
   .netz-karte,
   .passwort-karte {
     margin-top: 16px;
+  }
+  .netz-knoepfe {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
   }
   .einzel-panel {
     background: var(--weiss);

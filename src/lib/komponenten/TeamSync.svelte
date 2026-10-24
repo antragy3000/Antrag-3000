@@ -69,7 +69,7 @@
   async function verbindungPruefen() {
     pruefe = true;
     try {
-      await pruefen();
+      await pruefen(true); // true = nicht angeklickt (Verbindungsprotokoll)
     } finally {
       pruefe = false;
     }

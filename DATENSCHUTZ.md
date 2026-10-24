@@ -50,6 +50,10 @@ keine Cookies, keine Inhalte aus deinem Tresor. Wie bei jeder Internet-Verbindun
 sieht der Server technisch die IP-Adresse deines Anschlusses und den Zeitpunkt der
 Anfrage (siehe Abschnitt 3: er speichert sie nicht).
 
+**Selbst nachsehen:** Unter **Stammdaten & Team → Internet-Verbindungen →
+Verbindungsprotokoll** zeigt die App jede Verbindung seit dem Start: wann, wozu, zu
+welchem Server, was mitgeschickt wurde und ob sie von selbst oder per Klick lief.
+
 **Fehler in der Förder-Datenbank melden:** Im Einzelplatz öffnet die App dein
 E-Mail-Programm mit einer vorbereiteten Nachricht an `pilot@antrag3000.de`. Du siehst
 den Text und schickst ihn selbst ab – oder eben nicht.

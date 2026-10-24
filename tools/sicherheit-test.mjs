@@ -12,7 +12,8 @@
 // Ausfuehren:  npm run sicherheit   (oder: node tools/sicherheit-test.mjs)
 // ============================================================
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
+import { NETZ_BEFEHLE, zielName, netzFehlerText } from "../src/lib/netzBefehle.js";
 import { sichereWebUrl, sichereMailUrl, kappen, macDownloadUrl, foerdererKontakt } from "../src/lib/sicherheit.js";
 import {
   linkPruefen, dokumentPruefen, dokumentAnlegen, dokumentAendern, dokumentLoeschen,
@@ -257,6 +258,72 @@ console.log("\nOberflaechen ohne <style>-Block:");
 for (const ui of ["admin-app/ui/index.html", "foerderer-app/ui/index.html"]) {
   const html = readFileSync(new URL(`../${ui}`, import.meta.url), "utf8");
   pruefe(!/<style[\s>]/i.test(html), `${ui} ohne <style> (Gestaltung in style.css)`);
+}
+
+// Verbindungsprotokoll (Paket 6): JEDE Verbindung ins Internet muss im
+// Protokoll landen. Netzverkehr gibt es nur in sync.rs (reqwest) und im
+// Update-Pruefer (plugin-updater); das Fenster selbst darf laut CSP nicht ins
+// Netz (siehe oben). Geprueft wird:
+//  1. reqwest kommt in keiner anderen Rust-Datei vor,
+//  2. jeder async-Befehl aus sync.rs steht in netzBefehle.js,
+//  3. kein Netzbefehl wird im Frontend direkt per invoke() aufgerufen,
+//  4. jeder Aufruf des Update-Pruefers laeuft ueber netzMit().
+// Kommt spaeter ein neuer Netzweg dazu, schlaegt der Test fehl, bis er im
+// Protokoll erscheint.
+console.log("\nVerbindungsprotokoll – keine Verbindung am Protokoll vorbei:");
+{
+  const rustOrdner = new URL("../src-tauri/src/", import.meta.url);
+  const rustDateien = readdirSync(rustOrdner).filter((f) => f.endsWith(".rs"));
+  const fremdNetz = rustDateien.filter(
+    (f) => f !== "sync.rs" && /\breqwest\b/.test(readFileSync(new URL(f, rustOrdner), "utf8")),
+  );
+  pruefe(fremdNetz.length === 0, `reqwest nur in sync.rs (sonst: ${fremdNetz.join(", ") || "–"})`);
+
+  const syncRs = readFileSync(new URL("sync.rs", rustOrdner), "utf8");
+  const rustNetz = [...syncRs.matchAll(/#\[tauri::command\]\s*pub async fn (\w+)/g)].map((m) => m[1]);
+  pruefe(rustNetz.length >= 20, `Netzbefehle in sync.rs gefunden (${rustNetz.length})`);
+  const fehlend = rustNetz.filter((b) => !(b in NETZ_BEFEHLE));
+  pruefe(fehlend.length === 0, `jeder Netzbefehl steht in netzBefehle.js (fehlt: ${fehlend.join(", ") || "–"})`);
+  const ohneText = Object.entries(NETZ_BEFEHLE).filter(([, v]) => !v.zweck?.trim() || !v.mit?.trim());
+  pruefe(ohneText.length === 0, "jeder Eintrag hat Zweck und „Mitgeschickt\"-Text");
+
+  // Frontend durchsuchen: Netzbefehle nur ueber netzAufruf (einzige Ausnahme
+  // ist netzProtokoll.svelte.js selbst, das den echten invoke() macht).
+  const direkt = new RegExp(`invoke\\(\\s*["'\`](${Object.keys(NETZ_BEFEHLE).join("|")})["'\`]`);
+  const updaterAufruf = /\b(check|appUpdateCheck|downloadAndInstall)\(/;
+  pruefe(direkt.test('invoke("sync_put_board", {})'), "Selbsttest: ein direkter Aufruf wuerde erkannt");
+  const srcOrdner = new URL("../src/", import.meta.url);
+  const direktVerstoesse = [];
+  const updaterVerstoesse = [];
+  let anzahlDateien = 0;
+  for (const roh of readdirSync(srcOrdner, { recursive: true })) {
+    const name = String(roh).replaceAll("\\", "/");
+    if (!/\.(svelte|js)$/.test(name) || name.endsWith("netzProtokoll.svelte.js")) continue;
+    const inhalt = readFileSync(new URL(name, srcOrdner), "utf8");
+    anzahlDateien++;
+    if (direkt.test(inhalt)) direktVerstoesse.push(name);
+    if (inhalt.includes("@tauri-apps/plugin-updater")) {
+      inhalt.split("\n").forEach((zeile, i) => {
+        if (updaterAufruf.test(zeile) && !zeile.includes("netzMit(")) updaterVerstoesse.push(`${name}:${i + 1}`);
+      });
+    }
+  }
+  pruefe(anzahlDateien > 20, `Frontend-Dateien durchsucht (${anzahlDateien})`);
+  pruefe(direktVerstoesse.length === 0, `kein Netzbefehl direkt per invoke() (sonst: ${direktVerstoesse.join(", ") || "–"})`);
+  pruefe(updaterVerstoesse.length === 0, `Update-Pruefer nur ueber netzMit() (sonst: ${updaterVerstoesse.join(", ") || "–"})`);
+
+  // Anzeige des Servers: nur Rechnername, nie Pfad/Zugangsdaten.
+  pruefe(zielName("https://sync.antrag3000.de/katalog?x=1") === "sync.antrag3000.de", "Server-Anzeige ohne Pfad");
+  pruefe(zielName("team.antrag3000.de:8443") === "team.antrag3000.de:8443", "Server-Anzeige mit Port");
+  pruefe(zielName("https://nutzer:geheim@host.example/") === "host.example", "Server-Anzeige ohne Zugangsdaten");
+  pruefe(zielName("") === "–", "leere Adresse → –");
+
+  // Verständlicher Hinweis bei ausgetauschtem Zertifikat (echte Meldung vom
+  // 24.10.2026, Norton-HTTPS-Scan) – andere Fehler bleiben unverändert.
+  const norton = "Abruf fehlgeschlagen: error sending request → client error (Connect) → invalid peer certificate: UnknownIssuer";
+  pruefe(netzFehlerText(norton).includes("Virenschutz") && netzFehlerText(norton).includes(norton),
+    "Zertifikats-Fehler → Hinweis auf Virenschutz (mit technischer Meldung)");
+  pruefe(netzFehlerText("Server antwortete mit 503") === "Server antwortete mit 503", "andere Fehler unverändert");
 }
 
 if (fehler === 0) {

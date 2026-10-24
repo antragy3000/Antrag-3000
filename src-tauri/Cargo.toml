@@ -63,7 +63,15 @@ image = { version = "0.23", default-features = false, features = ["png", "jpeg"]
 # Rust-Aufgabe). reqwest mit rustls; x509-parser/rustls-pemfile, um das
 # Zugangs-Paket zu pruefen und den Geraetenamen (CN) aus dem Zertifikat
 # zu lesen.
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+# rustls-tls-native-roots (zieht rustls-native-certs): Die OEFFENTLICHEN
+# Abrufe (Katalog, Logos, Enroll, Team erstellen) vertrauen zusaetzlich dem
+# Zertifikatsspeicher des Betriebssystems – wie der Update-Pruefer und jeder
+# Browser. Sonst scheitern sie hinter Virenschutz mit HTTPS-Scan (Norton & Co.
+# legen ihre Wurzel in den Windows-Speicher). Der TEAM-Kanal bleibt davon
+# unberuehrt: client_mit_ausweis schaltet mit tls_built_in_root_certs(false)
+# alle eingebauten Wurzeln ab (eingebaute UND Betriebssystem) und vertraut nur
+# der Team-CA (Audit E1).
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "rustls-tls-native-roots", "json"] }
 x509-parser = "0.16"
 rustls-pemfile = "2"
 # base64: dekodiert das in den Stammdaten gespeicherte Logo (als Data-URL)

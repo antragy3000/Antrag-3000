@@ -9,10 +9,14 @@
   import { check } from "@tauri-apps/plugin-updater";
   import { relaunch } from "@tauri-apps/plugin-process";
   import { getVersion } from "@tauri-apps/api/app";
+  import { netzMit } from "$lib/netzProtokoll.svelte.js";
+  import { UPDATE_SERVER } from "$lib/netzBefehle";
 
   // merkeUpdate: optionaler Rückruf, um Version + Notizen VOR dem Neustart
   // zu sichern, damit die App danach einmalig "Was ist neu?" zeigen kann.
-  let { schliessen, merkeUpdate } = $props();
+  // automatisch: true, wenn die stille Start-Prüfung den Dialog geöffnet hat
+  // (dann ist auch diese Prüfung nicht angeklickt – fürs Protokoll).
+  let { schliessen, merkeUpdate, automatisch = false } = $props();
 
   // 'pruefen' | 'aktuell' | 'verfuegbar' | 'laedt' | 'fertig' | 'fehler'
   let zustand = $state("pruefen");
@@ -40,7 +44,7 @@
       laufendeVersion = await getVersion();
     } catch { /* unkritisch */ }
     try {
-      const u = await check();
+      const u = await netzMit("app_update_pruefen", () => check(), { ziel: UPDATE_SERVER, automatisch });
       if (!u) { zustand = "aktuell"; return; }
       aktualisierung = u;
       info = { version: u.version, body: u.body ?? "", date: u.date ?? "" };
@@ -57,11 +61,12 @@
     geladen = 0;
     gesamt = 0;
     try {
-      await aktualisierung.downloadAndInstall((ev) => {
+      const u = aktualisierung;
+      await netzMit("app_update_laden", () => u.downloadAndInstall((ev) => {
         if (ev.event === "Started") gesamt = ev.data?.contentLength ?? 0;
         else if (ev.event === "Progress") geladen += ev.data?.chunkLength ?? 0;
         else if (ev.event === "Finished") zustand = "fertig";
-      });
+      }), { ziel: UPDATE_SERVER });
       zustand = "fertig";
       // Notizen der neuen Version sichern, damit die App nach dem Neustart
       // einmalig "Was ist neu?" zeigen kann (unkritisch, wenn es scheitert).

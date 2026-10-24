@@ -108,9 +108,11 @@ fn client_mit_ausweis(ausweis_pem: &str, ca_pem: &str) -> Result<reqwest::Client
     // Wenn ein Team-CA-Zertifikat vorliegt, ihm auch fuer die Server-Seite
     // vertrauen (das Server-Zertifikat ist von derselben CA signiert) – und
     // dann AUSSCHLIESSLICH ihr: die oeffentlichen Wurzeln (Let's Encrypt &
-    // Co.) werden abgeschaltet, damit nur unser eigener Server akzeptiert
-    // wird (Audit E1). Ohne Team-CA (aeltere Pakete) gelten die normalen
-    // oeffentlichen Wurzeln weiter.
+    // Co.) UND die des Betriebssystem-Speichers (rustls-tls-native-roots,
+    // dort liegen z. B. Virenschutz-Wurzeln) werden abgeschaltet, damit nur
+    // unser eigener Server akzeptiert wird (Audit E1; 24.10.2026 gegen den
+    // echten Server mit Norton-HTTPS-Scan geprueft: abgelehnt). Ohne Team-CA
+    // (aeltere Pakete) gelten die normalen Wurzeln weiter.
     let ca = ca_pem.trim();
     if !ca.is_empty() {
         let root = reqwest::Certificate::from_pem(ca.as_bytes())
@@ -165,7 +167,7 @@ pub async fn sync_health(adresse: String, ausweis_pem: String, ca_pem: String) -
 pub async fn sync_get_board(adresse: String, ausweis_pem: String, ca_pem: String) -> Result<String, String> {
     let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
     let url = format!("{}/api/board", basis_url(&adresse));
-    let r = client.get(&url).send().await.map_err(|e| format!("Abruf fehlgeschlagen: {e}"))?;
+    let r = client.get(&url).send().await.map_err(|e| format!("Abruf fehlgeschlagen: {}", fehler_kette(&e)))?;
     if !r.status().is_success() {
         return Err(format!("Server antwortete mit {}", r.status()));
     }
@@ -191,7 +193,7 @@ pub async fn sync_put_board(
         .body(body_json)
         .send()
         .await
-        .map_err(|e| format!("Senden fehlgeschlagen: {e}"))?;
+        .map_err(|e| format!("Senden fehlgeschlagen: {}", fehler_kette(&e)))?;
     if !r.status().is_success() {
         return Err(format!("Server antwortete mit {}", r.status()));
     }
@@ -214,7 +216,7 @@ pub async fn sync_delete_board(
         .delete(&url)
         .send()
         .await
-        .map_err(|e| format!("Loeschen fehlgeschlagen: {e}"))?;
+        .map_err(|e| format!("Loeschen fehlgeschlagen: {}", fehler_kette(&e)))?;
     if !r.status().is_success() {
         return Err(format!("Server antwortete mit {}", r.status()));
     }
@@ -256,7 +258,7 @@ pub async fn sync_trockenlauf(ziel_url: String, koerper: Vec<String>) -> Result<
             .body(body.clone())
             .send()
             .await
-            .map_err(|e| format!("Senden an den Mitschnitt fehlgeschlagen: {e}"))?;
+            .map_err(|e| format!("Senden an den Mitschnitt fehlgeschlagen: {}", fehler_kette(&e)))?;
         gesendet += 1;
     }
     Ok(gesendet)
@@ -273,7 +275,7 @@ pub async fn sync_katalog_holen(adresse: String, ausweis_pem: String, ca_pem: St
         .get(&url)
         .send()
         .await
-        .map_err(|e| format!("Abruf fehlgeschlagen: {e}"))?;
+        .map_err(|e| format!("Abruf fehlgeschlagen: {}", fehler_kette(&e)))?;
     if !r.status().is_success() {
         return Err(format!("Server antwortete mit {}", r.status()));
     }
@@ -301,7 +303,7 @@ pub async fn katalog_oeffentlich_holen(adresse: String) -> Result<String, String
         .get(&url)
         .send()
         .await
-        .map_err(|e| format!("Abruf fehlgeschlagen: {e}"))?;
+        .map_err(|e| format!("Abruf fehlgeschlagen: {}", fehler_kette(&e)))?;
     if !r.status().is_success() {
         return Err(format!("Server antwortete mit {}", r.status()));
     }
@@ -357,7 +359,7 @@ pub async fn logo_oeffentlich_holen(
         .get(&url)
         .send()
         .await
-        .map_err(|e| format!("Abruf fehlgeschlagen: {e}"))?;
+        .map_err(|e| format!("Abruf fehlgeschlagen: {}", fehler_kette(&e)))?;
     match r.status().as_u16() {
         404 => Ok(None),
         s if !(200..300).contains(&s) => Err(format!("Server antwortete mit {s}")),
@@ -405,7 +407,7 @@ pub async fn sync_meldung_senden(
 pub async fn sync_foerderer_holen(adresse: String, ausweis_pem: String, ca_pem: String) -> Result<String, String> {
     let client = client_mit_ausweis(&ausweis_pem, &ca_pem)?;
     let url = format!("{}/api/foerderer", basis_url(&adresse));
-    let r = client.get(&url).send().await.map_err(|e| format!("Abruf fehlgeschlagen: {e}"))?;
+    let r = client.get(&url).send().await.map_err(|e| format!("Abruf fehlgeschlagen: {}", fehler_kette(&e)))?;
     if !r.status().is_success() {
         return Err(format!("Server antwortete mit {}", r.status()));
     }
@@ -456,7 +458,7 @@ pub async fn sync_foerderer_loeschen(
         .delete(&url)
         .send()
         .await
-        .map_err(|e| format!("Loeschen fehlgeschlagen: {e}"))?;
+        .map_err(|e| format!("Loeschen fehlgeschlagen: {}", fehler_kette(&e)))?;
     if !r.status().is_success() {
         return Err(format!("Server antwortete mit {}", r.status()));
     }
@@ -562,17 +564,21 @@ pub async fn mac_update_pruefen() -> Result<Option<MacUpdate>, String> {
     if !cfg!(target_os = "macos") {
         return Ok(None);
     }
-    let client = match reqwest::Client::builder()
+    let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(15))
         .build()
-    {
-        Ok(c) => c,
-        Err(_) => return Ok(None),
-    };
-    let resp = match client.get(MAC_UPDATE_URL).send().await {
-        Ok(r) if r.status().is_success() => r,
-        _ => return Ok(None),
-    };
+        .map_err(|e| format!("Client-Fehler: {e}"))?;
+    // Netz-/Serverfehler als Fehler melden (nicht als "kein Update"): sonst
+    // hiesse es beim Klick "neueste Version", obwohl der Server gar nicht
+    // erreichbar war – und das Verbindungsprotokoll zeigte ein falsches ✓.
+    let resp = client
+        .get(MAC_UPDATE_URL)
+        .send()
+        .await
+        .map_err(|e| format!("Abruf fehlgeschlagen: {}", fehler_kette(&e)))?;
+    if !resp.status().is_success() {
+        return Err(format!("Server antwortete mit {}", resp.status()));
+    }
     let body = match resp.text().await {
         Ok(t) => t,
         Err(_) => return Ok(None),
