@@ -65,6 +65,26 @@ Vorhaben gleichzeitig arbeiten.
 - **🗑 (Papierkorb)**: aktives Projekt löschen (mit Rückfrage, endgültig).
 - Ohne Projekt fordert die App dich auf, eines zu erstellen.
 
+## Übersicht (Startseite)
+Nach dem Entsperren landest du auf der **Übersicht** des aktiven Projekts. Sie
+zeigt, was gerade wichtig ist. Ein Klick führt jeweils an die passende Stelle.
+
+- **Als Nächstes**: höchstens 5 Punkte, das Dringendste zuerst: überfällige und
+  bald fällige Fristen, Anträge mit „muss nachgebessert werden" und
+  Unterlagen mit „muss angefragt werden". Abgeschickte Anträge erinnern nicht
+  mehr an ihre Frist. Interne Fristen und Verwendungsnachweise verschwinden
+  30 Tage nach ihrem Datum aus dieser Liste, im Kalender bleiben sie.
+- **Kalender**: Monatsansicht mit einem farbigen Punkt je Termin-Art
+  (Förder-Frist, interne Frist, Team-Frist, Verwendungsnachweis). Klick auf einen
+  Tag zeigt seine Termine und erlaubt, dort eine interne Frist anzulegen.
+- **Meine Anträge**: wie viele Anträge bei welchem Status stehen.
+- **Abrechnung**: Belege, die noch nicht ganz zugeordnet sind, und Soll/Zugeordnet
+  je Geldquelle. Erscheint erst, wenn es Belege oder Geldquellen gibt.
+- Bei einem neuen, leeren Projekt stehen dort stattdessen die **Ersten Schritte**.
+
+Die Frist für den Verwendungsnachweis trägst du unter **Abrechnung → Geldquellen**
+ein. Sie bleibt nur auf deinem Gerät und wird nicht mit dem Team geteilt.
+
 Die **Stammdaten** (siehe unten) gelten projektübergreifend – dein Name
 ändert sich ja nicht pro Projekt.
 

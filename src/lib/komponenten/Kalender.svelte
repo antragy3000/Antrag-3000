@@ -2,6 +2,7 @@
   // Fristen / Kalender: die Einreichfristen der gemerkten Förderungen,
   // nach Datum sortiert, mit Countdown ("noch X Tage") und Antrag-
   // Status. Klick auf eine Zeile öffnet die Detailansicht.
+  import { onMount } from "svelte";
   import FoerderDetail from "./FoerderDetail.svelte";
   import { LAENDER, fristText, fristNormalisieren, fristAlsDatum } from "$lib/begriffe";
   import {
@@ -34,6 +35,9 @@
     meineProjektIds = [],
     foerderungLabel = null,
     logoHerunterladen = null,
+    // Von der Übersicht kommend: diese Förderung gleich im Detail öffnen.
+    startFoerderungId = null,
+    startErledigt = null,
   } = $props();
 
   let ausgewaehlt = $state(null);
@@ -217,6 +221,12 @@
     aktuellerAntrag = antragHolen ? antragHolen(f) : null;
     ausgewaehlt = f;
   }
+
+  onMount(() => {
+    const f = foerderungen.find((x) => x.id === startFoerderungId);
+    if (f) oeffnen(f);
+    startErledigt?.();
+  });
 </script>
 
 <div class="bereich">

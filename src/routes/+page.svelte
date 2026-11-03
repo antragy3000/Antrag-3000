@@ -6,6 +6,7 @@
   import Matching from "$lib/komponenten/Matching.svelte";
   import Merkliste from "$lib/komponenten/Merkliste.svelte";
   import Kalender from "$lib/komponenten/Kalender.svelte";
+  import Uebersicht from "$lib/komponenten/Uebersicht.svelte";
   import Stammdaten from "$lib/komponenten/Stammdaten.svelte";
   import SammelFormular from "$lib/komponenten/SammelFormular.svelte";
   import KostenPlan from "$lib/komponenten/KostenPlan.svelte";
@@ -66,7 +67,7 @@
   let daten = $state(null);
 
   // Welcher Bereich ist nach dem Entsperren aktiv?
-  let bereich = $state("foerderungen"); // foerderungen | merkliste | fristen | formular | kostenplan | belege | stammdaten
+  let bereich = $state("uebersicht"); // uebersicht | foerderungen | merkliste | fristen | formular | kostenplan | belege | stammdaten
   // Oberster Arbeits-Modus: "antrag" (Recherche/Antrag) oder "abrechnung"
   // (Belege/Verwendungsnachweis). Blendet jeweils nur die passenden Reiter
   // ein, damit der andere Modus nicht visuell stört. Stammdaten ist in
@@ -80,6 +81,23 @@
     if (!erlaubt.includes(bereich)) {
       bereich = m === "abrechnung" ? "belege" : "foerderungen";
     }
+  }
+  // Von der Übersicht kommend: Diese Förderung öffnet der Bereich „Fristen"
+  // gleich in der Detailansicht (einmalig, danach wieder null).
+  let detailStartId = $state(null);
+  // Springt von einer Kachel der Übersicht an die passende Stelle und stellt
+  // dabei den Modus (Antrag/Abrechnung) passend ein.
+  function zuZiel(ziel) {
+    if (ziel.bereich === "foerderung") {
+      detailStartId = ziel.foerderungId;
+      arbeitsModus = "antrag";
+      bereich = "fristen";
+      return;
+    }
+    if (ziel.ansicht) foerderAnsicht = ziel.ansicht;
+    if (ANTRAG_BEREICHE.includes(ziel.bereich) && ziel.bereich !== "stammdaten") arbeitsModus = "antrag";
+    if (ABRECHNUNG_BEREICHE.includes(ziel.bereich) && ziel.bereich !== "stammdaten") arbeitsModus = "abrechnung";
+    bereich = ziel.bereich;
   }
   let foerderAnsicht = $state("alle"); // innerhalb "Förderungen": alle | passend
   let projektMenuOffen = $state(false); // Projekt-Auswahlmenü (mit Umbenennen/Löschen)
@@ -392,7 +410,7 @@
     invoke("temp_aufraeumen").catch(() => {});
     daten = null;
     fehler = "";
-    bereich = "foerderungen";
+    bereich = "uebersicht";
     arbeitsModus = "antrag";
     ansicht = "entsperren";
   }
@@ -2180,6 +2198,10 @@
         </div>
       </div>
       <nav>
+        <button class:aktiv={bereich === "uebersicht"} onclick={() => (bereich = "uebersicht")}>
+          Übersicht
+        </button>
+        <span class="nav-trenner" aria-hidden="true"></span>
         <div class="modus-schalter" role="group" aria-label="Modus wählen">
           <button class:aktiv={arbeitsModus === "antrag"} onclick={() => arbeitsModusWechseln("antrag")}>
             Antrag
@@ -2249,7 +2271,18 @@
       </div>
     {/if}
     <main inert={schreibschutz}>
-      {#if bereich === "foerderungen"}
+      {#if bereich === "uebersicht"}
+        <Uebersicht
+          projekt={aktivesProjekt}
+          foerderungen={alleFoerderungen}
+          teamBoard={daten.sync?.teamBoard ?? null}
+          {meineProjektIds}
+          foerderungLabel={boardFoerderungLabel}
+          interneAnlegen={interneFristAnlegen}
+          {zuZiel}
+          projektErstellen={() => (neuesProjektOffen = true)}
+        />
+      {:else if bereich === "foerderungen"}
         <div class="unter-reiter">
           <button class:aktiv={foerderAnsicht === "alle"} onclick={() => (foerderAnsicht = "alle")}>
             Alle Förderungen
@@ -2545,6 +2578,8 @@
           {meineProjektIds}
           foerderungLabel={boardFoerderungLabel}
           {logoHerunterladen}
+          startFoerderungId={detailStartId}
+          startErledigt={() => (detailStartId = null)}
         />
       {:else}
         <Merkliste
