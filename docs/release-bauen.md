@@ -64,6 +64,29 @@ Das Skript
 Die einzelnen Schritte von Hand stehen unten – falls du sie einmal getrennt
 brauchst.
 
+### Danach: pushen, damit die Prüfsumme auf GitHub erscheint
+
+Am Ende committet das Skript die Prüfsumme nach `release/pruefsummen/` (nur diese
+eine Datei). **Pushen musst du selbst.** Danach trägt GitHub Actions sie als Release
+ein (`.github/workflows/pruefsummen.yml`). Das gilt genauso für die Admin- und die
+Förderer-App.
+
+Vor dem Eintragen lädt GitHub die Datei vom Server und vergleicht sie mit dem, was
+du gebaut hast. **Ein roter Lauf heißt: Die Datei auf dem Server ist nicht die
+gebaute.** Dann bitte zuerst nachsehen, bevor du die Version weitergibst.
+
+Einen Trockenlauf ohne GitHub machst du so; er vergleicht nur mit dem Server und
+ändert nichts:
+
+```powershell
+node release/pruefsummen-veroeffentlichen.mjs --probelauf
+```
+
+> **Vorsicht beim Pushen:** Sobald ein Push die Versionsnummer in
+> `src-tauri/tauri.conf.json` ändert, startet der Mac-Bau. Er legt die neue `.dmg`
+> samt `mac.json` auf den Server. Mac-Geräte sehen dann das Update, also erst
+> pushen, wenn die Version wirklich raus soll.
+
 ---
 
 ## Pro Release von Hand: bauen, signieren, hochladen

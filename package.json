@@ -13,6 +13,7 @@
     "sicherheit": "node tools/sicherheit-test.mjs",
     "termine": "node tools/termine-test.mjs",
     "sachbericht": "node tools/sachbericht-test.mjs",
+    "pruefsummen": "node tools/pruefsummen-test.mjs",
     "tokens": "node tools/tokens-sync.mjs",
     "tokens:check": "node tools/tokens-sync.mjs --check",
     "tauri": "tauri"

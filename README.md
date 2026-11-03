@@ -58,6 +58,10 @@ Installieren eine Warnung. App-Updates sind unabhängig davon signiert
 (minisign-Signatur, von der App vor der Installation geprüft).
 Details in der [Code-Signing-Richtlinie](CODE_SIGNING.md).
 
+Ob ein heruntergeladener Installer echt ist, lässt sich schon jetzt prüfen: Die
+[Releases-Seite](https://github.com/antragy3000/Antrag-3000/releases) nennt zu jeder
+Version die SHA-256-Prüfsumme und den passenden Befehl.
+
 > Free code signing provided by [SignPath.io](https://signpath.io), certificate by
 > [SignPath Foundation](https://signpath.org).
 

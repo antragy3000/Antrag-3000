@@ -27,6 +27,11 @@ on:
       - "src-tauri/tauri.conf.json"
   workflow_dispatch:
 
+# Der Bau darf auf GitHub nichts aendern. Schreibrecht hat nur der kleine Job
+# "pruefsumme" unten, in dem kein fremder Paket-Code laeuft.
+permissions:
+  contents: read
+
 # Die Actions sind auf einen festen Commit-Hash gepinnt (nicht auf ein
 # bewegliches Tag wie @v4 oder @stable): Eine spaeter kompromittierte
 # Action-Version laeuft so nicht automatisch mit Zugriff auf den Deploy-
@@ -35,6 +40,9 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+    outputs:
+      version: ${{ steps.summe.outputs.version }}
+      zeile: ${{ steps.summe.outputs.zeile }}
     steps:
       - name: Quellcode auschecken
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -74,6 +82,16 @@ jobs:
           name: Antrag-3000-macOS-universal
           path: src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
           if-no-files-found: error
+
+      - name: Pruefsumme der .dmg berechnen
+        id: summe
+        run: |
+          set -euo pipefail
+          VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          DMG=$(ls src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg | head -1)
+          HASH=$(shasum -a 256 "$DMG" | awk '{print $1}')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "zeile=$HASH  Antrag-3000_${VERSION}_universal.dmg" >> "$GITHUB_OUTPUT"
 
       # --- macOS-Version auf den Update-Server legen (fuer den In-App-Hinweis) ---
       # Legt die .dmg + eine mac.json (Version, Download-URL, SHA-256, Notiz)
@@ -130,3 +148,29 @@ jobs:
           "${SSH[@]}" "dmg $ZIEL" < "$DMG"
           "${SSH[@]}" "manifest" < mac.json
           echo "OK: $ZIEL (SHA-256 $HASH) und mac.json hochgeladen."
+
+  # Traegt die Pruefsumme der .dmg ins GitHub-Release dieser Version ein (siehe
+  # pruefsummen.yml). Eigener Job, damit das Schreibrecht nicht beim Bauen da ist.
+  pruefsumme:
+    needs: build
+    runs-on: ubuntu-latest
+    concurrency: pruefsummen
+    permissions:
+      contents: write
+    steps:
+      - name: Quellcode auschecken
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Pruefsumme ins Release eintragen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.build.outputs.version }}
+          ZEILE: ${{ needs.build.outputs.zeile }}
+        run: |
+          set -euo pipefail
+          DATEI="antrag-3000-${VERSION}-macos.sha256"
+          printf '%s\n' "$ZEILE" > "$DATEI"
+          node release/pruefsummen-veroeffentlichen.mjs --ohne-server "$DATEI"

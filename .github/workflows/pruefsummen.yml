@@ -1,0 +1,45 @@
+# GitHub Actions: Pruefsummen der Windows-Installer als GitHub-Release eintragen.
+#
+# Warum: Die Installer sind noch nicht code-signiert. Darum liegt ihr digitaler
+# Fingerabdruck auch hier und nicht nur auf dem Download-Server: Wer eine Datei
+# faelschen will, muesste beide Orte zugleich manipulieren.
+#
+# Ablauf: Die drei release/veroeffentlichen.ps1 berechnen die Pruefsumme direkt
+# nach dem Bauen und committen sie nach release/pruefsummen/. Nach dem Push laedt
+# dieser Lauf die Datei vom Server, vergleicht und traegt sie als Release ein.
+# ROT heisst: Die Datei auf dem Server ist nicht die gebaute. Dann bitte ansehen!
+#
+# Kein zusaetzliches Geheimnis noetig: github.token stellt GitHub nur fuer diesen
+# einen Lauf aus.
+
+name: Pruefsummen eintragen
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "release/pruefsummen/*.sha256"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  eintragen:
+    runs-on: ubuntu-latest
+    # Nie zwei Laeufe zugleich (auch nicht mit dem Mac-Bau): beide aendern dasselbe Release.
+    concurrency: pruefsummen
+    permissions:
+      contents: write
+    steps:
+      - name: Quellcode auschecken
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      # Bewusst ohne "npm ci": In diesem Job mit Schreibrecht laeuft kein fremder Paket-Code.
+      - name: Gegen den Server pruefen und eintragen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: node release/pruefsummen-veroeffentlichen.mjs

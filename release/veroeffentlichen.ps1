@@ -119,7 +119,7 @@ if (-not (Test-Path $latest)) { throw "latest.json nicht gefunden: $latest" }
 # (Get-FileHash <datei> -Algorithm SHA256 und vergleichen).
 $hash     = (Get-FileHash $setup.FullName -Algorithm SHA256).Hash.ToLower()
 $sumDatei = Join-Path $setup.DirectoryName ($setup.Name + ".sha256")
-"$hash  $($setup.Name)" | Set-Content -Path $sumDatei -Encoding ascii
+[IO.File]::WriteAllText($sumDatei, "$hash  $($setup.Name)`n", (New-Object Text.UTF8Encoding($false)))
 Write-Host "SHA-256: $hash" -ForegroundColor Green
 
 # --- 5. Hochladen (scp ueber Tailscale) ---------------------------------
@@ -161,3 +161,5 @@ Remove-Item Env:\TAURI_SIGNING_PRIVATE_KEY -ErrorAction SilentlyContinue
 
 Write-Host "`nFertig: $version ist veroeffentlicht. Geraete mit aelterer Version" -ForegroundColor Green
 Write-Host "sehen das Update beim naechsten Entsperren (oder per Knopf)." -ForegroundColor Green
+
+& "$wurzel\release\pruefsumme-festhalten.ps1" -SumDatei $sumDatei -Name "antrag-3000-$version-windows"

@@ -98,7 +98,8 @@ if (-not (Test-Path $latest)) { throw "latest.json nicht gefunden: $latest" }
 # (Get-FileHash <datei> -Algorithm SHA256 und vergleichen).
 $hash     = (Get-FileHash $setup.FullName -Algorithm SHA256).Hash.ToLower()
 $sumDatei = Join-Path $setup.DirectoryName ($setup.Name + ".sha256")
-"$hash  $($setup.Name)" | Set-Content -Path $sumDatei -Encoding ascii
+# UTF-8, nicht ASCII: Der Dateiname enthaelt einen Gedankenstrich, aus dem ASCII "?" macht.
+[IO.File]::WriteAllText($sumDatei, "$hash  $($setup.Name)`n", (New-Object Text.UTF8Encoding($false)))
 Write-Host "SHA-256: $hash" -ForegroundColor Green
 
 # --- 4. Ziel-Ordner auf der NAS anlegen (falls neu) ---------------------
@@ -147,3 +148,5 @@ Remove-Item Env:\TAURI_SIGNING_PRIVATE_KEY -ErrorAction SilentlyContinue
 
 Write-Host "`nFertig: Admin-Version $version ist veroeffentlicht. Admin-Geraete mit" -ForegroundColor Green
 Write-Host "aelterer Version sehen das Update per Knopf 'Auf Updates pruefen'." -ForegroundColor Green
+
+& "$wurzel\..\release\pruefsumme-festhalten.ps1" -SumDatei $sumDatei -Name "antrag-3000-admin-$version-windows"
