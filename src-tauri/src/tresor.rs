@@ -30,11 +30,11 @@ use aes_gcm::aead::rand_core::RngCore;
 use aes_gcm::aead::{Aead, KeyInit, OsRng};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
 use tauri::Manager;
-use zeroize::Zeroize;
+use zeroize::{Zeroize, Zeroizing};
 
 pub(crate) const MAGIC: &[u8; 8] = b"ANTRAG3K";
 const VERSION: u8 = 1;
-const SALT_LAENGE: usize = 16;
+pub(crate) const SALT_LAENGE: usize = 16;
 const NONCE_LAENGE: usize = 12;
 const KOPF_LAENGE: usize = 8 + 1 + SALT_LAENGE + NONCE_LAENGE;
 
@@ -78,7 +78,7 @@ pub(crate) fn tresor_pfad(app: &tauri::AppHandle) -> Result<PathBuf, String> {
 /// Passwort + Salt -> 32-Byte-Schluessel per Argon2id.
 /// Die Standardwerte des Crates entsprechen den aktuellen
 /// OWASP-Empfehlungen (19 MiB Speicher, 2 Durchgaenge).
-fn schluessel_ableiten(passwort: &str, salt: &[u8]) -> Result<[u8; 32], String> {
+pub(crate) fn schluessel_ableiten(passwort: &str, salt: &[u8]) -> Result<[u8; 32], String> {
     let mut schluessel = [0u8; 32];
     argon2::Argon2::default()
         .hash_password_into(passwort.as_bytes(), salt, &mut schluessel)
@@ -236,6 +236,33 @@ pub fn tresor_speichern(
 #[tauri::command]
 pub fn tresor_sperren(state: tauri::State<TresorZustand>) {
     *state.geheim.lock().unwrap() = None;
+}
+
+/// Fuer die Sicherung mit Dateien: Schluessel und Salt der offenen Sitzung samt
+/// der dazu passenden Tresor-Datei. Das Schloss haelt gleichzeitiges Speichern
+/// fern, und gesichert wird nur ein Tresor, der sich auch oeffnen laesst.
+pub(crate) fn offener_stand(
+    app: &tauri::AppHandle,
+) -> Result<(Zeroizing<[u8; 32]>, [u8; SALT_LAENGE], Vec<u8>), String> {
+    let zustand = app.state::<TresorZustand>();
+    let geheim = zustand.geheim.lock().unwrap();
+    let geheim = geheim
+        .as_ref()
+        .ok_or("Der Tresor ist nicht entsperrt.".to_string())?;
+
+    let inhalt = fs::read(tresor_pfad(app)?).map_err(|e| format!("Tresor nicht lesbar: {e}"))?;
+    if inhalt.len() < KOPF_LAENGE || &inhalt[..8] != MAGIC || inhalt[9..9 + SALT_LAENGE] != geheim.salt {
+        return Err("Die Tresor-Datei passt nicht zur offenen Sitzung. Bitte sperren und neu entsperren.".into());
+    }
+    let pruefung = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&geheim.schluessel)).decrypt(
+        Nonce::from_slice(&inhalt[9 + SALT_LAENGE..KOPF_LAENGE]),
+        &inhalt[KOPF_LAENGE..],
+    );
+    match pruefung {
+        Ok(mut klartext) => klartext.zeroize(),
+        Err(_) => return Err("Die Tresor-Datei passt nicht zur offenen Sitzung. Bitte sperren und neu entsperren.".into()),
+    }
+    Ok((Zeroizing::new(geheim.schluessel), geheim.salt, inhalt))
 }
 
 /// Womit der Zugang vor einem Passwortwechsel nachgewiesen wird.

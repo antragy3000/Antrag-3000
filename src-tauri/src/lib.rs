@@ -87,7 +87,10 @@ pub fn run() {
             katalog::katalog_kandidat_lesen,
             katalog::katalog_zuruecksetzen,
             backup::tresor_backup_erstellen,
-            backup::tresor_backup_einspielen
+            backup::tresor_backup_einspielen,
+            backup::sicherung_art,
+            backup::sicherung_erstellen,
+            backup::sicherung_einspielen
         ])
         .run(tauri::generate_context!())
         .expect("Fehler beim Starten der Anwendung");

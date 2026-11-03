@@ -119,6 +119,8 @@
   let reiheUmbId = $state(null);
   let reiheUmbName = $state("");
   let sicherungOffen = $state(false);
+  // Ergebnis des Einspielens; steht auf dem Entsperren-Bildschirm, bis entsperrt wurde.
+  let wiederherstellHinweis = $state("");
   let katalogOffen = $state(false);
   let updateOffen = $state(false);
   // Wurde der Update-Dialog von der stillen Start-Prüfung geöffnet (nicht per
@@ -222,6 +224,7 @@
     // Ältere Datenstände (z. B. aus Schritt 3) sanft überführen.
     if (normalisieren(daten)) await tresorSpeichern();
     passwort = "";
+    wiederherstellHinweis = "";
     ansicht = "offen";
     // Betriebssystem einmal ermitteln (macOS nutzt den Hinweis statt Auto-Update).
     istMac = await invoke("ist_macos").catch(() => false);
@@ -393,14 +396,17 @@
     ansicht = "entsperren";
   }
 
-  // Nach dem Einspielen einer Sicherung: abmelden, der wiederhergestellte
-  // Tresor wird mit seinem Passwort neu entsperrt.
-  async function nachWiederherstellung() {
-    daten = null;
-    fehler = "";
-    bereich = "alle";
+  // Nach dem Einspielen einer Sicherung: abmelden wie beim Sperren, der
+  // wiederhergestellte Tresor wird mit seinem Passwort neu entsperrt. Auch der
+  // Weg vom Willkommens-Bildschirm (neuer Computer) endet hier.
+  async function nachWiederherstellung(hinweis = "") {
     sicherungOffen = false;
-    ansicht = "entsperren";
+    await sperren();
+    passwort = "";
+    passwortWdh = "";
+    wiederherstellHinweis = hinweis;
+    merkenAktiv = await invoke("merken_status").catch(() => false);
+    merkenWunsch = merkenAktiv;
   }
 
   // Speichert den gesamten Datenstand verschlüsselt in den Tresor.
@@ -1980,7 +1986,14 @@
         Ohne Passwort sind die Daten endgültig verloren – so ist es gewollt,
         damit niemand außer dir an deine Daten kommt.
       </p>
+
+      <button class="leise" onclick={() => { fehler = ""; sicherungOffen = true; }}>
+        Ich habe eine Sicherung (z. B. vom alten Computer) …
+      </button>
     </div>
+    {#if sicherungOffen}
+      <Sicherung nurWiederherstellen schliessen={() => (sicherungOffen = false)} {nachWiederherstellung} />
+    {/if}
   </div>
 {:else if ansicht === "entsperren"}
   <div class="buehne">
@@ -2004,6 +2017,8 @@
         </svg>
       </h1>
       <p class="untertitel">Tresor entsperren</p>
+
+      {#if wiederherstellHinweis}<p class="wiederhergestellt">✓ {wiederherstellHinweis}</p>{/if}
 
       {#if merkenAktiv}
         <button type="button" disabled={beschaeftigt} onclick={merkenEntsperrenJetzt}>
@@ -2547,7 +2562,7 @@
     </main>
 
     {#if sicherungOffen}
-      <Sicherung schliessen={() => (sicherungOffen = false)} {nachWiederherstellung} />
+      <Sicherung schliessen={() => (sicherungOffen = false)} {nachWiederherstellung} vorSichern={tresorSpeichern} />
     {/if}
 
     {#if updateOffen}
@@ -3232,6 +3247,14 @@
     font-size: 0.9rem;
   }
 
+  .wiederhergestellt {
+    margin: 0 0 18px;
+    color: var(--erfolg-text);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+
   .warnung {
     margin: 24px 0 0;
     padding: 12px 14px;
@@ -3268,6 +3291,9 @@
     display: flex;
     justify-content: center;
     margin: 0 0 6px;
+    /* Das Logo steht in einer Überschrift: Ohne das erbt der Schriftzug deren
+       Fettschrift, wird zu breit für seine Fläche und die letzte Null fehlt. */
+    font-weight: 400;
   }
   .logo-gross > svg {
     height: 56px;

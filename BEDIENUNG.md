@@ -209,13 +209,27 @@ Passt alles, hast du zwei Möglichkeiten:
 
 ## Sicherung (Backup)
 Oben rechts **🛡 Sicherung**:
-- **Sicherung erstellen**: speichert eine verschlüsselte Kopie deines Tresors
-  an einen Ort deiner Wahl (USB-Stick, Cloud-Ordner …). Sie ist nur mit deinem
-  Passwort lesbar – mach das regelmäßig.
+- **Sicherung erstellen**: speichert eine verschlüsselte Sicherung an einem Ort
+  deiner Wahl (USB-Stick, Cloud-Ordner …). Sie ist nur mit deinem Passwort
+  lesbar – mach das regelmäßig. Mit **„Auch meine Dateien sichern"** (Standard)
+  sind auch Belege, Dokumente, PDFs und Word-/Excel-Dateien aus
+  `Dokumente\Antrag 3000` dabei, ebenfalls verschlüsselt (`.a3ksicherung`).
+  Ohne das Häkchen wird nur der Tresor gesichert (`.enc`).
 - **Sicherung wiederherstellen**: ersetzt den aktuellen Tresor durch eine
   gewählte Sicherungsdatei. Danach wirst du abgemeldet und entsperrst mit dem
   Passwort, das zu **dieser** Sicherung gehört. Der bisherige Tresor wird
-  vorher beiseitegelegt (nicht gelöscht).
+  vorher beiseitegelegt (nicht gelöscht). Vorhandene Dateien werden nie
+  überschrieben, und eine beschädigte Sicherung verändert nichts.
+
+### Auf einen neuen Computer umziehen
+1. Auf dem alten Computer eine Sicherung **mit Dateien** speichern, am besten
+   auf einen USB-Stick.
+2. Auf dem neuen Computer Antrag 3000 installieren und starten.
+3. Beim Willkommens-Bildschirm **kein neues Passwort** festlegen, sondern auf
+   **„Ich habe eine Sicherung"** klicken.
+4. Sicherungsdatei auswählen und dein Passwort eingeben.
+5. Mit demselben Passwort entsperren. „Auf diesem Gerät merken" musst du dort
+   neu ankreuzen.
 
 ## Datensouveränität (zur Erinnerung)
 - Tresor-Daten sind verschlüsselt und verlassen das Gerät nie über das Netz.

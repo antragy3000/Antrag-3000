@@ -31,8 +31,12 @@ serde_json = "1"
 #         (absichtlich langsam, erschwert Passwort-Raten massiv)
 # aes-gcm: AES-256-GCM-Verschluesselung mit Echtheits-Siegel
 #          (falsches Passwort/Manipulation wird sicher erkannt)
+#          Feature "stream": verschluesselt die Sicherung mit Dateien in
+#          Bloecken, damit grosse Belegordner nicht in den Arbeitsspeicher
+#          muessen; erkennt auch abgeschnittene Dateien. Kein neues Paket,
+#          nur ein Schalter im vorhandenen.
 argon2 = "0.5"
-aes-gcm = "0.10"
+aes-gcm = { version = "0.10", features = ["stream"] }
 # zeroize: ueberschreibt Schluessel/Passwort im Arbeitsspeicher nach Gebrauch
 # (statt sie nur "fallenzulassen"). RustCrypto-Standard, liegt ohnehin schon
 # als indirekte Abhaengigkeit im Baum. (Audit-Befund A1.)
