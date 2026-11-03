@@ -16,7 +16,7 @@
   <div class="kopf">
     <h2>Kostenstellen – Plan / Ist</h2>
     <p class="untertitel">
-      Geplante Kosten aus dem Kostenplan{#if projektName} von <strong>{projektName}</strong>{/if}
+      Geplante Kosten aus dem Kostenplan{#if projektName}{" "}von <strong>{projektName}</strong>{/if}
       gegenüber den tatsächlich erfassten Belegen.
     </p>
   </div>

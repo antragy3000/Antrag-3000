@@ -338,6 +338,12 @@ export function normalisieren(d) {
           q.dateien = [];
           veraendert = true;
         }
+        // Eigener Sachbericht je Geldquelle: Ältere Stände haben keinen, für
+        // sie gilt weiter der gemeinsame Text als Vorlage.
+        if (q && typeof q.sachbericht !== "string") {
+          q.sachbericht = "";
+          veraendert = true;
+        }
       }
       if (typeof p.abrechnung.sachbericht !== "string") {
         p.abrechnung.sachbericht = "";

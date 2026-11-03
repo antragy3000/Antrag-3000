@@ -12,6 +12,7 @@
     betragParsen,
     groesseText,
   } from "$lib/abrechnung";
+  import { hatEigenenSachbericht } from "$lib/sachbericht";
 
   let {
     quellen = [],
@@ -92,9 +93,10 @@
 
   async function quelleLoeschen(q) {
     const benutzt = (zugeordnet.get(q.id) ?? 0) > 0;
+    const bericht = hatEigenenSachbericht(q) ? " Auch ihr eigener Sachbericht wird gelöscht." : "";
     const text = benutzt
-      ? `„${q.name}" löschen? Die bereits zugeordneten Beträge (${betragFormat(zugeordnet.get(q.id))}) werden aus den Belegen entfernt.`
-      : `„${q.name}" löschen?`;
+      ? `„${q.name}" löschen? Die bereits zugeordneten Beträge (${betragFormat(zugeordnet.get(q.id))}) werden aus den Belegen entfernt.${bericht}`
+      : `„${q.name}" löschen?${bericht}`;
     if (!confirm(text)) return;
     beschaeftigt = true;
     try {
@@ -165,7 +167,7 @@
     <div class="titel-block">
       <h2>Geldquellen</h2>
       <p class="untertitel">
-        Förderer und Eigenmittel{#if projektName} für <strong>{projektName}</strong>{/if}, denen du
+        Förderer und Eigenmittel{#if projektName}{" "}für <strong>{projektName}</strong>{/if}, denen du
         später Belege zuordnest. Das <strong>Soll</strong> ist der bewilligte bzw. erwartete Betrag.
       </p>
     </div>

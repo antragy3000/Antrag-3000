@@ -43,8 +43,8 @@ export const BELEG_STATUS = {
 };
 
 /// Leere Abrechnungs-Struktur fuer ein neues Projekt.
-/// `sachbericht` ist EIN projektweiter Bericht (erscheint in jedem
-/// Verwendungsnachweis).
+/// `sachbericht` ist die gemeinsame Vorlage des Projekts: Sie erscheint im
+/// Verwendungsnachweis jeder Geldquelle, die keinen eigenen Text hat.
 export function leereAbrechnung() {
   return { belege: [], quellen: [], sachbericht: "" };
 }
@@ -130,11 +130,12 @@ function neueQuelleId() {
     : "q-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
 }
 
-/// Frische Geldquelle. (Der Sachbericht ist projektweit, nicht je Quelle.)
+/// Frische Geldquelle. `sachbericht` ist ihr eigener Bericht; leer heißt: Es
+/// gilt die gemeinsame Vorlage des Projekts (siehe sachbericht.js).
 /// `dateien` sind hochgeladene Nachweise (z. B. Bankauszug), die dem
 /// Verwendungsnachweis dieser Quelle angehängt werden.
 export function neueQuelle(typ = "foerderung") {
-  return { id: neueQuelleId(), typ, foerderId: "", name: "", soll: "", dateien: [] };
+  return { id: neueQuelleId(), typ, foerderId: "", name: "", soll: "", sachbericht: "", dateien: [] };
 }
 
 /// Soll-Betrag einer Quelle als Zahl.
@@ -281,7 +282,7 @@ export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName, 
   const anhaenge = [];
   const anhangliste = [];
 
-  // Sachbericht (projektweit, falls hinterlegt).
+  // Sachbericht (der für diese Quelle geltende, falls hinterlegt).
   if ((sachbericht ?? "").trim()) {
     abschnitte.push({ ueberschrift: "Sachbericht", absaetze: [sachbericht.trim()], tabelle: [] });
   }

@@ -16,6 +16,7 @@
     datumText,
     QUELLE_TYP,
   } from "$lib/abrechnung";
+  import { hatEigenenSachbericht } from "$lib/sachbericht";
 
   let {
     belege = [],
@@ -26,6 +27,7 @@
     // Verwendungsnachweis-Export (Phase A5).
     nachweisPdf,
     nachweisWord,
+    sachberichtVorlage = "",
   } = $props();
 
   let liste = $state(structuredClone($state.snapshot(belege)));
@@ -140,7 +142,7 @@
     <div class="kopf">
       <h2>Zuteilung – Abrechnung je Förderer</h2>
       <p class="untertitel">
-        Wähle eine Geldquelle, um ihr Belege zuzuordnen{#if projektName} ({projektName}){/if}.
+        Wähle eine Geldquelle, um ihr Belege zuzuordnen{#if projektName}{" "}({projektName}){/if}.
         Ziel: jede Quelle ausschöpfen, jeden Beleg decken.
       </p>
     </div>
@@ -212,6 +214,15 @@
       <span class="export-titel">Verwendungsnachweis:</span>
       <button class="zweit schmal" onclick={() => nachweisPdf(ausgewaehltId)}>PDF</button>
       <button class="zweit schmal" onclick={() => nachweisWord(ausgewaehltId)}>Word</button>
+      <span class="export-bericht">
+        {#if hatEigenenSachbericht(ausgewaehlt)}
+          mit dem eigenen Sachbericht für diese Geldquelle
+        {:else if sachberichtVorlage.trim()}
+          mit der gemeinsamen Sachbericht-Vorlage
+        {:else}
+          noch ohne Sachbericht
+        {/if}
+      </span>
     </div>
 
     {#if zugeordneteBelege.length === 0}
@@ -365,8 +376,9 @@
   .d-kopf h2 { margin: 0; }
   .d-zahlen { display: flex; gap: 22px; font-size: 0.92rem; color: var(--text-muted); margin: 8px 0 14px; flex-wrap: wrap; }
   .d-zahlen strong { color: var(--text); }
-  .export { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
+  .export { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
   .export-titel { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; }
+  .export-bericht { font-size: 0.82rem; color: var(--text-muted); }
 
   .typ { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 0.74rem; font-weight: 600; }
   .typ.t-foerderung { background: var(--akzent-bg); color: var(--akzent-d4); }

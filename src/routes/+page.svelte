@@ -37,6 +37,7 @@
   import { antragsPdfBauen, absenderZeilen } from "$lib/antragsPdf";
   import { kfpExport, neuePostenId } from "$lib/kfp";
   import { verwendungsnachweisAbschnitte } from "$lib/abrechnung";
+  import { sachberichtFuerQuelle } from "$lib/sachbericht";
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
   import { boardAusTresor, geteilteFoerdererAusTresor } from "$lib/sync";
   // Reine Tresor-Struktur-Helfer (Vorlagen + Migration) – ausgelagert nach
@@ -458,9 +459,17 @@
     await tresorSpeichern();
   }
 
-  // Projektweiten Sachbericht speichern.
+  // Gemeinsame Sachbericht-Vorlage des Projekts speichern.
   async function sachberichtSpeichern(text) {
     aktivesProjekt.abrechnung.sachbericht = text;
+    await tresorSpeichern();
+  }
+
+  // Eigenen Sachbericht einer Geldquelle speichern (leer = Vorlage gilt).
+  async function quelleSachberichtSpeichern(quelleId, text) {
+    const q = aktivesProjekt.abrechnung.quellen.find((x) => x.id === quelleId);
+    if (!q) return;
+    q.sachbericht = text;
     await tresorSpeichern();
   }
 
@@ -475,7 +484,7 @@
       a.belege,
       aktivesProjekt.kfp,
       aktivesProjekt.name,
-      a.sachbericht
+      sachberichtFuerQuelle(q, a.sachbericht)
     );
     const absender = daten.stammdaten ? absenderZeilen(daten.stammdaten) : [];
     const logo = daten.stammdaten?.logo || null;
@@ -2500,13 +2509,16 @@
             projektName={aktivesProjekt.name}
             nachweisPdf={(id) => nachweisExport(id, "pdf")}
             nachweisWord={(id) => nachweisExport(id, "word")}
+            sachberichtVorlage={aktivesProjekt.abrechnung.sachbericht}
           />
         {/key}
       {:else if bereich === "sachbericht"}
         {#key daten.aktivesProjektId}
           <Sachbericht
             sachbericht={aktivesProjekt.abrechnung.sachbericht}
+            quellen={aktivesProjekt.abrechnung.quellen}
             speichern={sachberichtSpeichern}
+            quelleSpeichern={quelleSachberichtSpeichern}
             projektName={aktivesProjekt.name}
           />
         {/key}
