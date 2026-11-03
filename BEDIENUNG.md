@@ -26,12 +26,28 @@ Beim allerersten Start legst du ein **Tresor-Passwort** fest (mindestens
 Ohne Passwort sind die Daten endgültig verloren – das ist absichtlich so,
 damit niemand außer dir an deine Daten kommt. Schreib es dir sicher auf.
 
+Danach fragt die App einmal, wann sie ins Internet darf (siehe „Datensouveränität").
+Hast du schon eine Sicherung vom alten Computer, lege **kein** neues Passwort fest
+(siehe „Auf einen neuen Computer umziehen").
+
 ## Entsperren und Sperren
 - Bei jedem Start gibst du dein Passwort ein, um den Tresor zu **entsperren**.
 - Oben rechts kannst du jederzeit **Sperren** – dann sind die Daten wieder
   verschlüsselt und niemand sieht sie ohne Passwort.
 
-## Passwort vergessen? „Neu aufsetzen"
+## Passwort ändern
+Unter **Stammdaten & Team → Tresor-Passwort → 🔑 Passwort ändern** gibst du dein
+aktuelles und ein neues Passwort ein. Ältere Sicherungen bleiben mit dem alten
+Passwort verschlüsselt, mach deshalb danach gleich eine neue Sicherung.
+
+## Passwort vergessen?
+- **Die App öffnet sich über „Auf diesem Gerät merken" ohne Passwort:** Im Fenster
+  „Passwort ändern" auf **„Ich kenne mein aktuelles Passwort nicht mehr"** klicken
+  und ein neues festlegen. Deine Daten bleiben erhalten.
+- **Die App verlangt das Passwort:** Es lässt sich nicht wiederherstellen. Es bleibt
+  nur „Neu aufsetzen".
+
+## Neu aufsetzen
 Auf der Entsperren-Seite gibt es „Passwort vergessen? Neu aufsetzen …".
 Damit beginnst du mit einem leeren Tresor und neuem Passwort. Der alte Tresor
 wird **nicht gelöscht**, sondern mit Datum beiseitegelegt (falls dir das alte
@@ -113,6 +129,9 @@ Beteiligte/Mitwirkende/Partner*innen).
   damit diese sensiblen Daten nicht unverschlüsselt in der Datei stehen.
   Die Word-Datei ist eine **Ausgabe**; Änderungen darin fließen nicht in
   die App zurück.
+- **↗ In CryptPad öffnen / ↙ Aus CryptPad übernehmen**: bringt die Texte über die
+  Zwischenablage in ein CryptPad-Dokument und wieder zurück. Die App sendet dabei
+  selbst nichts. Die bebilderte Anleitung steht im Handbuch, Kapitel 15.
 
 ### Kostenplan (Kostenfinanzplan)
 Ausgaben und Finanzierung in **Kategorien** (1, 2, 3 …) mit **Positionen**
@@ -207,6 +226,11 @@ Passt alles, hast du zwei Möglichkeiten:
 **Achtung:** Diese PDF enthält Stammdaten und Kostenfinanzplan und liegt
 **unverschlüsselt** im Ordner (sie ist die bewusste Ausgabe zum Einreichen).
 
+## Sachbericht (Abrechnung)
+Unter **Abrechnung → Sachbericht** schreibst du eine gemeinsame Vorlage und passt sie
+bei Bedarf je Geldquelle an („Für diesen Förderer anpassen"). Ohne eigenen Text
+erscheint im Verwendungsnachweis die Vorlage. Mehr dazu: Handbuch, Kapitel 22.
+
 ## Sicherung (Backup)
 Oben rechts **🛡 Sicherung**:
 - **Sicherung erstellen**: speichert eine verschlüsselte Sicherung an einem Ort
@@ -233,6 +257,12 @@ Oben rechts **🛡 Sicherung**:
 
 ## Datensouveränität (zur Erinnerung)
 - Tresor-Daten sind verschlüsselt und verlassen das Gerät nie über das Netz.
+- Die App holt vom Server nur App-Updates und die öffentliche Förder-Datenbank, von
+  dir wird dabei nichts mitgeschickt. Beim ersten Start wählst du **Automatisch beim
+  Start** oder **Nur auf Knopfdruck**; ändern kannst du das unter **Stammdaten & Team
+  → Internet-Verbindungen**.
+- Das **📋 Verbindungsprotokoll** an derselben Stelle zeigt jede Verbindung seit dem
+  Start. Die Liste wird nicht gespeichert.
 - Word- und Excel-Dateien legst du bewusst **unverschlüsselt** im
   Dokumente-Ordner ab, um damit zu arbeiten. Liegt dein Dokumente-Ordner in
   einer Cloud (z. B. OneDrive), werden diese Dateien mit synchronisiert.

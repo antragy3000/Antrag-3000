@@ -90,14 +90,17 @@
   .dezent { color: #5e6c84; font-size: 9.5pt; margin: 4px 0 10px; }
 
   .merke {
+    break-inside: avoid;
     background: #eef1ff; border-left: 4px solid #4f6df5;
     border-radius: 8px; padding: 10px 14px; margin: 12px 0; font-size: 10pt;
   }
   .warn {
+    break-inside: avoid;
     background: #ffeceb; border-left: 4px solid #ca3521;
     border-radius: 8px; padding: 10px 14px; margin: 12px 0; font-size: 10pt; color: #5d1f1a;
   }
   .tipp {
+    break-inside: avoid;
     background: #dcfff1; border-left: 4px solid #22a06b;
     border-radius: 8px; padding: 10px 14px; margin: 12px 0; font-size: 10pt; color: #143d2b;
   }
@@ -190,6 +193,7 @@
 
   .struktur { counter-reset: st; }
   .struktur .stp {
+    break-inside: avoid;
     display: flex; gap: 10px; align-items: flex-start; padding: 7px 10px;
     background: #fff; border: 1px solid #e4e7ec; border-radius: 8px; margin: 6px 0; font-size: 9.5pt;
   }
@@ -238,7 +242,7 @@
     <li><span class="nr">1</span><span class="t">Einführung – was Antrag 3000 ist</span><span class="pg" data-ch="1">5</span></li>
     <li><span class="nr">2</span><span class="t">Datensouveränität: deine Daten bleiben bei dir</span><span class="pg" data-ch="2">6</span></li>
     <li><span class="nr">3</span><span class="t">Erster Start: Tresor anlegen</span><span class="pg" data-ch="3">7</span></li>
-    <li><span class="nr">4</span><span class="t">Entsperren, Sperren, Neu aufsetzen</span><span class="pg" data-ch="4">8</span></li>
+    <li><span class="nr">4</span><span class="t">Entsperren, Sperren, Passwort</span><span class="pg" data-ch="4">8</span></li>
     <li><span class="nr">5</span><span class="t">Projekte verwalten</span><span class="pg" data-ch="5">9</span></li>
     <li><span class="nr">6</span><span class="t">Die Bereiche im Überblick</span><span class="pg" data-ch="6">10</span></li>
     <li><span class="nr">7</span><span class="t">Alle Förderungen</span><span class="pg" data-ch="7">11</span></li>
@@ -253,7 +257,7 @@
     <li><span class="nr">16</span><span class="t">Kostenplan (Kostenfinanzplan)</span><span class="pg" data-ch="16">23</span></li>
     <li><span class="nr">17</span><span class="t">Stammdaten</span><span class="pg" data-ch="17">25</span></li>
     <li><span class="nr">18</span><span class="t">Ordner und Dateien auf dem Computer</span><span class="pg" data-ch="18">26</span></li>
-    <li><span class="nr">19</span><span class="t">Sicherung (Backup)</span><span class="pg" data-ch="19">27</span></li>
+    <li><span class="nr">19</span><span class="t">Sicherung &amp; Umzug auf einen neuen Computer</span><span class="pg" data-ch="19">27</span></li>
     <li><span class="nr">20</span><span class="t">Förder-Datenbank aktuell halten</span><span class="pg" data-ch="20">28</span></li>
     <li><span class="nr">21</span><span class="t">App-Updates</span><span class="pg" data-ch="21">29</span></li>
     <li><span class="nr">22</span><span class="t">Abrechnung (Verwendungsnachweis)</span><span class="pg" data-ch="22">30</span></li>
@@ -378,8 +382,9 @@
   die sensiblen Daten nie.</p>
 
   <div class="merke"><strong>Wann Inhalte dein Gerät doch verlassen – immer nur durch dich:</strong>
-  wenn du ein Antrags-PDF per Mail versendest (Kap. 13), Formular-Texte nach CryptPad
-  bringst (Kap. 15) oder erzeugte Dateien in einem Cloud-Ordner liegen (Kap. 18).
+  wenn du ein Antrags-PDF per Mail versendest (Kap. 13), eine Meldung per Mail abschickst
+  (Kap. 20), Formular-Texte nach CryptPad bringst (Kap. 15) oder erzeugte Dateien in einem
+  Cloud-Ordner liegen (Kap. 18).
   Die App selbst lädt nichts davon hoch.</div>
 
   <div class="warn"><strong>Wichtig, sobald du Dateien erzeugst.</strong> Wenn du
@@ -391,6 +396,68 @@
   iCloud), wird die Datei – samt enthaltener Stamm- und Finanzdaten – automatisch
   <strong>in die Cloud synchronisiert</strong> (Kap. 18). Wenn du das nicht willst,
   lege den Programm-/Projektordner <strong>außerhalb</strong> solcher Cloud-Ordner ab.</div>
+
+  <h3>Wann geht die App ins Internet?</h3>
+  <p>Arbeitest du allein, holt die App vom Antrag-3000-Server
+  (<span class="pfad">sync.antrag3000.de</span>) nur zwei Dinge: <strong>App-Updates</strong>
+  und die öffentliche <strong>Förder-Datenbank</strong>. Von dir wird dabei nichts mitgeschickt.
+  Wie bei jeder Internet-Verbindung sieht der Server die IP-Adresse deines Anschlusses. Wann
+  das passiert, entscheidest du: Beim ersten Start fragt die App einmal nach (nach einem Update
+  von einer älteren Version einmal nach dem Entsperren).</p>
+
+  <figure>
+    <div class="screen" style="display:flex;justify-content:center">
+      <div class="karte" style="max-width:420px;width:100%">
+        <div style="font-weight:700;margin-bottom:8px">Wann soll die App nachsehen?</div>
+        <div style="border:2px solid #4f6df5;background:#eef1ff;border-radius:7px;padding:7px 10px">
+          <b>◉ Automatisch beim Start</b> (empfohlen)
+          <div class="geber" style="font-size:8.5pt">Du bekommst Sicherheits-Updates und neue Förderungen sofort.</div>
+        </div>
+        <div style="border:1px solid #dfe1e6;border-radius:7px;padding:7px 10px;margin-top:6px">
+          <b>○ Nur auf Knopfdruck</b>
+          <div class="geber" style="font-size:8.5pt">Die App verbindet sich nur, wenn du „⬆ Update" oder „Förder-Datenbank aktualisieren" drückst. Schau dann ab und zu selbst nach Updates.</div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 2.2</b> – Du wählst, wann die App nachsehen darf.</figcaption>
+  </figure>
+
+  <p>Bei „Nur auf Knopfdruck" funktioniert alles wie gewohnt, du bekommst Neues aber erst, wenn
+  du selbst nachsiehst. Schau dann ab und zu nach, denn Updates können Sicherheitslücken
+  schließen. Ändern kannst du deine Wahl jederzeit unter <strong>Stammdaten &amp; Team →
+  Internet-Verbindungen</strong> mit <em>„🌐 Ändern · Was wird übertragen?"</em>. Dort führt
+  auch ein Link zur ausführlichen Datenschutz-Erklärung. Im Team kommt der Team-Abgleich dazu,
+  aber erst, wenn du die Synchronisation startest (Kap. 24).</p>
+
+  <h3>Selbst nachsehen: das Verbindungsprotokoll</h3>
+  <p>Das kannst du jederzeit nachprüfen. Unter <strong>Stammdaten &amp; Team →
+  Internet-Verbindungen → 📋 Verbindungsprotokoll</strong> zeigt dir die App jede Verbindung ins
+  Internet seit dem Start: wann, wozu, zu welchem Server, was mitgeschickt wurde und ob sie von
+  selbst lief oder du sie ausgelöst hast.</p>
+
+  <figure>
+    <div class="screen" style="display:flex;justify-content:center">
+      <div class="karte" style="max-width:460px;width:100%">
+        <div style="font-weight:700">Verbindungsprotokoll</div>
+        <div class="geber" style="font-size:8.5pt;margin:2px 0 8px">Alle Verbindungen der App ins Internet seit dem Start um <b>09:14:02</b>.</div>
+        <div style="font-size:8pt;font-weight:600;color:#5e6c84;margin-bottom:3px">2 Verbindungen, neueste oben</div>
+        <div style="border-top:1px solid #f1f2f4;padding:6px 0">
+          <div style="display:flex;gap:10px"><span class="geber">09:14:05</span><b>Nach App-Update gesehen</b><span style="margin-left:auto;color:#216e4e;font-weight:700">✓</span></div>
+          <div class="geber" style="font-size:8pt">Server: sync.antrag3000.de · Mitgeschickt: nichts · automatisch</div>
+        </div>
+        <div style="border-top:1px solid #f1f2f4;padding:6px 0">
+          <div style="display:flex;gap:10px"><span class="geber">09:14:03</span><b>Förder-Datenbank geholt</b><span style="margin-left:auto;color:#216e4e;font-weight:700">✓</span></div>
+          <div class="geber" style="font-size:8pt">Server: sync.antrag3000.de · Mitgeschickt: nichts · automatisch</div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 2.3</b> – Das Verbindungsprotokoll nach einem normalen Start. Von dir wurde nichts mitgeschickt.</figcaption>
+  </figure>
+
+  <p>Die Liste gilt nur für die laufende Sitzung und wird nicht gespeichert. Inhalte deiner
+  Daten stehen nie darin. Auch „Förderer-Logo geholt" kann dort stehen: Das Logo gehört zu den
+  öffentlichen Programm-Infos. Links, die du im Browser öffnest (z. B. Förderer-Webseiten oder
+  CryptPad), fehlen in der Liste, weil sie dein Browser lädt und nicht Antrag 3000.</p>
 </section>
 
 <!-- ===== 3 ===== -->
@@ -412,6 +479,7 @@
         <div style="margin-top:14px;background:#fff7d6;color:#533f04;border-radius:7px;padding:9px 11px;font-size:8.5pt">
           Wichtig: Dieses Passwort kann <b>nicht wiederhergestellt</b> werden.
         </div>
+        <div style="text-align:center;margin-top:10px;font-size:8.5pt;color:#5e6c84">Ich habe eine Sicherung<br>(z. B. vom alten Computer) …</div>
       </div>
     </div>
     <figcaption><b>Abb. 3.1</b> – Tresor anlegen beim ersten Start.</figcaption>
@@ -429,15 +497,20 @@
   beim sicheren Aufbewahren. Dieses Passwort schützt all deine Finanz- und
   Steuerdaten – es lohnt sich, hier sorgfältig zu sein.</div>
 
-  <div class="merke"><strong>Direkt nach dem Anlegen ist alles bereit.</strong> Sobald
-  der Tresor steht, verbindet sich die App <strong>automatisch</strong> mit dem Server
-  und lädt die aktuelle Förder-Datenbank – du musst nichts einrichten und keine
-  Adresse eintippen. Ohne Internet geht es trotzdem sofort weiter (offline).</div>
+  <div class="merke"><strong>Direkt nach dem Anlegen fragt die App einmal nach dem
+  Internet.</strong> Du wählst, ob sie beim Start automatisch nachsehen darf oder nur auf
+  Knopfdruck (Kap. 2). Bei „Automatisch" lädt sie gleich die aktuelle Förder-Datenbank – du musst
+  nichts einrichten und keine Adresse eintippen. Bei „Nur auf Knopfdruck" oder ohne Internet
+  arbeitest du mit der mitgelieferten Fassung offline weiter.</div>
+
+  <div class="tipp"><strong>Neuer Computer?</strong> Hast du Antrag 3000 schon auf einem anderen
+  Computer benutzt, lege hier <strong>kein neues Passwort</strong> fest. Klick stattdessen auf
+  <em>„Ich habe eine Sicherung"</em> (Kap. 19).</div>
 </section>
 
 <!-- ===== 4 ===== -->
 <section class="chapter">
-  <h2><span class="kn">4</span>Entsperren, Sperren, Neu aufsetzen</h2>
+  <h2><span class="kn">4</span>Entsperren, Sperren, Passwort</h2>
 
   <h3>Entsperren</h3>
   <p>Bei jedem Start gibst du dein Passwort ein, um den Tresor zu entsperren.
@@ -456,8 +529,8 @@
     Kap. 27). Auf einem anderen Konto oder Gerät ist diese Datei nutzlos.</li>
     <li><strong>Was das bedeutet:</strong> Wer Zugriff auf dein
     <strong>angemeldetes Windows-Konto</strong> hat, kann die App dann ohne Passwort
-    öffnen. Nutze die Funktion also nur auf einem Gerät, das nur du benutzt, und
-    sichere deinen Windows-Login.</li>
+    öffnen und dort sogar ein neues Passwort festlegen. Nutze die Funktion also nur auf einem
+    Gerät, das nur du benutzt, und sichere deinen Windows-Login.</li>
     <li><strong>Wieder abschalten:</strong> Auf dem Entsperr-Bildschirm
     <em>„Gerät vergessen (künftig wieder Passwort verlangen)"</em> klicken.</li>
   </ul>
@@ -475,7 +548,47 @@
   einfach wieder entsperren. (Sobald gesperrt wird, wird der Schlüssel aus dem
   Arbeitsspeicher entfernt.)</div>
 
-  <h3>Passwort vergessen? „Neu aufsetzen"</h3>
+  <h3>Passwort ändern</h3>
+  <p>Unter <strong>Stammdaten &amp; Team → Tresor-Passwort</strong> klickst du auf
+  <strong>🔑 Passwort ändern</strong>. Die App prüft dein aktuelles Passwort und verschlüsselt
+  den Tresor dann mit dem neuen. Hattest du „Auf diesem Gerät merken" eingeschaltet, bleibt es
+  eingeschaltet.</p>
+
+  <figure>
+    <div class="screen" style="display:flex;justify-content:center">
+      <div class="karte" style="max-width:320px;width:100%">
+        <div style="font-size:11pt;font-weight:700;margin-bottom:4px">Tresor-Passwort ändern</div>
+        <div class="label">Aktuelles Passwort</div>
+        <div class="feld">••••••••••</div>
+        <div style="color:#3d5bf0;font-size:8.5pt;margin-top:4px;text-decoration:underline">Ich kenne mein aktuelles Passwort nicht mehr</div>
+        <div class="label">Neues Passwort (mindestens 8 Zeichen)</div>
+        <div class="feld">••••••••••••</div>
+        <div class="label">Neues Passwort wiederholen</div>
+        <div class="feld">••••••••••••</div>
+        <div style="text-align:right;margin-top:12px"><span class="leise">Abbrechen</span> <span class="btn pri">Passwort ändern</span></div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 4.1</b> – Passwort ändern. Der unterstrichene Link erscheint nur, wenn du die App über „Auf diesem Gerät merken" geöffnet hast.</figcaption>
+  </figure>
+
+  <div class="warn"><strong>Ältere Sicherungen behalten das alte Passwort.</strong> Eine
+  Sicherung lässt sich immer nur mit dem Passwort öffnen, das galt, als du sie erstellt hast.
+  Mach deshalb gleich nach dem Ändern eine neue Sicherung (Kap. 19).</div>
+
+  <h3>Passwort vergessen?</h3>
+  <p>Was du tun kannst, hängt davon ab, wie sich die App gerade öffnen lässt:</p>
+  <ul>
+    <li><strong>Die App öffnet sich ohne Passwort</strong> (über „Auf diesem Gerät merken" oder
+    <em>„🔓 Mit Windows-Konto entsperren"</em>): Dann ist nichts verloren. Geh zu
+    <strong>Stammdaten &amp; Team → Tresor-Passwort → 🔑 Passwort ändern</strong>, klick auf
+    <em>„Ich kenne mein aktuelles Passwort nicht mehr"</em> und lege ein neues fest. Mach danach
+    gleich eine neue Sicherung.</li>
+    <li><strong>Die App verlangt das Passwort und du kennst es nicht:</strong> Dann lässt es sich
+    nicht wiederherstellen, das ist so gewollt. Es bleibt nur „Neu aufsetzen". Hast du eine
+    Sicherung, deren Passwort du noch kennst, kannst du sie danach einspielen (Kap. 19).</li>
+  </ul>
+
+  <h3>Neu aufsetzen</h3>
   <p>Auf der Entsperren-Seite gibt es den Link
   <em>„Passwort vergessen? Neu aufsetzen …"</em>. Damit beginnst du mit einem
   <strong>leeren</strong> Tresor und neuem Passwort. Zur Bestätigung tippst du
@@ -850,6 +963,12 @@
   <em>„nicht alle erforderlichen Dateien haben den Status abgeschlossen"</em>
   bzw. <em>„es wurden noch nicht alle Dateien hochgeladen"</em>.</p>
 
+  <div class="merke"><strong>Kostenplan nicht ausgeglichen?</strong> Ist der Knopf aktiv, aber
+  Kosten und Finanzierung passen nicht zusammen, fragt die App vor dem Erstellen nach. Sie nennt
+  den Fehlbetrag (<em>„Es fehlen noch …"</em>) oder die <em>Überdeckung</em>, wenn die Finanzierung
+  die Kosten übersteigt. Du wählst dann <em>„Zum Kostenplan"</em>, <em>„Trotzdem erstellen"</em>
+  (z. B. für einen Entwurf) oder <em>„Abbrechen"</em>. Die App warnt nur, sie blockiert nicht.</div>
+
   <h3>Vorschau und Speichern</h3>
   <figure>
     <div class="screen" style="display:flex;justify-content:center">
@@ -1046,27 +1165,146 @@
     Förderung (Kapitel 10) ordnest du Dokumente aus dieser Liste zu oder legst dort neue
     an. Jedes Dokument gibt es nur einmal – ändern oder löschen wirkt überall.</li>
     <li><strong>Dateien teilen:</strong> Trag den Link zu einem geteilten Ordner ein
-    (z. B. CryptPad-Drive oder Nextcloud). Mit <em>„📁 Projektordner öffnen"</em> ziehst
+    (z. B. CryptPad-Drive oder Nextcloud; für Dateien in CryptPad brauchst du ein kostenloses
+    Konto, siehe unten). Mit <em>„📁 Projektordner öffnen"</em> ziehst
     du Dateien von Hand hinüber – Antrag 3000 lädt selbst nichts hoch.</li>
   </ul>
-  <h3>Formular-Texte in CryptPad bearbeiten</h3>
+  <h3>Schritt für Schritt: Formular-Texte in CryptPad bearbeiten</h3>
   <p>Neben „Word erstellen" bringen zwei Knöpfe die Texte des Sammel-Formulars in ein
-  CryptPad-Dokument und wieder zurück. Das läuft über die <strong>Zwischenablage</strong> –
-  Antrag 3000 selbst sendet nichts.</p>
-  <ul>
-    <li><strong>↗ In CryptPad öffnen:</strong> kopiert alle Formular-Texte (auch noch nicht
-    gespeicherte) in die Zwischenablage und öffnet ein neues CryptPad-Textdokument. Dort
-    <strong>Strg+V</strong>. <em>Erst danach</em> den Link des Dokuments (Adresszeile oder
-    „Teilen") kopieren und in der App einfügen – er wird als Arbeitsdokument gespeichert.
-    Der Text steht im App-Fenster auch zum Nachkopieren bereit. Beim ersten Mal erklärt ein
-    Hinweis, dass deine Projekttexte danach – verschlüsselt – bei CryptPad liegen.</li>
-    <li><strong>Zeilen mit <code>=== … ===</code></strong> trennen die Felder. Bitte stehen
-    lassen – an ihnen erkennt die App, welcher Text in welches Feld gehört.</li>
-    <li><strong>↙ Aus CryptPad übernehmen:</strong> in CryptPad <strong>Strg+A</strong>,
-    <strong>Strg+C</strong>, in der App einfügen und „Prüfen". Die App zeigt dir, welche Felder
-    sich ändern (alt durchgestrichen, neu grün), und übernimmt erst nach deinem Klick.
-    Danach wie gewohnt <strong>„Speichern"</strong>.</li>
-  </ul>
+  CryptPad-Dokument und wieder zurück. Das läuft über die <strong>Zwischenablage</strong>:
+  Antrag 3000 selbst sendet nichts, das Einfügen machst du. Wer mitschreibt, braucht kein
+  Antrag 3000, nur den Link.</p>
+  <p>Du wechselst zwischen zwei Fenstern. Bei jedem Schritt steht, wo du gerade bist.</p>
+  <p class="dezent">Die Abbildungen sind vereinfachte Nachbauten. CryptPad ist ein eigener Dienst,
+  seine Fenster zeigen den Stand von November 2026 und können sich ändern.</p>
+
+  <div class="struktur"><div class="stp"><span class="num">1</span><div><span class="badge b-blau"><span class="dot"></span>In Antrag 3000</span><div style="margin-top:4px">Klick auf <strong>↗ In CryptPad öffnen</strong> und, wenn der Hinweis erscheint, auf
+  <strong>„Text kopieren und CryptPad öffnen"</strong>. Alle Formular-Texte, auch noch nicht
+  gespeicherte, liegen jetzt in der Zwischenablage, und dein Browser öffnet ein neues Dokument.
+  <strong>Lass das Fenster der App offen</strong>, du brauchst es in Schritt 4.</div></div></div></div>
+
+  <figure>
+    <div class="screen" style="display:flex;justify-content:center">
+      <div class="karte" style="max-width:420px;width:100%">
+<div style="font-size:11pt;font-weight:700;margin-bottom:6px">Formular in CryptPad öffnen</div>
+        <div style="font-size:8.5pt">Antrag 3000 kopiert alle Texte dieses Formulars in die <b>Zwischenablage</b> und öffnet ein <b>neues CryptPad-Dokument</b> im Browser. Dort fügst du sie mit <b>Strg+V</b> ein.</div>
+        <div style="background:#fff7d6;color:#533f04;border-radius:7px;padding:7px 10px;font-size:8.5pt;margin:8px 0">Danach liegen deine Projekttexte bei CryptPad (cryptpad.fr) – <b>Ende-zu-Ende-verschlüsselt</b>, aber nicht mehr nur auf diesem Gerät.</div>
+        <div style="text-align:right;margin-top:10px"><span class="leise">Abbrechen</span> <span class="btn pri">Text kopieren und CryptPad öffnen</span></div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 15.3</b> – Beim ersten Mal erklärt die App, was passiert. Du kannst den Hinweis für dieses Projekt abschalten.</figcaption>
+  </figure>
+
+  <div class="struktur"><div class="stp"><span class="num">2</span><div><span class="badge b-gruen"><span class="dot"></span>Im Browser: CryptPad</span><div style="margin-top:4px">Klick in das leere Dokument und drück <strong>Strg+V</strong>. Fragt CryptPad unten rechts, ob
+  es das Dokument in deinem CryptDrive speichern soll, klick auf <strong>Speichern</strong>, dann
+  findest du es dort wieder. Oben links steht ein Titel wie „Rich Text" mit Datum, mit dem Stift
+  daneben kannst du ihn ändern. Die Zeilen mit <code>=== … ===</code> bitte <strong>stehen
+  lassen</strong>: An ihnen erkennt die App später, welcher Text in welches Feld gehört.</div></div></div></div>
+
+  <figure>
+    <div class="screen">
+      <div class="karte" style="padding:0;overflow:hidden">
+        <div style="background:#e9edf2;padding:5px 12px;font-size:8pt;color:#5e6c84">cryptpad.fr/pad/#/2/pad/edit/…</div>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:7px 12px;border-bottom:1px solid #e4e7ec;font-size:8.5pt">
+          <b>Rich Text – Di., 3. November 2026 ✎</b>
+          <span>Datei</span><span>Werkzeuge</span><b style="color:#0b7568">Teilen</b><span>Zugriff</span><span>Chat</span>
+        </div>
+        <div style="padding:10px 16px 12px;font-size:8.5pt;line-height:1.5">
+          <div class="geber">Antrag 3000 · Sammel-Formular · Projekt: Klangräume</div>
+          <div class="geber">Hinweis: Die Zeilen mit === … === bitte nicht ändern oder löschen …</div>
+          <div style="margin-top:6px;font-weight:700;color:#0b7568">=== Projekttitel ===</div>
+          <div>Klangräume im Stadtpark</div>
+          <div style="margin-top:6px;font-weight:700;color:#0b7568">=== Kurzbeschreibung ===</div>
+          <div>Eine begehbare Klanginstallation im Park.</div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;padding:0 12px 12px">
+          <div style="max-width:270px;border:1px solid #dfe1e6;border-radius:7px;padding:8px 10px;font-size:8pt">Dieses Dokument ist nicht in deinem CryptDrive. Möchtest du es jetzt dort speichern?
+            <div style="text-align:right;margin-top:6px"><span class="leise">NICHT SPEICHERN</span> <span class="btn pri" style="padding:3px 8px;font-size:8pt">SPEICHERN</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 15.4</b> – Der Text steht jetzt in CryptPad. Die Zeilen mit <code>=== … ===</code> (hier grün hervorgehoben) bleiben stehen.</figcaption>
+  </figure>
+
+  <div class="struktur"><div class="stp"><span class="num">3</span><div><span class="badge b-gruen"><span class="dot"></span>Im Browser: CryptPad</span><div style="margin-top:4px"><strong>Erst jetzt</strong> den Link holen: Klick auf <strong>Teilen</strong>, dann auf den Reiter
+  <strong>Link</strong>. Lass die Zugriffsrechte auf <strong>Bearbeiten</strong> und klick auf
+  <strong>Link kopieren</strong>. Warum erst jetzt? Der kopierte Link ersetzt den Text in der
+  Zwischenablage. Ist das zu früh passiert, klick in der App auf <em>„📋 Nochmal kopieren"</em>.</div></div></div></div>
+
+  <figure>
+    <div class="screen" style="display:flex;justify-content:center">
+      <div class="karte" style="max-width:420px;width:100%">
+        <div style="display:flex;gap:14px;border-bottom:1px solid #e4e7ec;font-size:9pt;padding-bottom:5px;margin-bottom:8px">
+          <span class="geber">Kontakte</span><b style="color:#0b7568">Link</b><span class="geber">Einbetten</span>
+        </div>
+        <div class="label" style="margin-top:0">Zugriffsrechte</div>
+        <div style="font-size:9pt">○ Ansehen &nbsp;&nbsp; <b>◉ Bearbeiten</b></div>
+        <div class="feld" style="margin-top:8px;white-space:nowrap;overflow:hidden">https://cryptpad.fr/pad/#/2/pad/edit/…</div>
+        <div style="background:#fff7d6;color:#533f04;border-radius:7px;padding:7px 10px;font-size:8.5pt;margin:8px 0">Dieser Link enthält die Schlüssel zu deinem Dokument.</div>
+        <div style="text-align:right;margin-top:10px"><span class="leise">ABBRECHEN</span> <span class="btn sec">LINK ÖFFNEN</span> <span class="btn pri">LINK KOPIEREN</span></div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 15.5</b> – Das Fenster „Teilen" in CryptPad, Reiter „Link".</figcaption>
+  </figure>
+
+  <div class="struktur"><div class="stp"><span class="num">4</span><div><span class="badge b-blau"><span class="dot"></span>In Antrag 3000</span><div style="margin-top:4px">Im offenen Fenster <em>„Jetzt in CryptPad einfügen"</em> klickst du ins Feld <strong>Link aus
+  CryptPad</strong>, drückst <strong>Strg+V</strong> und dann <strong>„Als Arbeitsdokument
+  speichern"</strong>. Das Dokument steht jetzt oben im Reiter „Dateien" unter den
+  Arbeitsdokumenten. Mit <em>„Öffnen ↗"</em> kommst du jederzeit wieder hin.</div></div></div></div>
+
+  <figure>
+    <div class="screen" style="display:flex;justify-content:center">
+      <div class="karte" style="max-width:420px;width:100%">
+<div style="font-size:11pt;font-weight:700;margin-bottom:6px">Jetzt in CryptPad einfügen</div>
+        <div style="color:#216e4e;font-weight:600;font-size:8.5pt">✓ In die Zwischenablage kopiert. CryptPad öffnet sich im Browser.</div>
+        <div style="margin-top:6px;font-size:8.5pt;color:#5e6c84">📋 Nochmal kopieren</div>
+        <div class="label">Titel</div>
+        <div class="feld">Sammel-Formular – Klangräume</div>
+        <div class="label">Link aus CryptPad</div>
+        <div class="feld" style="border-color:#4f6df5;white-space:nowrap;overflow:hidden">https://cryptpad.fr/pad/#/2/pad/edit/…</div>
+        <div style="text-align:right;margin-top:10px"><span class="leise">Ohne Link schließen</span> <span class="btn pri">Als Arbeitsdokument speichern</span></div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 15.6</b> – Zurück in Antrag 3000: Link einfügen und speichern. Dieses Fenster blieb die ganze Zeit offen.</figcaption>
+  </figure>
+
+  <div class="struktur"><div class="stp"><span class="num">5</span><div><span class="badge b-grau"><span class="dot"></span>Per Signal o. Ä.</span><div style="margin-top:4px">Gib den Link an alle, die mitschreiben sollen. Nimm dafür einen sicheren Weg wie Signal, keine
+  normale E-Mail: <strong>Der Link enthält die Schlüssel zum Dokument</strong>, und wer ihn einmal
+  hat, behält den Zugriff. Soll jemand nur lesen, wähl in Schritt 3 <strong>Ansehen</strong> und
+  kopier diesen eigenen Link.</div></div></div></div>
+  <div class="struktur"><div class="stp"><span class="num">6</span><div><span class="badge b-gruen"><span class="dot"></span>Im Browser: CryptPad</span> dann <span class="badge b-blau"><span class="dot"></span>In Antrag 3000</span><div style="margin-top:4px">Ist der Text fertig, klick in CryptPad in den Text und drück <strong>Strg+A</strong> (alles
+  markieren) und <strong>Strg+C</strong> (kopieren). In der App klickst du auf <strong>↙ Aus
+  CryptPad übernehmen</strong>, fügst mit <strong>Strg+V</strong> ein und klickst auf
+  <strong>„Prüfen"</strong>.</div></div></div></div>
+  <div class="struktur"><div class="stp"><span class="num">7</span><div><span class="badge b-blau"><span class="dot"></span>In Antrag 3000</span><div style="margin-top:4px">Die App zeigt dir, welche Felder sich ändern. Fehlt ein Marker, nennt sie das Feld, und es bleibt
+  wie bisher. Klick auf <strong>„… Feld übernehmen"</strong> und danach im Formular wie gewohnt auf
+  <strong>„Speichern"</strong>. Erst dann liegt der neue Text im Tresor.</div></div></div></div>
+
+  <figure>
+    <div class="screen" style="display:flex;justify-content:center">
+      <div class="karte" style="max-width:420px;width:100%">
+<div style="font-size:11pt;font-weight:700;margin-bottom:6px">Aus CryptPad übernehmen</div>
+        <div style="font-size:8.5pt;margin-bottom:6px">Diese Felder ändern sich:</div>
+        <div style="border-top:1px solid #f1f2f4;padding-top:6px;font-size:8.5pt"><b>Kurzbeschreibung</b>
+          <div style="color:#ae2e24;text-decoration:line-through;margin-top:2px">Eine begehbare Klanginstallation im Park.</div>
+          <div style="color:#216e4e;margin-top:2px">Eine begehbare Klanginstallation mit 12 Lautsprechern im Stadtpark.</div>
+        </div>
+        <div class="geber" style="font-size:8pt;margin-top:8px">6 Feld(er) unverändert.</div>
+        <div style="text-align:right;margin-top:10px"><span class="leise">Zurück</span> <span class="btn pri">1 Feld übernehmen</span></div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 15.7</b> – Die Vorschau: alt durchgestrichen, neu grün. Erst dein Klick übernimmt den Text.</figcaption>
+  </figure>
+
+  <div class="warn"><strong>Ohne CryptPad-Konto werden Dokumente gelöscht.</strong> Laut CryptPad
+  (Stand November 2026) werden Dokumente ohne Konto nach <strong>3 Monaten ohne Nutzung</strong>
+  gelöscht, und Dateien wie Bilder oder PDFs kannst du ohne Konto gar nicht ablegen. Ein kostenloses
+  Konto braucht nur Nutzernamen und Passwort, keine E-Mail-Adresse. Deine Dokumente bleiben dann
+  erhalten, solange du das Konto nutzt. Dieses Passwort kann CryptPad aber nicht zurücksetzen, und
+  es hat nichts mit deinem Tresor-Passwort zu tun. So oder so gilt: Hol fertige Texte rechtzeitig
+  mit „Aus CryptPad übernehmen" in die App zurück.</div>
+
   <div class="merke">Es gibt <strong>keinen automatischen Abgleich</strong>: Wer in CryptPad
   weiterschreibt, holt den Stand mit „Aus CryptPad übernehmen" zurück. Abschnitte, deren
   Marker gelöscht wurden, werden nicht übernommen – die Vorschau sagt dir, welche.</div>
@@ -1167,6 +1405,9 @@
   (z. B. UID-Nummer / Steuerverwaltung) – die Felder sind freie Textfelder.</div>
   <div class="merke">Stammdaten gelten für <strong>alle</strong> Projekte – dein
   Name ändert sich ja nicht pro Vorhaben.</div>
+  <div class="merke">Im selben Reiter <strong>„Stammdaten &amp; Team"</strong> findest du auch die
+  Karten <strong>Internet-Verbindungen</strong> (Kap. 2) und <strong>Tresor-Passwort</strong>
+  (Kap. 4).</div>
 </section>
 
 <!-- ===== 18 ===== -->
@@ -1201,16 +1442,20 @@
 
 <!-- ===== 19 ===== -->
 <section class="chapter">
-  <h2><span class="kn">19</span>Sicherung (Backup)</h2>
-  <p class="lead">Mach regelmäßig eine Sicherung deines Tresors – oben rechts
-  unter <strong>🛡 Sicherung</strong>.</p>
+  <h2><span class="kn">19</span>Sicherung &amp; Umzug auf einen neuen Computer</h2>
+  <p class="lead">Mach regelmäßig eine Sicherung – oben rechts unter
+  <strong>🛡 Sicherung</strong>. Sie schützt dich, wenn dein Computer kaputtgeht, und bringt alles
+  auf einen neuen Computer.</p>
 
   <figure>
     <div class="screen" style="display:flex;justify-content:center">
-      <div class="karte" style="max-width:330px">
+      <div class="karte" style="max-width:370px;width:100%">
         <div style="font-weight:700;margin-bottom:8px">Sicherung</div>
         <div style="font-size:9pt;font-weight:600">Sicherung erstellen</div>
-        <div class="geber" style="font-size:8.5pt;margin:3px 0 8px">Speichert eine verschlüsselte Kopie an einen Ort deiner Wahl.</div>
+        <div class="geber" style="font-size:8.5pt;margin:3px 0 8px">Speichert eine verschlüsselte Sicherung an einem Ort deiner Wahl (z. B. USB-Stick oder Cloud-Ordner).</div>
+        <div style="font-size:8.5pt;font-weight:600;margin-bottom:8px">☑ Auch meine Dateien sichern (empfohlen)
+          <div class="geber" style="font-weight:400">Belege, hochgeladene Dokumente, Antrags-PDFs und Word-/Excel-Dateien aus <code>Dokumente\Antrag 3000</code>.</div>
+        </div>
         <div class="btn pri" style="display:inline-block">Sicherung speichern …</div>
         <div style="border-top:1px solid #f1f2f4;margin:12px 0"></div>
         <div style="font-size:9pt;font-weight:600">Sicherung wiederherstellen</div>
@@ -1222,22 +1467,58 @@
   </figure>
 
   <ul>
-    <li><strong>Sicherung erstellen</strong>: speichert eine verschlüsselte Kopie
-    deines Tresors (USB-Stick, Cloud-Ordner …). Sie ist nur mit deinem Passwort
-    lesbar.</li>
-    <li><strong>Sicherung wiederherstellen</strong>: ersetzt den aktuellen Tresor
-    durch eine gewählte Datei. Der bisherige Tresor wird vorher beiseitegelegt
-    (nicht gelöscht).</li>
+    <li><strong>Sicherung erstellen:</strong> Speicher die Datei dort, wo sie auch einen kaputten
+    Computer übersteht, z. B. auf einem USB-Stick. Sie ist nur mit deinem Passwort lesbar, auch für
+    den Cloud-Anbieter oder jemanden, der den USB-Stick findet.</li>
+    <li><strong>Mit Häkchen „Auch meine Dateien sichern"</strong> (Datei endet auf
+    <code>.a3ksicherung</code>): dein Tresor und alles aus <code>Dokumente\Antrag 3000</code>, als
+    Ganzes verschlüsselt. Bei vielen Dateien dauert das ein paar Minuten. Die App prüft die Sicherung
+    danach und nennt dir Dateien, die sie nicht lesen konnte.</li>
+    <li><strong>Ohne Häkchen</strong> (Datei endet auf <code>.enc</code>): nur der Tresor.</li>
+    <li><strong>Sicherung wiederherstellen:</strong> ersetzt den aktuellen Tresor durch die gewählte
+    Datei. Danach entsperrst du mit dem Passwort, das galt, als die Sicherung erstellt wurde. Der
+    bisherige Tresor wird vorher beiseitegelegt (nicht gelöscht). Eine Sicherung mit Dateien wird
+    zuerst komplett geprüft, und Dateien, die es schon gibt, werden nicht überschrieben.</li>
   </ul>
-  <div class="warn"><strong>Die Sicherung enthält nur deinen Tresor – nicht deine Dateien.</strong>
-  Belege (Kap. 22), hochgeladene Dokumente (Kap. 11), Antrags-PDFs, Word- und Excel-Dateien
-  liegen als normale Dateien im Ordner <code>Dokumente\Antrag 3000</code> (Kap. 18). Sichere
-  diesen Ordner <strong>zusätzlich</strong>, z. B. indem du ihn regelmäßig auf einen USB-Stick
-  kopierst. Besonders wichtig sind die <strong>Belege</strong>: Sie musst du für den
-  Verwendungsnachweis aufbewahren – wie lange, steht in deinem Zuwendungsbescheid bzw.
-  dessen Nebenbestimmungen; steuerliche Aufbewahrungspflichten können länger sein.</div>
+  <div class="warn"><strong>Ohne Häkchen fehlen deine Dateien.</strong> Belege (Kap. 22),
+  hochgeladene Dokumente (Kap. 11), Antrags-PDFs, Word- und Excel-Dateien liegen als normale,
+  <strong>unverschlüsselte</strong> Dateien im Ordner <code>Dokumente\Antrag 3000</code> (Kap. 18).
+  Lässt du das Häkchen weg, sichere den Ordner anders. Besonders wichtig sind die
+  <strong>Belege</strong>: Sie musst du für den Verwendungsnachweis aufbewahren – wie lange, steht in
+  deinem Zuwendungsbescheid bzw. dessen Nebenbestimmungen; steuerliche Aufbewahrungspflichten können
+  länger sein.</div>
+  <div class="merke"><strong>Zum Wiederherstellen brauchst du immer das Passwort</strong>, auch wenn
+  du die App über „Auf diesem Gerät merken" sonst ohne Passwort öffnest. Weißt du es nicht mehr, lege
+  zuerst ein neues fest (Kap. 4) und mach dann eine neue Sicherung.</div>
   <div class="tipp">Mach eine Sicherung besonders vor wichtigen Schritten und
   bewahre eine Kopie an einem zweiten Ort auf.</div>
+
+  <h3>Auf einen neuen Computer umziehen</h3>
+  <div class="struktur">
+    <div class="stp"><span class="num">1</span><div>Auf dem <b>alten</b> Computer eine Sicherung <b>mit dem Häkchen „Auch meine Dateien sichern"</b> speichern, am besten auf einem USB-Stick.</div></div>
+    <div class="stp"><span class="num">2</span><div>Auf dem <b>neuen</b> Computer Antrag 3000 installieren und starten.</div></div>
+    <div class="stp"><span class="num">3</span><div>Beim Willkommens-Bildschirm <b>kein neues Passwort</b> festlegen, sondern auf <b>„Ich habe eine Sicherung"</b> klicken.</div></div>
+    <div class="stp"><span class="num">4</span><div>Die Sicherungsdatei auswählen und dein Passwort eingeben.</div></div>
+    <div class="stp"><span class="num">5</span><div>Mit demselben Passwort entsperren. „Auf diesem Gerät merken" gilt nur für ein Gerät, das musst du dort neu ankreuzen.</div></div>
+  </div>
+
+  <figure>
+    <div class="screen" style="display:flex;justify-content:center">
+      <div class="karte" style="max-width:310px;width:100%">
+        <div style="font-size:14pt;font-weight:600">Antrag 3000</div>
+        <div class="geber" style="margin:2px 0 12px">Willkommen! Lege zuerst dein Tresor-Passwort fest.</div>
+        <div class="label">Passwort (mindestens 8 Zeichen)</div>
+        <div class="feld" style="opacity:.55">&nbsp;</div>
+        <div class="btn dis" style="display:block;text-align:center;margin-top:10px">Tresor anlegen</div>
+        <div style="margin-top:12px;border:2px solid #4f6df5;background:#eef1ff;border-radius:7px;padding:7px 10px;text-align:center;font-size:8.5pt;font-weight:600">Ich habe eine Sicherung<br>(z. B. vom alten Computer) …</div>
+      </div>
+    </div>
+    <figcaption><b>Abb. 19.2</b> – Auf dem neuen Computer: <b>kein</b> neues Passwort festlegen, sondern den markierten Link nehmen.</figcaption>
+  </figure>
+
+  <div class="merke"><strong>Was kommt mit?</strong> Der Tresor enthält Projekte, Stammdaten,
+  Merklisten und einen Team-Zugang, die Sicherung mit Häkchen zusätzlich alle Dateien. Prüfe auf dem
+  neuen Computer kurz, ob alles da ist, <strong>bevor du den alten abgibst</strong>.</div>
 </section>
 
 <!-- ===== 20 ===== -->
@@ -1259,8 +1540,9 @@
   <ul>
     <li><strong>🔄 Vom Server holen</strong> – die zentral gepflegte Fassung vom
     Antrag-3000-Server. Gleichwertig: der Knopf <strong>„Förder-Datenbank
-    aktualisieren"</strong> unter „Stammdaten &amp; Team". Außerdem holt die App die
-    neueste Fassung bei jedem Start still im Hintergrund.</li>
+    aktualisieren"</strong> unter „Stammdaten &amp; Team". Hast du „Automatisch beim Start"
+    gewählt (Kap. 2), holt die App die neueste Fassung außerdem bei jedem Start still im
+    Hintergrund.</li>
     <li><strong>Update aus Datei laden</strong> – eine Katalog-Datei, die du
     z. B. per USB bekommen hast.</li>
     <li><strong>Auf Werkszustand zurücksetzen</strong> – zurück zur
@@ -1283,12 +1565,17 @@
   nicht mehr)? Melde es im Fenster <strong>Förder-Datenbank</strong> unter
   <strong>„Problem melden"</strong>: Förderung wählen, Art angeben, optional eine
   kurze Anmerkung.</p>
-  <div class="warn"><strong>Wichtig:</strong> Wenn du allein arbeitest, sammelt die App deine
-  Meldungen derzeit nur – sie werden <strong>noch nicht versendet</strong> (sie stehen auf
-  „noch nicht gesendet"). Ist dir ein Fehler wichtig, schreib bitte direkt an
-  <strong>pilot@antrag3000.de</strong>. Im Team-Modus gehen Meldungen automatisch raus (Kap. 24).</div>
+  <ul>
+    <li><strong>Wenn du allein arbeitest:</strong> Klick auf <strong>„✉ Per Mail melden"</strong>. Die
+    App öffnet in deinem Mailprogramm eine vorbereitete Nachricht an <strong>pilot@antrag3000.de</strong>.
+    Du siehst sie vor dem Absenden und schickst sie selbst ab. Ohne Mailprogramm schreibst du einfach
+    direkt an diese Adresse.</li>
+    <li><strong>Im Team:</strong> Klick auf <strong>„Melden"</strong>. Die Meldung geht beim laufenden
+    Synchronisieren automatisch raus (Kap. 24).</li>
+  </ul>
   <div class="merke">Die Meldung enthält <strong>nur</strong> Förderungs-Name,
-  Art und deine Anmerkung – keine Tresor-Daten. Sie fließt in die zentrale
+  Art und deine Anmerkung – keine Tresor-Daten. Schreib bitte auch in die Anmerkung <strong>keine
+  persönlichen Daten</strong> (Namen, Adresse, Budget). Die Meldung fließt in die zentrale
   Pflege der Datenbank ein.</div>
 
 </section>
@@ -1300,10 +1587,11 @@
   aktualisieren – sicher und automatisch geprüft.</p>
 
   <h3>Wie es funktioniert</h3>
-  <p>Beim Entsperren schaut die App einmal kurz nach, ob auf dem Server eine
-  neuere Version liegt. Ist das der Fall, öffnet sich ein Hinweis mit der neuen
-  Versionsnummer und einer kurzen Beschreibung, was neu ist. Du kannst auch
-  jederzeit selbst suchen: oben rechts auf <strong>„⬆ Update"</strong>.</p>
+  <p>Hast du „Automatisch beim Start" gewählt (Kap. 2), schaut die App beim Entsperren einmal
+  kurz nach, ob auf dem Server eine neuere Version liegt. Ist das der Fall, öffnet sich ein Hinweis
+  mit der neuen Versionsnummer und einer kurzen Beschreibung, was neu ist. Du kannst auch
+  jederzeit selbst suchen: oben rechts auf <strong>„⬆ Update"</strong>. Bei „Nur auf Knopfdruck"
+  ist das der einzige Weg, schau dann also ab und zu nach.</p>
   <p class="dezent">Im <strong>Einzelplatz-Modus</strong> ist das – neben der Förder-Datenbank –
   der einzige Moment, in dem die App im Alltag kurz online geht. (Im Team-Modus kommt der
   Team-Abgleich hinzu, Kap. 24.) Deine <strong>sensiblen Tresor-Daten sind dabei
@@ -1331,6 +1619,13 @@
   <p>„Alles aktuell" heißt: Du hast bereits die neueste Version. Eine Meldung
   „Update nicht möglich" bedeutet meist nur, dass der Server gerade nicht
   erreichbar ist – prüfe die Verbindung (Status-Punkt) und versuche es später erneut.</p>
+
+  <div class="merke"><strong>Virenschutz mit HTTPS-Scan (z. B. Norton).</strong> App-Updates und die
+  Förder-Datenbank funktionieren auch, wenn dein Virenschutz verschlüsselte Verbindungen durchleuchtet.
+  Updates bleiben dabei geschützt, denn das Siegel prüft die App in jedem Fall selbst. Erscheint
+  trotzdem eine Meldung zum Zertifikat, trag im Virenschutz eine Ausnahme ein für
+  <span class="pfad">sync.antrag3000.de</span> und <span class="pfad">team.antrag3000.de</span>
+  (Kap. 24).</div>
 </section>
 
 <!-- ===== 22 ===== -->
@@ -1397,11 +1692,40 @@
   auf"</strong>, ist alles sauber verteilt.</div>
 
   <h3>5. Sachbericht</h3>
-  <p>Im Reiter <strong>Sachbericht</strong> schreibst du <strong>einen</strong>
-  durchgehenden, projektweiten Bericht (Ausgangslage, Ablauf, Ergebnisse,
-  Besonderheiten). Er wird automatisch in den Verwendungsnachweis
-  <strong>jeder</strong> Geldquelle übernommen und beim Verlassen des Feldes
-  gespeichert.</p>
+  <p>Förderer fragen oft nach Unterschiedlichem. Darum gibt es im Reiter
+  <strong>Sachbericht</strong> eine <strong>gemeinsame Vorlage</strong> für das ganze Projekt
+  (Ausgangslage, Ablauf, Ergebnisse, Besonderheiten) und daneben einen Reiter je Geldquelle. Hat eine
+  Geldquelle keinen eigenen Text, erscheint in ihrem Verwendungsnachweis die Vorlage.</p>
+
+  <figure>
+    <div class="screen">
+      <div class="karte">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;font-size:8.5pt">
+          <span style="border:1px solid #dfe1e6;border-radius:7px;padding:4px 9px">Gemeinsame Vorlage</span>
+          <span style="border:2px solid #4f6df5;background:#eef1ff;border-radius:7px;padding:3px 9px"><b>Stadt Beispielstadt</b><br><span class="geber" style="font-size:7.5pt">nutzt die Vorlage</span></span>
+          <span style="border:1px solid #dfe1e6;border-radius:7px;padding:4px 9px">Kulturstiftung Muster<br><span style="font-size:7.5pt;color:#216e4e;font-weight:600">eigener Text</span></span>
+        </div>
+        <div style="font-size:8.5pt">Für <b>Stadt Beispielstadt</b> gilt gerade die gemeinsame Vorlage. So steht es im Verwendungsnachweis:</div>
+        <div style="background:#f7f8f9;border-radius:7px;padding:7px 10px;font-size:8.5pt;margin:6px 0 10px;color:#44546f">Das Projekt fand von Mai bis September statt und erreichte rund 2.000 Besucher:innen …</div>
+        <span class="btn pri">Für diesen Förderer anpassen</span> <span class="leise">Vorlage bearbeiten</span>
+      </div>
+    </div>
+    <figcaption><b>Abb. 22.1</b> – Eine Vorlage für alle, und je Geldquelle ein eigener Reiter. Beim Reiter steht, ob sie die Vorlage nutzt oder einen eigenen Text hat.</figcaption>
+  </figure>
+
+  <ul>
+    <li><strong>Für einen Förderer anpassen:</strong> Reiter der Geldquelle wählen und auf
+    <em>„Für diesen Förderer anpassen"</em> klicken. Die App kopiert die Vorlage, und du änderst den
+    Text. Spätere Änderungen an der Vorlage ändern ihn nicht mehr.</li>
+    <li><strong>Zurück zur Vorlage:</strong> <em>„Eigenen Text löschen und wieder die Vorlage
+    nutzen"</em>.</li>
+    <li><strong>Speichern</strong> passiert automatisch beim Verlassen des Feldes.</li>
+    <li><strong>Kontrolle:</strong> In der Zuteilung steht beim Verwendungsnachweis, welcher Text
+    hineinkommt: <em>„mit dem eigenen Sachbericht für diese Geldquelle"</em>, <em>„mit der gemeinsamen
+    Sachbericht-Vorlage"</em> oder <em>„noch ohne Sachbericht"</em>.</li>
+    <li><strong>Geldquelle löschen:</strong> Ihr eigener Sachbericht wird mitgelöscht. Die App sagt es
+    dir vorher.</li>
+  </ul>
 
   <h3>6. Verwendungsnachweis erstellen</h3>
   <p>Öffne in der <strong>Zuteilung</strong> einen Förderer und klicke bei
@@ -1409,7 +1733,7 @@
   PDF ist wie ein Brief aufgebaut:</p>
   <div class="struktur">
     <div class="stp"><span class="num">1</span><div><b>Kopf.</b> Dein Absender (aus den Stammdaten) und – falls hinterlegt – dein Logo, darunter der Titel „Verwendungsnachweis – [Förderer]", die Zeile „für das Projekt …" sowie Bewilligt/Abgerechnet/Stand.</div></div>
-    <div class="stp"><span class="num">2</span><div><b>Sachbericht</b> und die <b>Belegliste</b>: eine Tabelle, in der die Belege <strong>nach Kostenstelle gruppiert</strong> sind (Kostenstelle als Überschriftszeile, je Gruppe eine Zwischensumme, am Ende die Gesamtsumme).</div></div>
+    <div class="stp"><span class="num">2</span><div><b>Sachbericht dieser Geldquelle</b> und die <b>Belegliste</b>: eine Tabelle, in der die Belege <strong>nach Kostenstelle gruppiert</strong> sind (Kostenstelle als Überschriftszeile, je Gruppe eine Zwischensumme, am Ende die Gesamtsumme).</div></div>
     <div class="stp"><span class="num">3</span><div><b>Anhänge.</b> Eine Liste der beigefügten Dateien, danach die Dateien selbst: <strong>zuerst der Bankauszug</strong>, dann die Belege. Auf jede Anhangseite wird oben links <strong>rot</strong> gestempelt, wozu sie gehört (z.&nbsp;B. „Beleg&nbsp;1.2.1&nbsp;·&nbsp;1.2&nbsp;Technik" bzw. „Bankauszug&nbsp;·&nbsp;[Förderer]") – so bleibt alles zuordenbar.</div></div>
   </div>
   <p>Das fertige PDF liegt unter
@@ -1425,8 +1749,8 @@
   <div class="warn"><strong>Zwei Dinge zu den Beleg-Dateien:</strong> Liegt dein
   Dokumente-Ordner in einer <strong>Cloud</strong> (z. B. OneDrive), werden auch die Belege
   dorthin synchronisiert (Kap. 18). Und die <strong>Sicherung</strong> (Kap. 19) enthält
-  sie <strong>nicht</strong> – kopiere den Ordner <span class="pfad">Dokumente\Antrag 3000</span>
-  regelmäßig zusätzlich, z. B. auf einen USB-Stick. Belege musst du für den
+  sie nur mit dem Häkchen <strong>„Auch meine Dateien sichern"</strong> (es ist voreingestellt).
+  Belege musst du für den
   Verwendungsnachweis aufbewahren – wie lange, steht in deinem Zuwendungsbescheid bzw.
   dessen Nebenbestimmungen; steuerliche Aufbewahrungspflichten können länger sein.</div>
 </section>
@@ -1437,8 +1761,11 @@
 
   <dl class="faq">
     <dt>Ich habe mein Passwort vergessen – was nun?</dt>
-    <dd>Das Passwort kann nicht wiederhergestellt werden. Du kannst mit
-    „Neu aufsetzen" frisch beginnen (Kapitel 4). Bewahre dein Passwort sicher auf
+    <dd>Öffnet sich die App über „Auf diesem Gerät merken" noch ohne Passwort, kannst du ein
+    neues festlegen: <strong>Stammdaten &amp; Team → Tresor-Passwort → 🔑 Passwort ändern →
+    „Ich kenne mein aktuelles Passwort nicht mehr"</strong>. Verlangt die App das Passwort, kann es
+    nicht wiederhergestellt werden. Dann bleibt nur „Neu aufsetzen", danach kannst du eine Sicherung
+    einspielen, deren Passwort du noch kennst (Kapitel 4 und 19). Bewahre dein Passwort sicher auf
     und mach regelmäßig Sicherungen.</dd>
 
     <dt>Warum ist „Antrags-PDF erstellen" grau?</dt>
@@ -1459,20 +1786,37 @@
     <dd>Der Installer ist (noch) nicht von Microsoft zertifiziert, deshalb warnt
     Windows pauschal – das heißt nicht, dass die Datei schädlich ist.
     <strong>Prüfe vorher die Echtheit:</strong> Verwende nur den Installer aus der
-    <strong>offiziellen Bezugsquelle</strong>, die dir der Anbieter genannt hat. Zu jedem Installer liegt eine kleine
-    <strong>Prüfsummen-Datei</strong> (gleicher Name, Endung <code>.sha256</code>).
-    So prüfst du, ob deine heruntergeladene Datei unverändert ist:
+    <strong>offiziellen Bezugsquelle</strong>, die dir der Anbieter genannt hat. Zu jeder Version gibt
+    es eine <strong>Prüfsumme</strong>, eine Art Fingerabdruck der Datei. Sie steht an zwei Orten: beim
+    Download (kleine Datei mit der Endung <code>.sha256</code>) und unabhängig davon auf GitHub. Wer dir
+    eine gefälschte Datei unterschieben will, müsste beide Orte zugleich verändern.
     <ol>
+      <li>Die Seite <span class="pfad" style="white-space:nowrap;word-break:normal">github.com/antragy3000/Antrag-3000/releases</span> öffnen und deine Version
+        suchen. Dort steht die Prüfsumme, eine lange Folge aus Zahlen und Buchstaben.</li>
       <li>In Windows die <strong>PowerShell</strong> öffnen (Startmenü → „PowerShell").</li>
-      <li>Diesen Befehl eingeben (Pfad zur heruntergeladenen Datei anpassen):
-        <br><code>Get-FileHash "Antrag 3000_…_x64-setup.exe" -Algorithm SHA256</code></li>
-      <li>Den angezeigten Wert mit dem aus der <code>.sha256</code>-Datei (bzw. dem,
-        den dir der Anbieter genannt hat) vergleichen.</li>
+      <li>Diesen Befehl eingeben (die Versionsnummer anstelle von … einsetzen und den Ordner anpassen,
+        falls die Datei nicht unter Downloads liegt):
+        <br><code>Get-FileHash "$HOME\Downloads\Antrag 3000_…_x64-setup.exe" -Algorithm SHA256</code></li>
+      <li>Den angezeigten Wert mit dem auf GitHub vergleichen. Groß- und Kleinschreibung spielt keine
+        Rolle.</li>
     </ol>
     Stimmen die Werte überein, ist die Datei echt – erst dann über
-    „Weitere Informationen" → „Trotzdem ausführen" fortfahren.
+    „Weitere Informationen" → „Trotzdem ausführen" fortfahren. <strong>Stimmen sie nicht überein,
+    installiere die Datei nicht</strong> und melde dich unter pilot@antrag3000.de.
     <em>Hinweis: Spätere App-Updates sind digital signiert (Kap. 21) und werden
     automatisch geprüft – diese Warnung betrifft nur die erste Installation.</em></dd>
+
+    <dt>Mein Virenschutz (z. B. Norton) meldet ein Problem mit dem Zertifikat.</dt>
+    <dd>Manche Schutzprogramme durchleuchten verschlüsselte Verbindungen und tauschen dabei das
+    Zertifikat aus. App-Updates und die Förder-Datenbank funktionieren trotzdem, betroffen ist nur der
+    Team-Abgleich. Trag im Virenschutz eine Ausnahme ein für
+    <span class="pfad">sync.antrag3000.de</span> und <span class="pfad">team.antrag3000.de</span>
+    (meist unter „HTTPS-Scan" oder „SSL-Scan", Kap. 24).</dd>
+
+    <dt>Ich habe einen neuen Computer. Wie nehme ich alles mit?</dt>
+    <dd>Auf dem alten Computer eine Sicherung mit dem Häkchen „Auch meine Dateien sichern" speichern.
+    Auf dem neuen beim Willkommens-Bildschirm <strong>kein neues Passwort</strong> festlegen, sondern
+    „Ich habe eine Sicherung" wählen (Kap. 19).</dd>
 
     <dt>Was bleibt beim Deinstallieren?</dt>
     <dd>Die App selbst wird entfernt. <strong>Bestehen bleiben</strong> deine Dateien unter
@@ -1490,7 +1834,8 @@
     <dt>Wie prüfe ich, dass keine sensiblen Daten ins Netz gehen?</dt>
     <dd>Wenn du allein arbeitest, spricht die App nur mit dem Server, um App-Updates
     (Kap. 21) und die öffentliche Förder-Datenbank (Kap. 20) zu holen – deine
-    Tresor-Daten sind dabei nie im Spiel. Im Team-Modus kannst du jeden gesendeten
+    Tresor-Daten sind dabei nie im Spiel. Jede einzelne Verbindung siehst du im
+    <strong>Verbindungsprotokoll</strong> (Kap. 2). Im Team-Modus kannst du jeden gesendeten
     Datensatz selbst nachprüfen (Kap. 26).</dd>
   </dl>
 </section>
@@ -1540,9 +1885,10 @@
   Betriebsarten ausschließlich lokal. Der Unterschied ist nur, ob die unkritischen
   Status-/Fristen-Daten mit einem Team geteilt werden.</div>
 
-  <div class="merke"><strong>Die Verbindung entsteht von selbst.</strong> Sobald du
-  die App das erste Mal aktivierst (Tresor angelegt), stellt sie die Verbindung zum
-  Server automatisch her und lädt die Förder-Datenbank – ganz ohne Knopfdruck. Ohne
+  <div class="merke"><strong>Die Verbindung entsteht von selbst, wenn du es so gewählt
+  hast.</strong> Hast du beim ersten Start „Automatisch" gewählt (Kap. 2), stellt die App die
+  Verbindung zum Server selbst her und lädt die Förder-Datenbank – ganz ohne Knopfdruck. Bei
+  „Nur auf Knopfdruck" passiert das erst, wenn du es auslöst. Ohne
   Internet arbeitet die App <strong>vollständig offline</strong> weiter; du erhältst
   dann nur keine automatischen Aktualisierungen. Ein Datenverlust droht dabei nie.</div>
 
@@ -1697,7 +2043,8 @@
   </div>
   <div class="merke">Wer keinen solchen HTTPS-Scan aktiv hat, ist davon nicht
   betroffen. Bei anderen Schutzprogrammen mit „SSL-Scan" gilt dasselbe Vorgehen:
-  eine Ausnahme für die Team-Adresse setzen.</div>
+  eine Ausnahme für die Team-Adresse setzen. Seit Version 0.5.0 betrifft das nur den
+  Team-Abgleich: App-Updates und die Förder-Datenbank kommen auch mit aktivem HTTPS-Scan durch.</div>
 
   <h3>Warum das sicher ist</h3>
   <ul>
@@ -1836,7 +2183,8 @@
   <h2><span class="kn">26</span>Selbst prüfen: Was verlässt das Gerät?</h2>
   <p class="lead">Du musst dem Versprechen „nur unkritische Daten" nicht blind
   glauben – du kannst es <strong>selbst nachprüfen</strong>. Dafür gibt es im
-  Bereich Team-Sync den Abschnitt <strong>„▸ Prüfen &amp; Protokoll"</strong>.</p>
+  Bereich Team-Sync den Abschnitt <strong>„▸ Prüfen &amp; Protokoll"</strong>. In jeder Betriebsart zeigt dir außerdem das
+  <strong>Verbindungsprotokoll</strong> (Kap. 2), wann sich die App womit verbunden hat.</p>
 
   <h3>1 · Sende-Vorschau (Trockenlauf)</h3>
   <p>Ein Klick auf <strong>„Sende-Vorschau anzeigen"</strong> zeigt dir die
@@ -1947,6 +2295,17 @@
     Admin-App relevant, mit der der Anbieter die Förder-Datenbank pflegt – nicht für
     deinen Tresor: Er ist mit deinem Passwort
     verschlüsselt, und ein 6-stelliger Code kann eine verschlüsselte Datei nicht öffnen.</dd>
+
+    <dt>CryptPad</dt><dd>Ein eigener Online-Dienst zum gemeinsamen Schreiben. Die Texte sind
+    Ende-zu-Ende-verschlüsselt, der Anbieter kann sie nicht lesen. Antrag 3000 ist damit nicht
+    verbunden: Du bringst Texte selbst über die Zwischenablage hin und zurück (Kap. 15).</dd>
+
+    <dt>Prüfsumme (SHA-256)</dt><dd>Eine Art Fingerabdruck einer Datei: eine lange Zeichenfolge, die
+    sich komplett ändert, sobald sich die Datei auch nur minimal ändert. Stimmt sie mit der
+    veröffentlichten überein, ist die Datei unverändert (Kap. 23).</dd>
+
+    <dt>Verbindungsprotokoll</dt><dd>Eine Liste in der App, die jede Verbindung ins Internet seit dem
+    Start zeigt: wann, wozu und was mitgeschickt wurde (Kap. 2).</dd>
 
     <dt>Reiter</dt><dd>Die Bereiche oben in der App, zwischen denen du wechselst
     (z. B. „Merkliste", „Dateien", „Kostenplan") – wie Karteikarten-Reiter (Kap. 6).</dd>
