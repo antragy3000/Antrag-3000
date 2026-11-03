@@ -31,6 +31,9 @@ const S = {
   belegBetrag: "SENSIBEL_BELEG_BETRAG_777",
   belegNotiz: "SENSIBEL_BELEG_NOTIZ_nur_fuer_mich",
   belegDatei: "SENSIBEL_BELEG_DATEI_Rechnung42.pdf",
+  // Geldquelle mit Nachweis-Frist (Kalender): bleibt trotzdem lokal.
+  quelleName: "SENSIBEL_GELDQUELLE_Stiftung_X",
+  nachweisFrist: "2099-12-31",
   // Arbeitsdokumente: der CryptPad-Link enthaelt den Schluessel zum Dokument.
   dokLink: "https://cryptpad.fr/pad/#/2/pad/edit/SENSIBEL_CRYPTPAD_SCHLUESSEL/",
   dokTitel: "SENSIBEL_ARBEITSDOKUMENT_TITEL",
@@ -44,7 +47,7 @@ const VERBOTENE_FELDNAMEN = [
   "beschreibung", "ziele", "datei",
   // Abrechnungs-Modus: nichts davon darf je das Geraet verlassen.
   "abrechnung", "belege", "quellen", "empfaenger", "brutto",
-  "mwst_satz", "zahlungsart", "zuordnungen", "dateien", "sachbericht",
+  "mwst_satz", "zahlungsart", "zuordnungen", "dateien", "sachbericht", "nachweisfrist",
   // Arbeitsdokumente / geteilter Ablageort: Links bleiben auf dem Geraet.
   "arbeitsdokumente", "ablageurl",
 ];
@@ -102,7 +105,9 @@ const daten = {
             zuordnungen: [], notiz: S.belegNotiz,
           },
         ],
-        quellen: [],
+        quellen: [
+          { id: "q1", typ: "foerderung", foerderId: "", name: S.quelleName, soll: "5000", nachweisFrist: S.nachweisFrist, dateien: [] },
+        ],
       },
       // Links zu gemeinsam geschriebenen Texten – auch einer Foerderung
       // zugeordnet, die im Board steht. Duerfen trotzdem NIE ins Board.

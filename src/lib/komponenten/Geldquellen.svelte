@@ -11,6 +11,7 @@
     betragFormat,
     betragParsen,
     groesseText,
+    datumText,
   } from "$lib/abrechnung";
   import { hatEigenenSachbericht } from "$lib/sachbericht";
 
@@ -202,7 +203,12 @@
           {@const zu = zugeordnet.get(q.id) ?? 0}
           {@const rest = quelleSoll(q) - zu}
           <tr>
-            <td class="name">{q.name}</td>
+            <td class="name">
+              {q.name}
+              {#if q.nachweisFrist}
+                <span class="frist">Nachweis bis {datumText(q.nachweisFrist)}</span>
+              {/if}
+            </td>
             <td><span class="typ t-{q.typ}">{QUELLE_TYP[q.typ] || q.typ}</span></td>
             <td class="betrag">{betragFormat(quelleSoll(q))}</td>
             <td class="betrag">{betragFormat(zu)}</td>
@@ -294,7 +300,15 @@
           <span>Soll (bewilligt)</span>
           <input type="text" bind:value={form.soll} placeholder="z. B. 5.000" inputmode="decimal" />
         </label>
+        <label class="feld">
+          <span>Verwendungsnachweis fällig am <em>(optional)</em></span>
+          <input type="date" bind:value={form.nachweisFrist} />
+        </label>
       </div>
+      <p class="feld-hinweis">
+        Das Datum erscheint im Kalender auf der Übersicht. Es bleibt nur auf deinem Gerät und
+        wird nicht mit dem Team geteilt.
+      </p>
       {#if betragParsen(form.soll) > 0}
         <p class="rechen">Soll: {betragFormat(betragParsen(form.soll))}</p>
       {/if}
@@ -532,6 +546,19 @@
   .feld textarea:focus {
     outline: none;
     border-color: var(--akzent);
+  }
+  .name .frist {
+    display: block;
+    margin-top: 2px;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 400;
+  }
+  .feld-hinweis {
+    margin: 10px 0 0;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    line-height: 1.5;
   }
   .rechen {
     margin: 14px 0 0;

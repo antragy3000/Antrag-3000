@@ -134,8 +134,10 @@ function neueQuelleId() {
 /// gilt die gemeinsame Vorlage des Projekts (siehe sachbericht.js).
 /// `dateien` sind hochgeladene Nachweise (z. B. Bankauszug), die dem
 /// Verwendungsnachweis dieser Quelle angehängt werden.
+/// `nachweisFrist` ("JJJJ-MM-TT", optional): bis wann der Verwendungsnachweis
+/// abgegeben sein muss – erscheint im Kalender, bleibt aber lokal.
 export function neueQuelle(typ = "foerderung") {
-  return { id: neueQuelleId(), typ, foerderId: "", name: "", soll: "", sachbericht: "", dateien: [] };
+  return { id: neueQuelleId(), typ, foerderId: "", name: "", soll: "", nachweisFrist: "", sachbericht: "", dateien: [] };
 }
 
 /// Soll-Betrag einer Quelle als Zahl.
