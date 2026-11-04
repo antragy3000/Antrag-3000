@@ -8,7 +8,7 @@
 // ============================================================
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use tauri::Manager;
 
@@ -115,14 +115,86 @@ pub fn ordner_umbenennen(
     let w = wurzel(&app)?;
     let alter_pfad = w.join(bereinigen(&alt)?);
     let neuer_pfad = w.join(bereinigen(&neu)?);
+    ordner_verschieben(&alter_pfad, &neuer_pfad)
+}
+
+/// Verschiebt einen Ordner, ohne je einen fremden Ordner zu treffen.
+/// Windows unterscheidet Gross- und Kleinschreibung nicht: Bei "festival" ->
+/// "Festival" meldet es das Ziel als vorhanden, obwohl es derselbe Ordner ist.
+/// Darum vergleicht canonicalize die echten Ordner statt der Schreibweisen.
+fn ordner_verschieben(alter_pfad: &Path, neuer_pfad: &Path) -> Result<(), String> {
     if alter_pfad == neuer_pfad || !alter_pfad.exists() {
         return Ok(());
     }
-    if neuer_pfad.exists() {
+    let selber_ordner = fs::canonicalize(alter_pfad).ok() == fs::canonicalize(neuer_pfad).ok();
+    if neuer_pfad.exists() && !selber_ordner {
         return Err(format!(
             "Es existiert bereits ein Ordner namens \"{}\".",
             neuer_pfad.file_name().unwrap_or_default().to_string_lossy()
         ));
     }
-    fs::rename(&alter_pfad, &neuer_pfad).map_err(|e| format!("Umbenennen fehlgeschlagen: {e}"))
+    fs::rename(alter_pfad, neuer_pfad).map_err(|e| format!("Umbenennen fehlgeschlagen: {e}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Frischer, leerer Testordner mit eindeutigem Namen.
+    fn testordner(zweck: &str) -> PathBuf {
+        let eindeutig = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let pfad = std::env::temp_dir().join(format!("a3000-ordner-{zweck}-{eindeutig}"));
+        fs::create_dir_all(&pfad).unwrap();
+        pfad
+    }
+
+    #[test]
+    fn verschiebt_auf_freien_namen_samt_inhalt() {
+        let w = testordner("frei");
+        fs::create_dir(w.join("Alt")).unwrap();
+        fs::write(w.join("Alt").join("beleg.pdf"), "x").unwrap();
+        ordner_verschieben(&w.join("Alt"), &w.join("Neu")).unwrap();
+        assert!(!w.join("Alt").exists());
+        assert!(w.join("Neu").join("beleg.pdf").exists());
+        let _ = fs::remove_dir_all(&w);
+    }
+
+    #[test]
+    fn fremder_ordner_bleibt_unberuehrt() {
+        let w = testordner("fremd");
+        fs::create_dir(w.join("A")).unwrap();
+        fs::create_dir(w.join("B")).unwrap();
+        fs::write(w.join("A").join("von-a.pdf"), "x").unwrap();
+        fs::write(w.join("B").join("von-b.pdf"), "x").unwrap();
+        assert!(ordner_verschieben(&w.join("A"), &w.join("B")).is_err());
+        assert!(w.join("A").join("von-a.pdf").exists());
+        assert!(w.join("B").join("von-b.pdf").exists());
+        assert!(!w.join("B").join("von-a.pdf").exists());
+        let _ = fs::remove_dir_all(&w);
+    }
+
+    #[test]
+    fn ohne_alten_ordner_ist_nichts_zu_tun() {
+        let w = testordner("ohne");
+        ordner_verschieben(&w.join("Gibt-es-nicht"), &w.join("Neu")).unwrap();
+        assert!(!w.join("Neu").exists());
+        let _ = fs::remove_dir_all(&w);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn nur_die_schreibweise_aendern_geht_unter_windows() {
+        let w = testordner("schreibweise");
+        fs::create_dir(w.join("festival")).unwrap();
+        ordner_verschieben(&w.join("festival"), &w.join("Festival")).unwrap();
+        let namen: Vec<String> = fs::read_dir(&w)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(namen, vec!["Festival".to_string()]);
+        let _ = fs::remove_dir_all(&w);
+    }
 }

@@ -39,6 +39,7 @@
   import { kfpExport, neuePostenId } from "$lib/kfp";
   import { verwendungsnachweisAbschnitte } from "$lib/abrechnung";
   import { sachberichtFuerQuelle } from "$lib/sachbericht";
+  import { projektNamePruefen } from "$lib/projektname";
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
   import { boardAusTresor, geteilteFoerdererAusTresor } from "$lib/sync";
   // Reine Tresor-Struktur-Helfer (Vorlagen + Migration) – ausgelagert nach
@@ -126,9 +127,13 @@
   });
   let neuesProjektOffen = $state(false);
   let neuerProjektName = $state("");
+  let neuerProjektPruefung = $derived(projektNamePruefen(neuerProjektName, daten?.projekte));
   let loeschDialogOffen = $state(false);
   let umbenennenOffen = $state(false);
   let umbenennenName = $state("");
+  let umbenennenPruefung = $derived(projektNamePruefen(umbenennenName, daten?.projekte, aktivesProjekt));
+  // Fehler beim Umzug des Projektordners; das Projekt bleibt dann unverändert.
+  let umbenennenFehler = $state("");
   // Projekt-Bearbeiten-Dialog: gewählte Programmreihe + Feld für eine neue Reihe.
   let umbenennenReiheId = $state(null);
   let neueReiheName = $state("");
@@ -1811,6 +1816,7 @@
     umbenennenName = aktivesProjekt.name;
     umbenennenReiheId = aktivesProjekt.reiheId ?? null;
     neueReiheName = "";
+    umbenennenFehler = "";
     umbenennenOffen = true;
   }
 
@@ -1825,6 +1831,7 @@
     umbenennenName = p.name;
     umbenennenReiheId = p.reiheId ?? null;
     neueReiheName = "";
+    umbenennenFehler = "";
     umbenennenOffen = true;
     projektMenuOffen = false;
   }
@@ -1836,9 +1843,20 @@
 
   async function projektUmbenennen(event) {
     event.preventDefault();
-    const name = umbenennenName.trim();
-    if (!name) return;
+    if (!umbenennenPruefung.ok) return;
+    const name = umbenennenPruefung.name;
     const alterName = aktivesProjekt.name;
+    // ZUERST der Ordner, erst danach der Name: Der Ordner ergibt sich aus dem
+    // Namen. Änderte sich der Name trotz fehlgeschlagenem Umzug, zeigte das
+    // Projekt danach auf einen falschen Ordner.
+    if (name !== alterName) {
+      try {
+        await invoke("ordner_umbenennen", { alt: alterName, neu: name });
+      } catch (e) {
+        umbenennenFehler = `Der Projektordner konnte nicht umbenannt werden, das Projekt bleibt unverändert. ${e}`;
+        return;
+      }
+    }
     aktivesProjekt.name = name;
     // Programmreihe zuordnen: entweder eine neu eingetippte anlegen oder die
     // im Auswahlfeld gewählte (bzw. „keine").
@@ -1851,12 +1869,6 @@
     neueReiheName = "";
     umbenennenOffen = false;
     await tresorSpeichern();
-    // Falls es schon einen Projektordner gibt, zieht er mit um.
-    try {
-      await invoke("ordner_umbenennen", { alt: alterName, neu: name });
-    } catch (e) {
-      alert("Hinweis: Der Projektordner konnte nicht umbenannt werden.\n" + e);
-    }
   }
 
   // --- Programmreihen (Übertitel für mehrere Projekte) ---
@@ -1943,9 +1955,8 @@
 
   async function projektAnlegen(event) {
     event.preventDefault();
-    const name = neuerProjektName.trim();
-    if (!name) return;
-    const p = neuesProjekt(name);
+    if (!neuerProjektPruefung.ok) return;
+    const p = neuesProjekt(neuerProjektPruefung.name);
     daten.projekte.push(p);
     daten.aktivesProjektId = p.id;
     neuerProjektName = "";
@@ -2709,7 +2720,8 @@
           <h1>Neues Projekt</h1>
           <label for="projektname">Name des Projekts</label>
           <input id="projektname" type="text" bind:value={neuerProjektName} />
-          <button type="submit" disabled={!neuerProjektName.trim()}>Anlegen</button>
+          {#if neuerProjektPruefung.fehler}<p class="fehler" role="alert">{neuerProjektPruefung.fehler}</p>{/if}
+          <button type="submit" disabled={!neuerProjektPruefung.ok}>Anlegen</button>
           <button type="button" class="leise" onclick={() => (neuesProjektOffen = false)}>
             Abbrechen
           </button>
@@ -2722,7 +2734,8 @@
         <form class="karte" onsubmit={projektUmbenennen} onclick={(e) => e.stopPropagation()}>
           <h1>Projekt bearbeiten</h1>
           <label for="umbenennen">Name</label>
-          <input id="umbenennen" type="text" bind:value={umbenennenName} />
+          <input id="umbenennen" type="text" bind:value={umbenennenName} oninput={() => (umbenennenFehler = "")} />
+          {#if umbenennenPruefung.fehler || umbenennenFehler}<p class="fehler" role="alert">{umbenennenPruefung.fehler || umbenennenFehler}</p>{/if}
 
           <label for="reihe-wahl">Programmreihe <span class="feld-optional">(optional)</span></label>
           <select id="reihe-wahl" bind:value={umbenennenReiheId} disabled={!!neueReiheName.trim()}>
@@ -2738,7 +2751,7 @@
             placeholder="… oder neue Programmreihe anlegen"
           />
 
-          <button type="submit" disabled={!umbenennenName.trim()}>Speichern</button>
+          <button type="submit" disabled={!umbenennenPruefung.ok}>Speichern</button>
           <button type="button" class="leise" onclick={() => { umbenennenOffen = false; neueReiheName = ''; }}>
             Abbrechen
           </button>
