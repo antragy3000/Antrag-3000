@@ -38,6 +38,8 @@ const S = {
   dokLink: "https://cryptpad.fr/pad/#/2/pad/edit/SENSIBEL_CRYPTPAD_SCHLUESSEL/",
   dokTitel: "SENSIBEL_ARBEITSDOKUMENT_TITEL",
   ablageLink: "https://cryptpad.fr/drive/#/SENSIBEL_ABLAGE_SCHLUESSEL",
+  // Projektgruppen ordnen nur das eigene Menü, das Team-Board bleibt unverändert.
+  gruppenName: "SENSIBEL_PROJEKTGRUPPE_Festival",
 };
 
 // Verbotene Feldnamen (dürfen als Schlüssel nie im Board stehen).
@@ -50,6 +52,8 @@ const VERBOTENE_FELDNAMEN = [
   "mwst_satz", "zahlungsart", "zuordnungen", "dateien", "sachbericht", "nachweisfrist",
   // Arbeitsdokumente / geteilter Ablageort: Links bleiben auf dem Geraet.
   "arbeitsdokumente", "ablageurl",
+  // Projektgruppen bleiben auf dem Geraet.
+  "projektgruppen", "gruppeid",
 ];
 
 // Tresor mit erfundenen sensiblen Daten.
@@ -61,10 +65,12 @@ const daten = {
     bank: { kontoinhaber: "Max Muster", iban: S.iban, bic: S.bic, bank: "Geheimbank" },
     steuer: { steuernummer: S.steuer, ustid: S.ustid, finanzamt: "FA Stadt" },
   },
+  projektgruppen: [{ id: "g1", name: S.gruppenName }],
   projekte: [
     {
       id: "p1",
       name: "Klangraum Festival",
+      gruppeId: "g1",
       fragebogen: { budget: S.budget, sparten: ["musik"] },
       merkliste: ["de-musikfonds", "eigen-1"],
       formular: {

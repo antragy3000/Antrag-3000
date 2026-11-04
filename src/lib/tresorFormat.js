@@ -11,6 +11,7 @@ import { leererKfp, neuePostenId } from "./kfp";
 import { leereAbrechnung } from "./abrechnung";
 import { fristNormalisieren, fristAlsDatum } from "./begriffe";
 import { katalog } from "./katalog.svelte.js";
+import { gruppenUmstellen } from "./projektgruppen";
 
 // Die editierbaren „offiziellen Fristen" im Tresor sind konkrete Datums-
 // Strings (per Datumsfeld bearbeitbar). Wiederkehrende Daten ohne Jahr aus
@@ -39,8 +40,8 @@ export function neuesProjekt(name) {
     id: neueId(),
     name,
     erstellt: new Date().toISOString().slice(0, 10),
-    // Zugehörige Programmreihe (Übertitel) – id aus daten.reihen oder null.
-    reiheId: null,
+    // Zugehörige Projektgruppe – id aus daten.projektgruppen oder null.
+    gruppeId: null,
     // Archiviert = abgeschlossen, aus der Hauptliste ausgeblendet und
     // schreibgeschützt (nur ansehen), bis es aus dem Archiv geholt wird.
     archiviert: false,
@@ -99,8 +100,8 @@ export function frischerTresor() {
     version: 2,
     stammdaten: leereStammdaten(),
     projekte: [],
-    // Programmreihen (Übertitel), denen Projekte zugeordnet werden: [{id,name}].
-    reihen: [],
+    // Projektgruppen, die Projekte im Menü ordnen: [{id,name}].
+    projektgruppen: [],
     aktivesProjektId: null,
     modus: "einzel", // "einzel" (ohne Team) oder "team"
     modusHinweisAus: false, // true = Hinweis beim Umstellen der Betriebsart nicht mehr zeigen
@@ -125,11 +126,6 @@ export function normalisieren(d) {
     d.projekte = [];
     veraendert = true;
   }
-  // Programmreihen-Liste (Übertitel) sicherstellen.
-  if (!Array.isArray(d.reihen)) {
-    d.reihen = [];
-    veraendert = true;
-  }
   // Schritt-3-Stand: ein einzelner Fragebogen ohne Projekt.
   if (d.fragebogen) {
     const p = neuesProjekt("Mein Projekt");
@@ -138,6 +134,8 @@ export function normalisieren(d) {
     delete d.fragebogen;
     veraendert = true;
   }
+  // Programmreihen älterer Stände werden zu Projektgruppen.
+  if (gruppenUmstellen(d)) veraendert = true;
   // Stammdaten aus aelteren Staenden um fehlende Felder ergaenzen.
   const vorlage = leereStammdaten();
   if (!d.stammdaten || typeof d.stammdaten !== "object") {
@@ -170,18 +168,8 @@ export function normalisieren(d) {
 
   // Projekte aus aelteren Staenden bekommen eine leere Merkliste
   // und ein leeres Sammel-Formular.
-  const reihenIds = new Set(d.reihen.map((r) => r?.id));
   for (const p of d.projekte) {
-    // Programmreihe + Archiv-Status (aus älteren Ständen ergänzen). Ein
-    // Reihen-Verweis auf eine gelöschte Reihe fällt auf „keine Reihe" zurück.
-    if (p.reiheId !== null && !reihenIds.has(p.reiheId)) {
-      p.reiheId = null;
-      veraendert = true;
-    }
-    if (typeof p.reiheId === "undefined") {
-      p.reiheId = null;
-      veraendert = true;
-    }
+    // Archiv-Status aus älteren Ständen ergänzen.
     if (typeof p.archiviert !== "boolean") {
       p.archiviert = false;
       veraendert = true;

@@ -40,6 +40,7 @@
   import { verwendungsnachweisAbschnitte } from "$lib/abrechnung";
   import { sachberichtFuerQuelle } from "$lib/sachbericht";
   import { projektNamePruefen } from "$lib/projektname";
+  import { projekteNachGruppen, leereGruppenEntfernen, gruppeAnlegen, gruppenNamePruefen, gruppeAufloesen } from "$lib/projektgruppen";
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
   import { boardAusTresor, geteilteFoerdererAusTresor } from "$lib/sync";
   // Reine Tresor-Struktur-Helfer (Vorlagen + Migration) – ausgelagert nach
@@ -112,19 +113,9 @@
   // Projekte für die Hauptliste (nicht archiviert) bzw. das Archiv.
   let aktiveProjekte = $derived((daten?.projekte ?? []).filter((p) => !p.archiviert));
   let archivierteProjekte = $derived((daten?.projekte ?? []).filter((p) => p.archiviert));
-  // Aktive Projekte nach Programmreihe gruppiert: [{ reihe:{id,name}|null, projekte:[…] }].
-  // Reihen in ihrer Reihenfolge, danach die Projekte ohne Reihe.
-  let projektGruppen = $derived.by(() => {
-    const reihen = daten?.reihen ?? [];
-    const gruppen = [];
-    for (const r of reihen) {
-      const ps = aktiveProjekte.filter((p) => p.reiheId === r.id);
-      if (ps.length) gruppen.push({ reihe: r, projekte: ps });
-    }
-    const ohne = aktiveProjekte.filter((p) => !p.reiheId);
-    if (ohne.length) gruppen.push({ reihe: null, projekte: ohne });
-    return gruppen;
-  });
+  // Beide Listen nach Projektgruppe geordnet (siehe projektgruppen.js).
+  let aktiveGruppen = $derived(projekteNachGruppen(aktiveProjekte, daten?.projektgruppen));
+  let archivGruppen = $derived(projekteNachGruppen(archivierteProjekte, daten?.projektgruppen));
   let neuesProjektOffen = $state(false);
   let neuerProjektName = $state("");
   let neuerProjektPruefung = $derived(projektNamePruefen(neuerProjektName, daten?.projekte));
@@ -134,14 +125,16 @@
   let umbenennenPruefung = $derived(projektNamePruefen(umbenennenName, daten?.projekte, aktivesProjekt));
   // Fehler beim Umzug des Projektordners; das Projekt bleibt dann unverändert.
   let umbenennenFehler = $state("");
-  // Projekt-Bearbeiten-Dialog: gewählte Programmreihe + Feld für eine neue Reihe.
-  let umbenennenReiheId = $state(null);
-  let neueReiheName = $state("");
+  // Gruppenwahl in den Dialogen „Neues Projekt" und „Projekt bearbeiten":
+  // gewählte Projektgruppe + Feld für eine neue Gruppe.
+  let gruppeWahl = $state(null);
+  let neueGruppeName = $state("");
   let archivOffen = $state(false); // Archiv-Bereich im Projektmenü aufgeklappt?
-  // Programmreihe umbenennen (eigener kleiner Dialog).
-  let reiheUmbOffen = $state(false);
-  let reiheUmbId = $state(null);
-  let reiheUmbName = $state("");
+  // Projektgruppe umbenennen (eigener kleiner Dialog).
+  let gruppeUmbOffen = $state(false);
+  let gruppeUmbId = $state(null);
+  let gruppeUmbName = $state("");
+  let gruppeUmbPruefung = $derived(gruppenNamePruefen(gruppeUmbName, daten?.projektgruppen, gruppeUmbId));
   let sicherungOffen = $state(false);
   // Ergebnis des Einspielens; steht auf dem Entsperren-Bildschirm, bis entsperrt wurde.
   let wiederherstellHinweis = $state("");
@@ -452,6 +445,7 @@
   async function projektLoeschen() {
     daten.projekte = daten.projekte.filter((p) => p.id !== daten.aktivesProjektId);
     daten.aktivesProjektId = daten.projekte[0]?.id ?? null;
+    leereGruppenEntfernen(daten);
     loeschDialogOffen = false;
     await tresorSpeichern();
   }
@@ -1793,7 +1787,7 @@
   // wieder entfernen (Stern-Knopf).
   async function merklisteUmschalten(id) {
     if (!aktivesProjekt) {
-      neuesProjektOffen = true;
+      neuesProjektOeffnen();
       return;
     }
     const liste = aktivesProjekt.merkliste;
@@ -1814,8 +1808,8 @@
 
   function umbenennenOeffnen() {
     umbenennenName = aktivesProjekt.name;
-    umbenennenReiheId = aktivesProjekt.reiheId ?? null;
-    neueReiheName = "";
+    gruppeWahl = aktivesProjekt.gruppeId ?? null;
+    neueGruppeName = "";
     umbenennenFehler = "";
     umbenennenOffen = true;
   }
@@ -1829,8 +1823,8 @@
   function umbenennenOeffnenFuer(p) {
     daten.aktivesProjektId = p.id;
     umbenennenName = p.name;
-    umbenennenReiheId = p.reiheId ?? null;
-    neueReiheName = "";
+    gruppeWahl = p.gruppeId ?? null;
+    neueGruppeName = "";
     umbenennenFehler = "";
     umbenennenOffen = true;
     projektMenuOffen = false;
@@ -1858,51 +1852,35 @@
       }
     }
     aktivesProjekt.name = name;
-    // Programmreihe zuordnen: entweder eine neu eingetippte anlegen oder die
-    // im Auswahlfeld gewählte (bzw. „keine").
-    const neu = neueReiheName.trim();
-    if (neu) {
-      aktivesProjekt.reiheId = reiheAnlegen(neu);
-    } else {
-      aktivesProjekt.reiheId = umbenennenReiheId ?? null;
-    }
-    neueReiheName = "";
+    aktivesProjekt.gruppeId = gewaehlteGruppeId();
+    leereGruppenEntfernen(daten);
     umbenennenOffen = false;
     await tresorSpeichern();
   }
 
-  // --- Programmreihen (Übertitel für mehrere Projekte) ---
-  // Legt eine Reihe an (oder gibt eine gleichnamige bestehende zurück) und
-  // liefert ihre id. Speichert NICHT selbst – der Aufrufer speichert.
-  function reiheAnlegen(name) {
-    const sauber = name.trim();
-    if (!sauber) return null;
-    const schon = daten.reihen.find((r) => r.name.toLowerCase() === sauber.toLowerCase());
-    if (schon) return schon.id;
-    const r = { id: neueId(), name: sauber };
-    daten.reihen.push(r);
-    return r.id;
+  // --- Projektgruppen (ordnen Projekte im Menü, siehe projektgruppen.js) ---
+  // Was der Dialog gewählt hat: eine neu eingetippte Gruppe (wird angelegt)
+  // oder die im Auswahlfeld (bzw. „keine"). Der Aufrufer speichert.
+  function gewaehlteGruppeId() {
+    return neueGruppeName.trim() ? gruppeAnlegen(daten, neueGruppeName, neueId) : (gruppeWahl ?? null);
   }
-  function reiheUmbenennenOeffnen(reihe) {
-    reiheUmbId = reihe.id;
-    reiheUmbName = reihe.name;
-    reiheUmbOffen = true;
+  function gruppeUmbenennenOeffnen(gruppe) {
+    gruppeUmbId = gruppe.id;
+    gruppeUmbName = gruppe.name;
+    gruppeUmbOffen = true;
     projektMenuOffen = false;
   }
-  async function reiheUmbenennenSpeichern(event) {
+  async function gruppeUmbenennenSpeichern(event) {
     event.preventDefault();
-    const name = reiheUmbName.trim();
-    if (!name) return;
-    const r = daten.reihen.find((x) => x.id === reiheUmbId);
-    if (r) r.name = name;
-    reiheUmbOffen = false;
+    if (!gruppeUmbPruefung.ok) return;
+    const g = daten.projektgruppen.find((x) => x.id === gruppeUmbId);
+    if (g) g.name = gruppeUmbPruefung.name;
+    gruppeUmbOffen = false;
     await tresorSpeichern();
   }
-  // Eine Reihe löschen: die Projekte darin bleiben, verlieren nur die Zuordnung.
-  async function reiheLoeschenFuer(reihe) {
-    if (!confirm(`Programmreihe „${reihe.name}" auflösen? Die Projekte bleiben erhalten (ohne Reihe).`)) return;
-    for (const p of daten.projekte) if (p.reiheId === reihe.id) p.reiheId = null;
-    daten.reihen = daten.reihen.filter((r) => r.id !== reihe.id);
+  async function gruppeAufloesenFuer(gruppe) {
+    if (!confirm(`Projektgruppe „${gruppe.name}" auflösen? Die Projekte bleiben erhalten, auch archivierte, nur ohne Gruppe.`)) return;
+    gruppeAufloesen(daten, gruppe.id);
     await tresorSpeichern();
   }
 
@@ -1953,10 +1931,17 @@
     }
   }
 
+  function neuesProjektOeffnen() {
+    gruppeWahl = null;
+    neueGruppeName = "";
+    neuesProjektOffen = true;
+  }
+
   async function projektAnlegen(event) {
     event.preventDefault();
     if (!neuerProjektPruefung.ok) return;
     const p = neuesProjekt(neuerProjektPruefung.name);
+    p.gruppeId = gewaehlteGruppeId();
     daten.projekte.push(p);
     daten.aktivesProjektId = p.id;
     neuerProjektName = "";
@@ -2145,7 +2130,7 @@
         </span>
         <div class="projektwahl">
           {#if daten.projekte.length === 0}
-            <button class="leise" onclick={() => (neuesProjektOffen = true)}>
+            <button class="leise" onclick={neuesProjektOeffnen}>
               + Erstes Projekt erstellen
             </button>
           {:else}
@@ -2162,20 +2147,20 @@
               {#if projektMenuOffen}
                 <div class="menu-backdrop" onclick={() => (projektMenuOffen = false)} role="presentation"></div>
                 <div class="projekt-liste" role="menu">
-                  {#each projektGruppen as g (g.reihe?.id ?? "_ohne")}
-                    {#if g.reihe}
-                      <div class="reihe-kopf">
-                        <span class="reihe-name" title="Programmreihe">📚 {g.reihe.name}</span>
-                        <button class="zeile-icon" title="Programmreihe umbenennen" aria-label={`Programmreihe „${g.reihe.name}" umbenennen`} onclick={() => reiheUmbenennenOeffnen(g.reihe)}>✏️</button>
-                        <button class="zeile-icon" title="Programmreihe auflösen" aria-label={`Programmreihe „${g.reihe.name}" auflösen`} onclick={() => reiheLoeschenFuer(g.reihe)}>✕</button>
+                  {#each aktiveGruppen as g (g.gruppe?.id ?? "_ohne")}
+                    {#if g.gruppe}
+                      <div class="gruppe-kopf">
+                        <span class="gruppe-name" title="Projektgruppe">📚 {g.gruppe.name}</span>
+                        <button class="zeile-icon" title="Projektgruppe umbenennen" aria-label={`Projektgruppe „${g.gruppe.name}" umbenennen`} onclick={() => gruppeUmbenennenOeffnen(g.gruppe)}>✏️</button>
+                        <button class="zeile-icon" title="Projektgruppe auflösen" aria-label={`Projektgruppe „${g.gruppe.name}" auflösen`} onclick={() => gruppeAufloesenFuer(g.gruppe)}>✕</button>
                       </div>
                     {/if}
                     {#each g.projekte as p (p.id)}
-                      <div class="projekt-zeile" class:aktiv={p.id === daten.aktivesProjektId} class:in-reihe={!!g.reihe}>
+                      <div class="projekt-zeile" class:aktiv={p.id === daten.aktivesProjektId} class:in-gruppe={!!g.gruppe}>
                         <button class="projekt-name" onclick={() => projektWaehlen(p.id)}>
                           {p.name}
                         </button>
-                        <button class="zeile-icon" title="Bearbeiten (Name, Reihe)" aria-label={`Projekt „${p.name}" bearbeiten`} onclick={() => umbenennenOeffnenFuer(p)}>✏️</button>
+                        <button class="zeile-icon" title="Bearbeiten (Name, Gruppe)" aria-label={`Projekt „${p.name}" bearbeiten`} onclick={() => umbenennenOeffnenFuer(p)}>✏️</button>
                         <button class="zeile-icon" title="Archivieren" aria-label={`Projekt „${p.name}" archivieren`} onclick={() => projektArchivieren(p)}>📥</button>
                         <button class="zeile-icon" title="Löschen" aria-label={`Projekt „${p.name}" löschen`} onclick={() => loeschenOeffnenFuer(p)}>🗑</button>
                       </div>
@@ -2184,7 +2169,7 @@
                   {#if aktiveProjekte.length === 0}
                     <div class="menu-leer">Alle Projekte sind archiviert.</div>
                   {/if}
-                  <button class="projekt-neu" onclick={() => { projektMenuOffen = false; neuesProjektOffen = true; }}>
+                  <button class="projekt-neu" onclick={() => { projektMenuOffen = false; neuesProjektOeffnen(); }}>
                     + Neues Projekt
                   </button>
 
@@ -2193,12 +2178,19 @@
                       <span class="pfeil-klein">{archivOffen ? "▾" : "▸"}</span> Archiv ({archivierteProjekte.length})
                     </button>
                     {#if archivOffen}
-                      {#each archivierteProjekte as p (p.id)}
-                        <div class="projekt-zeile archiviert" class:aktiv={p.id === daten.aktivesProjektId}>
-                          <button class="projekt-name" onclick={() => projektWaehlen(p.id)} title="Archiviert – nur ansehen">🔒 {p.name}</button>
-                          <button class="zeile-icon" title="Aus dem Archiv holen" aria-label={`Projekt „${p.name}" aus dem Archiv holen`} onclick={() => projektEntarchivieren(p)}>↩︎</button>
-                          <button class="zeile-icon" title="Löschen" aria-label={`Projekt „${p.name}" löschen`} onclick={() => loeschenOeffnenFuer(p)}>🗑</button>
-                        </div>
+                      {#each archivGruppen as g (g.gruppe?.id ?? "_ohne")}
+                        {#if g.gruppe}
+                          <div class="gruppe-kopf">
+                            <span class="gruppe-name" title="Projektgruppe">📚 {g.gruppe.name}</span>
+                          </div>
+                        {/if}
+                        {#each g.projekte as p (p.id)}
+                          <div class="projekt-zeile archiviert" class:aktiv={p.id === daten.aktivesProjektId} class:in-gruppe={!!g.gruppe}>
+                            <button class="projekt-name" onclick={() => projektWaehlen(p.id)} title="Archiviert – nur ansehen">🔒 {p.name}</button>
+                            <button class="zeile-icon" title="Aus dem Archiv holen" aria-label={`Projekt „${p.name}" aus dem Archiv holen`} onclick={() => projektEntarchivieren(p)}>↩︎</button>
+                            <button class="zeile-icon" title="Löschen" aria-label={`Projekt „${p.name}" löschen`} onclick={() => loeschenOeffnenFuer(p)}>🗑</button>
+                          </div>
+                        {/each}
                       {/each}
                     {/if}
                   {/if}
@@ -2291,7 +2283,7 @@
           foerderungLabel={boardFoerderungLabel}
           interneAnlegen={interneFristAnlegen}
           {zuZiel}
-          projektErstellen={() => (neuesProjektOffen = true)}
+          projektErstellen={neuesProjektOeffnen}
         />
       {:else if bereich === "foerderungen"}
         <div class="unter-reiter">
@@ -2319,7 +2311,7 @@
                 „Passende für mich" gehört zu einem Projekt – mit eigenem Fragebogen.
                 Erstelle zuerst ein Projekt.
               </p>
-              <button onclick={() => (neuesProjektOffen = true)}>Projekt erstellen</button>
+              <button onclick={neuesProjektOeffnen}>Projekt erstellen</button>
             </div>
           </div>
         {:else}
@@ -2465,7 +2457,7 @@
               mit eigenem Fragebogen und eigener Auswahl. Erstelle dein
               erstes Projekt, um loszulegen.
             </p>
-            <button onclick={() => (neuesProjektOffen = true)}>
+            <button onclick={neuesProjektOeffnen}>
               Projekt erstellen
             </button>
           </div>
@@ -2714,6 +2706,22 @@
       />
     {/if}
 
+    {#snippet gruppenWahl()}
+      <label for="gruppe-wahl">Projektgruppe <span class="feld-optional">(optional)</span></label>
+      <select id="gruppe-wahl" bind:value={gruppeWahl} disabled={!!neueGruppeName.trim()}>
+        <option value={null}>— keine —</option>
+        {#each daten.projektgruppen as g (g.id)}
+          <option value={g.id}>{g.name}</option>
+        {/each}
+      </select>
+      <input
+        type="text"
+        class="gruppe-neu-feld"
+        bind:value={neueGruppeName}
+        placeholder="… oder neue Projektgruppe anlegen"
+      />
+    {/snippet}
+
     {#if neuesProjektOffen}
       <div class="schleier" onclick={() => (neuesProjektOffen = false)} role="presentation">
         <form class="karte" onsubmit={projektAnlegen} onclick={(e) => e.stopPropagation()}>
@@ -2721,6 +2729,9 @@
           <label for="projektname">Name des Projekts</label>
           <input id="projektname" type="text" bind:value={neuerProjektName} />
           {#if neuerProjektPruefung.fehler}<p class="fehler" role="alert">{neuerProjektPruefung.fehler}</p>{/if}
+
+          {@render gruppenWahl()}
+
           <button type="submit" disabled={!neuerProjektPruefung.ok}>Anlegen</button>
           <button type="button" class="leise" onclick={() => (neuesProjektOffen = false)}>
             Abbrechen
@@ -2737,36 +2748,25 @@
           <input id="umbenennen" type="text" bind:value={umbenennenName} oninput={() => (umbenennenFehler = "")} />
           {#if umbenennenPruefung.fehler || umbenennenFehler}<p class="fehler" role="alert">{umbenennenPruefung.fehler || umbenennenFehler}</p>{/if}
 
-          <label for="reihe-wahl">Programmreihe <span class="feld-optional">(optional)</span></label>
-          <select id="reihe-wahl" bind:value={umbenennenReiheId} disabled={!!neueReiheName.trim()}>
-            <option value={null}>— keine —</option>
-            {#each daten.reihen as r (r.id)}
-              <option value={r.id}>{r.name}</option>
-            {/each}
-          </select>
-          <input
-            type="text"
-            class="reihe-neu-feld"
-            bind:value={neueReiheName}
-            placeholder="… oder neue Programmreihe anlegen"
-          />
+          {@render gruppenWahl()}
 
           <button type="submit" disabled={!umbenennenPruefung.ok}>Speichern</button>
-          <button type="button" class="leise" onclick={() => { umbenennenOffen = false; neueReiheName = ''; }}>
+          <button type="button" class="leise" onclick={() => (umbenennenOffen = false)}>
             Abbrechen
           </button>
         </form>
       </div>
     {/if}
 
-    {#if reiheUmbOffen}
-      <div class="schleier" onclick={() => (reiheUmbOffen = false)} role="presentation">
-        <form class="karte" onsubmit={reiheUmbenennenSpeichern} onclick={(e) => e.stopPropagation()}>
-          <h1>Programmreihe umbenennen</h1>
-          <label for="reihe-umb">Name</label>
-          <input id="reihe-umb" type="text" bind:value={reiheUmbName} />
-          <button type="submit" disabled={!reiheUmbName.trim()}>Speichern</button>
-          <button type="button" class="leise" onclick={() => (reiheUmbOffen = false)}>Abbrechen</button>
+    {#if gruppeUmbOffen}
+      <div class="schleier" onclick={() => (gruppeUmbOffen = false)} role="presentation">
+        <form class="karte" onsubmit={gruppeUmbenennenSpeichern} onclick={(e) => e.stopPropagation()}>
+          <h1>Projektgruppe umbenennen</h1>
+          <label for="gruppe-umb">Name</label>
+          <input id="gruppe-umb" type="text" bind:value={gruppeUmbName} />
+          {#if gruppeUmbPruefung.fehler}<p class="fehler" role="alert">{gruppeUmbPruefung.fehler}</p>{/if}
+          <button type="submit" disabled={!gruppeUmbPruefung.ok}>Speichern</button>
+          <button type="button" class="leise" onclick={() => (gruppeUmbOffen = false)}>Abbrechen</button>
         </form>
       </div>
     {/if}
@@ -2954,15 +2954,15 @@
   .projekt-neu:hover {
     background: var(--lila-bg5);
   }
-  /* Programmreihe: Gruppen-Kopf im Projektmenü. */
-  .reihe-kopf {
+  /* Projektgruppe: Gruppen-Kopf im Projektmenü. */
+  .gruppe-kopf {
     display: flex;
     align-items: center;
     gap: 4px;
     padding: 8px 6px 3px;
     margin-top: 2px;
   }
-  .reihe-name {
+  .gruppe-name {
     flex: 1 1 auto;
     font-size: 0.74rem;
     font-weight: 700;
@@ -2973,7 +2973,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .projekt-zeile.in-reihe .projekt-name {
+  .projekt-zeile.in-gruppe .projekt-name {
     padding-left: 20px;
   }
   .menu-leer {
@@ -3038,7 +3038,7 @@
     color: var(--text-leise);
     font-weight: 400;
   }
-  .reihe-neu-feld {
+  .gruppe-neu-feld {
     margin-top: 6px;
   }
 
@@ -3243,7 +3243,8 @@
     margin: 16px 0 6px;
   }
 
-  input {
+  input,
+  .karte select {
     width: 100%;
     box-sizing: border-box;
     padding: 10px 12px;
@@ -3253,7 +3254,8 @@
     background: var(--flaeche);
     transition: border-color 0.15s, background 0.15s;
   }
-  input:focus {
+  input:focus,
+  .karte select:focus {
     outline: none;
     border-color: var(--akzent);
     background: var(--weiss);
