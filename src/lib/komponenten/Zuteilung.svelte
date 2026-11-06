@@ -15,7 +15,11 @@
     betragParsen,
     datumText,
     QUELLE_TYP,
+    abdeckungsWarnung,
+    belegBausteinName,
+    quelleAbdeckung,
   } from "$lib/abrechnung";
+  import { abdeckungText } from "$lib/teilantrag";
   import { hatEigenenSachbericht } from "$lib/sachbericht";
 
   let {
@@ -28,6 +32,10 @@
     nachweisPdf,
     nachweisWord,
     sachberichtVorlage = "",
+    // Bausteine und Anträge des Projekts: Deckt der Antrag einer Quelle den
+    // Baustein eines Belegs nicht ab, erscheint eine Warnung (keine Sperre).
+    bausteine = [],
+    antraege = {},
   } = $props();
 
   let liste = $state(structuredClone($state.snapshot(belege)));
@@ -54,7 +62,20 @@
   let belegeUeberzogen = $derived(liste.filter((b) => belegFrei(b) < -0.005).length);
   let belegeOhne = $derived(liste.filter((b) => belegBrutto(b) > 0 && belegZugeordnet(b) < 0.005).length);
   let quellenUeberzogen = $derived(quellen.filter((q) => quelleSoll(q) - (zugeordnetQ.get(q.id) ?? 0) < -0.005).length);
-  let allesOk = $derived(belegeUeberzogen === 0 && belegeOhne === 0 && quellenUeberzogen === 0);
+  const warnung = (b, q) => abdeckungsWarnung(b, q, kfp, bausteine, antraege);
+  const bausteinVonBeleg = (b) => belegBausteinName(b, kfp, bausteine);
+  // Zuordnungen zu einer Quelle, deren Antrag den Baustein nicht abdeckt.
+  let ausserhalb = $derived(
+    liste.reduce(
+      (n, b) => n + (b.zuordnungen ?? []).filter((z) => {
+        const q = quellen.find((x) => x.id === z.quelleId);
+        return q && warnung(b, q);
+      }).length,
+      0
+    )
+  );
+  let allesOk = $derived(belegeUeberzogen === 0 && belegeOhne === 0 && quellenUeberzogen === 0 && ausserhalb === 0);
+  let ausgewaehltAbdeckung = $derived(ausgewaehlt ? quelleAbdeckung(ausgewaehlt, antraege, bausteine) : null);
 
   // Belege, die der ausgewählten Quelle zugeordnet sind (mit Datum sortiert).
   let zugeordneteBelege = $derived(
@@ -160,6 +181,7 @@
           {#if belegeUeberzogen}<span>⚠ {belegeUeberzogen} Beleg(e) überzogen</span>{/if}
           {#if quellenUeberzogen}<span>⚠ {quellenUeberzogen} Quelle(n) überschritten</span>{/if}
           {#if belegeOhne}<span>• {belegeOhne} Beleg(e) ohne Zuordnung</span>{/if}
+          {#if ausserhalb}<span>⚠ {ausserhalb} Zuordnung(en) außerhalb des Antrags</span>{/if}
         </div>
       {/if}
 
@@ -200,6 +222,9 @@
       <span class="typ t-{ausgewaehlt.typ}">{QUELLE_TYP[ausgewaehlt.typ] || ausgewaehlt.typ}</span>
       <h2>{ausgewaehlt.name}</h2>
     </div>
+    {#if ausgewaehltAbdeckung !== null}
+      <p class="d-umfang">Der Antrag umfasst {abdeckungText(ausgewaehltAbdeckung, bausteine)}.</p>
+    {/if}
     <div class="d-zahlen">
       <span>Soll <strong>{betragFormat(i.soll)}</strong></span>
       <span>Zugeordnet <strong>{betragFormat(i.zu)}</strong></span>
@@ -242,12 +267,16 @@
         <tbody>
           {#each zugeordneteBelege as b (b.id)}
             {@const frei = belegFrei(b)}
-            <tr>
+            {@const w = warnung(b, ausgewaehlt)}
+            <tr class:abweichung={w}>
               <td class="num">{anzeigeNr(b)}</td>
               <td>{datumText(b.datum)}</td>
               <td class="bel">
                 <div class="b-emp">{b.empfaenger || "—"}</div>
-                {#if b.zweck}<div class="b-zw">{b.zweck}</div>{/if}
+                {#if b.zweck || bausteinVonBeleg(b)}
+                  <div class="b-zw">{[bausteinVonBeleg(b), b.zweck].filter(Boolean).join(" · ")}</div>
+                {/if}
+                {#if w}<div class="b-warn">⚠ {w}</div>{/if}
               </td>
               <td class="betrag">{betragFormat(belegBrutto(b))}</td>
               <td class="betrag zelle">
@@ -280,7 +309,7 @@
     <!-- Belege hinzufügen -->
     <div class="zuordnen">
       <button class="zweit" onclick={() => (zuordnenOffen = !zuordnenOffen)} disabled={!verfuegbareBelege.length}>
-        + Beleg zuordnen{#if verfuegbareBelege.length} ({verfuegbareBelege.length} verfügbar){/if}
+        + Beleg zuordnen{verfuegbareBelege.length ? ` (${verfuegbareBelege.length} verfügbar)` : ""}
       </button>
       {#if !verfuegbareBelege.length}
         <span class="dezent"> – alle Belege mit freiem Betrag sind dieser Quelle bereits zugeordnet.</span>
@@ -288,9 +317,11 @@
       {#if zuordnenOffen && verfuegbareBelege.length}
         <ul class="verfuegbar">
           {#each verfuegbareBelege as b (b.id)}
-            <li>
+            {@const w = warnung(b, ausgewaehlt)}
+            <li class:abweichung={w} title={w || undefined}>
               <span class="vb-nr">{anzeigeNr(b)}</span>
-              <span class="vb-emp">{b.empfaenger || "—"}{#if b.zweck} · {b.zweck}{/if}</span>
+              <span class="vb-emp">{b.empfaenger || "—"}{b.zweck ? ` · ${b.zweck}` : ""}</span>
+              {#if bausteinVonBeleg(b)}<span class="vb-teil" class:aussen={w}>{w ? "⚠ " : ""}{bausteinVonBeleg(b)}</span>{/if}
               <span class="vb-frei">frei {betragFormat(belegFrei(b))}</span>
               <button class="zweit schmal" onclick={() => zuordnen(b)} disabled={beschaeftigt}>zuordnen</button>
             </li>
@@ -374,6 +405,7 @@
   .zurueck:hover { text-decoration: underline; }
   .d-kopf { display: flex; align-items: center; gap: 10px; }
   .d-kopf h2 { margin: 0; }
+  .d-umfang { margin: 6px 0 0; font-size: 0.88rem; color: var(--text-muted); }
   .d-zahlen { display: flex; gap: 22px; font-size: 0.92rem; color: var(--text-muted); margin: 8px 0 14px; flex-wrap: wrap; }
   .d-zahlen strong { color: var(--text); }
   .export { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -391,6 +423,8 @@
   .bel { min-width: 150px; }
   .b-emp { color: var(--text); }
   .b-zw { color: var(--text-leise); font-size: 0.78rem; }
+  .b-warn { color: var(--warnung-text3); font-size: 0.8rem; margin-top: 3px; line-height: 1.4; }
+  tr.abweichung td { background: var(--warnung-bg2); }
   .betrag { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
   td.zelle input {
     width: 90px; padding: 5px 7px; border: 2px solid var(--rand); border-radius: 7px;
@@ -416,6 +450,9 @@
   .vb-nr { color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .vb-emp { flex: 1; min-width: 0; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .vb-frei { color: var(--text-muted); white-space: nowrap; }
+  .vb-teil { color: var(--text-muted); font-size: 0.8rem; white-space: nowrap; }
+  .vb-teil.aussen { color: var(--warnung-text3); font-weight: 600; }
+  .verfuegbar li.abweichung { border-color: var(--warnung-rand); }
 
   button.zweit {
     padding: 9px 14px; font-size: 0.9rem; font-weight: 600; font-family: inherit;

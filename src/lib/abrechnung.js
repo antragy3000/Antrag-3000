@@ -20,7 +20,11 @@
 // (deutsche Schreibweise, z. B. "1.234,56"); so kann man tippen wie gewohnt.
 // ============================================================
 
-import { betragParsen, betragFormat, postenBetrag } from "./kfp.js";
+// kfpRechnen.js statt kfp.js: Die reine Rechenlogik lädt keinen Katalog,
+// darum bleibt diese Datei mit `npm run abrechnung` in Node testbar.
+import { betragParsen, betragFormat, postenBetrag } from "./kfpRechnen.js";
+import { GEMEINSAM, bausteinVon } from "./bausteine.js";
+import { abdeckungVon, abdeckungText } from "./teilantrag.js";
 
 export { betragFormat, betragParsen };
 
@@ -201,8 +205,9 @@ export function zugeordnetJeQuelle(belege) {
 // ============================================================
 
 /// KFP-Kosten-Posten nach Kategorie gruppiert – fuer die Auswahl im
-/// Beleg-Formular. Liefert [{ name, posten: [{ id, nummer, bezeichnung }] }].
-export function kostenstellenNachKategorie(kfp) {
+/// Beleg-Formular. Liefert [{ name, posten: [{ id, nummer, bezeichnung, baustein }] }].
+/// `baustein` ist der Name des Bausteins ("" ohne Bausteine).
+export function kostenstellenNachKategorie(kfp, bausteine = []) {
   return (kfp?.kosten ?? []).map((k, ki) => ({
     name: k.name || "(ohne Name)",
     posten: (k.posten ?? [])
@@ -211,6 +216,7 @@ export function kostenstellenNachKategorie(kfp) {
         id: p.id,
         nummer: `${ki + 1}.${pi + 1}`,
         bezeichnung: p.bezeichnung || "(ohne Bezeichnung)",
+        baustein: bausteinAnzeige(bausteinVon(p, bausteine) || GEMEINSAM, bausteine),
       })),
   }));
 }
@@ -262,7 +268,11 @@ export function belegNummern(belege, kfp) {
 ///   anhaenge   – { datei, stempel } je Beleg-Datei dieser Geldquelle; der
 ///                Stempel wird rot oben links auf die angehängte Seite gedruckt.
 /// In Tabellenzellen markiert ** am Anfang eine fette (Summen-)Zeile.
-export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName, sachbericht = "") {
+/// `teil` = { bausteine, antraege } des Projekts: Mit Bausteinen nennt jede
+/// Kostenstelle ihren Baustein, und bei einem Teil-Antrag steht unter dem
+/// Titel, welche Teile er umfasst. Ohne Bausteine bleibt alles wie bisher.
+export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName, sachbericht = "", teil = null) {
+  const bausteine = teil?.bausteine ?? [];
   const nummern = belegNummern(belege, kfp);
   const anteil = (b) =>
     betragParsen((b.zuordnungen ?? []).find((z) => z.quelleId === quelle.id)?.betrag);
@@ -279,6 +289,8 @@ export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName, 
     `für das Projekt ${projektName || "—"}`,
     `Bewilligt ${betragFormat(soll)} · Abgerechnet ${betragFormat(summe)} · Stand ${new Date().toLocaleDateString("de-DE")}`,
   ];
+  const abdeckung = quelleAbdeckung(quelle, teil?.antraege, bausteine);
+  if (abdeckung !== null) untertitel.push(`Der Antrag umfasst ${abdeckungText(abdeckung, bausteine)}.`);
 
   const abschnitte = [];
   const anhaenge = [];
@@ -326,7 +338,9 @@ export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName, 
     let gesamt = 0;
     for (const key of keys) {
       const ksLabel = key ? kostenstelleLabel(kfp, key) || "(entfernt)" : "";
-      tab.push([key ? `Kostenstelle ${ksLabel}` : "Ohne Kostenstelle"]);
+      const ksBaustein = key && bausteine.length ? belegBaustein({ kostenstelle: key }, kfp, bausteine) : null;
+      const ksZusatz = ksBaustein ? ` · ${bausteinAnzeige(ksBaustein, bausteine)}` : "";
+      tab.push([key ? `Kostenstelle ${ksLabel}${ksZusatz}` : "Ohne Kostenstelle"]);
       let gruppenSumme = 0;
       for (const b of gruppen.get(key)) {
         const nr = nummern.get(b.id) ?? `#${b.nr}`;
@@ -369,6 +383,87 @@ export function verwendungsnachweisAbschnitte(quelle, belege, kfp, projektName, 
   }
 
   return { titel, untertitel, abschnitte, anhaenge };
+}
+
+// ============================================================
+// Bausteine in der Abrechnung (Umbau Etappe 5). Ein Beleg gehört über seine
+// Kostenstelle zu einem Baustein. Deckt der Antrag einer Geldquelle diesen
+// Baustein nicht ab, warnt die Zuteilung – sie sperrt aber nie, denn manchmal
+// erlaubt ein Förderer eine Umwidmung.
+// ============================================================
+
+/// Kosten-Posten zu einer Kostenstellen-ID (oder null).
+function kostenPosten(kfp, id) {
+  if (!id) return null;
+  for (const k of kfp?.kosten ?? []) {
+    for (const p of k.posten ?? []) if (p.id === id) return p;
+  }
+  return null;
+}
+
+/// Lesbarer Name zu einer Baustein-id oder GEMEINSAM ("" ohne Bausteine).
+function bausteinAnzeige(id, bausteine) {
+  if (!(bausteine ?? []).length) return "";
+  if (id === GEMEINSAM) return "gemeinsam";
+  return bausteine.find((b) => b.id === id)?.name ?? "gemeinsam";
+}
+
+/// Baustein eines Belegs: Baustein-id, GEMEINSAM, oder null, wenn der Beleg
+/// keine (gültige) Kostenstelle hat oder das Projekt keine Bausteine kennt.
+export function belegBaustein(beleg, kfp, bausteine) {
+  if (!(bausteine ?? []).length) return null;
+  const posten = kostenPosten(kfp, beleg?.kostenstelle);
+  if (!posten) return null;
+  return bausteinVon(posten, bausteine) || GEMEINSAM;
+}
+
+/// Name des Bausteins eines Belegs für die Anzeige ("" wenn unbekannt).
+export function belegBausteinName(beleg, kfp, bausteine) {
+  const id = belegBaustein(beleg, kfp, bausteine);
+  return id === null ? "" : bausteinAnzeige(id, bausteine);
+}
+
+/// Abdeckung des Antrags hinter einer Geldquelle: null = ganzes Projekt
+/// (auch bei Eigenmitteln und Quellen ohne Förderer), sonst die Liste.
+export function quelleAbdeckung(quelle, antraege, bausteine) {
+  if (!quelle?.foerderId) return null;
+  return abdeckungVon(antraege?.[quelle.foerderId], bausteine);
+}
+
+/// Warnung, wenn eine Geldquelle den Baustein eines Belegs nicht abdeckt.
+/// "" = passt oder lässt sich nicht prüfen (z. B. Beleg ohne Kostenstelle).
+export function abdeckungsWarnung(beleg, quelle, kfp, bausteine, antraege) {
+  const abdeckung = quelleAbdeckung(quelle, antraege, bausteine);
+  if (abdeckung === null) return "";
+  const teil = belegBaustein(beleg, kfp, bausteine);
+  if (teil === null || abdeckung.includes(teil)) return "";
+  const gehoert = teil === GEMEINSAM ? "zu den gemeinsamen Kosten" : `zu „${bausteinAnzeige(teil, bausteine)}“`;
+  if (!abdeckung.length) return `Der Antrag bei ${quelle.name} deckt noch keinen Teil ab; dieser Beleg gehört ${gehoert}.`;
+  return `Der Antrag bei ${quelle.name} umfasst nur ${abdeckungText(abdeckung, bausteine)}; dieser Beleg gehört ${gehoert}.`;
+}
+
+/// Plan/Ist je Baustein (plus eine Zeile „gemeinsam"). Belege ohne
+/// Kostenstelle fehlen hier; sie stehen in der Übersicht als „Nicht
+/// zugeordnet". Ohne Bausteine: leere Liste.
+/// Liefert [{ id, name, plan, ist, rest, anzahl }].
+export function bausteinUebersicht(kfp, belege, bausteine) {
+  if (!(bausteine ?? []).length) return [];
+  const zeilen = [...bausteine.map((b) => ({ id: b.id, name: b.name })), { id: GEMEINSAM, name: "gemeinsam" }].map(
+    (z) => ({ ...z, plan: 0, ist: 0, rest: 0, anzahl: 0 })
+  );
+  const zeile = (id) => zeilen.find((z) => z.id === id);
+  for (const k of kfp?.kosten ?? []) {
+    for (const p of k.posten ?? []) zeile(bausteinVon(p, bausteine) || GEMEINSAM).plan += postenBetrag(p);
+  }
+  for (const b of belege ?? []) {
+    const id = belegBaustein(b, kfp, bausteine);
+    if (id === null) continue;
+    const z = zeile(id);
+    z.ist += belegBrutto(b);
+    z.anzahl += 1;
+  }
+  for (const z of zeilen) z.rest = z.plan - z.ist;
+  return zeilen;
 }
 
 /// Nur die Nummer einer Kostenstelle (z. B. "1.2"), oder "" wenn keine bzw.

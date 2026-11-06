@@ -1,11 +1,13 @@
 <script>
   // Abrechnungs-Modus, Phase A3: Plan-/Ist-Übersicht je Kostenstelle.
   // Liest den KFP (Plan) und die Belege (Ist) – nur Anzeige, ändert nichts.
-  import { kostenstellenUebersicht, betragFormat } from "$lib/abrechnung";
+  import { kostenstellenUebersicht, bausteinUebersicht, betragFormat } from "$lib/abrechnung";
 
-  let { kfp = { kosten: [], finanzierung: [] }, belege = [], projektName = "" } = $props();
+  let { kfp = { kosten: [], finanzierung: [] }, belege = [], projektName = "", bausteine = [] } = $props();
 
   let u = $derived(kostenstellenUebersicht(kfp, belege));
+  // Plan/Ist je Baustein; leer, wenn das Projekt keine Bausteine hat.
+  let teile = $derived(bausteinUebersicht(kfp, belege, bausteine));
   let hatKostenstellen = $derived((kfp?.kosten ?? []).some((k) => (k.posten ?? []).length));
 
   // Negativer Rest = überzogen (Ist über Plan).
@@ -30,6 +32,32 @@
       </p>
     </div>
   {:else}
+    {#if teile.length}
+      <h3>Je Baustein</h3>
+      <table class="ks-tab teile">
+        <thead>
+          <tr>
+            <th>Baustein</th>
+            <th class="num">Belege</th>
+            <th class="betrag">Plan</th>
+            <th class="betrag">Ist</th>
+            <th class="betrag">Rest</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each teile as t (t.id)}
+            <tr class:gemeinsam={t.id === "gemeinsam"}>
+              <td>{t.name}</td>
+              <td class="num">{t.anzahl || ""}</td>
+              <td class="betrag">{betragFormat(t.plan)}</td>
+              <td class="betrag">{betragFormat(t.ist)}</td>
+              <td class="betrag {restKlasse(t.rest)}">{betragFormat(t.rest)}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+      <h3>Je Kostenstelle</h3>
+    {/if}
     <table class="ks-tab">
       <thead>
         <tr>
@@ -115,6 +143,18 @@
     line-height: 1.5;
   }
 
+  h3 {
+    margin: 22px 0 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  table.teile {
+    margin-bottom: 8px;
+  }
+  tr.gemeinsam td {
+    color: var(--text-muted);
+  }
   .leer {
     text-align: center;
     color: var(--text-muted);
@@ -153,6 +193,9 @@
     color: var(--text-muted);
   }
   .betrag {
+    /* Feste Breite: Die Tabellen „Je Baustein" und „Je Kostenstelle" stehen
+       dadurch Spalte für Spalte untereinander. */
+    width: 110px;
     text-align: right;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;

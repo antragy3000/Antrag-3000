@@ -21,6 +21,7 @@
     kostenstelleLabel,
     belegNummern,
     belegDateiBasis,
+    belegBausteinName,
   } from "$lib/abrechnung";
 
   let {
@@ -31,6 +32,9 @@
     // Callback zum Anlegen eines neuen Kosten-Postens.
     kfp = { kosten: [], finanzierung: [] },
     kostenstelleAnlegen,
+    // Bausteine des Projekts: Jede Kostenstelle nennt ihren Baustein, und eine
+    // neue Kostenstelle lässt sich gleich einem Baustein zuordnen.
+    bausteine = [],
     // Beleg-Dateien – kommen als Callbacks aus +page.svelte, die das
     // Rust-Backend (Datei in den Belegordner kopieren / öffnen / löschen /
     // Ordner öffnen) aufrufen.
@@ -54,10 +58,11 @@
 
   // Kostenstellen-Auswahl im Formular (nach Kategorie gruppiert) + das
   // Anlegen einer neuen Kostenstelle direkt aus der Beleg-Maske.
-  let kategorien = $derived(kostenstellenNachKategorie(kfp));
+  let kategorien = $derived(kostenstellenNachKategorie(kfp, bausteine));
   let neuKsOffen = $state(false);
   let neuKsKategorie = $state(0);
   let neuKsBezeichnung = $state("");
+  let neuKsBaustein = $state("");
 
   // Welcher Beleg hat gerade sein Datei-Panel offen?
   let dateienOffenId = $state(null);
@@ -84,6 +89,7 @@
     neuKsOffen = false;
     neuKsKategorie = 0;
     neuKsBezeichnung = "";
+    neuKsBaustein = "";
   }
 
   function neu() {
@@ -115,7 +121,7 @@
   async function neueKostenstelle() {
     const bez = neuKsBezeichnung.trim();
     if (!bez) return;
-    const id = await kostenstelleAnlegen(neuKsKategorie, bez);
+    const id = await kostenstelleAnlegen(neuKsKategorie, bez, neuKsBaustein);
     if (id) form.kostenstelle = id;
     neuKsZuruecksetzen();
   }
@@ -252,7 +258,10 @@
             <td>{datumText(b.datum)}</td>
             <td>{b.empfaenger || "—"}</td>
             <td class="zweck">{b.zweck || "—"}</td>
-            <td class="ks">{kostenstelleLabel(kfp, b.kostenstelle) || "—"}</td>
+            <td class="ks">
+              {kostenstelleLabel(kfp, b.kostenstelle) || "—"}
+              {#if belegBausteinName(b, kfp, bausteine)}<div class="ks-teil">{belegBausteinName(b, kfp, bausteine)}</div>{/if}
+            </td>
             <td class="betrag">
               {betragFormat(belegBrutto(b))}
               {#if mwstSatz(b) > 0}<div class="mwst">inkl. {mwstSatz(b)} % MwSt</div>{/if}
@@ -363,7 +372,7 @@
               {#if kat.posten.length}
                 <optgroup label={kat.name}>
                   {#each kat.posten as p}
-                    <option value={p.id}>{p.nummer} {p.bezeichnung}</option>
+                    <option value={p.id}>{p.nummer} {p.bezeichnung}{p.baustein ? ` · ${p.baustein}` : ""}</option>
                   {/each}
                 </optgroup>
               {/if}
@@ -393,6 +402,14 @@
                 bind:value={neuKsBezeichnung}
                 placeholder="Bezeichnung, z. B. Honorar Regie"
               />
+              {#if bausteine.length}
+                <select bind:value={neuKsBaustein} aria-label="Baustein">
+                  <option value="">gemeinsam</option>
+                  {#each bausteine as bs (bs.id)}
+                    <option value={bs.id}>{bs.name}</option>
+                  {/each}
+                </select>
+              {/if}
               <button type="button" class="zweit schmal" onclick={neueKostenstelle}>anlegen</button>
               <button type="button" class="leise" onclick={neuKsZuruecksetzen}>abbrechen</button>
             </div>
@@ -696,6 +713,10 @@
   td.ks {
     color: var(--text-2);
     font-size: 0.84rem;
+  }
+  .ks-teil {
+    color: var(--text-leise);
+    font-size: 0.78rem;
   }
 
   /* Kostenstelle im Formular */

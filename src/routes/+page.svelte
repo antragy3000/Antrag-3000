@@ -514,7 +514,8 @@
       a.belege,
       aktivesProjekt.kfp,
       aktivesProjekt.name,
-      sachberichtFuerQuelle(q, a.sachbericht)
+      sachberichtFuerQuelle(q, a.sachbericht),
+      { bausteine: aktivesProjekt.bausteine ?? [], antraege: aktivesProjekt.antraege ?? {} }
     );
     const absender = daten.stammdaten ? absenderZeilen(daten.stammdaten) : [];
     const logo = daten.stammdaten?.logo || null;
@@ -571,12 +572,12 @@
 
   // Neue Kostenstelle (KFP-Kosten-Posten) aus der Beleg-Maske anlegen.
   // Gibt die neue Posten-ID zurück, die die Beleg-Maske gleich auswählt.
-  async function kostenstelleAnlegen(kategorieIndex, bezeichnung) {
+  async function kostenstelleAnlegen(kategorieIndex, bezeichnung, bausteinId = "") {
     const kat = aktivesProjekt.kfp?.kosten?.[kategorieIndex];
     if (!kat) return null;
     const id = neuePostenId();
     if (!Array.isArray(kat.posten)) kat.posten = [];
-    kat.posten.push({ id, bezeichnung: bezeichnung.trim(), erlaeuterung: "", betrag: "" });
+    kat.posten.push({ id, bezeichnung: bezeichnung.trim(), erlaeuterung: "", betrag: "", bausteinId });
     await tresorSpeichern();
     return id;
   }
@@ -2548,6 +2549,7 @@
             speichern={belegeSpeichern}
             projektName={aktivesProjekt.name}
             kfp={aktivesProjekt.kfp}
+            bausteine={aktivesProjekt.bausteine ?? []}
             {kostenstelleAnlegen}
             dateiHinzufuegen={belegDateiHinzufuegen}
             dateiOeffnen={belegDateiOeffnen}
@@ -2561,6 +2563,7 @@
             kfp={aktivesProjekt.kfp}
             belege={aktivesProjekt.abrechnung.belege}
             projektName={aktivesProjekt.name}
+            bausteine={aktivesProjekt.bausteine ?? []}
           />
         {/key}
       {:else if bereich === "geldquellen"}
@@ -2587,6 +2590,8 @@
             projektName={aktivesProjekt.name}
             nachweisPdf={(id) => nachweisExport(id, "pdf")}
             nachweisWord={(id) => nachweisExport(id, "word")}
+            bausteine={aktivesProjekt.bausteine ?? []}
+            antraege={aktivesProjekt.antraege ?? {}}
             sachberichtVorlage={aktivesProjekt.abrechnung.sachbericht}
           />
         {/key}

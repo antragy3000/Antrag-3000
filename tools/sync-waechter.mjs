@@ -89,7 +89,7 @@ const daten = {
         beschreibung: S.beschreibung, ziele: S.ziele, zeitraum: "", ort: "", beteiligte: "",
       },
       kfp: {
-        kosten: [{ name: "Personal", posten: [{ bezeichnung: "Honorar", erlaeuterung: "", betrag: S.budget, bausteinId: "bs1" }] }],
+        kosten: [{ name: "Personal", posten: [{ id: "k1", bezeichnung: "Honorar", erlaeuterung: "", betrag: S.budget, bausteinId: "bs1" }] }],
         finanzierung: [{ name: "", posten: [{ foerderId: "de-musikfonds", bezeichnung: "", betrag: S.budget, anteile: { bs1: S.budget } }] }],
       },
       kfpHinweisAusblenden: false,
@@ -118,13 +118,14 @@ const daten = {
             id: "b1", nr: 1, datum: "2026-05-01",
             empfaenger: S.belegEmpf, zweck: "Mietscheinwerfer",
             brutto: S.belegBetrag, mwst_satz: "19", zahlungsart: "karte",
-            kostenstelle: null, status: "erfasst",
+            // Kostenstelle eines Bausteins: Die Abrechnung kennt so den Baustein.
+            kostenstelle: "k1", status: "erfasst",
             dateien: [{ name: S.belegDatei, ref: "x" }],
             zuordnungen: [], notiz: S.belegNotiz,
           },
         ],
         quellen: [
-          { id: "q1", typ: "foerderung", foerderId: "", name: S.quelleName, soll: "5000", nachweisFrist: S.nachweisFrist, dateien: [] },
+          { id: "q1", typ: "foerderung", foerderId: "de-musikfonds", name: S.quelleName, soll: "5000", nachweisFrist: S.nachweisFrist, dateien: [] },
         ],
       },
       // Links zu gemeinsam geschriebenen Texten – auch einer Foerderung
