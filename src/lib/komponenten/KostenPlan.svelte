@@ -29,6 +29,9 @@
   let {
     kfp,
     bausteine = [],
+    // Deckt ein Antrag nur einzelne Teile ab? Nur dann gibt es „Auf Teile
+    // aufteilen"; eine schon begonnene Aufteilung bleibt immer sichtbar.
+    teilAntraege = false,
     speichern,
     merkliste = [],
     foerderungen = [],
@@ -624,7 +627,7 @@
                   <button class="leise" onclick={() => aufteilungEntfernen(posten)}>Aufteilung entfernen</button>
                 </div>
               </div>
-            {:else}
+            {:else if teilAntraege}
               <button class="leise aufteilen" onclick={() => aufteilungOeffnen(posten)}>
                 Auf Teile aufteilen
               </button>

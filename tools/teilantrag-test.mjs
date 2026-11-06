@@ -20,6 +20,7 @@ import {
   teilBeantragt,
   teilAntragAbschnitte,
   abdeckungAufraeumen,
+  hatTeilAntraege,
 } from "../src/lib/teilantrag.js";
 import { ausgabeBefuellen } from "../src/lib/ausgaben.js";
 
@@ -173,6 +174,19 @@ const ohneBetraege = ausgabeBefuellen(frisch(), vorige, { texte: false, kostenpl
 pruefe(ohneBetraege.kfp.finanzierung[0].posten.every((p) => !("anteile" in p)), "ohne Beträge auch keine Anteile");
 const ohneBausteine = ausgabeBefuellen(frisch(), vorige, { texte: false, kostenplan: false, betraege: false, merkliste: true }, () => []);
 pruefe(ohneBausteine.antraege.stadt.abdeckung === null, "ohne Bausteine gilt der Antrag fürs ganze Projekt");
+
+console.log("Gibt es Teil-Anträge?");
+const teilProjekt = (abdeckung, merkliste = ["f"]) => ({
+  bausteine: [{ id: "m", name: "März" }],
+  merkliste,
+  antraege: { f: { abdeckung } },
+});
+pruefe(hatTeilAntraege(teilProjekt(["m"])) === true, "Antrag über einen Teil");
+pruefe(hatTeilAntraege(teilProjekt([])) === true, "leere Abdeckung zählt auch (Warnung im Antrag)");
+pruefe(hatTeilAntraege(teilProjekt(null)) === false, "nur Anträge über das ganze Projekt");
+pruefe(hatTeilAntraege(teilProjekt(["m"], [])) === false, "Förderung nicht mehr gemerkt");
+pruefe(hatTeilAntraege({ ...teilProjekt(["m"]), bausteine: [] }) === false, "ohne Bausteine nie");
+pruefe(hatTeilAntraege({}) === false, "leeres Projekt");
 
 if (fehler) {
   console.error(`\n✗ ${fehler} Prüfung(en) fehlgeschlagen.`);

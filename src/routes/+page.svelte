@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { open as dateiWaehlen, save as dateiSpeichern } from "@tauri-apps/plugin-dialog";
   import Foerderungen from "$lib/komponenten/Foerderungen.svelte";
@@ -37,7 +37,7 @@
   import { formularWordBauen } from "$lib/antrag";
   import { antragsPdfBauen, absenderZeilen } from "$lib/antragsPdf";
   import { kfpExport, neuePostenId } from "$lib/kfp";
-  import { abdeckungVon, abdeckungAufraeumen } from "$lib/teilantrag";
+  import { abdeckungVon, abdeckungAufraeumen, hatTeilAntraege } from "$lib/teilantrag";
   import { bausteinTexteUebernehmen } from "$lib/bausteine";
   import { verwendungsnachweisAbschnitte } from "$lib/abrechnung";
   import { sachberichtFuerQuelle } from "$lib/sachbericht";
@@ -138,6 +138,8 @@
   // gewählte Projektgruppe + Feld für eine neue Gruppe.
   let gruppeWahl = $state(null);
   let neueGruppeName = $state("");
+  // Ohne bestehende Gruppen zeigt der Dialog statt der Felder nur einen Link.
+  let gruppeAufgeklappt = $state(false);
   let archivOffen = $state(false); // Archiv-Bereich im Projektmenü aufgeklappt?
   // Projektgruppe umbenennen (eigener kleiner Dialog).
   let gruppeUmbOffen = $state(false);
@@ -1830,6 +1832,7 @@
     umbenennenName = aktivesProjekt.name;
     gruppeWahl = aktivesProjekt.gruppeId ?? null;
     neueGruppeName = "";
+    gruppeAufgeklappt = false;
     umbenennenFehler = "";
     umbenennenOffen = true;
   }
@@ -1845,6 +1848,7 @@
     umbenennenName = p.name;
     gruppeWahl = p.gruppeId ?? null;
     neueGruppeName = "";
+    gruppeAufgeklappt = false;
     umbenennenFehler = "";
     umbenennenOffen = true;
     projektMenuOffen = false;
@@ -1970,6 +1974,7 @@
   function neuesProjektOeffnen() {
     gruppeWahl = null;
     neueGruppeName = "";
+    gruppeAufgeklappt = false;
     neuesProjektOffen = true;
   }
 
@@ -2533,6 +2538,7 @@
           <KostenPlan
             kfp={aktivesProjekt.kfp}
             bausteine={aktivesProjekt.bausteine ?? []}
+            teilAntraege={hatTeilAntraege(aktivesProjekt)}
             merkliste={aktivesProjekt.merkliste}
             foerderungen={alleFoerderungen}
             projektName={aktivesProjekt.name}
@@ -2765,19 +2771,35 @@
     {/if}
 
     {#snippet gruppenWahl()}
-      <label for="gruppe-wahl">Projektgruppe <span class="feld-optional">(optional)</span></label>
-      <select id="gruppe-wahl" bind:value={gruppeWahl} disabled={!!neueGruppeName.trim()}>
-        <option value={null}>— keine —</option>
-        {#each daten.projektgruppen as g (g.id)}
-          <option value={g.id}>{g.name}</option>
-        {/each}
-      </select>
-      <input
-        type="text"
-        class="gruppe-neu-feld"
-        bind:value={neueGruppeName}
-        placeholder="… oder neue Projektgruppe anlegen"
-      />
+      {#if daten.projektgruppen.length}
+        <label for="gruppe-wahl">Projektgruppe <span class="feld-optional">(optional)</span></label>
+        <select id="gruppe-wahl" bind:value={gruppeWahl} disabled={!!neueGruppeName.trim()}>
+          <option value={null}>— keine —</option>
+          {#each daten.projektgruppen as g (g.id)}
+            <option value={g.id}>{g.name}</option>
+          {/each}
+        </select>
+        <input
+          type="text"
+          class="gruppe-neu-feld"
+          bind:value={neueGruppeName}
+          placeholder="… oder neue Projektgruppe anlegen"
+        />
+      {:else if gruppeAufgeklappt}
+        <!-- Noch keine Gruppe: Eine Auswahl mit nur „keine" wäre sinnlos. -->
+        <label for="gruppe-neu">Neue Projektgruppe <span class="feld-optional">(optional)</span></label>
+        <input id="gruppe-neu" type="text" bind:value={neueGruppeName} placeholder="z. B. Festival" />
+      {:else}
+        <button
+          type="button"
+          class="gruppe-aufklappen"
+          onclick={async () => {
+            gruppeAufgeklappt = true;
+            await tick();
+            document.getElementById("gruppe-neu")?.focus();
+          }}
+        >+ In eine Projektgruppe einordnen</button>
+      {/if}
     {/snippet}
 
     {#if neuesProjektOffen}
@@ -3012,10 +3034,19 @@
   .projekt-neu:hover {
     background: var(--lila-bg5);
   }
+  /* Bei jedem Projekt möglich, aber selten gebraucht: darum leiser als
+     „+ Neues Projekt" und durch einen Strich abgesetzt. */
   .projekt-neu.ausgabe {
     margin-top: 0;
-    border-top: none;
+    border-top: 1px dashed var(--flaeche-2b);
+    border-radius: 0 0 7px 7px;
+    font-size: 0.82rem;
+    font-weight: 400;
+    color: var(--text-muted);
     overflow-wrap: anywhere;
+  }
+  .projekt-neu.ausgabe:hover {
+    color: var(--akzent-text);
   }
   /* Projektgruppe: Gruppen-Kopf im Projektmenü. */
   .gruppe-kopf {
@@ -3103,6 +3134,20 @@
   }
   .gruppe-neu-feld {
     margin-top: 6px;
+  }
+  button.gruppe-aufklappen {
+    display: block;
+    width: auto;
+    margin-top: 14px;
+    padding: 2px 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--akzent-text);
+    background: none;
+  }
+  button.gruppe-aufklappen:hover:not(:disabled) {
+    background: none;
+    text-decoration: underline;
   }
 
   /* Unter-Umschalter im Reiter „Förderungen" (Alle / Passende) */

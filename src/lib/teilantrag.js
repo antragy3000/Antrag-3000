@@ -267,6 +267,17 @@ export function teilAntragAbschnitte(kfp, foerderungId, foerderName, abdeckung, 
 }
 
 /// Räumt Abdeckungen und Anteile eines Projekts auf: Verweise auf entfernte
+/// Deckt mindestens ein Antrag des Projekts nur einzelne Teile ab? Nur dann
+/// braucht der Kostenplan „Auf Teile aufteilen" – sonst wäre der Knopf unter
+/// jeder Geldquelle nur Ballast. Zählt nur Förderungen auf der Merkliste.
+/** @param {any} p */
+export function hatTeilAntraege(p) {
+  const gemerkt = new Set(p?.merkliste ?? []);
+  return Object.entries(p?.antraege ?? {}).some(
+    ([id, a]) => gemerkt.has(id) && abdeckungVon(a, p.bausteine) !== null
+  );
+}
+
 /// Bausteine fallen weg; ohne Bausteine gilt jeder Antrag wieder für das
 /// ganze Projekt. Eine leer gewordene Abdeckung bleibt leer (der Antrag
 /// meldet dann „noch keinen Teil") und wird nie still zum ganzen Projekt.
