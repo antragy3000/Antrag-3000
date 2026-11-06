@@ -4,6 +4,7 @@
   // Aus diesen Antworten entstehen pro Foerderung antworten.json
   // und die Word-Datei.
   import { FORMULAR_FELDER } from "$lib/antrag";
+  import { BAUSTEIN_FELDER } from "$lib/bausteine";
   import { aenderungenAnwenden } from "$lib/cryptpadBruecke";
   import CryptpadBruecke from "./CryptpadBruecke.svelte";
 
@@ -11,7 +12,9 @@
   // Arbeitsdokumente + geteilter Ablageort), von +page.svelte gefüllt.
   // `cryptpad`: Hin-/Rückweg zu CryptPad über die Zwischenablage (siehe
   // CryptpadBruecke.svelte); null = Knöpfe ausblenden.
-  let { formular, speichern, wordErzeugen = null, oben = null, cryptpad = null } = $props();
+  // `bausteine`: Teile des Projekts (im Kostenplan angelegt); hier bekommen
+  // sie ihre Texte. `speichern(formular, texte)` mit texte = { [id]: {...} }.
+  let { formular, speichern, wordErzeugen = null, oben = null, cryptpad = null, bausteine = [] } = $props();
 
   let kopie = $state(structuredClone($state.snapshot(formular)));
   // Aeltere Projekte kennen die Liste der eigenen Felder evtl. noch nicht.
@@ -21,15 +24,24 @@
   let wordBeschaeftigt = $state(false);
   let wordErstellt = $state(false);
 
+  // Texte je Baustein; leere Felder als "" für die Eingabe.
+  function texteAus(liste) {
+    return Object.fromEntries(
+      (liste ?? []).map((b) => [b.id, Object.fromEntries(BAUSTEIN_FELDER.map(([key]) => [key, b[key] ?? ""]))])
+    );
+  }
+  let texte = $state(texteAus($state.snapshot(bausteine)));
+
   let veraendert = $derived(
     JSON.stringify($state.snapshot(kopie)) !==
-      JSON.stringify($state.snapshot(formular))
+      JSON.stringify($state.snapshot(formular)) ||
+      JSON.stringify($state.snapshot(texte)) !== JSON.stringify(texteAus($state.snapshot(bausteine)))
   );
 
   async function speichernKlick() {
     beschaeftigt = true;
     try {
-      await speichern(structuredClone($state.snapshot(kopie)));
+      await speichern(structuredClone($state.snapshot(kopie)), structuredClone($state.snapshot(texte)));
       einmalGespeichert = true;
     } finally {
       beschaeftigt = false;
@@ -118,6 +130,32 @@
         <input id={"feld-" + key} type="text" bind:value={kopie[key]} />
       {/if}
     {/each}
+
+    {#if bausteine.length}
+      <div class="eigene-felder">
+        <div class="eigene-titel">Teile des Projekts</div>
+        <p class="eigene-hinweis">
+          Die Teile (Bausteine) legst du im Kostenplan an. Ein Antrag über das ganze
+          Projekt zeigt im PDF alle Teile mit Text, ein Antrag über einzelne Teile nur
+          diese. Leere Felder erscheinen nirgends.
+        </p>
+        {#each bausteine as baustein (baustein.id)}
+          {#if texte[baustein.id]}
+            <div class="baustein-texte">
+              <div class="baustein-name">{baustein.name}</div>
+              {#each BAUSTEIN_FELDER as [key, beschriftung, typ] (key)}
+                <label for={`baustein-${baustein.id}-${key}`}>{beschriftung}</label>
+                {#if typ === "textarea"}
+                  <textarea id={`baustein-${baustein.id}-${key}`} rows="3" bind:value={texte[baustein.id][key]}></textarea>
+                {:else}
+                  <input id={`baustein-${baustein.id}-${key}`} type="text" bind:value={texte[baustein.id][key]} />
+                {/if}
+              {/each}
+            </div>
+          {/if}
+        {/each}
+      </div>
+    {/if}
 
     <div class="eigene-felder">
       <div class="eigene-titel">Eigene Felder</div>
@@ -298,6 +336,23 @@
     font-size: 0.82rem;
     color: var(--text-leise);
     line-height: 1.5;
+  }
+  .baustein-texte {
+    margin-top: 18px;
+    padding: 14px 16px 16px;
+    background: var(--flaeche);
+    border-radius: 10px;
+  }
+  .baustein-name {
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .baustein-texte label {
+    margin-top: 10px;
+  }
+  .baustein-texte input,
+  .baustein-texte textarea {
+    background: var(--weiss);
   }
   .eigen-feld {
     margin-top: 16px;

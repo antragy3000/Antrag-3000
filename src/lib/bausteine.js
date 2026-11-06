@@ -123,6 +123,56 @@ export function bausteinEntfernen(bausteine, kfp, id) {
   }
 }
 
+/// Texte je Baustein im Sammel-Formular: [Schlüssel, Beschriftung, Eingabetyp].
+/// Alle sind freiwillig; ein leeres Feld erscheint nirgends.
+export const BAUSTEIN_FELDER = [
+  ["beschreibung", "Beschreibung", "textarea"],
+  ["zeitraum", "Zeitraum", "input"],
+  ["ort", "Ort", "input"],
+];
+
+/// Texte aus dem Sammel-Formular übernehmen: `texte` = { [id]: {beschreibung,
+/// zeitraum, ort} }. Name und Zuordnungen bleiben unberührt (die gehören dem
+/// Kostenplan); Texte zu inzwischen gelöschten Bausteinen fallen weg.
+/**
+ * @param {any[]} bausteine
+ * @param {Record<string, any>} texte
+ */
+export function bausteinTexteUebernehmen(bausteine, texte) {
+  for (const b of bausteine ?? []) {
+    const t = texte?.[b.id];
+    if (!t) continue;
+    for (const [key] of BAUSTEIN_FELDER) {
+      const wert = String(t[key] ?? "").trim();
+      if (wert) b[key] = wert;
+      else delete b[key];
+    }
+  }
+}
+
+/// PDF-Abschnitte mit den Texten der Bausteine: bei einem Teil-Antrag nur die
+/// abgedeckten, sonst alle. Bausteine ohne Text fehlen, darum bleibt ein PDF
+/// ohne Baustein-Texte genau wie bisher.
+/**
+ * @param {any[]} bausteine
+ * @param {string[] | null} abdeckung  null = ganzes Projekt
+ */
+export function bausteinAbschnitte(bausteine, abdeckung) {
+  const abschnitte = [];
+  for (const b of bausteine ?? []) {
+    if (abdeckung !== null && !abdeckung.includes(b.id)) continue;
+    const beschreibung = String(b.beschreibung ?? "").trim();
+    const zeitraum = String(b.zeitraum ?? "").trim();
+    const ort = String(b.ort ?? "").trim();
+    const absaetze = [];
+    if (beschreibung) absaetze.push(beschreibung);
+    if (zeitraum) absaetze.push(`Zeitraum: ${zeitraum}`);
+    if (ort) absaetze.push(`Ort: ${ort}`);
+    if (absaetze.length) abschnitte.push({ ueberschrift: `Projektteil: ${b.name}`, absaetze, tabelle: [] });
+  }
+  return abschnitte;
+}
+
 /// Bringt ein Projekt aus älteren Ständen auf den Stand mit Bausteinen und
 /// räumt Verweise auf fehlende Bausteine weg. Liefert true bei Änderung.
 /** @param {any} p */

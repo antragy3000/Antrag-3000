@@ -7,6 +7,7 @@
 import { FORMULAR_FELDER } from "./antrag";
 import { kfpAbschnitteFuerAntrag, finanzBezeichnung } from "./kfp";
 import { teilAntragAbschnitte } from "./teilantrag";
+import { bausteinAbschnitte } from "./bausteine";
 
 function zeilen(...teile) {
   return teile.filter((t) => t && String(t).trim() !== "");
@@ -73,11 +74,16 @@ export function antragsPdfBauen(stammdaten, formular, kfp, foerderung, checklist
     if (ueberschrift && wert) abschnitte.push({ ueberschrift, absaetze: [wert], tabelle: [] });
   }
 
+  // Texte der Projektteile (Bausteine): beim Teil-Antrag nur die abgedeckten.
+  // Ohne Baustein-Texte entsteht hier nichts, das PDF bleibt wie bisher.
+  const abdeckung = Array.isArray(teil?.abdeckung) ? teil.abdeckung : null;
+  for (const a of bausteinAbschnitte(teil?.bausteine ?? [], abdeckung)) abschnitte.push(a);
+
   // 3. Kostenfinanzplan (auf diese Förderung zugeschnitten:
   //    andere Mittel + zu beantragende Summe als Fehlbetrag = der für
   //    diesen Förderer im KFP eingeplante Betrag)
-  const kfpTeile = Array.isArray(teil?.abdeckung)
-    ? teilAntragAbschnitte(kfp, foerderung.id, foerderung.name, teil.abdeckung, teil.bausteine, finanzBezeichnung)
+  const kfpTeile = abdeckung
+    ? teilAntragAbschnitte(kfp, foerderung.id, foerderung.name, abdeckung, teil.bausteine, finanzBezeichnung)
     : kfpAbschnitteFuerAntrag(kfp, foerderung.id, foerderung.name);
   for (const a of kfpTeile) {
     abschnitte.push({

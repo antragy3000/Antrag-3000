@@ -16,6 +16,8 @@ import {
   bausteinNamePruefen,
   bausteinEntfernen,
   bausteineUmstellen,
+  bausteinTexteUebernehmen,
+  bausteinAbschnitte,
 } from "../src/lib/bausteine.js";
 import { ausgabeBefuellen } from "../src/lib/ausgaben.js";
 
@@ -129,6 +131,33 @@ const mitTexten = ausgabeBefuellen(frisch(), quelle, { texte: true, kostenplan: 
 pruefe(mitTexten.bausteine.length === 2, "mit Texten kommen die Bausteine auch mit");
 const ohne = ausgabeBefuellen(frisch(), quelle, { texte: false, kostenplan: false, betraege: false, merkliste: false }, () => []);
 pruefe(ohne.bausteine.length === 0, "ohne Texte und Kostenplan bleiben sie weg");
+
+console.log("Texte je Baustein:");
+const mitTexten3 = [
+  { id: "maerz", name: "Konzert März", beschreibung: "alt" },
+  { id: "mai", name: "Konzert Mai" },
+];
+bausteinTexteUebernehmen(mitTexten3, {
+  maerz: { beschreibung: "  Kammermusik im Hof  ", zeitraum: "14.03.2027", ort: "" },
+  weg: { beschreibung: "gehört zu keinem Baustein" },
+});
+pruefe(mitTexten3[0].beschreibung === "Kammermusik im Hof" && mitTexten3[0].zeitraum === "14.03.2027", "Texte werden gesäubert übernommen");
+pruefe(!("ort" in mitTexten3[0]), "leeres Feld fällt weg");
+pruefe(mitTexten3[0].name === "Konzert März" && mitTexten3[0].id === "maerz", "Name und Kennung bleiben");
+pruefe(!("beschreibung" in mitTexten3[1]) && mitTexten3.length === 2, "Texte gelöschter Bausteine fallen weg");
+const ab = bausteinAbschnitte(mitTexten3, null);
+pruefe(ab.length === 1 && ab[0].ueberschrift === "Projektteil: Konzert März", "ganzes Projekt: alle Bausteine mit Text");
+pruefe(ab[0].absaetze.join(" | ") === "Kammermusik im Hof | Zeitraum: 14.03.2027", "Beschreibung, dann Zeitraum");
+pruefe(bausteinAbschnitte(mitTexten3, ["mai"]).length === 0, "Teil-Antrag: nur abgedeckte Bausteine");
+pruefe(bausteinAbschnitte(mitTexten3, ["maerz", GEMEINSAM]).length === 1, "Teil-Antrag mit gemeinsamen Kosten");
+pruefe(bausteinAbschnitte(bausteine, null).length === 0, "ohne Texte keine Abschnitte (PDF wie bisher)");
+const quelleTexte = { ...quelle, bausteine: [{ id: "maerz", name: "Konzert März", beschreibung: "Hof", zeitraum: "März 2026", ort: "Musterstadt" }] };
+const nurPlan = ausgabeBefuellen(frisch(), quelleTexte, { texte: false, kostenplan: true, betraege: false, merkliste: false }, () => []);
+pruefe(nurPlan.bausteine[0].name === "Konzert März" && !("beschreibung" in nurPlan.bausteine[0]) && !("ort" in nurPlan.bausteine[0]), "nur Kostenplan: Bausteine ohne Texte");
+const mitText = ausgabeBefuellen(frisch(), quelleTexte, { texte: true, kostenplan: false, betraege: false, merkliste: false }, () => []);
+pruefe(mitText.bausteine[0].beschreibung === "Hof" && mitText.bausteine[0].ort === "Musterstadt", "mit Texten: Beschreibung und Ort kommen mit");
+pruefe(!("zeitraum" in mitText.bausteine[0]), "Zeitraum der vorigen Ausgabe kommt nie mit");
+pruefe(quelleTexte.bausteine[0].zeitraum === "März 2026", "vorige Ausgabe bleibt unverändert");
 
 if (fehler) {
   console.error(`\n✗ ${fehler} Prüfung(en) fehlgeschlagen.`);

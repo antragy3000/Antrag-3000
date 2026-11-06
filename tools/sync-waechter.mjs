@@ -42,6 +42,7 @@ const S = {
   gruppenName: "SENSIBEL_PROJEKTGRUPPE_Festival",
   // Bausteine gliedern Kostenplan und Texte, bleiben also wie diese lokal.
   bausteinName: "SENSIBEL_BAUSTEIN_Konzert_Maerz",
+  bausteinText: "SENSIBEL_BAUSTEIN_BESCHREIBUNG_Hofkonzert",
 };
 
 // Verbotene Feldnamen (dürfen als Schlüssel nie im Board stehen).
@@ -80,7 +81,7 @@ const daten = {
       name: "Klangraum Festival",
       gruppeId: "g1",
       vorgaengerId: "p0",
-      bausteine: [{ id: "bs1", name: S.bausteinName }],
+      bausteine: [{ id: "bs1", name: S.bausteinName, beschreibung: S.bausteinText, ort: S.bausteinText }],
       fragebogen: { budget: S.budget, sparten: ["musik"] },
       merkliste: ["de-musikfonds", "eigen-1"],
       formular: {

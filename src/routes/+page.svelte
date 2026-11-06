@@ -38,6 +38,7 @@
   import { antragsPdfBauen, absenderZeilen } from "$lib/antragsPdf";
   import { kfpExport, neuePostenId } from "$lib/kfp";
   import { abdeckungVon, abdeckungAufraeumen } from "$lib/teilantrag";
+  import { bausteinTexteUebernehmen } from "$lib/bausteine";
   import { verwendungsnachweisAbschnitte } from "$lib/abrechnung";
   import { sachberichtFuerQuelle } from "$lib/sachbericht";
   import { projektNamePruefen } from "$lib/projektname";
@@ -465,8 +466,9 @@
   }
 
   // Sammel-Formular des aktiven Projekts ersetzen und sichern.
-  async function formularSpeichern(neu) {
+  async function formularSpeichern(neu, bausteinTexte) {
     aktivesProjekt.formular = neu;
+    if (bausteinTexte) bausteinTexteUebernehmen(aktivesProjekt.bausteine ?? [], bausteinTexte);
     await tresorSpeichern();
   }
 
@@ -2504,6 +2506,7 @@
         {#key daten.aktivesProjektId}
           <SammelFormular
             formular={aktivesProjekt.formular}
+            bausteine={aktivesProjekt.bausteine ?? []}
             speichern={formularSpeichern}
             wordErzeugen={formularWordErzeugen}
             cryptpad={{

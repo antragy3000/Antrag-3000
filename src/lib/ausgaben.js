@@ -134,7 +134,18 @@ export function ausgabeBefuellen(neu, quelle, wahl, fristenFuer) {
 
   if (wahl.kostenplan) neu.kfp = kfpUebernehmen(quelle.kfp, wahl);
   // Bausteine gliedern Texte und Kostenplan; ohne beides braucht es sie nicht.
-  if (wahl.texte || wahl.kostenplan) neu.bausteine = kopie(quelle.bausteine ?? []);
+  if (wahl.texte || wahl.kostenplan) {
+    neu.bausteine = kopie(quelle.bausteine ?? []);
+    for (const b of neu.bausteine) {
+      // Wie beim Projekt: Der Zeitraum der vorigen Ausgabe stimmt nicht mehr.
+      delete b.zeitraum;
+      // Nur mit dem Kostenplan kommen die Teile ohne ihre Texte mit.
+      if (!wahl.texte) {
+        delete b.beschreibung;
+        delete b.ort;
+      }
+    }
+  }
 
   if (wahl.merkliste) {
     const liste = [...(quelle.merkliste ?? [])];
