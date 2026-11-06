@@ -39,7 +39,12 @@
     abdeckung === null ? kostenGesamt : teilKostenSumme(kfp?.kosten ?? [], abdeckung, bausteine)
   );
   let teilHinweise = $derived(teilAntragHinweise(kfp, abdeckung, bausteine));
+  // Der Normalfall „ganzes Projekt" steht als eine Zeile da; die Auswahl
+  // klappt erst mit „ändern" auf. Wer einmal wählt, behält die Auswahl offen,
+  // damit sie beim Zurückschalten auf „ganzes Projekt" nicht wegspringt.
+  let umfangOffen = $state(false);
   function abdeckungSetzen(wert) {
+    umfangOffen = true;
     antrag.abdeckung = wert;
     aendern();
   }
@@ -262,7 +267,12 @@
     />
   {/if}
 
-  {#if bausteine.length}
+  {#if bausteine.length && abdeckung === null && !umfangOffen}
+    <p class="umfang-zeile">
+      Dieser Antrag deckt <strong>das ganze Projekt</strong> ab (Kosten {betragFormat(kostenAntrag)}) ·
+      <button type="button" class="link" onclick={() => (umfangOffen = true)}>nur einzelne Teile?</button>
+    </p>
+  {:else if bausteine.length}
     <h4 class="check-titel">Was deckt dieser Antrag ab?</h4>
     <div class="abdeckung" role="radiogroup" aria-label="Umfang des Antrags">
       <label class="wahl">
@@ -713,6 +723,26 @@
     flex-direction: column;
     gap: 6px;
     margin: 2px 0 4px 26px;
+  }
+  .umfang-zeile {
+    margin: 20px 0 0;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+  .umfang-zeile strong {
+    color: var(--text);
+  }
+  .umfang-zeile .link {
+    padding: 0;
+    font: inherit;
+    font-weight: 600;
+    color: var(--akzent-text);
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  .umfang-zeile .link:hover {
+    text-decoration: underline;
   }
   .abdeckung-summe {
     margin: 6px 0 0;
