@@ -60,6 +60,8 @@ const VERBOTENE_FELDNAMEN = [
   "vorgaengerid",
   // Bausteine gehören zum Kostenplan und bleiben auf dem Geraet.
   "bausteine", "bausteinid",
+  // Teil-Anträge: Abdeckung und Aufteilung der Finanzierung bleiben lokal.
+  "abdeckung", "anteile",
 ];
 
 // Tresor mit erfundenen sensiblen Daten.
@@ -87,12 +89,13 @@ const daten = {
       },
       kfp: {
         kosten: [{ name: "Personal", posten: [{ bezeichnung: "Honorar", erlaeuterung: "", betrag: S.budget, bausteinId: "bs1" }] }],
-        finanzierung: [],
+        finanzierung: [{ name: "", posten: [{ foerderId: "de-musikfonds", bezeichnung: "", betrag: S.budget, anteile: { bs1: S.budget } }] }],
       },
       kfpHinweisAusblenden: false,
       antraege: {
         "de-musikfonds": {
           status: "abgeschickt",
+          abdeckung: ["bs1"],
           statusFrei: "",
           offizielleFristen: ["2026-09-15"],
           eigeneFristen: [{ datum: "2026-09-01", titel: "Teamabgabe Entwurf" }],

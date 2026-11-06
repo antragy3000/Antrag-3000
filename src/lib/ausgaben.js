@@ -16,6 +16,7 @@
 
 import { projektNamePruefen } from "./projektname.js";
 import { ANTRAG_STATUS, ANTRAG_STANDARD, CHECK_STANDARD, statusLabel, statusFarbe } from "./status.js";
+import { abdeckungAufraeumen } from "./teilantrag.js";
 
 /// Tiefe Kopie. JSON statt structuredClone, weil die App mit $state-Proxys
 /// arbeitet, die structuredClone ablehnt. Der Tresor ist ohnehin reines JSON.
@@ -78,7 +79,11 @@ function kfpUebernehmen(kfp, wahl) {
   }
   if (!wahl.betraege) {
     for (const k of [...neu.kosten, ...neu.finanzierung]) {
-      for (const p of k.posten ?? []) p.betrag = "";
+      for (const p of k.posten ?? []) {
+        p.betrag = "";
+        // Die Aufteilung auf Bausteine besteht auch aus Beträgen.
+        delete p.anteile;
+      }
     }
   }
   return neu;
@@ -97,6 +102,8 @@ function antragUebernehmen(alt, fristen) {
     offizielleFristen: fristen,
     eigeneFristen: [],
     kontakt: kopie(alt.kontakt ?? { ansprechpartner: "", email: "", telefon: "", notiz: "" }),
+    // Welche Bausteine der Antrag abdeckt (null = ganzes Projekt).
+    abdeckung: kopie(alt.abdeckung ?? null),
     checkliste: (alt.checkliste ?? []).map((/** @type {any} */ p) => ({
       text: p.text,
       status: CHECK_STANDARD,
@@ -146,6 +153,8 @@ export function ausgabeBefuellen(neu, quelle, wahl, fristenFuer) {
       if (alt) neu.antraege[id] = antragUebernehmen(alt, ohneQuelle.has(id) ? [] : fristenFuer(id));
     }
   }
+  // Kamen die Bausteine nicht mit, gelten die Anträge wieder fürs ganze Projekt.
+  abdeckungAufraeumen(neu);
   return neu;
 }
 

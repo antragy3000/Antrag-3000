@@ -37,6 +37,7 @@
   import { formularWordBauen } from "$lib/antrag";
   import { antragsPdfBauen, absenderZeilen } from "$lib/antragsPdf";
   import { kfpExport, neuePostenId } from "$lib/kfp";
+  import { abdeckungVon, abdeckungAufraeumen } from "$lib/teilantrag";
   import { verwendungsnachweisAbschnitte } from "$lib/abrechnung";
   import { sachberichtFuerQuelle } from "$lib/sachbericht";
   import { projektNamePruefen } from "$lib/projektname";
@@ -474,6 +475,8 @@
   async function kfpSpeichern(neu, bausteine) {
     aktivesProjekt.kfp = neu;
     if (bausteine) aktivesProjekt.bausteine = bausteine;
+    // Ein entfernter Baustein verschwindet auch aus den Anträgen.
+    abdeckungAufraeumen(aktivesProjekt);
     await tresorSpeichern();
   }
 
@@ -693,7 +696,11 @@
       $state.snapshot(aktivesProjekt.formular),
       $state.snapshot(aktivesProjekt.kfp),
       $state.snapshot(foerderung),
-      $state.snapshot(antrag?.checkliste ?? [])
+      $state.snapshot(antrag?.checkliste ?? []),
+      {
+        abdeckung: abdeckungVon($state.snapshot(antrag), $state.snapshot(aktivesProjekt.bausteine ?? [])),
+        bausteine: $state.snapshot(aktivesProjekt.bausteine ?? []),
+      }
     );
     return { projekt: aktivesProjekt.name, foerderung: foerderung.name, titel, absender, abschnitte, anhaenge, logo: daten.stammdaten?.logo || null };
   }
@@ -1690,6 +1697,8 @@
         offizielleFristen: offizielleFristenAus(foerderung),
         eigeneFristen: [],
         kontakt: { ansprechpartner: "", email: "", telefon: "", notiz: "" },
+        // Welche Bausteine der Antrag abdeckt; null = das ganze Projekt.
+        abdeckung: null,
         checkliste: (foerderung.checkliste_vorschlag ?? []).map((t) => ({
           text: t,
           status: CHECK_STANDARD,

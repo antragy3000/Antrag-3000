@@ -6,7 +6,9 @@
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { ANTRAG_STATUS, CHECK_STATUS, statusFarbe } from "$lib/status";
   import { sichereWebUrl, sichereMailUrl } from "$lib/sicherheit";
-  import { betragFormat } from "$lib/kfp";
+  import { betragFormat, finanzBezeichnung, seitenSumme } from "$lib/kfp";
+  import { GEMEINSAM } from "$lib/bausteine";
+  import { abdeckungVon, teilKostenSumme, teilAntragHinweise } from "$lib/teilantrag";
 
   let {
     antrag,
@@ -22,7 +24,30 @@
     // Ist sie nicht 0, warnt der PDF-Knopf vorher (blockiert aber nichts).
     kfpDifferenz = null,
     zumKostenplan = null,
+    // Bausteine und Kostenplan des Projekts: Damit wählt der Antrag, welche
+    // Teile er abdeckt (siehe teilantrag.js). Ohne Bausteine wie bisher.
+    bausteine = [],
+    kfp = null,
   } = $props();
+
+  // --- Abdeckung: ganzes Projekt (null) oder einzelne Teile -------------
+  // Eigener Name je Antrag, damit die beiden Optionen eine Gruppe bilden.
+  const abdeckungId = $props.id();
+  let abdeckung = $derived(abdeckungVon(antrag, bausteine));
+  let kostenGesamt = $derived(seitenSumme(kfp?.kosten ?? []));
+  let kostenAntrag = $derived(
+    abdeckung === null ? kostenGesamt : teilKostenSumme(kfp?.kosten ?? [], abdeckung, bausteine)
+  );
+  let teilHinweise = $derived(teilAntragHinweise(kfp, abdeckung, bausteine));
+  function abdeckungSetzen(wert) {
+    antrag.abdeckung = wert;
+    aendern();
+  }
+  function teilUmschalten(id, an) {
+    const liste = (abdeckung ?? []).filter((x) => x !== id);
+    if (an) liste.push(id);
+    abdeckungSetzen(liste);
+  }
 
   // Die Einreich-Adresse kann aus dem (synchronisierten) Katalog stammen
   // und ist deshalb nicht vertrauenswürdig: nur eine echte http/https-URL
@@ -235,6 +260,52 @@
       bind:value={antrag.statusFrei}
       onchange={aendern}
     />
+  {/if}
+
+  {#if bausteine.length}
+    <h4 class="check-titel">Was deckt dieser Antrag ab?</h4>
+    <div class="abdeckung" role="radiogroup" aria-label="Umfang des Antrags">
+      <label class="wahl">
+        <input type="radio" name={`abdeckung-${abdeckungId}`} checked={abdeckung === null} onchange={() => abdeckungSetzen(null)} />
+        das ganze Projekt
+      </label>
+      <label class="wahl">
+        <input type="radio" name={`abdeckung-${abdeckungId}`} checked={abdeckung !== null} onchange={() => abdeckungSetzen([])} />
+        nur einzelne Teile
+      </label>
+      {#if abdeckung !== null}
+        <div class="teile">
+          {#each bausteine as b (b.id)}
+            <label>
+              <input type="checkbox" checked={abdeckung.includes(b.id)}
+                onchange={(e) => teilUmschalten(b.id, e.currentTarget.checked)} />
+              {b.name}
+            </label>
+          {/each}
+          <label>
+            <input type="checkbox" checked={abdeckung.includes(GEMEINSAM)}
+              onchange={(e) => teilUmschalten(GEMEINSAM, e.currentTarget.checked)} />
+            gemeinsame Kosten
+          </label>
+        </div>
+      {/if}
+      <p class="abdeckung-summe">
+        Kosten dieses Antrags: <strong>{betragFormat(kostenAntrag)}</strong>
+        {#if abdeckung !== null}von {betragFormat(kostenGesamt)}{/if}
+      </p>
+      {#if teilHinweise.nichtsAbgedeckt}
+        <p class="abdeckung-warn">Wähle mindestens einen Teil, sonst enthält das PDF keine Kosten.</p>
+      {:else if teilHinweise.nichtAufgeteilt.length}
+        <p class="abdeckung-warn">
+          Noch nicht auf die Teile aufgeteilt:
+          {teilHinweise.nichtAufgeteilt.map((p) => finanzBezeichnung(p) || "(ohne Namen)").join(", ")}.
+          Das PDF nennt diese Mittel darum für das ganze Projekt.
+          {#if zumKostenplan}
+            <button type="button" class="link" onclick={zumKostenplan}>Im Kostenplan aufteilen</button>
+          {/if}
+        </p>
+      {/if}
+    </div>
   {/if}
 
   <h4 class="check-titel">Kontakt zum Förderer</h4>
@@ -620,6 +691,55 @@
   }
   .eigene-frist input[type="date"] {
     flex: 0 0 auto;
+  }
+  .abdeckung {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .abdeckung label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .abdeckung input {
+    margin: 0;
+    accent-color: var(--akzent);
+  }
+  .teile {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 2px 0 4px 26px;
+  }
+  .abdeckung-summe {
+    margin: 6px 0 0;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+  .abdeckung-summe strong {
+    color: var(--text);
+  }
+  .abdeckung-warn {
+    margin: 4px 0 0;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--warnung-text2);
+    background: var(--warnung-bg);
+    border-radius: 8px;
+  }
+  .abdeckung-warn .link {
+    padding: 0;
+    font: inherit;
+    font-weight: 600;
+    color: inherit;
+    text-decoration: underline;
+    background: none;
+    border: none;
+    cursor: pointer;
   }
   .hinweis-klein {
     font-size: 0.8rem;

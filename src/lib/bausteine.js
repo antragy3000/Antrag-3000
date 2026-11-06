@@ -105,7 +105,8 @@ export function bausteinNamePruefen(eingabe, bausteine, eigeneId = null) {
 }
 
 /// Entfernt einen Baustein. Seine Posten bleiben erhalten und gelten danach
-/// als gemeinsam. Ändert `bausteine` und `kfp` direkt.
+/// als gemeinsam; sein Anteil an der Finanzierung fällt weg (siehe
+/// teilantrag.js). Ändert `bausteine` und `kfp` direkt.
 /**
  * @param {any[]} bausteine
  * @param {any} kfp
@@ -116,6 +117,9 @@ export function bausteinEntfernen(bausteine, kfp, id) {
   if (i >= 0) bausteine.splice(i, 1);
   for (const k of kfp?.kosten ?? []) {
     for (const p of k.posten ?? []) if (p.bausteinId === id) p.bausteinId = "";
+  }
+  for (const k of kfp?.finanzierung ?? []) {
+    for (const p of k.posten ?? []) if (p.anteile) delete p.anteile[id];
   }
 }
 

@@ -174,7 +174,8 @@
     {#if antrag}
       <AntragBlock {antrag} aendern={antragAendern} {hochladen} {pdfVorschau} {pdfSpeichern}
         einreichOnline={f.einreichung_online} einreichUrl={f.einreich_url}
-        {kfpDifferenz} {zumKostenplan} />
+        {kfpDifferenz} {zumKostenplan}
+        bausteine={projekt?.bausteine ?? []} kfp={projekt?.kfp ?? null} />
       {#if projekt && antragAendern}
         <Arbeitsdokumente {projekt} speichern={antragAendern} {teamModus} foerderungId={f.id} />
       {/if}

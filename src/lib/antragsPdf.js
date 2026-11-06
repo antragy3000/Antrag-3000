@@ -5,7 +5,8 @@
 // die Anhänge an.
 
 import { FORMULAR_FELDER } from "./antrag";
-import { kfpAbschnitteFuerAntrag } from "./kfp";
+import { kfpAbschnitteFuerAntrag, finanzBezeichnung } from "./kfp";
+import { teilAntragAbschnitte } from "./teilantrag";
 
 function zeilen(...teile) {
   return teile.filter((t) => t && String(t).trim() !== "");
@@ -29,7 +30,9 @@ export function absenderZeilen(stammdaten) {
   );
 }
 
-export function antragsPdfBauen(stammdaten, formular, kfp, foerderung, checkliste) {
+/// `teil` = { abdeckung, bausteine } für einen Antrag über einzelne Bausteine
+/// (siehe teilantrag.js); ohne `teil` bzw. mit abdeckung null wie bisher.
+export function antragsPdfBauen(stammdaten, formular, kfp, foerderung, checkliste, teil = null) {
   const s = stammdaten;
   const titel = `Förderantrag: ${formular.projekttitel || "(ohne Projekttitel)"} – ${foerderung.name}`;
   const abschnitte = [];
@@ -73,7 +76,10 @@ export function antragsPdfBauen(stammdaten, formular, kfp, foerderung, checklist
   // 3. Kostenfinanzplan (auf diese Förderung zugeschnitten:
   //    andere Mittel + zu beantragende Summe als Fehlbetrag = der für
   //    diesen Förderer im KFP eingeplante Betrag)
-  for (const a of kfpAbschnitteFuerAntrag(kfp, foerderung.id, foerderung.name)) {
+  const kfpTeile = Array.isArray(teil?.abdeckung)
+    ? teilAntragAbschnitte(kfp, foerderung.id, foerderung.name, teil.abdeckung, teil.bausteine, finanzBezeichnung)
+    : kfpAbschnitteFuerAntrag(kfp, foerderung.id, foerderung.name);
+  for (const a of kfpTeile) {
     abschnitte.push({
       ueberschrift: a.ueberschrift,
       absaetze: a.absaetze ?? [],

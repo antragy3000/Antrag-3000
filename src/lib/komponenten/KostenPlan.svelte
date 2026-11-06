@@ -24,6 +24,7 @@
     bausteinNamePruefen,
     bausteinEntfernen,
   } from "$lib/bausteine";
+  import { istAufgeteilt, aufteilungRest } from "$lib/teilantrag";
 
   let {
     kfp,
@@ -148,6 +149,32 @@
     kopie.finanzierung[0]?.posten.splice(pi, 1);
   }
 
+  // Aufteilung einer Geldquelle auf die Bausteine (für Teil-Anträge, siehe
+  // teilantrag.js). Offen ist sie, sobald ein Anteil eingetragen ist oder
+  // man „auf Teile aufteilen" geklickt hat.
+  let aufteilungOffen = $state([]);
+  function aufteilungZeigen(posten) {
+    return istAufgeteilt(posten, bausteineKopie) || aufteilungOffen.includes(posten);
+  }
+  function aufteilungOeffnen(posten) {
+    aufteilungOffen.push(posten);
+  }
+  function aufteilungEntfernen(posten) {
+    delete posten.anteile;
+    aufteilungOffen = aufteilungOffen.filter((p) => p !== posten);
+  }
+  function anteilSetzen(posten, id, wert) {
+    if (!posten.anteile) posten.anteile = {};
+    posten.anteile[id] = wert;
+  }
+  function restText(posten) {
+    const rest = aufteilungRest(posten, bausteineKopie);
+    if (Math.abs(rest) < 0.005) return { text: "✓ genau verteilt", ok: true };
+    return rest > 0
+      ? { text: `noch nicht verteilt: ${betragFormat(rest)}`, ok: false }
+      : { text: `${betragFormat(-rest)} zu viel verteilt`, ok: false };
+  }
+
   // Reihenfolge verschieben (Position in der Kategorie bzw. Kategorie
   // auf ihrer Seite); richtung = -1 (hoch) oder +1 (runter).
   function verschieben(liste, i, richtung) {
@@ -168,7 +195,18 @@
     const sauber = structuredClone($state.snapshot(kopie));
     for (const seite of ["kosten", "finanzierung"]) {
       for (const k of sauber[seite]) {
-        for (const p of k.posten) p.betrag = String(p.betrag ?? "").trim();
+        for (const p of k.posten) {
+          p.betrag = String(p.betrag ?? "").trim();
+          // Leere Anteile weglassen; ganz ohne Anteile ist die Quelle nicht aufgeteilt.
+          if (p.anteile) {
+            for (const [id, w] of Object.entries(p.anteile)) {
+              const t = String(w ?? "").trim();
+              if (t) p.anteile[id] = t;
+              else delete p.anteile[id];
+            }
+            if (Object.keys(p.anteile).length === 0) delete p.anteile;
+          }
+        }
       }
     }
     return sauber;
@@ -562,6 +600,36 @@
               ✕
             </button>
           </div>
+          {#if bausteineKopie.length}
+            {#if aufteilungZeigen(posten)}
+              {@const rest = restText(posten)}
+              <div class="aufteilung">
+                <p class="aufteilung-kopf">Auf die Teile aufgeteilt</p>
+                {#each bausteineKopie as baustein (baustein.id)}
+                  <label class="anteil">
+                    <span>{baustein.name.trim() || "(ohne Name)"}</span>
+                    <input class="betrag" type="text" placeholder="0,00"
+                      value={posten.anteile?.[baustein.id] ?? ""}
+                      oninput={(e) => anteilSetzen(posten, baustein.id, e.currentTarget.value)} />
+                  </label>
+                {/each}
+                <label class="anteil">
+                  <span>gemeinsame Kosten</span>
+                  <input class="betrag" type="text" placeholder="0,00"
+                    value={posten.anteile?.[GEMEINSAM] ?? ""}
+                    oninput={(e) => anteilSetzen(posten, GEMEINSAM, e.currentTarget.value)} />
+                </label>
+                <div class="aufteilung-fuss">
+                  <span class:rest-ok={rest.ok} class:rest-offen={!rest.ok}>{rest.text}</span>
+                  <button class="leise" onclick={() => aufteilungEntfernen(posten)}>Aufteilung entfernen</button>
+                </div>
+              </div>
+            {:else}
+              <button class="leise aufteilen" onclick={() => aufteilungOeffnen(posten)}>
+                Auf Teile aufteilen
+              </button>
+            {/if}
+          {/if}
         {/each}
 
         <button class="leise" onclick={foerdererHinzufuegen}>+ Förderer</button>
@@ -1043,6 +1111,56 @@
   .betrag {
     width: 150px;
     text-align: right;
+  }
+  .aufteilen {
+    display: block;
+    margin: -4px 0 10px 52px;
+    font-size: 0.82rem;
+  }
+  .aufteilung {
+    margin: -2px 40px 14px 52px;
+    padding: 10px 14px;
+    background: var(--flaeche);
+    border-radius: 10px;
+  }
+  .aufteilung-kopf {
+    margin: 0 0 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .anteil {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+    font-size: 0.88rem;
+  }
+  .anteil span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .anteil .betrag {
+    width: 130px;
+    flex-shrink: 0;
+  }
+  .aufteilung-fuss {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+    font-size: 0.84rem;
+  }
+  .rest-ok {
+    color: var(--erfolg-text);
+    font-weight: 600;
+  }
+  .rest-offen {
+    color: var(--warnung-text2);
+    font-weight: 600;
   }
   .rechen-hinweis {
     font-size: 0.78rem;
