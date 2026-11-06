@@ -41,6 +41,8 @@
   import { sachberichtFuerQuelle } from "$lib/sachbericht";
   import { projektNamePruefen } from "$lib/projektname";
   import { projekteNachGruppen, leereGruppenEntfernen, gruppeAnlegen, gruppenNamePruefen, gruppeAufloesen } from "$lib/projektgruppen";
+  import { ausgabeBefuellen } from "$lib/ausgaben";
+  import AusgabeDialog from "$lib/komponenten/AusgabeDialog.svelte";
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
   import { boardAusTresor, geteilteFoerdererAusTresor } from "$lib/sync";
   // Reine Tresor-Struktur-Helfer (Vorlagen + Migration) – ausgelagert nach
@@ -116,6 +118,11 @@
   // Beide Listen nach Projektgruppe geordnet (siehe projektgruppen.js).
   let aktiveGruppen = $derived(projekteNachGruppen(aktiveProjekte, daten?.projektgruppen));
   let archivGruppen = $derived(projekteNachGruppen(archivierteProjekte, daten?.projektgruppen));
+  // Die vorige Ausgabe des aktiven Projekts; fehlt, wenn sie gelöscht wurde.
+  let vorigeAusgabe = $derived(
+    aktivesProjekt?.vorgaengerId ? (daten.projekte.find((p) => p.id === aktivesProjekt.vorgaengerId) ?? null) : null
+  );
+  let ausgabeOffen = $state(false);
   let neuesProjektOffen = $state(false);
   let neuerProjektName = $state("");
   let neuerProjektPruefung = $derived(projektNamePruefen(neuerProjektName, daten?.projekte));
@@ -1931,6 +1938,22 @@
     }
   }
 
+  // Legt die nächste Ausgabe des aktiven Projekts an (Regeln: ausgaben.js).
+  async function ausgabeAnlegen(wahl) {
+    const quelle = aktivesProjekt;
+    const p = ausgabeBefuellen(neuesProjekt(wahl.name), quelle, wahl, (id) =>
+      offizielleFristenAus(alleFoerderungen.find((f) => f.id === id))
+    );
+    // Hat die vorige Ausgabe noch keine Gruppe, kommen beide in die neue.
+    quelle.gruppeId = quelle.gruppeId ?? gruppeAnlegen(daten, wahl.gruppenName, neueId);
+    p.gruppeId = quelle.gruppeId;
+    if (wahl.archivieren) quelle.archiviert = true;
+    daten.projekte.push(p);
+    daten.aktivesProjektId = p.id;
+    ausgabeOffen = false;
+    await tresorSpeichern();
+  }
+
   function neuesProjektOeffnen() {
     gruppeWahl = null;
     neueGruppeName = "";
@@ -2172,6 +2195,11 @@
                   <button class="projekt-neu" onclick={() => { projektMenuOffen = false; neuesProjektOeffnen(); }}>
                     + Neues Projekt
                   </button>
+                  {#if aktivesProjekt}
+                    <button class="projekt-neu ausgabe" onclick={() => { projektMenuOffen = false; ausgabeOffen = true; }}>
+                      + Nächste Ausgabe von „{aktivesProjekt.name}"
+                    </button>
+                  {/if}
 
                   {#if archivierteProjekte.length}
                     <button class="archiv-kopf" onclick={() => (archivOffen = !archivOffen)} aria-expanded={archivOffen}>
@@ -2598,6 +2626,7 @@
           {antragHolen}
           antragSpeichern={tresorSpeichern}
           projekt={aktivesProjekt}
+          {vorigeAusgabe}
           teamModus={daten.modus === "team"}
           zumKostenplan={() => (bereich = "kostenplan")}
           eigeneAnlegen={eigeneFoerderungAnlegen}
@@ -2703,6 +2732,16 @@
         {meldungEntfernen}
         perMail={!(daten.modus === "team" && daten.sync)}
         {meldungPerMail}
+      />
+    {/if}
+
+    {#if ausgabeOffen && aktivesProjekt}
+      <AusgabeDialog
+        quelle={aktivesProjekt}
+        projekte={daten.projekte}
+        gruppen={daten.projektgruppen}
+        abbrechen={() => (ausgabeOffen = false)}
+        anlegen={ausgabeAnlegen}
       />
     {/if}
 
@@ -2953,6 +2992,11 @@
   }
   .projekt-neu:hover {
     background: var(--lila-bg5);
+  }
+  .projekt-neu.ausgabe {
+    margin-top: 0;
+    border-top: none;
+    overflow-wrap: anywhere;
   }
   /* Projektgruppe: Gruppen-Kopf im Projektmenü. */
   .gruppe-kopf {

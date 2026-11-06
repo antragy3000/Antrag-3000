@@ -54,6 +54,8 @@ const VERBOTENE_FELDNAMEN = [
   "arbeitsdokumente", "ablageurl",
   // Projektgruppen bleiben auf dem Geraet.
   "projektgruppen", "gruppeid",
+  // Der Verweis auf die vorige Ausgabe bleibt ebenfalls auf dem Geraet.
+  "vorgaengerid",
 ];
 
 // Tresor mit erfundenen sensiblen Daten.
@@ -71,6 +73,7 @@ const daten = {
       id: "p1",
       name: "Klangraum Festival",
       gruppeId: "g1",
+      vorgaengerId: "p0",
       fragebogen: { budget: S.budget, sparten: ["musik"] },
       merkliste: ["de-musikfonds", "eigen-1"],
       formular: {

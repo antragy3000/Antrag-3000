@@ -6,6 +6,7 @@
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { sichereMailUrl, foerdererKontakt } from "$lib/sicherheit";
   import { fuerFoerderung } from "$lib/arbeitsdokumente";
+  import { vorigesErgebnis } from "$lib/ausgaben";
   import FoerderDetail from "./FoerderDetail.svelte";
   import EigeneFoerderung from "./EigeneFoerderung.svelte";
   import { LAENDER, SPARTEN, fristText } from "$lib/begriffe";
@@ -38,6 +39,7 @@
     neuFelderFuer = null,
     logoHerunterladen = null,
     projekt = null,
+    vorigeAusgabe = null,
     teamModus = false,
     zumKostenplan = null,
   } = $props();
@@ -330,6 +332,18 @@
             <p class="kontaktperson" class:leer-kontakt={!kontaktFuer(f).name}>
               👤 {kontaktFuer(f).name || "keine Kontaktperson"}{#if kontaktFuer(f).laut}<span class="laut">{" · laut Förderer"}</span>{/if}{#if neu(f.id, "kontakt") && kontaktFuer(f).laut}<span class="neu-feld">NEU</span>{/if}
             </p>
+
+            {#if vorigeAusgabe}
+              {@const ergebnis = vorigesErgebnis(vorigeAusgabe, f.id)}
+              <p class="vorige-zeile">
+                <span class="vorige-name" title="Ergebnis der vorigen Ausgabe">↩ {vorigeAusgabe.name}:</span>
+                {#if ergebnis.beantragt}
+                  <span class="status-badge farbe-{ergebnis.farbe}"><span class="punkt"></span>{ergebnis.label}</span>
+                {:else}
+                  <span class="vorige-keine">{ergebnis.label}</span>
+                {/if}
+              </p>
+            {/if}
 
             {#if dokAnzahl(f.id)}
               <p class="dok-zeile">📄 {dokAnzahl(f.id)} {dokAnzahl(f.id) === 1 ? "Arbeitsdokument" : "Arbeitsdokumente"}</p>
@@ -641,6 +655,22 @@
   }
   .kontaktperson.leer-kontakt {
     color: var(--grau-4);
+  }
+  .vorige-zeile {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 6px 0 0;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+  .vorige-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .vorige-keine {
+    font-style: italic;
   }
   .dok-zeile {
     margin: 4px 0 0;

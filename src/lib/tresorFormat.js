@@ -42,6 +42,8 @@ export function neuesProjekt(name) {
     erstellt: new Date().toISOString().slice(0, 10),
     // Zugehörige Projektgruppe – id aus daten.projektgruppen oder null.
     gruppeId: null,
+    // Vorige Ausgabe dieses Projekts (siehe ausgaben.js) – Projekt-id oder null.
+    vorgaengerId: null,
     // Archiviert = abgeschlossen, aus der Hauptliste ausgeblendet und
     // schreibgeschützt (nur ansehen), bis es aus dem Archiv geholt wird.
     archiviert: false,
@@ -168,7 +170,14 @@ export function normalisieren(d) {
 
   // Projekte aus aelteren Staenden bekommen eine leere Merkliste
   // und ein leeres Sammel-Formular.
+  const projektIds = new Set(d.projekte.map((p) => p.id));
   for (const p of d.projekte) {
+    // Verweis auf die vorige Ausgabe: fehlt in älteren Ständen, und ist die
+    // vorige Ausgabe gelöscht, gibt es nichts mehr anzuzeigen.
+    if (p.vorgaengerId === undefined || (p.vorgaengerId !== null && !projektIds.has(p.vorgaengerId))) {
+      p.vorgaengerId = null;
+      veraendert = true;
+    }
     // Archiv-Status aus älteren Ständen ergänzen.
     if (typeof p.archiviert !== "boolean") {
       p.archiviert = false;
