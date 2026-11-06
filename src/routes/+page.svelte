@@ -471,8 +471,9 @@
 
   // Kostenfinanzplan des aktiven Projekts ersetzen und verschlüsselt
   // sichern. Die Excel wird hier bewusst NICHT geschrieben.
-  async function kfpSpeichern(neu) {
+  async function kfpSpeichern(neu, bausteine) {
     aktivesProjekt.kfp = neu;
+    if (bausteine) aktivesProjekt.bausteine = bausteine;
     await tresorSpeichern();
   }
 
@@ -630,10 +631,10 @@
   // Excel des Kostenfinanzplans NUR auf ausdrücklichen Wunsch erzeugen.
   // Sie liegt danach unverschlüsselt im Projektordner. Gibt den Pfad
   // zurück. (Datensouveränität: bewusste, informierte Entscheidung.)
-  async function kfpExcelErzeugen(kfpDaten) {
+  async function kfpExcelErzeugen(kfpDaten, bausteine = []) {
     return await invoke("kfp_excel_schreiben", {
       projekt: aktivesProjekt.name,
-      kfp: kfpExport(kfpDaten),
+      kfp: kfpExport(kfpDaten, bausteine),
     });
   }
 
@@ -2518,6 +2519,7 @@
         {#key daten.aktivesProjektId}
           <KostenPlan
             kfp={aktivesProjekt.kfp}
+            bausteine={aktivesProjekt.bausteine ?? []}
             merkliste={aktivesProjekt.merkliste}
             foerderungen={alleFoerderungen}
             projektName={aktivesProjekt.name}

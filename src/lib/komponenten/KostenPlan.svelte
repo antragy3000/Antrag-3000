@@ -1,6 +1,7 @@
 <script>
   // Kostenfinanzplan-Editor: Kategorien mit Positionen, automatische
   // Summen, Fehlbedarfs-Anzeige. Tresor-Inhalt (Budget ist sensibel).
+  import { tick } from "svelte";
   import { fade } from "svelte/transition";
   import {
     vorlageKfp,
@@ -14,9 +15,19 @@
     postenBetrag,
     finanzBezeichnung,
   } from "$lib/kfp";
+  import {
+    ALLE,
+    GEMEINSAM,
+    bausteinVon,
+    kostenGefiltert,
+    summeGefiltert,
+    bausteinNamePruefen,
+    bausteinEntfernen,
+  } from "$lib/bausteine";
 
   let {
     kfp,
+    bausteine = [],
     speichern,
     merkliste = [],
     foerderungen = [],
@@ -44,6 +55,11 @@
   }
 
   let kopie = $state(structuredClone($state.snapshot(kfp)));
+  // Bausteine (Teile des Projekts, siehe bausteine.js) werden mit dem Plan
+  // bearbeitet und gespeichert.
+  let bausteineKopie = $state(structuredClone($state.snapshot(bausteine)));
+  // Welche Kosten zu sehen sind: ALLE, GEMEINSAM oder eine Baustein-id.
+  let filter = $state(ALLE);
   let einmalGespeichert = $state(false);
   let beschaeftigt = $state(false);
 
@@ -55,8 +71,37 @@
   let erzeugtTimer = null; // blendet die Erfolgsmeldung nach 3 s aus
 
   let veraendert = $derived(
-    JSON.stringify($state.snapshot(kopie)) !== JSON.stringify($state.snapshot(kfp))
+    JSON.stringify($state.snapshot(kopie)) !== JSON.stringify($state.snapshot(kfp)) ||
+      JSON.stringify($state.snapshot(bausteineKopie)) !== JSON.stringify($state.snapshot(bausteine))
   );
+
+  // Jeder Baustein braucht einen eigenen Namen, sonst lässt sich nicht speichern.
+  // Verglichen wird nur mit den Bausteinen davor: Bei einem doppelten Namen ist
+  // so nur der neuere markiert.
+  let bausteinFehler = $derived(
+    bausteineKopie.map((b, i) => bausteinNamePruefen(b.name, bausteineKopie.slice(0, i)))
+  );
+  let bausteineOk = $derived(bausteinFehler.every((p) => p.ok));
+  let gefiltert = $derived(kostenGefiltert(kopie.kosten, filter, bausteineKopie));
+  let filterName = $derived(
+    filter === GEMEINSAM ? "gemeinsame Kosten" : (bausteineKopie.find((b) => b.id === filter)?.name ?? "")
+  );
+
+  // Der neue Baustein bekommt gleich den Cursor, damit man lostippen kann.
+  async function bausteinHinzufuegen() {
+    const id = neuePostenId();
+    bausteineKopie.push({ id, name: "" });
+    await tick();
+    document.getElementById(`baustein-name-${id}`)?.focus();
+  }
+  function bausteinLoeschen(id) {
+    bausteinEntfernen(bausteineKopie, kopie, id);
+    if (filter === id) filter = ALLE;
+  }
+  // Zuordnung eines Postens; "" = gemeinsam.
+  function bausteinSetzen(posten, id) {
+    posten.bausteinId = id;
+  }
 
   let leer = $derived(kopie.kosten.length === 0 && kopie.finanzierung.length === 0);
   let diff = $derived(differenz(kopie));
@@ -68,11 +113,13 @@
     kopie[seite].splice(index, 1);
   }
   function postenHinzufuegen(seite, kategorie) {
-    kategorie.posten.push(
+    const posten =
       seite === "kosten"
         ? { id: neuePostenId(), bezeichnung: "", erlaeuterung: "", betrag: "" }
-        : { bezeichnung: "", betrag: "", foerderId: "" }
-    );
+        : { bezeichnung: "", betrag: "", foerderId: "" };
+    // Im Filter auf einen Baustein gehört die neue Position gleich dazu.
+    if (seite === "kosten" && filter !== ALLE && filter !== GEMEINSAM) posten.bausteinId = filter;
+    kategorie.posten.push(posten);
   }
 
   // Kurz-Hinweis "= 3.000,00 €" neben einem Betragsfeld, wenn dort
@@ -114,6 +161,9 @@
 
   // Betraege bleiben als Text erhalten (damit Rechnungen wie
   // "50 × 4 × 5 × 3" bearbeitbar bleiben); ausgerechnet wird live.
+  function saubereBausteine() {
+    return structuredClone($state.snapshot(bausteineKopie)).map((b) => ({ ...b, name: b.name.trim() }));
+  }
   function saubereKopie() {
     const sauber = structuredClone($state.snapshot(kopie));
     for (const seite of ["kosten", "finanzierung"]) {
@@ -127,7 +177,7 @@
   async function speichernKlick() {
     beschaeftigt = true;
     try {
-      await speichern(saubereKopie());
+      await speichern(saubereKopie(), saubereBausteine());
       einmalGespeichert = true;
     } finally {
       beschaeftigt = false;
@@ -161,10 +211,11 @@
     }
     try {
       const sauber = saubereKopie();
-      await speichern(sauber); // Tresor mit dem erzeugten Stand gleichziehen
+      const sauberBausteine = saubereBausteine();
+      await speichern(sauber, sauberBausteine); // Tresor mit dem erzeugten Stand gleichziehen
       einmalGespeichert = true;
       erzeugFehler = "";
-      erzeugtPfad = await excelErzeugen(sauber);
+      erzeugtPfad = await excelErzeugen(sauber, sauberBausteine);
       // Nach 5 s ausblenden, damit eine erneute Erzeugung sichtbar wird.
       erzeugtTimer = setTimeout(() => {
         erzeugtPfad = "";
@@ -195,10 +246,10 @@
       <button class="zweit" disabled={leer} onclick={() => (vorschauOffen = true)}>
         Vorschau
       </button>
-      <button class="zweit" disabled={beschaeftigt} onclick={generierenKlick}>
+      <button class="zweit" disabled={beschaeftigt || !bausteineOk} onclick={generierenKlick}>
         KFP generieren (Excel)
       </button>
-      <button class="primaer" disabled={!veraendert || beschaeftigt} onclick={speichernKlick}>
+      <button class="primaer" disabled={!veraendert || beschaeftigt || !bausteineOk} onclick={speichernKlick}>
         {beschaeftigt ? "Speichert …" : "Speichern"}
       </button>
     </div>
@@ -247,53 +298,147 @@
       {/if}
     </div>
 
+    <!-- Bausteine: optionale Teile des Projekts (z. B. einzelne Konzerte) -->
+    {#if bausteineKopie.length}
+      <section>
+        <div class="seiten-kopf">
+          <h3>Bausteine</h3>
+          <button class="leise" onclick={bausteinHinzufuegen}>+ Baustein</button>
+        </div>
+        <div class="karte">
+          <p class="baustein-hinweis">
+            Ordne jede Ausgabe einem Baustein zu. Was zu allen gehört (z. B. Plakate
+            für die ganze Reihe), bleibt <strong>gemeinsam</strong>.
+          </p>
+          {#each bausteineKopie as baustein, bi (baustein.id)}
+            <div class="baustein-zeile">
+              <input
+                type="text"
+                placeholder="Name des Bausteins (z. B. Konzert März)"
+                aria-label="Name des Bausteins"
+                id={`baustein-name-${baustein.id}`}
+                bind:value={baustein.name}
+              />
+              <span class="summe">{betragFormat(summeGefiltert(kopie.kosten, baustein.id, bausteineKopie, postenBetrag))}</span>
+              <button
+                class="entfernen"
+                title="Baustein entfernen – seine Ausgaben bleiben und werden gemeinsam"
+                aria-label={`Baustein „${baustein.name}" entfernen`}
+                onclick={() => bausteinLoeschen(baustein.id)}
+              >
+                ✕
+              </button>
+            </div>
+            {#if bausteinFehler[bi]?.fehler}
+              <p class="baustein-fehler" role="alert">{bausteinFehler[bi].fehler}</p>
+            {:else if !baustein.name.trim()}
+              <p class="baustein-fehler">Bitte gib dem Baustein einen Namen.</p>
+            {/if}
+          {/each}
+          <div class="baustein-zeile gemeinsam-zeile">
+            <span>gemeinsam</span>
+            <span class="summe">{betragFormat(summeGefiltert(kopie.kosten, GEMEINSAM, bausteineKopie, postenBetrag))}</span>
+          </div>
+        </div>
+      </section>
+    {/if}
+
     <!-- Ausgaben: Kategorien mit Positionen -->
     <section>
       <div class="seiten-kopf">
         <h3>
           Ausgaben
-          <span class="summe">{betragFormat(seitenSumme(kopie.kosten))}</span>
+          {#if filter === ALLE}
+            <span class="summe">{betragFormat(seitenSumme(kopie.kosten))}</span>
+          {:else}
+            <span class="filter-summe">
+              {filterName}
+              <span class="summe">{betragFormat(summeGefiltert(kopie.kosten, filter, bausteineKopie, postenBetrag))}</span>
+              von {betragFormat(seitenSumme(kopie.kosten))}
+            </span>
+          {/if}
         </h3>
-        <button class="leise" onclick={() => kategorieHinzufuegen("kosten")}>
-          + Kategorie
-        </button>
+        <span class="kopf-knoepfe">
+          {#if !bausteineKopie.length}
+            <button class="leise" title="Teile des Projekts, z. B. die einzelnen Konzerte einer Reihe" onclick={bausteinHinzufuegen}>
+              + Baustein
+            </button>
+          {/if}
+          {#if filter === ALLE}
+            <button class="leise" onclick={() => kategorieHinzufuegen("kosten")}>
+              + Kategorie
+            </button>
+          {/if}
+        </span>
       </div>
 
-      {#each kopie.kosten as kategorie, ki (kategorie)}
+      {#if bausteineKopie.length}
+        <div class="filter" role="group" aria-label="Ausgaben nach Baustein filtern">
+          <button class:aktiv={filter === ALLE} aria-pressed={filter === ALLE} onclick={() => (filter = ALLE)}>Alle</button>
+          {#each bausteineKopie as baustein (baustein.id)}
+            <button class:aktiv={filter === baustein.id} aria-pressed={filter === baustein.id} onclick={() => (filter = baustein.id)}>
+              {baustein.name.trim() || "(ohne Name)"}
+            </button>
+          {/each}
+          <button class:aktiv={filter === GEMEINSAM} aria-pressed={filter === GEMEINSAM} onclick={() => (filter = GEMEINSAM)}>gemeinsam</button>
+        </div>
+        {#if filter !== ALLE}
+          <p class="filter-hinweis">
+            Die Nummern bleiben wie im ganzen Plan, weil Belege daran hängen.
+            Reihenfolge und Kategorien änderst du unter <strong>Alle</strong>.
+          </p>
+        {/if}
+      {/if}
+
+      {#if filter !== ALLE && gefiltert.length === 0}
+        <p class="finanz-leer">Diesem Filter ist noch keine Ausgabe zugeordnet.</p>
+      {/if}
+
+      {#each gefiltert as eintrag (eintrag.kategorie)}
+        {@const kategorie = eintrag.kategorie}
+        {@const ki = Number(eintrag.nummer) - 1}
         <div class="karte kategorie">
           <div class="kategorie-kopf">
-            <span class="nummer">{ki + 1}</span>
-            <span class="verschieben">
-              <button class="pfeil" title="Kategorie nach oben" disabled={ki === 0}
-                onclick={() => verschieben(kopie.kosten, ki, -1)}>▲</button>
-              <button class="pfeil" title="Kategorie nach unten" disabled={ki === kopie.kosten.length - 1}
-                onclick={() => verschieben(kopie.kosten, ki, 1)}>▼</button>
-            </span>
+            <span class="nummer">{eintrag.nummer}</span>
+            {#if filter === ALLE}
+              <span class="verschieben">
+                <button class="pfeil" title="Kategorie nach oben" disabled={ki === 0}
+                  onclick={() => verschieben(kopie.kosten, ki, -1)}>▲</button>
+                <button class="pfeil" title="Kategorie nach unten" disabled={ki === kopie.kosten.length - 1}
+                  onclick={() => verschieben(kopie.kosten, ki, 1)}>▼</button>
+              </span>
+            {/if}
             <input
               class="kategorie-name"
               type="text"
               placeholder="Name der Kategorie (z. B. Personalkosten)"
               bind:value={kategorie.name}
             />
-            <span class="summe">{betragFormat(kategorieSumme(kategorie))}</span>
-            <button
-              class="entfernen"
-              title="Kategorie entfernen"
-              onclick={() => kategorieEntfernen("kosten", ki)}
-            >
-              ✕
-            </button>
+            <span class="summe">{betragFormat(filter === ALLE ? kategorieSumme(kategorie) : summeGefiltert([kategorie], filter, bausteineKopie, postenBetrag))}</span>
+            {#if filter === ALLE}
+              <button
+                class="entfernen"
+                title="Kategorie entfernen"
+                onclick={() => kategorieEntfernen("kosten", ki)}
+              >
+                ✕
+              </button>
+            {/if}
           </div>
 
-          {#each kategorie.posten as posten, pi (posten)}
+          {#each eintrag.posten as e (e.posten)}
+            {@const posten = e.posten}
+            {@const pi = e.index}
             <div class="posten">
-              <span class="nummer klein">{ki + 1}.{pi + 1}</span>
-              <span class="verschieben">
-                <button class="pfeil" title="Position nach oben" disabled={pi === 0}
-                  onclick={() => verschieben(kategorie.posten, pi, -1)}>▲</button>
-                <button class="pfeil" title="Position nach unten" disabled={pi === kategorie.posten.length - 1}
-                  onclick={() => verschieben(kategorie.posten, pi, 1)}>▼</button>
-              </span>
+              <span class="nummer klein">{e.nummer}</span>
+              {#if filter === ALLE}
+                <span class="verschieben">
+                  <button class="pfeil" title="Position nach oben" disabled={pi === 0}
+                    onclick={() => verschieben(kategorie.posten, pi, -1)}>▲</button>
+                  <button class="pfeil" title="Position nach unten" disabled={pi === kategorie.posten.length - 1}
+                    onclick={() => verschieben(kategorie.posten, pi, 1)}>▼</button>
+                </span>
+              {/if}
               <input
                 class="bezeichnung"
                 type="text"
@@ -306,6 +451,19 @@
                 placeholder="Erläuterung (z. B. 625 € pro Woche)"
                 bind:value={posten.erlaeuterung}
               />
+              {#if bausteineKopie.length}
+                <select
+                  class="baustein-wahl"
+                  aria-label="Baustein dieser Position"
+                  value={bausteinVon(posten, bausteineKopie)}
+                  onchange={(ev) => bausteinSetzen(posten, ev.currentTarget.value)}
+                >
+                  <option value="">gemeinsam</option>
+                  {#each bausteineKopie as baustein (baustein.id)}
+                    <option value={baustein.id}>{baustein.name.trim() || "(ohne Name)"}</option>
+                  {/each}
+                </select>
+              {/if}
               <div class="betrag-feld">
                 <input
                   class="betrag"
@@ -769,6 +927,94 @@
   .erlaeuterung {
     flex: 2;
   }
+  /* Breit genug für „gemeinsam" und kurze Namen; dafür wird der Betrag
+     schmaler, sobald es Bausteine gibt. */
+  .baustein-wahl {
+    flex: 0 1 136px;
+    min-width: 100px;
+    padding: 8px 6px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    color: var(--text);
+    border: 2px solid var(--rand);
+    border-radius: 8px;
+    background: var(--flaeche);
+  }
+  .kopf-knoepfe {
+    display: flex;
+    gap: 4px;
+  }
+  .filter-summe {
+    margin-left: 10px;
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+  .filter-summe .summe {
+    margin-left: 4px;
+  }
+  .filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .filter button {
+    padding: 5px 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: var(--text-2);
+    background: var(--weiss);
+    border: 2px solid var(--rand);
+    border-radius: 99px;
+    cursor: pointer;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+  .filter button:hover {
+    border-color: var(--akzent);
+  }
+  .filter button.aktiv {
+    color: var(--auf-farbe);
+    background: var(--akzent);
+    border-color: var(--akzent);
+  }
+  .filter-hinweis,
+  .baustein-hinweis {
+    margin: 0 0 12px;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+  }
+  .baustein-zeile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .baustein-zeile input {
+    flex: 1;
+  }
+  .gemeinsam-zeile {
+    margin: 4px 0 0;
+    padding: 8px 0 0;
+    border-top: 1px solid var(--flaeche-2b);
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+  .gemeinsam-zeile span:first-child {
+    flex: 1;
+    padding-left: 12px;
+  }
+  .gemeinsam-zeile .summe {
+    margin-right: 40px;
+  }
+  .baustein-fehler {
+    margin: -4px 0 8px;
+    font-size: 0.82rem;
+    color: var(--gefahr-text);
+  }
   .quelle {
     flex: 2;
     min-width: 0;
@@ -783,6 +1029,9 @@
     outline: none;
     border-color: var(--akzent);
     background: var(--weiss);
+  }
+  .posten:has(.baustein-wahl) .betrag {
+    width: 120px;
   }
   .betrag-feld {
     display: flex;

@@ -17,6 +17,7 @@
     "projektname": "node tools/projektname-test.mjs",
     "projektgruppen": "node tools/projektgruppen-test.mjs",
     "ausgaben": "node tools/ausgaben-test.mjs",
+    "bausteine": "node tools/bausteine-test.mjs",
     "pruefsummen": "node tools/pruefsummen-test.mjs",
     "tokens": "node tools/tokens-sync.mjs",
     "tokens:check": "node tools/tokens-sync.mjs --check",

@@ -18,6 +18,7 @@
 // ============================================================
 
 import { foerderungen } from "./katalog.svelte.js";
+import { bausteinName } from "./bausteine.js";
 
 /// Anzeigename einer verknuepften Foerderung oder null.
 export function foerderLabel(id) {
@@ -220,8 +221,10 @@ export function differenz(kfp) {
 }
 
 /// Maschinenlesbare Fassung fuer antworten.json: mit ausgerechneten
-/// Werten, Kategoriesummen und Gesamtsummen.
-export function kfpExport(kfp) {
+/// Werten, Kategoriesummen und Gesamtsummen. Hat das Projekt Bausteine,
+/// traegt jede Ausgabe ihren Baustein (fuer die Excel-Spalte).
+export function kfpExport(kfp, bausteine = []) {
+  const mitBausteinen = bausteine.length > 0;
   const kosten = kfp.kosten.map((k, i) => ({
     nummer: String(i + 1),
     name: k.name,
@@ -232,6 +235,7 @@ export function kfpExport(kfp) {
       erlaeuterung: p.erlaeuterung || "",
       betrag_formel: String(p.betrag ?? ""),
       betrag: postenBetrag(p),
+      baustein: mitBausteinen ? bausteinName(p, bausteine) : "",
     })),
   }));
   const finanzierung = kfp.finanzierung.map((k, i) => ({
@@ -252,6 +256,7 @@ export function kfpExport(kfp) {
     summe_kosten: seitenSumme(kfp.kosten),
     summe_finanzierung: seitenSumme(kfp.finanzierung),
     differenz: differenz(kfp),
+    mit_bausteinen: mitBausteinen,
   };
 }
 

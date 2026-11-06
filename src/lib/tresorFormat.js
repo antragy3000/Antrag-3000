@@ -12,6 +12,7 @@ import { leereAbrechnung } from "./abrechnung";
 import { fristNormalisieren, fristAlsDatum } from "./begriffe";
 import { katalog } from "./katalog.svelte.js";
 import { gruppenUmstellen } from "./projektgruppen";
+import { bausteineUmstellen } from "./bausteine";
 
 // Die editierbaren „offiziellen Fristen" im Tresor sind konkrete Datums-
 // Strings (per Datumsfeld bearbeitbar). Wiederkehrende Daten ohne Jahr aus
@@ -47,6 +48,8 @@ export function neuesProjekt(name) {
     // Archiviert = abgeschlossen, aus der Hauptliste ausgeblendet und
     // schreibgeschützt (nur ansehen), bis es aus dem Archiv geholt wird.
     archiviert: false,
+    // Teile des Projekts (siehe bausteine.js): [{id, name}]; leer = wie bisher.
+    bausteine: [],
     fragebogen: null,
     merkliste: [],
     formular: leeresFormular(),
@@ -273,6 +276,8 @@ export function normalisieren(d) {
         }
       }
     }
+    // Bausteine ergänzen, Verweise auf entfernte Bausteine werden gemeinsam.
+    if (bausteineUmstellen(p)) veraendert = true;
     if (typeof p.kfpHinweisAusblenden !== "boolean") {
       p.kfpHinweisAusblenden = false;
       veraendert = true;

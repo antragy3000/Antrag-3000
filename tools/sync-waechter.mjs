@@ -40,6 +40,8 @@ const S = {
   ablageLink: "https://cryptpad.fr/drive/#/SENSIBEL_ABLAGE_SCHLUESSEL",
   // Projektgruppen ordnen nur das eigene Menü, das Team-Board bleibt unverändert.
   gruppenName: "SENSIBEL_PROJEKTGRUPPE_Festival",
+  // Bausteine gliedern Kostenplan und Texte, bleiben also wie diese lokal.
+  bausteinName: "SENSIBEL_BAUSTEIN_Konzert_Maerz",
 };
 
 // Verbotene Feldnamen (dürfen als Schlüssel nie im Board stehen).
@@ -56,6 +58,8 @@ const VERBOTENE_FELDNAMEN = [
   "projektgruppen", "gruppeid",
   // Der Verweis auf die vorige Ausgabe bleibt ebenfalls auf dem Geraet.
   "vorgaengerid",
+  // Bausteine gehören zum Kostenplan und bleiben auf dem Geraet.
+  "bausteine", "bausteinid",
 ];
 
 // Tresor mit erfundenen sensiblen Daten.
@@ -74,6 +78,7 @@ const daten = {
       name: "Klangraum Festival",
       gruppeId: "g1",
       vorgaengerId: "p0",
+      bausteine: [{ id: "bs1", name: S.bausteinName }],
       fragebogen: { budget: S.budget, sparten: ["musik"] },
       merkliste: ["de-musikfonds", "eigen-1"],
       formular: {
@@ -81,7 +86,7 @@ const daten = {
         beschreibung: S.beschreibung, ziele: S.ziele, zeitraum: "", ort: "", beteiligte: "",
       },
       kfp: {
-        kosten: [{ name: "Personal", posten: [{ bezeichnung: "Honorar", erlaeuterung: "", betrag: S.budget }] }],
+        kosten: [{ name: "Personal", posten: [{ bezeichnung: "Honorar", erlaeuterung: "", betrag: S.budget, bausteinId: "bs1" }] }],
         finanzierung: [],
       },
       kfpHinweisAusblenden: false,

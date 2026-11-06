@@ -126,6 +126,8 @@ export function ausgabeBefuellen(neu, quelle, wahl, fristenFuer) {
   }
 
   if (wahl.kostenplan) neu.kfp = kfpUebernehmen(quelle.kfp, wahl);
+  // Bausteine gliedern Texte und Kostenplan; ohne beides braucht es sie nicht.
+  if (wahl.texte || wahl.kostenplan) neu.bausteine = kopie(quelle.bausteine ?? []);
 
   if (wahl.merkliste) {
     const liste = [...(quelle.merkliste ?? [])];
