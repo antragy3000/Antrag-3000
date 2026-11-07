@@ -622,9 +622,13 @@
   ein Menü mit all deinen Projekten:</p>
   <ul>
     <li><strong>Klick auf einen Projektnamen</strong>: zu diesem Projekt wechseln
-    (das aktive ist blau hinterlegt).</li>
+    (das aktive ist farbig hinterlegt).</li>
+    <li><strong>▸ vor einem Projekt</strong>: seine <strong>Teile</strong> auf- und
+    zuklappen (siehe unten). Ein Klick auf einen Teil nimmt ihn in den Blick.</li>
+    <li><strong>Klick auf 📚 [Gruppenname]</strong>: die <strong>Gruppen-Übersicht</strong>
+    mit allen Ausgaben dieser Projektgruppe (siehe unten).</li>
     <li><strong>✏️</strong> in der Zeile: dieses Projekt <strong>bearbeiten</strong> –
-    Name und <strong>Programmreihe</strong> (der zugehörige Ordner zieht bei einer
+    Name und <strong>Projektgruppe</strong> (der zugehörige Ordner zieht bei einer
     Umbenennung mit um).</li>
     <li><strong>📥</strong> in der Zeile: dieses Projekt <strong>archivieren</strong>
     (siehe unten).</li>
@@ -634,17 +638,99 @@
     <span class="pfad">Dokumente\Antrag 3000\[Projekt]</span> mit deinen Dateien und Belegen
     <strong>bleibt stehen</strong> – lösch ihn bei Bedarf von Hand, denk aber vorher an die
     Aufbewahrung der Belege.</li>
+    <li><strong>+ Teil</strong> (unter dem aktiven Projekt): einen neuen Teil anlegen.</li>
+    <li><strong>+ nächste Ausgabe</strong> (am Ende einer Projektgruppe): die nächste
+    Ausgabe eines wiederkehrenden Projekts anlegen.</li>
     <li><strong>+ Neues Projekt</strong>: ein weiteres Projekt anlegen.</li>
   </ul>
 
-  <h3>Programmreihen (mehrere Projekte unter einem Übertitel)</h3>
-  <p>Gehören mehrere Projekte zusammen (z.&nbsp;B. eine Veranstaltungsreihe),
-  fasst du sie zu einer <strong>Programmreihe</strong> zusammen: Im Bearbeiten-Dialog
-  (✏️) eines Projekts wählst du unter <strong>Programmreihe</strong> eine bestehende
-  Reihe oder legst über das Feld darunter eine neue an. Im Projekt-Menü sind die
-  Projekte dann unter <strong>📚 [Reihenname]</strong> gruppiert. Am Reihen-Kopf kannst
-  du die Reihe umbenennen (gilt für alle darin) oder auflösen – die Projekte
-  bleiben dann erhalten, nur ohne Reihe.</p>
+  <figure>
+    <div class="tree" style="white-space:pre;line-height:1.55"><b>📚 KLANGRAUM FESTIVAL</b>   <span style="color:#8590a2">← Klick: Gruppen-Übersicht</span>
+   Klangraum 2026
+ ▾ <b>Klangraum 2027</b>   <span style="color:#8590a2">← Ausgabe (ein Projekt)</span>
+      Konzert März  <span style="color:#8590a2">Teil</span>   <span style="color:#8590a2">← Klick: nur diesen Teil sehen</span>
+      Konzert Juni  <span style="color:#8590a2">Teil</span>
+      + Teil
+   + nächste Ausgabe
+ Workshop Herbst   <span style="color:#8590a2">← Projekt ohne Gruppe</span>
+ + Neues Projekt</div>
+    <figcaption><b>Abb. 5.2</b> – Das Projekt-Menü als Baum: Projektgruppe › Ausgabe › Teil.
+    Jede Ebene lässt sich anklicken.</figcaption>
+  </figure>
+
+  <h3>Projektgruppen und Ausgaben (wiederkehrende Projekte)</h3>
+  <p>Machst du ein Projekt immer wieder – etwa jedes Jahr ein Festival –, legst du
+  für jedes Mal eine eigene <strong>Ausgabe</strong> an: „Klangraum 2026",
+  „Klangraum 2027" … Jede Ausgabe ist ein vollständiges Projekt mit eigener
+  Merkliste, eigenem Kostenplan, eigenen Belegen und eigenem Ordner. Im Menü stehen
+  die Ausgaben gemeinsam unter einer <strong>Projektgruppe</strong>
+  (<strong>📚 Klangraum Festival</strong>).</p>
+  <div class="struktur">
+    <div class="stp"><span class="num">1</span><div><b>„+ nächste Ausgabe"</b> im Menü öffnet einen Dialog. Der Name wird vorgeschlagen (z.&nbsp;B. aus 2026 wird 2027); Vorlage ist die aktive bzw. die letzte Ausgabe der Gruppe.</div></div>
+    <div class="stp"><span class="num">2</span><div><b>Wählen, was mitkommt:</b> die Texte aus dem Sammel-Formular (ohne Zeitraum), die Kostenplan-Struktur (wahlweise mit Beträgen) und die Merkliste mit Kontakten und Checklisten – deren Status beginnen neu.</div></div>
+    <div class="stp"><span class="num">3</span><div><b>Nie übernommen</b> werden Belege, Geldquellen, Sachbericht, hochgeladene Dateien, eigene und interne Fristen sowie Links zu Arbeitsdokumenten. Die vorige Ausgabe bleibt unverändert; auf Wunsch wird sie gleich archiviert.</div></div>
+  </div>
+  <p>Hat das Projekt noch keine Gruppe, fragt der Dialog nach einem Namen für eine
+  Projektgruppe, in die dann beide Ausgaben kommen. Von Hand ordnest du ein Projekt
+  im Bearbeiten-Dialog (✏️) unter <strong>Projektgruppe</strong> ein. Am Gruppenkopf
+  im Menü kannst du die Gruppe umbenennen (✏️) oder auflösen (✕) – die Projekte
+  bleiben dann erhalten, nur ohne Gruppe.</p>
+  <div class="tipp">In der Merkliste einer neuen Ausgabe steht bei jeder Förderung, wie
+  es beim letzten Mal lief – z.&nbsp;B. <em>„↩ Klangraum 2026: Zusage erhalten"</em>.</div>
+
+  <h3>Teile eines Projekts</h3>
+  <p>Besteht ein Projekt aus mehreren <strong>Teilen</strong>, die verschiedene
+  Förderer bezahlen – zum Beispiel ein Konzert im März und eines im Juni –, legst du
+  diese Teile an. Alles bleibt <strong>in einem Projekt</strong>: Kosten, die zu allen
+  Teilen gehören (etwa Plakate für die ganze Reihe), und gemeinsame Belege lassen sich
+  so sauber verteilen.</p>
+  <ul>
+    <li><strong>Anlegen:</strong> im Menü <strong>„+ Teil"</strong> unter dem aktiven
+    Projekt – oder im Kostenplan (Kap. 16).</li>
+    <li><strong>Kosten zuordnen:</strong> Im Kostenplan gehört jede Position zu einem
+    Teil oder bleibt <strong>gemeinsam</strong> (Kap. 16).</li>
+    <li><strong>Anträge:</strong> Ein Antrag deckt das ganze Projekt oder nur einzelne
+    Teile ab (Kap. 10). Das Antrags-PDF rechnet dann nur mit diesen Teilen.</li>
+    <li><strong>Texte:</strong> Jeder Teil kann im Sammel-Formular eine eigene
+    Beschreibung, einen Zeitraum und einen Ort bekommen (Kap. 15).</li>
+  </ul>
+  <p>Ein Projekt ohne Teile funktioniert genau wie bisher – Teile sind freiwillig.</p>
+
+  <h3>Einen Teil in den Blick nehmen</h3>
+  <p>Klickst du im Menü auf einen Teil, steht auf dem Projekt-Knopf der ganze Pfad,
+  z.&nbsp;B. <strong>„Klangraum 2027 › Konzert März"</strong>, und ein Band über dem
+  Bereich sagt <em>„Blick auf den Teil …"</em>. Die Bereiche zeigen dann nur, was zu
+  diesem Teil gehört:</p>
+  <table class="kfp">
+    <tr><th>Bereich</th><th>Bei gewähltem Teil</th></tr>
+    <tr><td>Merkliste</td><td>nur Förderungen, deren Antrag diesen Teil abdeckt</td></tr>
+    <tr><td>Dateien (Sammel-Formular)</td><td>nur die Texte dieses Teils; die Projekttexte sind zugeklappt</td></tr>
+    <tr><td>Kostenplan</td><td>nur die Positionen dieses Teils</td></tr>
+    <tr><td>Belege, Kostenstellen</td><td>nur Belege und Kostenstellen dieses Teils</td></tr>
+    <tr><td>alle anderen</td><td>weiter die ganze Ausgabe – ein gestricheltes Band sagt das</td></tr>
+  </table>
+  <div class="merke">Die Auswahl ist <strong>nur ein Blickwinkel</strong>. Gespeichert wird
+  immer in der Ausgabe, und die Auswahl selbst wird nicht gespeichert. Der Knopf
+  <strong>„Ganze Ausgabe zeigen"</strong> im Band (oder ein Klick auf den Projektnamen
+  im Menü) führt zurück zur ganzen Ausgabe.</div>
+
+  <h3>Die Gruppen-Übersicht</h3>
+  <p>Ein Klick auf den <strong>Namen einer Projektgruppe</strong> im Menü zeigt alle
+  ihre Ausgaben auf einen Blick – auch die archivierten (grau):</p>
+  <ul>
+    <li><strong>Zahlen je Ausgabe:</strong> <em>Kosten</em> (Summe des Kostenplans),
+    <em>Beantragt</em> (alle Anträge auf der Merkliste, auch noch offene; bei einem
+    Teil-Antrag nur sein Anteil), <em>Bewilligt</em> (nur Anträge mit „Zusage erhalten";
+    steht der Förderer schon als Geldquelle in der Abrechnung, gilt deren Soll),
+    <em>Abgerechnet</em> (in der Zuteilung Belegen zugeordnet, nur bei Förderern) und
+    <em>Nachweis bis</em> (die nächste Frist für einen Verwendungsnachweis).</li>
+    <li><strong>Förderer im Vergleich:</strong> je Förderer Status und Betrag in jeder
+    Ausgabe – oder „nicht beantragt".</li>
+  </ul>
+  <p>Die Gruppen-Übersicht ist <strong>nur zum Ansehen</strong>: Solange eine Gruppe
+  gewählt ist, sind die Reiter einer einzelnen Ausgabe ausgegraut. Ein Klick auf den
+  Namen einer Ausgabe öffnet sie zum Bearbeiten. Die Zahlen werden nur auf deinem
+  Gerät berechnet und nicht mit dem Team geteilt.</p>
 
   <h3>Archiv (abgeschlossene Projekte)</h3>
   <p>Ein fertiges Projekt schiebst du mit <strong>📥</strong> ins <strong>Archiv</strong>.
@@ -891,6 +977,23 @@
   </ul>
   <div class="merke">Es wird immer nur der aktuelle Stand gezeigt – keine
   Verlaufshistorie.</div>
+
+  <h3>Antrag nur für einzelne Teile</h3>
+  <p>Hat dein Projekt Teile (Kap. 5), steht in der Detailansicht:
+  <em>„Dieser Antrag deckt das ganze Projekt ab · nur einzelne Teile?"</em>. Ein Klick
+  auf <strong>„nur einzelne Teile?"</strong> zeigt die Teile zum Ankreuzen, dazu
+  <strong>„gemeinsame Kosten"</strong>. Darunter steht, welche Kosten dieser Antrag
+  damit umfasst.</p>
+  <ul>
+    <li>Das <strong>Antrags-PDF</strong> (Kap. 12) enthält dann nur die Kosten dieser
+    Teile und deren Texte (Abschnitte „Projektteil: …"). Die beantragte Summe ist der
+    Anteil dieses Förderers an diesen Teilen.</li>
+    <li>Gemeinsame Kosten werden <strong>nie automatisch</strong> umgelegt. Gehören sie in
+    den Antrag, kreuzt du „gemeinsame Kosten" mit an.</li>
+    <li>Sind andere Geldquellen im Kostenplan noch nicht auf die Teile aufgeteilt,
+    erscheint ein Hinweis mit dem Link <strong>„Im Kostenplan aufteilen"</strong>. Das PDF
+    nennt diese Mittel dann für das ganze Projekt – es ist eine Warnung, keine Sperre.</li>
+  </ul>
 </section>
 
 <!-- ===== 11 ===== -->
@@ -1135,6 +1238,12 @@
   <div class="merke">Felder: Projekttitel, Kurz- und ausführliche Beschreibung,
   Ziele/Zielgruppe, Zeitraum, Durchführungsort, Beteiligte. Kosten und
   Finanzierung haben einen eigenen Bereich – den Kostenplan (Kapitel 16).</div>
+  <p>Hat das Projekt Teile (Kap. 5), steht unter dem Formular der Abschnitt
+  <strong>„Teile des Projekts"</strong>: Je Teil gibt es eine eigene
+  <strong>Beschreibung</strong>, einen <strong>Zeitraum</strong> und einen
+  <strong>Ort</strong>, alle freiwillig. Das Antrags-PDF zeigt sie als
+  „Projektteil: …" – bei einem Antrag über einzelne Teile nur diese. Leere Felder
+  erscheinen nirgends.</p>
 
   <h3>Gemeinsam schreiben &amp; Dateien teilen</h3>
   <p>Ganz oben im Reiter „Dateien" findest du zwei Werkzeuge für die Zusammenarbeit.
@@ -1381,6 +1490,25 @@
     <li><strong>Speichern</strong>: legt den Plan verschlüsselt in den Tresor.</li>
     <li><strong>KFP generieren (Excel)</strong>: erstellt auf Knopfdruck eine
     Excel-Datei im Projektordner (unverschlüsselt; mit Hinweis).</li>
+  </ul>
+
+  <h3>Teile im Kostenplan</h3>
+  <p>Mit <strong>„+ Teil"</strong> gliederst du das Projekt in Teile (Kap. 5). Dann
+  erscheint oben der Abschnitt <strong>„Teile"</strong> mit der Summe je Teil und der
+  Zeile <strong>„gemeinsam"</strong>.</p>
+  <ul>
+    <li>Jede Position bekommt rechts eine Auswahl: einen Teil oder
+    <strong>gemeinsam</strong> – für Kosten, die zu allen gehören (z.&nbsp;B. Plakate).</li>
+    <li>Die Leiste über den Ausgaben filtert nach einem Teil. Die Nummern der Positionen
+    bleiben dabei gleich, weil Belege daran hängen.</li>
+    <li><strong>✕</strong> neben einem Teil entfernt ihn; seine Positionen bleiben und
+    werden gemeinsam.</li>
+    <li>Die Excel-Datei bekommt eine zusätzliche Spalte <strong>„Teil"</strong>.</li>
+    <li><strong>Finanzierung aufteilen:</strong> Deckt ein Antrag nur einzelne Teile ab
+    (Kap. 10), erscheint bei jeder Geldquelle <strong>„Auf Teile aufteilen"</strong>.
+    Dort trägst du ein, wie viel davon auf welchen Teil und auf die gemeinsamen Kosten
+    fällt. Das ist freiwillig; ohne Aufteilung nennt das PDF die Mittel für das ganze
+    Projekt.</li>
   </ul>
 </section>
 
@@ -1668,6 +1796,11 @@
   erscheinen <strong>rot</strong>; Belege ohne Kostenstelle stehen unter
   „Nicht zugeordnet".</p>
 
+  <div class="tipp"><strong>Mit Teilen</strong> (Kap. 5): Jede Kostenstelle gehört zu
+  einem Teil oder ist gemeinsam – der Teil steht beim Beleg unter der Kostenstelle. Eine
+  neue Kostenstelle kannst du gleich einem Teil zuordnen. Der Reiter Kostenstellen zeigt
+  zusätzlich die Tabelle <strong>„Je Teil"</strong> (Plan / Ist / Rest).</div>
+
   <h3>3. Geldquellen</h3>
   <p>Im Reiter <strong>Geldquellen</strong> legst du an, von wem das Geld kommt:
   <strong>Förderer</strong> und <strong>Eigenmittel/Einnahmen</strong> (z.&nbsp;B.
@@ -1698,6 +1831,11 @@
   (Doppelförderung), wenn ein <strong>Förderer überschritten</strong> ist oder
   Belege noch <strong>ohne Zuordnung</strong> sind. Steht dort <strong>„✓ Geht
   auf"</strong>, ist alles sauber verteilt.</div>
+  <p><strong>Mit Teilen:</strong> Deckt der Antrag einer Geldquelle nur einzelne Teile
+  ab, nennt die Zuteilung diesen Umfang. Ordnest du einen Beleg aus einem anderen Teil
+  zu, erscheint am Beleg eine Warnung, und die Statusleiste zählt
+  „Zuordnung(en) außerhalb des Antrags" – gesperrt wird nichts. Der
+  Verwendungsnachweis nennt unter dem Titel ebenfalls, was der Antrag umfasst.</p>
 
   <h3>5. Sachbericht</h3>
   <p>Förderer fragen oft nach Unterschiedlichem. Darum gibt es im Reiter
@@ -2315,6 +2453,13 @@
     <dt>Verbindungsprotokoll</dt><dd>Eine Liste in der App, die jede Verbindung ins Internet seit dem
     Start zeigt: wann, wozu und was mitgeschickt wurde (Kap. 2).</dd>
 
+    <dt>Projektgruppe</dt><dd>Fasst die Ausgaben eines wiederkehrenden Projekts zusammen
+    (z.&nbsp;B. „Klangraum Festival"). Ihr Name bleibt auf deinem Gerät (Kap. 5).</dd>
+    <dt>Ausgabe</dt><dd>Ein Durchgang eines wiederkehrenden Projekts, z.&nbsp;B.
+    „Klangraum 2027". Technisch ein ganz normales Projekt (Kap. 5).</dd>
+    <dt>Teil</dt><dd>Ein Abschnitt eines Projekts, den Förderer einzeln bezahlen können,
+    z.&nbsp;B. ein einzelnes Konzert. Kosten gehören zu einem Teil oder sind gemeinsam
+    (Kap. 5, 16).</dd>
     <dt>Reiter</dt><dd>Die Bereiche oben in der App, zwischen denen du wechselst
     (z. B. „Merkliste", „Dateien", „Kostenplan") – wie Karteikarten-Reiter (Kap. 6).</dd>
 
