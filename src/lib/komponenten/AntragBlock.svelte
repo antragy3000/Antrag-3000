@@ -365,7 +365,7 @@
     {#each antrag.eigeneFristen ?? [] as f, i (i)}
       <li>
         <span class="frist-datum">
-          📅 {fristAnzeige(f.datum)}{#if f.titel} – {f.titel}{/if}
+          📅 {fristAnzeige(f.datum)}{#if f.titel}{" "}– {f.titel}{/if}
         </span>
         <button class="entfernen" title="Frist entfernen" onclick={() => fristEntfernen(i)}>✕</button>
       </li>

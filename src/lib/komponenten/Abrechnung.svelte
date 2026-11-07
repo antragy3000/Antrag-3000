@@ -216,8 +216,8 @@
     <div class="titel-block">
       <h2>Abrechnung – Belege</h2>
       <p class="untertitel">
-        Erfasse hier laufend deine Belege{#if projektName}
-          für <strong>{projektName}</strong>{/if}. Später ordnest du sie den
+        Erfasse hier laufend deine Belege{#if projektName}{" "}für
+          <strong>{projektName}</strong>{/if}. Später ordnest du sie den
         Förderern zu. Alle Angaben bleiben lokal verschlüsselt auf deinem Gerät.
       </p>
     </div>
@@ -292,8 +292,8 @@
     <div class="datei-panel" transition:fade={{ duration: 120 }}>
       <div class="dp-kopf">
         <h3>
-          📎 Dateien zu Beleg {anzeigeNr(dateienBeleg)}{#if dateienBeleg.empfaenger}
-            – {dateienBeleg.empfaenger}{/if}
+          📎 Dateien zu Beleg {anzeigeNr(dateienBeleg)}{#if dateienBeleg.empfaenger}{" "}–
+            {dateienBeleg.empfaenger}{/if}
         </h3>
         <button class="leise" onclick={() => (dateienOffenId = null)}>schließen</button>
       </div>

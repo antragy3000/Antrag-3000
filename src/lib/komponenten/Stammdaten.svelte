@@ -2,6 +2,8 @@
   // Stammdaten: wiederverwendbare sensible Angaben (Tresor-Inhalt).
   // Bearbeitet wird eine Arbeitskopie; erst "Speichern" schreibt sie
   // verschlüsselt zurück.
+  import { ungespeichertMelden } from "$lib/ungespeichert";
+
   let { stammdaten, speichern } = $props();
 
   let kopie = $state(structuredClone($state.snapshot(stammdaten)));
@@ -12,6 +14,11 @@
     JSON.stringify($state.snapshot(kopie)) !==
       JSON.stringify($state.snapshot(stammdaten))
   );
+  // Vor einem Reiter-/Projektwechsel nachfragen statt still zu verwerfen.
+  $effect(() => {
+    ungespeichertMelden("stammdaten", "in den Stammdaten", veraendert);
+    return () => ungespeichertMelden("stammdaten", "", false);
+  });
 
   const GRUPPEN = [
     {

@@ -26,6 +26,7 @@
   } from "$lib/bausteine";
   import { istAufgeteilt, aufteilungRest } from "$lib/teilantrag";
   import TeilBand from "./TeilBand.svelte";
+  import { ungespeichertMelden } from "$lib/ungespeichert";
 
   let {
     kfp,
@@ -100,6 +101,11 @@
     JSON.stringify($state.snapshot(kopie)) !== JSON.stringify($state.snapshot(kfp)) ||
       JSON.stringify($state.snapshot(bausteineKopie)) !== JSON.stringify($state.snapshot(bausteine))
   );
+  // Vor einem Reiter-/Projektwechsel nachfragen statt still zu verwerfen.
+  $effect(() => {
+    ungespeichertMelden("kostenplan", "im Kostenplan", veraendert);
+    return () => ungespeichertMelden("kostenplan", "", false);
+  });
 
   // Jeder Baustein braucht einen eigenen Namen, sonst lässt sich nicht speichern.
   // Verglichen wird nur mit den Bausteinen davor: Bei einem doppelten Namen ist

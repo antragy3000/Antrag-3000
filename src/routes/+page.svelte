@@ -48,6 +48,7 @@
   import AusgabeDialog from "$lib/komponenten/AusgabeDialog.svelte";
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
   import { boardAusTresor, geteilteFoerdererAusTresor } from "$lib/sync";
+  import { verlassenErlaubt } from "$lib/ungespeichert";
   // Reine Tresor-Struktur-Helfer (Vorlagen + Migration) – ausgelagert nach
   // $lib/tresorFormat.js, damit diese Datei kleiner bleibt.
   import { offizielleFristenAus, neueId, neuesProjekt, leereStammdaten, frischerTresor, normalisieren, STANDARD_TEAM_SYNC } from "$lib/tresorFormat.js";
@@ -83,11 +84,18 @@
   const ANTRAG_BEREICHE = ["foerderungen", "merkliste", "fristen", "formular", "kostenplan", "stammdaten"];
   const ABRECHNUNG_BEREICHE = ["belege", "kostenstellen", "geldquellen", "zuteilung", "sachbericht", "stammdaten"];
   function arbeitsModusWechseln(m) {
-    arbeitsModus = m;
     const erlaubt = m === "abrechnung" ? ABRECHNUNG_BEREICHE : ANTRAG_BEREICHE;
     if (!erlaubt.includes(bereich)) {
+      if (!verlassenErlaubt()) return;
       bereich = m === "abrechnung" ? "belege" : "foerderungen";
     }
+    arbeitsModus = m;
+  }
+  // Reiter wechseln – bei ungespeicherten Eingaben (Sammel-Formular,
+  // Kostenplan, Stammdaten) vorher nachfragen, statt sie still zu verwerfen.
+  function zu(ziel) {
+    if (ziel === bereich || !verlassenErlaubt()) return;
+    bereich = ziel;
   }
   // Von der Übersicht kommend: Diese Förderung öffnet der Bereich „Fristen"
   // gleich in der Detailansicht (einmalig, danach wieder null).
@@ -1854,6 +1862,7 @@
 
   // --- Projekt-Auswahlmenü (Wechseln + Umbenennen/Löschen je Projekt) ---
   async function projektWaehlen(id) {
+    if (id !== daten.aktivesProjektId && !verlassenErlaubt()) return;
     daten.aktivesProjektId = id;
     teilWahl = null;
     projektMenuOffen = false;
@@ -1868,6 +1877,7 @@
   // Einen Teil in den Blick nehmen: Seine Ausgabe wird die aktive.
   async function teilWaehlen(p, teil) {
     const wechsel = daten.aktivesProjektId !== p.id;
+    if (wechsel && !verlassenErlaubt()) return;
     daten.aktivesProjektId = p.id;
     teilWahl = { projektId: p.id, teilId: teil.id };
     projektMenuOffen = false;
@@ -2388,7 +2398,7 @@
         </div>
       </div>
       <nav>
-        <button class:aktiv={bereich === "uebersicht"} onclick={() => (bereich = "uebersicht")}>
+        <button class:aktiv={bereich === "uebersicht"} onclick={() => zu("uebersicht")}>
           Übersicht
         </button>
         <span class="nav-trenner" aria-hidden="true"></span>
@@ -2402,50 +2412,50 @@
         </div>
         <span class="nav-trenner" aria-hidden="true"></span>
         {#if arbeitsModus === "antrag"}
-          <button class:aktiv={bereich === "foerderungen"} onclick={() => (bereich = "foerderungen")}>
+          <button class:aktiv={bereich === "foerderungen"} onclick={() => zu("foerderungen")}>
             Förderungen
           </button>
           <span class="nav-trenner" aria-hidden="true"></span>
-          <button class:aktiv={bereich === "merkliste"} onclick={() => (bereich = "merkliste")}>
+          <button class:aktiv={bereich === "merkliste"} onclick={() => zu("merkliste")}>
             Merkliste{#if aktivesProjekt?.merkliste.length}&nbsp;({aktivesProjekt.merkliste.length}){/if}
           </button>
-          <button class:aktiv={bereich === "fristen"} onclick={() => (bereich = "fristen")}>
+          <button class:aktiv={bereich === "fristen"} onclick={() => zu("fristen")}>
             Fristen
           </button>
           <!-- Reiter „Dateien" (intern weiter "formular"): Arbeitsdokumente,
                Dateien teilen und Sammel-Formular. -->
-          <button class:aktiv={bereich === "formular"} onclick={() => (bereich = "formular")}>
+          <button class:aktiv={bereich === "formular"} onclick={() => zu("formular")}>
             Dateien
           </button>
-          <button class:aktiv={bereich === "kostenplan"} onclick={() => (bereich = "kostenplan")}>
+          <button class:aktiv={bereich === "kostenplan"} onclick={() => zu("kostenplan")}>
             Kostenplan
           </button>
         {:else}
-          <button class:aktiv={bereich === "belege"} onclick={() => (bereich = "belege")}>
+          <button class:aktiv={bereich === "belege"} onclick={() => zu("belege")}>
             Belege{#if aktivesProjekt?.abrechnung?.belege?.length}&nbsp;({aktivesProjekt.abrechnung.belege.length}){/if}
           </button>
-          <button class:aktiv={bereich === "kostenstellen"} onclick={() => (bereich = "kostenstellen")}>
+          <button class:aktiv={bereich === "kostenstellen"} onclick={() => zu("kostenstellen")}>
             Kostenstellen
           </button>
-          <button class:aktiv={bereich === "geldquellen"} onclick={() => (bereich = "geldquellen")}>
+          <button class:aktiv={bereich === "geldquellen"} onclick={() => zu("geldquellen")}>
             Geldquellen
           </button>
-          <button class:aktiv={bereich === "zuteilung"} onclick={() => (bereich = "zuteilung")}>
+          <button class:aktiv={bereich === "zuteilung"} onclick={() => zu("zuteilung")}>
             Zuteilung
           </button>
-          <button class:aktiv={bereich === "sachbericht"} onclick={() => (bereich = "sachbericht")}>
+          <button class:aktiv={bereich === "sachbericht"} onclick={() => zu("sachbericht")}>
             Sachbericht
           </button>
         {/if}
         <span class="nav-trenner" aria-hidden="true"></span>
-        <button class:aktiv={bereich === "stammdaten"} onclick={() => (bereich = "stammdaten")}>
+        <button class:aktiv={bereich === "stammdaten"} onclick={() => zu("stammdaten")}>
           Stammdaten &amp; Team
         </button>
       </nav>
       <div class="rechts">
         <button class="leise" onclick={() => (sicherungOffen = true)}>🛡 Sicherung</button>
         <button class="leise" onclick={updateSuchen} title="Nach App-Updates suchen">⬆ Update</button>
-        <button class="leise" onclick={sperren}>Sperren</button>
+        <button class="leise" onclick={() => verlassenErlaubt() && sperren()}>Sperren</button>
         <span
           class="status-punkt {verbindungsStatus.klasse}"
           title={verbindungsStatus.text}
@@ -3833,7 +3843,10 @@
     background: var(--flaeche-2b);
     color: var(--text);
   }
-  nav button.aktiv {
+  /* Auch unter der Maus: die allgemeine Regel `button:hover` würde den
+     aktiven Reiter sonst dunkel färben (Schrift kaum lesbar). */
+  nav button.aktiv,
+  nav button.aktiv:hover:not(:disabled) {
     background: var(--akzent-bg);
     color: var(--akzent-text);
     font-weight: 600;

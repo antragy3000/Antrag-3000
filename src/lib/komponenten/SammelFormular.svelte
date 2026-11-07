@@ -8,6 +8,7 @@
   import { aenderungenAnwenden } from "$lib/cryptpadBruecke";
   import CryptpadBruecke from "./CryptpadBruecke.svelte";
   import TeilBand from "./TeilBand.svelte";
+  import { ungespeichertMelden } from "$lib/ungespeichert";
 
   // `oben`: optionaler Bereich über dem Formular (Zusammenarbeit:
   // Arbeitsdokumente + geteilter Ablageort), von +page.svelte gefüllt.
@@ -60,6 +61,11 @@
       JSON.stringify($state.snapshot(formular)) ||
       JSON.stringify($state.snapshot(texte)) !== JSON.stringify(texteAus($state.snapshot(bausteine)))
   );
+  // Vor einem Reiter-/Projektwechsel nachfragen statt still zu verwerfen.
+  $effect(() => {
+    ungespeichertMelden("formular", "im Sammel-Formular", veraendert);
+    return () => ungespeichertMelden("formular", "", false);
+  });
 
   async function speichernKlick() {
     beschaeftigt = true;

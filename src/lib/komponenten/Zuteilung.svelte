@@ -111,11 +111,30 @@
     return z ? z.betrag : "";
   }
 
-  async function setzeZuordnung(b, qId, roh) {
-    const wert = String(roh ?? "").trim();
-    const zahl = betragParsen(wert);
+  // Beleg, dessen Eingabe zuletzt auf den Belegbetrag gekürzt wurde (Hinweis).
+  let begrenztId = $state(null);
+
+  // `feld`: das Eingabefeld, falls der Betrag von Hand getippt wurde – es
+  // bekommt den gekürzten Wert zurück, wenn mehr als der Beleg eingetragen war.
+  async function setzeZuordnung(b, qId, roh, feld = null) {
+    let wert = String(roh ?? "").trim();
+    let zahl = betragParsen(wert);
     if (!Array.isArray(b.zuordnungen)) b.zuordnungen = [];
     const i = b.zuordnungen.findIndex((z) => z.quelleId === qId);
+    // Einem Beleg nie mehr zuordnen, als er gekostet hat (abzüglich dessen,
+    // was schon anderen Quellen zugeordnet ist) – sonst stünde im
+    // Verwendungsnachweis ein höherer Anteil als der Beleg selbst.
+    const andere = (b.zuordnungen ?? [])
+      .filter((z) => z.quelleId !== qId)
+      .reduce((s, z) => s + betragParsen(z.betrag), 0);
+    const hoechstens = Math.max(0, Math.round((belegBrutto(b) - andere) * 100) / 100);
+    begrenztId = null;
+    if (zahl > hoechstens + 0.005) {
+      zahl = hoechstens;
+      wert = String(hoechstens).replace(".", ",");
+      if (feld) feld.value = wert;
+      begrenztId = b.id;
+    }
     if (!wert || zahl === 0) {
       if (i >= 0) b.zuordnungen.splice(i, 1);
     } else if (i >= 0) {
@@ -284,8 +303,11 @@
                   type="text"
                   inputmode="decimal"
                   value={zuordnungBetrag(b, ausgewaehltId)}
-                  onchange={(e) => setzeZuordnung(b, ausgewaehltId, e.currentTarget.value)}
+                  onchange={(e) => setzeZuordnung(b, ausgewaehltId, e.currentTarget.value, e.currentTarget)}
                 />
+                {#if begrenztId === b.id}
+                  <div class="begrenzt">auf den freien Betrag des Belegs gekürzt</div>
+                {/if}
                 {#if frei > 0.005}
                   <button class="rest-btn" title="freien Rest ({betragFormat(frei)}) hierhin" onclick={() => restHierhin(b)}>+{betragFormat(frei)}</button>
                 {/if}
@@ -450,6 +472,7 @@
   .vb-nr { color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .vb-emp { flex: 1; min-width: 0; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .vb-frei { color: var(--text-muted); white-space: nowrap; }
+  .begrenzt { font-size: 0.75rem; color: var(--orange-d); white-space: nowrap; margin-top: 2px; }
   .vb-teil { color: var(--text-muted); font-size: 0.8rem; white-space: nowrap; }
   .vb-teil.aussen { color: var(--warnung-text3); font-weight: 600; }
   .verfuegbar li.abweichung { border-color: var(--warnung-rand); }
