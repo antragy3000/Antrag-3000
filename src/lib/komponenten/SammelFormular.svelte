@@ -7,6 +7,7 @@
   import { BAUSTEIN_FELDER } from "$lib/bausteine";
   import { aenderungenAnwenden } from "$lib/cryptpadBruecke";
   import CryptpadBruecke from "./CryptpadBruecke.svelte";
+  import TeilBand from "./TeilBand.svelte";
 
   // `oben`: optionaler Bereich über dem Formular (Zusammenarbeit:
   // Arbeitsdokumente + geteilter Ablageort), von +page.svelte gefüllt.
@@ -14,7 +15,23 @@
   // CryptpadBruecke.svelte); null = Knöpfe ausblenden.
   // `bausteine`: Teile des Projekts (im Kostenplan angelegt); hier bekommen
   // sie ihre Texte. `speichern(formular, texte)` mit texte = { [id]: {...} }.
-  let { formular, speichern, wordErzeugen = null, oben = null, cryptpad = null, bausteine = [] } = $props();
+  // `teil`: im Projektmenü gewählter Teil (oder null). Dann stehen nur seine
+  // Texte offen; die Projekttexte gelten für alle Teile und sind zugeklappt.
+  // Gespeichert wird trotzdem immer alles.
+  let {
+    formular,
+    speichern,
+    wordErzeugen = null,
+    oben = null,
+    cryptpad = null,
+    bausteine = [],
+    teil = null,
+    ausgabeName = "",
+    ganzeAusgabe = null,
+  } = $props();
+  let projekttexteOffen = $state(false);
+  // Welche Teile mit ihren Texten zu sehen sind.
+  let sichtbareTeile = $derived(teil ? bausteine.filter((b) => b.id === teil.id) : bausteine);
 
   let kopie = $state(structuredClone($state.snapshot(formular)));
   // Aeltere Projekte kennen die Liste der eigenen Felder evtl. noch nicht.
@@ -85,6 +102,9 @@
 </script>
 
 <div class="bereich">
+  {#if teil}
+    <TeilBand {teil} {ausgabeName} {ganzeAusgabe} />
+  {/if}
   {#if oben}{@render oben()}{/if}
   <div class="kopfzeile">
     <div>
@@ -124,6 +144,19 @@
   </div>
 
   <div class="karte">
+    {#if teil}
+      <button
+        type="button"
+        class="projekttexte-knopf"
+        aria-expanded={projekttexteOffen}
+        onclick={() => (projekttexteOffen = !projekttexteOffen)}
+      >
+        <span class="pfeil-klein" aria-hidden="true">{projekttexteOffen ? "▾" : "▸"}</span>
+        <strong>Projekttexte der Ausgabe</strong>
+        <span class="leise">· Titel, Beschreibung, Ziele, eigene Felder … gelten für alle Teile</span>
+      </button>
+    {/if}
+    {#if !teil || projekttexteOffen}
     {#each FORMULAR_FELDER as [key, beschriftung, typ] (key)}
       <label for={"feld-" + key}>{beschriftung}</label>
       {#if typ === "textarea"}
@@ -136,19 +169,28 @@
         <input id={"feld-" + key} type="text" bind:value={kopie[key]} />
       {/if}
     {/each}
+    {/if}
 
-    {#if bausteine.length}
-      <div class="eigene-felder">
-        <div class="eigene-titel">Teile des Projekts</div>
-        <p class="eigene-hinweis">
-          Die Teile (Bausteine) legst du im Kostenplan an. Ein Antrag über das ganze
-          Projekt zeigt im PDF alle Teile mit Text, ein Antrag über einzelne Teile nur
-          diese. Leere Felder erscheinen nirgends.
-        </p>
-        {#each bausteine as baustein (baustein.id)}
+    {#if sichtbareTeile.length}
+      <div class="eigene-felder" class:teil-allein={!!teil}>
+        {#if teil}
+          <div class="eigene-titel">Texte zu „{teil.name}“</div>
+          <p class="eigene-hinweis">
+            Sie erscheinen im Antrags-PDF beim Teil „{teil.name}“. Die Texte der
+            anderen Teile siehst du in der ganzen Ausgabe. Leere Felder erscheinen nirgends.
+          </p>
+        {:else}
+          <div class="eigene-titel">Teile des Projekts</div>
+          <p class="eigene-hinweis">
+            Die Teile (Bausteine) legst du im Kostenplan an. Ein Antrag über das ganze
+            Projekt zeigt im PDF alle Teile mit Text, ein Antrag über einzelne Teile nur
+            diese. Leere Felder erscheinen nirgends.
+          </p>
+        {/if}
+        {#each sichtbareTeile as baustein (baustein.id)}
           {#if texte[baustein.id]}
             <div class="baustein-texte">
-              <div class="baustein-name">{baustein.name}</div>
+              {#if !teil}<div class="baustein-name">{baustein.name}</div>{/if}
               {#each BAUSTEIN_FELDER as [key, beschriftung, typ] (key)}
                 <label for={`baustein-${baustein.id}-${key}`}>{beschriftung}</label>
                 {#if typ === "textarea"}
@@ -163,6 +205,7 @@
       </div>
     {/if}
 
+    {#if !teil || projekttexteOffen}
     <div class="eigene-felder">
       <div class="eigene-titel">Eigene Felder</div>
       <p class="eigene-hinweis">
@@ -206,6 +249,7 @@
         + Eigenes Feld hinzufügen
       </button>
     </div>
+    {/if}
   </div>
 </div>
 
@@ -342,6 +386,43 @@
     font-size: 0.82rem;
     color: var(--text-leise);
     line-height: 1.5;
+  }
+  /* Teil-Ansicht: zugeklappte Projekttexte und der Teil direkt darunter. */
+  .projekttexte-knopf {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 2px 8px;
+    width: 100%;
+    margin: 0;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    font-weight: 400;
+    text-align: left;
+    color: var(--text);
+    background: none;
+    border: 1px solid var(--rand);
+    border-radius: var(--radius);
+  }
+  .projekttexte-knopf:hover:not(:disabled) {
+    background: var(--flaeche-2);
+  }
+  .projekttexte-knopf strong {
+    font-weight: 600;
+  }
+  .projekttexte-knopf .leise {
+    color: var(--text-muted);
+  }
+  .projekttexte-knopf[aria-expanded="true"] {
+    margin-bottom: 8px;
+  }
+  .pfeil-klein {
+    display: inline-block;
+    width: 1em;
+    color: var(--text-muted);
+  }
+  .eigene-felder.teil-allein .baustein-texte {
+    margin-top: 10px;
   }
   .baustein-texte {
     margin-top: 18px;

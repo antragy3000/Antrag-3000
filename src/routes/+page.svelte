@@ -138,6 +138,8 @@
     aktivesProjekt?.vorgaengerId ? (daten.projekte.find((p) => p.id === aktivesProjekt.vorgaengerId) ?? null) : null
   );
   let ausgabeOffen = $state(false);
+  // Vorlage für die nächste Ausgabe (aus dem Projektmenü); null = aktives Projekt.
+  let ausgabeQuelle = $state(null);
   let neuesProjektOffen = $state(false);
   let neuerProjektName = $state("");
   let neuerProjektPruefung = $derived(projektNamePruefen(neuerProjektName, daten?.projekte));
@@ -2012,8 +2014,19 @@
   }
 
   // Legt die nächste Ausgabe des aktiven Projekts an (Regeln: ausgaben.js).
+  // Nächste Ausgabe aus dem Projektmenü: Vorlage ist die angegebene Ausgabe.
+  function ausgabeOeffnen(p) {
+    ausgabeQuelle = p;
+    projektMenuOffen = false;
+    ausgabeOffen = true;
+  }
+  function ausgabeSchliessen() {
+    ausgabeOffen = false;
+    ausgabeQuelle = null;
+  }
+
   async function ausgabeAnlegen(wahl) {
-    const quelle = aktivesProjekt;
+    const quelle = ausgabeQuelle ?? aktivesProjekt;
     const p = ausgabeBefuellen(neuesProjekt(wahl.name), quelle, wahl, (id) =>
       offizielleFristenAus(alleFoerderungen.find((f) => f.id === id))
     );
@@ -2023,7 +2036,7 @@
     if (wahl.archivieren) quelle.archiviert = true;
     daten.projekte.push(p);
     daten.aktivesProjektId = p.id;
-    ausgabeOffen = false;
+    ausgabeSchliessen();
     await tresorSpeichern();
   }
 
@@ -2284,7 +2297,9 @@
                         <button class="zeile-icon" title="Archivieren" aria-label={`Projekt „${p.name}" archivieren`} onclick={() => projektArchivieren(p)}>📥</button>
                         <button class="zeile-icon" title="Löschen" aria-label={`Projekt „${p.name}" löschen`} onclick={() => loeschenOeffnenFuer(p)}>🗑</button>
                       </div>
-                      {#if offen && (teile.length || teilNeuFuer === p.id)}
+                      <!-- Jedes Plus steht dort, wo das Neue im Baum erscheint: ein Teil
+                           unter seiner Ausgabe, eine Ausgabe am Ende ihrer Gruppe. -->
+                      {#if offen && (teile.length || istAktiv || teilNeuFuer === p.id)}
                         {#each teile as t (t.id)}
                           <div class="projekt-zeile teil-zeile" class:aktiv={istAktiv && teilAktiv?.id === t.id} class:in-gruppe={!!g.gruppe}>
                             <button class="projekt-name" onclick={() => teilWaehlen(p, t)}>
@@ -2311,10 +2326,25 @@
                             {/if}
                           </form>
                         {:else}
-                          <button class="teil-plus" class:in-gruppe={!!g.gruppe} onclick={() => teilNeuOeffnen(p)}>+ Teil</button>
+                          <div class="plus-zeile" class:in-gruppe={!!g.gruppe}>
+                            <button class="teil-plus" onclick={() => teilNeuOeffnen(p)}>+ Teil</button>
+                            {#if !g.gruppe && istAktiv}
+                              <!-- Ohne Gruppe gibt es kein Gruppen-Ende für „+ nächste Ausgabe". -->
+                              <span class="plus-trenner" aria-hidden="true">·</span>
+                              <button class="teil-plus" onclick={() => ausgabeOeffnen(p)}>+ nächste Ausgabe</button>
+                            {/if}
+                          </div>
                         {/if}
                       {/if}
                     {/each}
+                    {#if g.gruppe}
+                      <button
+                        class="ausgabe-plus"
+                        class:mit-pfeil={baumMitTeilen}
+                        title="Neue Ausgabe in dieser Gruppe; Vorlage ist die aktive oder die letzte Ausgabe"
+                        onclick={() => ausgabeOeffnen(g.projekte.find((x) => x.id === daten.aktivesProjektId) ?? g.projekte.at(-1))}
+                      >+ nächste Ausgabe</button>
+                    {/if}
                   {/each}
                   {#if aktiveProjekte.length === 0}
                     <div class="menu-leer">Alle Projekte sind archiviert.</div>
@@ -2322,14 +2352,10 @@
                   <button class="projekt-neu" onclick={() => { projektMenuOffen = false; neuesProjektOeffnen(); }}>
                     + Neues Projekt
                   </button>
-                  {#if aktivesProjekt && !schreibschutz && !aktivesProjekt.bausteine?.length && teilNeuFuer !== aktivesProjekt.id}
-                    <!-- Ohne Teile gibt es keinen Pfeil und kein „+ Teil" darunter. -->
-                    <button class="projekt-neu ausgabe" onclick={() => teilNeuOeffnen(aktivesProjekt)}>
-                      + „{aktivesProjekt.name}" in Teile gliedern
-                    </button>
-                  {/if}
-                  {#if aktivesProjekt}
-                    <button class="projekt-neu ausgabe" onclick={() => { projektMenuOffen = false; ausgabeOffen = true; }}>
+                  {#if aktivesProjekt?.archiviert}
+                    <!-- Ein archiviertes Projekt steht nicht im Baum; die nächste
+                         Ausgabe lässt sich trotzdem von ihm anlegen. -->
+                    <button class="projekt-neu ausgabe" onclick={() => ausgabeOeffnen(aktivesProjekt)}>
                       + Nächste Ausgabe von „{aktivesProjekt.name}"
                     </button>
                   {/if}
@@ -2628,6 +2654,9 @@
           <SammelFormular
             formular={aktivesProjekt.formular}
             bausteine={aktivesProjekt.bausteine ?? []}
+            teil={teilAktiv}
+            ausgabeName={aktivesProjekt.name}
+            ganzeAusgabe={() => (teilWahl = null)}
             speichern={formularSpeichern}
             wordErzeugen={formularWordErzeugen}
             cryptpad={{
@@ -2654,6 +2683,8 @@
             kfp={aktivesProjekt.kfp}
             bausteine={aktivesProjekt.bausteine ?? []}
             teilAntraege={hatTeilAntraege(aktivesProjekt)}
+            teil={teilAktiv}
+            ganzeAusgabe={() => (teilWahl = null)}
             merkliste={aktivesProjekt.merkliste}
             foerderungen={alleFoerderungen}
             projektName={aktivesProjekt.name}
@@ -2875,12 +2906,12 @@
       />
     {/if}
 
-    {#if ausgabeOffen && aktivesProjekt}
+    {#if ausgabeOffen && (ausgabeQuelle ?? aktivesProjekt)}
       <AusgabeDialog
-        quelle={aktivesProjekt}
+        quelle={ausgabeQuelle ?? aktivesProjekt}
         projekte={daten.projekte}
         gruppen={daten.projektgruppen}
-        abbrechen={() => (ausgabeOffen = false)}
+        abbrechen={ausgabeSchliessen}
         anlegen={ausgabeAnlegen}
       />
     {/if}
@@ -3244,11 +3275,26 @@
     font-size: 0.72rem;
     color: var(--text-muted);
   }
-  .teil-plus {
+  .plus-zeile {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0 6px;
+    padding: 2px 10px 4px 44px;
+  }
+  .plus-zeile.in-gruppe {
+    padding-left: 56px;
+  }
+  .plus-trenner {
+    font-size: 0.82rem;
+    color: var(--text-leise);
+  }
+  .teil-plus,
+  .ausgabe-plus {
     display: block;
     width: auto;
     margin: 0;
-    padding: 4px 10px 6px 44px;
+    padding: 3px 0;
     font-size: 0.82rem;
     font-weight: 400;
     font-family: inherit;
@@ -3258,10 +3304,14 @@
     border: none;
     cursor: pointer;
   }
-  .teil-plus.in-gruppe {
-    padding-left: 56px;
+  .ausgabe-plus {
+    padding: 4px 10px 6px 20px;
   }
-  .teil-plus:hover {
+  .ausgabe-plus.mit-pfeil {
+    padding-left: 38px;
+  }
+  .teil-plus:hover,
+  .ausgabe-plus:hover {
     color: var(--akzent-text);
     background: none;
   }

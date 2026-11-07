@@ -25,6 +25,7 @@
     bausteinEntfernen,
   } from "$lib/bausteine";
   import { istAufgeteilt, aufteilungRest } from "$lib/teilantrag";
+  import TeilBand from "./TeilBand.svelte";
 
   let {
     kfp,
@@ -39,6 +40,11 @@
     excelErzeugen,
     hinweisAusblenden = false,
     hinweisMerken,
+    // Im Projektmenü gewählter Teil (oder null): Dann steht der Filter fest
+    // auf diesem Teil; Teile verwalten und Filter wechseln geht in der
+    // ganzen Ausgabe.
+    teil = null,
+    ganzeAusgabe = null,
   } = $props();
 
   // Gemerkte Förderungen dieses Projekts (als Quellen wählbar) –
@@ -75,6 +81,11 @@
   });
   // Welche Kosten zu sehen sind: ALLE, GEMEINSAM oder eine Baustein-id.
   let filter = $state(ALLE);
+  // Der gewählte Teil gibt den Filter vor; zurück in der ganzen Ausgabe
+  // sind wieder alle Kosten zu sehen.
+  $effect(() => {
+    filter = teil ? teil.id : ALLE;
+  });
   let einmalGespeichert = $state(false);
   let beschaeftigt = $state(false);
 
@@ -283,6 +294,9 @@
 </script>
 
 <div class="bereich">
+  {#if teil}
+    <TeilBand {teil} ausgabeName={projektName} {ganzeAusgabe} />
+  {/if}
   <div class="kopfzeile">
     <div class="titel-block">
       <h2>Kostenfinanzplan</h2>
@@ -338,6 +352,8 @@
     </div>
   {:else}
     <div class="bilanz" class:rot={diff < -0.005} class:gruen={Math.abs(diff) < 0.005}>
+      <!-- Die Bilanz gilt immer für die ganze Ausgabe, auch beim Blick auf einen Teil. -->
+      {teil ? "Ganze Ausgabe: " : ""}
       {#if Math.abs(diff) < 0.005}
         ✓ Der Plan ist ausgeglichen ({betragFormat(seitenSumme(kopie.kosten))} Kosten gedeckt).
       {:else if diff < 0}
@@ -352,7 +368,7 @@
     </div>
 
     <!-- Bausteine: optionale Teile des Projekts (z. B. einzelne Konzerte) -->
-    {#if bausteineKopie.length}
+    {#if bausteineKopie.length && !teil}
       <section>
         <div class="seiten-kopf">
           <h3>Bausteine</h3>
@@ -425,7 +441,7 @@
         </span>
       </div>
 
-      {#if bausteineKopie.length}
+      {#if bausteineKopie.length && !teil}
         <div class="filter" role="group" aria-label="Ausgaben nach Baustein filtern">
           <button class:aktiv={filter === ALLE} aria-pressed={filter === ALLE} onclick={() => (filter = ALLE)}>Alle</button>
           {#each bausteineKopie as baustein (baustein.id)}
@@ -443,8 +459,16 @@
         {/if}
       {/if}
 
+      {#if teil}
+        <p class="filter-hinweis">
+          Zu sehen sind nur die Ausgaben von „{teil.name}“. Die Nummern bleiben wie
+          im ganzen Plan, weil Belege daran hängen. Reihenfolge, Kategorien und Teile
+          änderst du in der ganzen Ausgabe.
+        </p>
+      {/if}
+
       {#if filter !== ALLE && gefiltert.length === 0}
-        <p class="finanz-leer">Diesem Filter ist noch keine Ausgabe zugeordnet.</p>
+        <p class="finanz-leer">{teil ? "Diesem Teil" : "Diesem Filter"} ist noch keine Ausgabe zugeordnet.</p>
       {/if}
 
       {#each gefiltert as eintrag (eintrag.kategorie)}
