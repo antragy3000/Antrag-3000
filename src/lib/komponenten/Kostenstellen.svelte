@@ -65,11 +65,11 @@
     </div>
   {:else}
     {#if teile.length && !teil}
-      <h3>Je Baustein</h3>
+      <h3>Je Teil</h3>
       <table class="ks-tab teile">
         <thead>
           <tr>
-            <th>Baustein</th>
+            <th>Teil</th>
             <th class="num">Belege</th>
             <th class="betrag">Plan</th>
             <th class="betrag">Ist</th>
@@ -234,7 +234,7 @@
     color: var(--text-muted);
   }
   .betrag {
-    /* Feste Breite: Die Tabellen „Je Baustein" und „Je Kostenstelle" stehen
+    /* Feste Breite: Die Tabellen „Je Teil" und „Je Kostenstelle" stehen
        dadurch Spalte für Spalte untereinander. */
     width: 110px;
     text-align: right;

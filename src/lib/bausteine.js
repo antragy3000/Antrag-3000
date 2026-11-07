@@ -100,7 +100,7 @@ export function bausteinNamePruefen(eingabe, bausteine, eigeneId = null) {
   const schon = (bausteine ?? []).find(
     (b) => b.id !== eigeneId && String(b.name).toLowerCase() === name.toLowerCase()
   );
-  if (schon) return { ok: false, name, fehler: `Es gibt schon einen Baustein „${schon.name}".` };
+  if (schon) return { ok: false, name, fehler: `Es gibt schon einen Teil „${schon.name}“.` };
   return { ok: true, name, fehler: "" };
 }
 

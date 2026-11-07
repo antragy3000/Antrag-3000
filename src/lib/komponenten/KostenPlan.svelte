@@ -377,28 +377,28 @@
     {#if bausteineKopie.length && !teil}
       <section>
         <div class="seiten-kopf">
-          <h3>Bausteine</h3>
-          <button class="leise" onclick={bausteinHinzufuegen}>+ Baustein</button>
+          <h3>Teile</h3>
+          <button class="leise" onclick={bausteinHinzufuegen}>+ Teil</button>
         </div>
         <div class="karte">
           <p class="baustein-hinweis">
-            Ordne jede Ausgabe einem Baustein zu. Was zu allen gehört (z. B. Plakate
+            Ordne jede Position einem Teil zu. Was zu allen gehört (z. B. Plakate
             für die ganze Reihe), bleibt <strong>gemeinsam</strong>.
           </p>
           {#each bausteineKopie as baustein, bi (baustein.id)}
             <div class="baustein-zeile">
               <input
                 type="text"
-                placeholder="Name des Bausteins (z. B. Konzert März)"
-                aria-label="Name des Bausteins"
+                placeholder="Name des Teils (z. B. Konzert März)"
+                aria-label="Name des Teils"
                 id={`baustein-name-${baustein.id}`}
                 bind:value={baustein.name}
               />
               <span class="summe">{betragFormat(summeGefiltert(kopie.kosten, baustein.id, bausteineKopie, postenBetrag))}</span>
               <button
                 class="entfernen"
-                title="Baustein entfernen – seine Ausgaben bleiben und werden gemeinsam"
-                aria-label={`Baustein „${baustein.name}" entfernen`}
+                title="Teil entfernen – seine Positionen bleiben und werden gemeinsam"
+                aria-label={`Teil „${baustein.name}“ entfernen`}
                 onclick={() => bausteinLoeschen(baustein.id)}
               >
                 ✕
@@ -407,7 +407,7 @@
             {#if bausteinFehler[bi]?.fehler}
               <p class="baustein-fehler" role="alert">{bausteinFehler[bi].fehler}</p>
             {:else if !baustein.name.trim()}
-              <p class="baustein-fehler">Bitte gib dem Baustein einen Namen.</p>
+              <p class="baustein-fehler">Bitte gib dem Teil einen Namen.</p>
             {/if}
           {/each}
           <div class="baustein-zeile gemeinsam-zeile">
@@ -436,7 +436,7 @@
         <span class="kopf-knoepfe">
           {#if !bausteineKopie.length}
             <button class="leise" title="Teile des Projekts, z. B. die einzelnen Konzerte einer Reihe" onclick={bausteinHinzufuegen}>
-              + Baustein
+              + Teil
             </button>
           {/if}
           {#if filter === ALLE}
@@ -448,7 +448,7 @@
       </div>
 
       {#if bausteineKopie.length && !teil}
-        <div class="filter" role="group" aria-label="Ausgaben nach Baustein filtern">
+        <div class="filter" role="group" aria-label="Ausgaben nach Teil filtern">
           <button class:aktiv={filter === ALLE} aria-pressed={filter === ALLE} onclick={() => (filter = ALLE)}>Alle</button>
           {#each bausteineKopie as baustein (baustein.id)}
             <button class:aktiv={filter === baustein.id} aria-pressed={filter === baustein.id} onclick={() => (filter = baustein.id)}>
@@ -537,7 +537,7 @@
               {#if bausteineKopie.length}
                 <select
                   class="baustein-wahl"
-                  aria-label="Baustein dieser Position"
+                  aria-label="Teil dieser Position"
                   value={bausteinVon(posten, bausteineKopie)}
                   onchange={(ev) => bausteinSetzen(posten, ev.currentTarget.value)}
                 >

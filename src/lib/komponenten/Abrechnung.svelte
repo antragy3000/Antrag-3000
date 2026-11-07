@@ -433,7 +433,7 @@
                 placeholder="Bezeichnung, z. B. Honorar Regie"
               />
               {#if bausteine.length}
-                <select bind:value={neuKsBaustein} aria-label="Baustein">
+                <select bind:value={neuKsBaustein} aria-label="Teil">
                   <option value="">gemeinsam</option>
                   {#each bausteine as bs (bs.id)}
                     <option value={bs.id}>{bs.name}</option>

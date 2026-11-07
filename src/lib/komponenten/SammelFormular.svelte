@@ -188,7 +188,7 @@
         {:else}
           <div class="eigene-titel">Teile des Projekts</div>
           <p class="eigene-hinweis">
-            Die Teile (Bausteine) legst du im Kostenplan an. Ein Antrag über das ganze
+            Neue Teile legst du im Kostenplan oder im Projektmenü an. Ein Antrag über das ganze
             Projekt zeigt im PDF alle Teile mit Text, ein Antrag über einzelne Teile nur
             diese. Leere Felder erscheinen nirgends.
           </p>

@@ -249,7 +249,7 @@
     font-weight: 600;
     white-space: nowrap;
   }
-  .status-badge.farbe-blau { background: var(--akzent-bg2); color: var(--akzent-text); }
+  .status-badge.farbe-blau { background: var(--akzent-bg2); color: var(--akzent-d3); }
   .status-badge.farbe-lila { background: var(--lila-bg2); color: var(--lila-d2); }
   .status-badge.farbe-gruen { background: var(--erfolg-bg); color: var(--erfolg-text); }
   .status-badge.farbe-rot { background: var(--gefahr-bg); color: var(--gefahr-text); }

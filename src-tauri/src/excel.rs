@@ -11,7 +11,7 @@
 // formatiert in die Tabelle.
 //
 // Hat das Projekt Bausteine (z. B. einzelne Konzerte einer Reihe), bekommt
-// die Ausgaben-Seite eine zusaetzliche Spalte "Baustein". Ohne Bausteine
+// die Ausgaben-Seite eine zusaetzliche Spalte "Teil". Ohne Bausteine
 // sieht die Datei aus wie bisher.
 // ============================================================
 
@@ -125,7 +125,7 @@ fn arbeitsmappe_bauen(projekt: &str, kfp: &XKfp) -> Workbook {
             let _ = blatt.write_string_with_format(row, 2, spalte2, &kopf_fmt);
             let _ = blatt.write_string_with_format(row, 3, "Betrag", &kopf_fmt);
             if mit_baustein {
-                let _ = blatt.write_string_with_format(row, 4, "Baustein", &kopf_fmt);
+                let _ = blatt.write_string_with_format(row, 4, "Teil", &kopf_fmt);
             }
             row += 1;
             for kat in kategorien {

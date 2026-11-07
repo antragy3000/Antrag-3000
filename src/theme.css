@@ -269,7 +269,7 @@
     --akzent-text: #2dcfbe;
     --akzent-d: #0e9a8b;
     --akzent-d2: #0b8175;
-    --akzent-d3: #0a6b60;
+    --akzent-d3: #45ddcd; /* nur Schrift auf --akzent-bg/-bg2 (Status-Etiketten) */
     --akzent-d4: #0e9a8b;
     --link: #2dcfbe;
     --link-2: #45ddcd;
