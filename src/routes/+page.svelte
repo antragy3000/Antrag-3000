@@ -76,6 +76,10 @@
 
   // Die entschlüsselten Daten – leben nur im Arbeitsspeicher.
   let daten = $state(null);
+  // ID der geöffneten Organisation (eigene Tresor-Datei, Variante B+). Jedes
+  // Speichern nennt sie, damit Rust in den richtigen Tresor schreibt.
+  /** @type {string | null} */
+  let orgId = $state(null);
 
   // Welcher Bereich ist nach dem Entsperren aktiv?
   let bereich = $state("uebersicht"); // uebersicht | foerderungen | merkliste | fristen | formular | kostenplan | belege | stammdaten
@@ -284,8 +288,8 @@
     merkenWunsch = merkenAktiv;
     if (merkenAktiv) {
       try {
-        const json = await invoke("merken_entsperren");
-        await nachEntsperren(json);
+        const offen = await invoke("merken_entsperren");
+        await nachEntsperren(offen);
         return;
       } catch {
         // Gemerkter Zugang ungültig/entfernt → normales Entsperren.
@@ -297,9 +301,13 @@
   });
 
   // Gemeinsamer Abschluss nach erfolgreichem Entsperren (egal ob per
-  // Passwort oder per gemerktem Zugang).
-  async function nachEntsperren(json) {
-    daten = JSON.parse(json);
+  // Passwort oder per gemerktem Zugang). Rust liefert je geöffneter
+  // Organisation {id, daten}; bis zum Umschalter (Etappe O2) gibt es genau eine.
+  /** @param {{ id: string, daten: string }[]} offen */
+  async function nachEntsperren(offen) {
+    const erste = offen[0];
+    orgId = erste.id;
+    daten = JSON.parse(erste.daten);
     // Ältere Datenstände (z. B. aus Schritt 3) sanft überführen.
     if (normalisieren(daten)) await tresorSpeichern();
     passwort = "";
@@ -358,8 +366,8 @@
     fehler = "";
     beschaeftigt = true;
     try {
-      const json = await invoke("merken_entsperren");
-      await nachEntsperren(json);
+      const offen = await invoke("merken_entsperren");
+      await nachEntsperren(offen);
     } catch {
       merkenAktiv = false;
       fehler = "Automatisches Entsperren nicht möglich – bitte Passwort eingeben.";
@@ -391,7 +399,7 @@
     beschaeftigt = true;
     try {
       const frisch = frischerTresor();
-      await invoke("tresor_erstellen", {
+      orgId = await invoke("tresor_erstellen", {
         passwort,
         daten: JSON.stringify(frisch),
       });
@@ -414,7 +422,7 @@
     fehler = "";
     beschaeftigt = true;
     try {
-      const json = await invoke("tresor_entsperren", { passwort });
+      const offen = await invoke("tresor_entsperren", { passwort });
       // Merken-Wunsch umsetzen (Tresor ist jetzt offen → Schlüssel vorhanden).
       try {
         if (merkenWunsch) {
@@ -425,7 +433,7 @@
           merkenAktiv = false;
         }
       } catch { /* Merken ist Komfort, kein harter Fehler */ }
-      await nachEntsperren(json);
+      await nachEntsperren(offen);
     } catch (e) {
       fehler =
         String(e) === "falsches_passwort" ? "Falsches Passwort." : String(e);
@@ -469,6 +477,7 @@
     // Antrags-PDF-Vorschau) aus dem Temp-Ordner entfernen.
     invoke("temp_aufraeumen").catch(() => {});
     daten = null;
+    orgId = null;
     fehler = "";
     bereich = "uebersicht";
     arbeitsModus = "antrag";
@@ -491,6 +500,7 @@
   // Speichert den gesamten Datenstand verschlüsselt in den Tresor.
   async function tresorSpeichern() {
     await invoke("tresor_speichern", {
+      org: orgId,
       daten: JSON.stringify($state.snapshot(daten)),
     });
   }
@@ -2877,7 +2887,7 @@
     </main>
 
     {#if sicherungOffen}
-      <Sicherung schliessen={() => (sicherungOffen = false)} {nachWiederherstellung} vorSichern={tresorSpeichern} />
+      <Sicherung org={orgId} schliessen={() => (sicherungOffen = false)} {nachWiederherstellung} vorSichern={tresorSpeichern} />
     {/if}
 
     {#if updateOffen}
@@ -2941,6 +2951,7 @@
 
     {#if passwortOffen}
       <PasswortAendern
+        org={orgId}
         aktuelleDaten={() => JSON.stringify($state.snapshot(daten))}
         schliessen={() => (passwortOffen = false)}
       />

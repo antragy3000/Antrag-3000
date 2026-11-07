@@ -12,11 +12,15 @@
   import { invoke } from "@tauri-apps/api/core";
   import { save, open } from "@tauri-apps/plugin-dialog";
 
+  // org: ID der offenen Organisation (eigene Tresor-Datei, Variante B+).
+  // Ohne org (erster Start) wird eine Sicherung als neue Organisation
+  // eingespielt, sonst ersetzt sie diese Organisation.
   let {
     schliessen,
     nachWiederherstellung,
     nurWiederherstellen = false,
     vorSichern = null,
+    org = null,
   } = $props();
 
   let meldung = $state("");
@@ -38,7 +42,7 @@
   onMount(async () => {
     if (nurWiederherstellen) return;
     try {
-      ueberMerken = !!(await invoke("tresor_ueber_merken"));
+      ueberMerken = !!(await invoke("tresor_ueber_merken", { org }));
     } catch {
       ueberMerken = false;
     }
@@ -72,11 +76,11 @@
       // Den neuesten Stand zuerst in den Tresor schreiben.
       if (vorSichern) await vorSichern();
       if (mitDateien) {
-        const b = await invoke("sicherung_erstellen", { ziel });
+        const b = await invoke("sicherung_erstellen", { org, ziel });
         meldung = `Sicherung gespeichert und geprüft: dein Tresor und ${dateienText(b.dateien)} (${groesseText(b.bytes)}).\n${ziel}`;
         probleme = b.probleme;
       } else {
-        await invoke("tresor_backup_erstellen", { ziel });
+        await invoke("tresor_backup_erstellen", { org, ziel });
         meldung = "Sicherung gespeichert:\n" + ziel;
       }
     } catch (e) {
@@ -128,10 +132,10 @@
     try {
       let hinweis = "Sicherung eingespielt.";
       if (art === "komplett") {
-        const b = await invoke("sicherung_einspielen", { quelle: gewaehlteDatei, passwort });
+        const b = await invoke("sicherung_einspielen", { org, quelle: gewaehlteDatei, passwort });
         hinweis = berichtText(b);
       } else {
-        await invoke("tresor_backup_einspielen", { quelle: gewaehlteDatei });
+        await invoke("tresor_backup_einspielen", { org, quelle: gewaehlteDatei });
       }
       passwort = "";
       bestaetigen = false;

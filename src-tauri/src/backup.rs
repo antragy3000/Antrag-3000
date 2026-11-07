@@ -639,10 +639,20 @@ fn art_erkennen(quelle: &Path) -> Result<&'static str, String> {
 // Tauri-Befehle
 // ============================================================
 
-/// Kopiert den Tresor an den gewaehlten Zielpfad ("nur Tresor").
+/// Wohin eine Sicherung eingespielt wird: in eine vorhandene Organisation
+/// (`org` = ihre ID, sie wird ersetzt) oder – ohne `org` – als NEUE
+/// Organisation (erster Start auf einem neuen Computer).
+fn einspiel_ziel(app: &tauri::AppHandle, org: Option<String>) -> Result<PathBuf, String> {
+    match org {
+        Some(id) => tresor::tresor_pfad(app, &id),
+        None => tresor::neuer_tresor_pfad(app).map(|(_, pfad)| pfad),
+    }
+}
+
+/// Kopiert den Tresor einer Organisation an den gewaehlten Zielpfad ("nur Tresor").
 #[tauri::command]
-pub fn tresor_backup_erstellen(app: tauri::AppHandle, ziel: String) -> Result<(), String> {
-    let quelle = tresor::tresor_pfad(&app)?;
+pub fn tresor_backup_erstellen(app: tauri::AppHandle, org: String, ziel: String) -> Result<(), String> {
+    let quelle = tresor::tresor_pfad(&app, &org)?;
     if !quelle.exists() {
         return Err("Es gibt noch keinen Tresor zum Sichern.".into());
     }
@@ -656,6 +666,7 @@ pub fn tresor_backup_erstellen(app: tauri::AppHandle, ziel: String) -> Result<()
 pub fn tresor_backup_einspielen(
     app: tauri::AppHandle,
     state: tauri::State<tresor::TresorZustand>,
+    org: Option<String>,
     quelle: String,
 ) -> Result<(), String> {
     let daten = fs::read(&quelle).map_err(|e| format!("Sicherungsdatei nicht lesbar: {e}"))?;
@@ -664,7 +675,7 @@ pub fn tresor_backup_einspielen(
         return Err(KEINE_SICHERUNG.into());
     }
 
-    let ziel = tresor::tresor_pfad(&app)?;
+    let ziel = einspiel_ziel(&app, org)?;
     let neu = ziel.with_extension("enc.neu");
     let _aufraeumen = Aufraeumen(neu.clone());
     fs::write(&neu, &daten).map_err(|e| format!("Wiederherstellen fehlgeschlagen: {e}"))?;
@@ -675,7 +686,7 @@ pub fn tresor_backup_einspielen(
     // neu entsperrt.
     let mut geheim = state.geheim.lock().unwrap();
     tresor_austauschen(&neu, &ziel)?;
-    *geheim = None;
+    geheim.clear();
     Ok(())
 }
 
@@ -689,8 +700,8 @@ pub fn sicherung_art(quelle: String) -> Result<String, String> {
 /// Sicherung mit Dateien erstellen (Tresor muss offen sein). Kann bei vielen
 /// Dateien dauern, darum ausserhalb des Hauptfadens – sonst friert die App ein.
 #[tauri::command]
-pub async fn sicherung_erstellen(app: tauri::AppHandle, ziel: String) -> Result<Bericht, String> {
-    let (schluessel, salt, tresor_inhalt) = tresor::offener_stand(&app)?;
+pub async fn sicherung_erstellen(app: tauri::AppHandle, org: String, ziel: String) -> Result<Bericht, String> {
+    let (schluessel, salt, tresor_inhalt) = tresor::offener_stand(&app, &org)?;
     let wurzel = ordner::wurzel(&app)?;
     tauri::async_runtime::spawn_blocking(move || {
         komplett_schreiben(Path::new(&ziel), &tresor_inhalt, &wurzel, &schluessel, &salt)
@@ -704,11 +715,12 @@ pub async fn sicherung_erstellen(app: tauri::AppHandle, ziel: String) -> Result<
 #[tauri::command]
 pub async fn sicherung_einspielen(
     app: tauri::AppHandle,
+    org: Option<String>,
     quelle: String,
     passwort: String,
 ) -> Result<Bericht, String> {
     let passwort = Zeroizing::new(passwort);
-    let tresor_ziel = tresor::tresor_pfad(&app)?;
+    let tresor_ziel = einspiel_ziel(&app, org)?;
     let wurzel = ordner::wurzel(&app)?;
     tauri::async_runtime::spawn_blocking(move || {
         let neu = tresor_ziel.with_extension("enc.neu");
@@ -719,7 +731,7 @@ pub async fn sicherung_einspielen(
         let zustand = app.state::<tresor::TresorZustand>();
         let mut geheim = zustand.geheim.lock().unwrap();
         tresor_austauschen(&neu, &tresor_ziel)?;
-        *geheim = None;
+        geheim.clear();
         Ok(bericht)
     })
     .await

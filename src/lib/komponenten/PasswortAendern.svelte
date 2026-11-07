@@ -12,7 +12,8 @@
   import { invoke } from "@tauri-apps/api/core";
 
   // aktuelleDaten(): JSON-Text des aktuellen Tresor-Inhalts (wie beim Speichern).
-  let { aktuelleDaten, schliessen } = $props();
+  // org: ID der offenen Organisation (eigene Tresor-Datei, Variante B+).
+  let { org, aktuelleDaten, schliessen } = $props();
 
   let alt = $state("");
   let neu = $state("");
@@ -27,7 +28,7 @@
 
   onMount(async () => {
     try {
-      vergessenMoeglich = !!(await invoke("tresor_ueber_merken"));
+      vergessenMoeglich = !!(await invoke("tresor_ueber_merken", { org }));
     } catch {
       vergessenMoeglich = false;
     }
@@ -42,8 +43,9 @@
     beschaeftigt = true;
     try {
       const merkenOk = vergessen
-        ? await invoke("tresor_passwort_neu_setzen", { neuesPasswort: neu, daten: aktuelleDaten() })
+        ? await invoke("tresor_passwort_neu_setzen", { org, neuesPasswort: neu, daten: aktuelleDaten() })
         : await invoke("tresor_passwort_aendern", {
+            org,
             altesPasswort: alt,
             neuesPasswort: neu,
             daten: aktuelleDaten(),
