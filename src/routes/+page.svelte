@@ -38,6 +38,7 @@
   import { antragsPdfBauen, absenderZeilen } from "$lib/antragsPdf";
   import { kfpExport, neuePostenId } from "$lib/kfp";
   import { abdeckungVon, abdeckungAufraeumen, hatTeilAntraege } from "$lib/teilantrag";
+  import { teilImBlick, teilAnlegen } from "$lib/teilwahl";
   import { bausteinTexteUebernehmen } from "$lib/bausteine";
   import { verwendungsnachweisAbschnitte } from "$lib/abrechnung";
   import { sachberichtFuerQuelle } from "$lib/sachbericht";
@@ -120,6 +121,18 @@
   // Beide Listen nach Projektgruppe geordnet (siehe projektgruppen.js).
   let aktiveGruppen = $derived(projekteNachGruppen(aktiveProjekte, daten?.projektgruppen));
   let archivGruppen = $derived(projekteNachGruppen(archivierteProjekte, daten?.projektgruppen));
+  // Gewählter Teil der aktiven Ausgabe (null = ganze Ausgabe). Nur ein
+  // Blickwinkel auf dem Bildschirm, kommt nie in den Tresor (teilwahl.js).
+  let teilWahl = $state(null);
+  let teilAktiv = $derived(teilImBlick(teilWahl, aktivesProjekt));
+  // Aufgeklappte Ausgaben im Projektmenü; ohne Eintrag ist nur die aktive offen.
+  let aufgeklappt = $state({});
+  // Hat irgendeine Ausgabe Teile? Dann bekommen alle Zeilen Platz für den Pfeil.
+  let baumMitTeilen = $derived(aktiveProjekte.some((p) => p.bausteine?.length));
+  // Neuer Teil direkt im Menü: Projekt-id der offenen Eingabe oder null.
+  let teilNeuFuer = $state(null);
+  let teilNeuName = $state("");
+  let teilNeuFehler = $state("");
   // Die vorige Ausgabe des aktiven Projekts; fehlt, wenn sie gelöscht wurde.
   let vorigeAusgabe = $derived(
     aktivesProjekt?.vorgaengerId ? (daten.projekte.find((p) => p.id === aktivesProjekt.vorgaengerId) ?? null) : null
@@ -1840,6 +1853,49 @@
   // --- Projekt-Auswahlmenü (Wechseln + Umbenennen/Löschen je Projekt) ---
   async function projektWaehlen(id) {
     daten.aktivesProjektId = id;
+    teilWahl = null;
+    projektMenuOffen = false;
+    await tresorSpeichern();
+  }
+  function istAufgeklappt(p) {
+    return aufgeklappt[p.id] ?? p.id === daten.aktivesProjektId;
+  }
+  function aufklappen(p) {
+    aufgeklappt[p.id] = !istAufgeklappt(p);
+  }
+  // Einen Teil in den Blick nehmen: Seine Ausgabe wird die aktive.
+  async function teilWaehlen(p, teil) {
+    const wechsel = daten.aktivesProjektId !== p.id;
+    daten.aktivesProjektId = p.id;
+    teilWahl = { projektId: p.id, teilId: teil.id };
+    projektMenuOffen = false;
+    if (wechsel) await tresorSpeichern();
+  }
+  async function teilNeuOeffnen(p) {
+    teilNeuFuer = p.id;
+    teilNeuName = "";
+    teilNeuFehler = "";
+    aufgeklappt[p.id] = true;
+    await tick();
+    document.getElementById("teil-neu")?.focus();
+  }
+  function teilNeuAbbrechen() {
+    teilNeuFuer = null;
+    teilNeuName = "";
+    teilNeuFehler = "";
+  }
+  // Neuer Teil aus dem Menü: anlegen, gleich in den Blick nehmen, sichern.
+  async function teilNeuAnlegen(event, p) {
+    event.preventDefault();
+    const ergebnis = teilAnlegen(p, teilNeuName);
+    if (!ergebnis.ok) {
+      if (ergebnis.fehler) teilNeuFehler = ergebnis.fehler;
+      else teilNeuAbbrechen();
+      return;
+    }
+    teilNeuAbbrechen();
+    daten.aktivesProjektId = p.id;
+    teilWahl = { projektId: p.id, teilId: ergebnis.teil.id };
     projektMenuOffen = false;
     await tresorSpeichern();
   }
@@ -2178,12 +2234,17 @@
             <div class="projekt-menu">
               <button
                 class="projekt-knopf"
-                onclick={() => (projektMenuOffen = !projektMenuOffen)}
+                onclick={() => {
+                  projektMenuOffen = !projektMenuOffen;
+                  teilNeuAbbrechen();
+                }}
                 aria-haspopup="true"
                 aria-expanded={projektMenuOffen}
-                title="Projekt wechseln, umbenennen oder löschen"
+                title={teilAktiv
+                  ? `${aktivesProjekt.name} › ${teilAktiv.name} – Projekt oder Teil wechseln`
+                  : "Projekt wechseln, umbenennen oder löschen"}
               >
-                {#if schreibschutz}🔒 {/if}{aktivesProjekt?.name ?? "Projekt wählen"}<span class="pfeil">▾</span>
+                {#if schreibschutz}🔒 {/if}<span class="knopf-text">{aktivesProjekt?.name ?? "Projekt wählen"}{#if teilAktiv}<span class="pfad-trenner">›</span>{teilAktiv.name}{/if}</span><span class="pfeil">▾</span>
               </button>
               {#if projektMenuOffen}
                 <div class="menu-backdrop" onclick={() => (projektMenuOffen = false)} role="presentation"></div>
@@ -2197,7 +2258,25 @@
                       </div>
                     {/if}
                     {#each g.projekte as p (p.id)}
-                      <div class="projekt-zeile" class:aktiv={p.id === daten.aktivesProjektId} class:in-gruppe={!!g.gruppe}>
+                      {@const teile = p.bausteine ?? []}
+                      {@const offen = istAufgeklappt(p)}
+                      {@const istAktiv = p.id === daten.aktivesProjektId}
+                      <div
+                        class="projekt-zeile"
+                        class:aktiv={istAktiv && !teilAktiv}
+                        class:im-pfad={istAktiv && !!teilAktiv}
+                        class:in-gruppe={!!g.gruppe}
+                      >
+                        {#if teile.length}
+                          <button
+                            class="aufklapper"
+                            aria-expanded={offen}
+                            aria-label={`Teile von „${p.name}" ${offen ? "zuklappen" : "aufklappen"}`}
+                            onclick={() => aufklappen(p)}
+                          >{offen ? "▾" : "▸"}</button>
+                        {:else if baumMitTeilen}
+                          <span class="aufklapper-platz" aria-hidden="true"></span>
+                        {/if}
                         <button class="projekt-name" onclick={() => projektWaehlen(p.id)}>
                           {p.name}
                         </button>
@@ -2205,6 +2284,36 @@
                         <button class="zeile-icon" title="Archivieren" aria-label={`Projekt „${p.name}" archivieren`} onclick={() => projektArchivieren(p)}>📥</button>
                         <button class="zeile-icon" title="Löschen" aria-label={`Projekt „${p.name}" löschen`} onclick={() => loeschenOeffnenFuer(p)}>🗑</button>
                       </div>
+                      {#if offen && (teile.length || teilNeuFuer === p.id)}
+                        {#each teile as t (t.id)}
+                          <div class="projekt-zeile teil-zeile" class:aktiv={istAktiv && teilAktiv?.id === t.id} class:in-gruppe={!!g.gruppe}>
+                            <button class="projekt-name" onclick={() => teilWaehlen(p, t)}>
+                              {t.name}<span class="teil-marke">Teil</span>
+                            </button>
+                          </div>
+                        {/each}
+                        {#if teilNeuFuer === p.id}
+                          <form class="teil-neu" class:in-gruppe={!!g.gruppe} onsubmit={(e) => teilNeuAnlegen(e, p)}>
+                            <input
+                              id="teil-neu"
+                              type="text"
+                              bind:value={teilNeuName}
+                              placeholder="Name, z. B. Konzert Mai"
+                              aria-label={`Neuer Teil in „${p.name}"`}
+                              oninput={() => (teilNeuFehler = "")}
+                              onkeydown={(e) => {
+                                if (e.key === "Escape") teilNeuAbbrechen();
+                              }}
+                            />
+                            <button type="submit">Anlegen</button>
+                            {#if teilNeuFehler}
+                              <p class="teil-neu-fehler" role="alert">{teilNeuFehler}</p>
+                            {/if}
+                          </form>
+                        {:else}
+                          <button class="teil-plus" class:in-gruppe={!!g.gruppe} onclick={() => teilNeuOeffnen(p)}>+ Teil</button>
+                        {/if}
+                      {/if}
                     {/each}
                   {/each}
                   {#if aktiveProjekte.length === 0}
@@ -2213,6 +2322,12 @@
                   <button class="projekt-neu" onclick={() => { projektMenuOffen = false; neuesProjektOeffnen(); }}>
                     + Neues Projekt
                   </button>
+                  {#if aktivesProjekt && !schreibschutz && !aktivesProjekt.bausteine?.length && teilNeuFuer !== aktivesProjekt.id}
+                    <!-- Ohne Teile gibt es keinen Pfeil und kein „+ Teil" darunter. -->
+                    <button class="projekt-neu ausgabe" onclick={() => teilNeuOeffnen(aktivesProjekt)}>
+                      + „{aktivesProjekt.name}" in Teile gliedern
+                    </button>
+                  {/if}
                   {#if aktivesProjekt}
                     <button class="projekt-neu ausgabe" onclick={() => { projektMenuOffen = false; ausgabeOffen = true; }}>
                       + Nächste Ausgabe von „{aktivesProjekt.name}"
@@ -2941,7 +3056,17 @@
     border: 2px solid var(--rand);
     border-radius: 8px;
     cursor: pointer;
-    max-width: 280px;
+    max-width: 360px;
+  }
+  .knopf-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pfad-trenner {
+    margin: 0 6px;
+    font-weight: 400;
+    color: var(--text-muted);
   }
   .projekt-knopf:hover {
     border-color: var(--akzent);
@@ -3069,6 +3194,106 @@
   }
   .projekt-zeile.in-gruppe .projekt-name {
     padding-left: 20px;
+  }
+  /* Baum: Pfeil zum Auf- und Zuklappen der Teile einer Ausgabe. Ausgaben
+     ohne Teile bekommen denselben Platz, damit die Namen untereinander stehen. */
+  .aufklapper {
+    flex: 0 0 auto;
+    width: 20px;
+    margin: 0 0 0 4px;
+    padding: 6px 0;
+    font-size: 0.72rem;
+    font-family: inherit;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  .aufklapper:hover {
+    color: var(--text);
+    background: var(--weiss);
+  }
+  .aufklapper-platz {
+    flex: 0 0 auto;
+    width: 24px;
+  }
+  .projekt-zeile.in-gruppe .aufklapper {
+    margin-left: 14px;
+  }
+  .projekt-zeile.in-gruppe .aufklapper-platz {
+    width: 34px;
+  }
+  .projekt-zeile .aufklapper + .projekt-name,
+  .projekt-zeile .aufklapper-platz + .projekt-name {
+    padding-left: 4px;
+  }
+  /* Ein Teil ist gewählt: Seine Ausgabe ist hervorgehoben, aber nicht markiert. */
+  .projekt-zeile.im-pfad .projekt-name {
+    font-weight: 600;
+  }
+  .projekt-zeile.teil-zeile .projekt-name {
+    padding-left: 44px;
+    font-size: 0.88rem;
+  }
+  .projekt-zeile.teil-zeile.in-gruppe .projekt-name {
+    padding-left: 56px;
+  }
+  .teil-marke {
+    margin-left: 8px;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+  .teil-plus {
+    display: block;
+    width: auto;
+    margin: 0;
+    padding: 4px 10px 6px 44px;
+    font-size: 0.82rem;
+    font-weight: 400;
+    font-family: inherit;
+    text-align: left;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  .teil-plus.in-gruppe {
+    padding-left: 56px;
+  }
+  .teil-plus:hover {
+    color: var(--akzent-text);
+    background: none;
+  }
+  .teil-neu {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px 6px 44px;
+  }
+  .teil-neu.in-gruppe {
+    padding-left: 56px;
+  }
+  .teil-neu input {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    margin: 0;
+    padding: 5px 8px;
+    font-size: 0.86rem;
+  }
+  .teil-neu button {
+    width: auto;
+    margin: 0;
+    padding: 5px 10px;
+    font-size: 0.82rem;
+  }
+  .teil-neu-fehler {
+    flex-basis: 100%;
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--gefahr-text);
   }
   .menu-leer {
     padding: 8px 10px;

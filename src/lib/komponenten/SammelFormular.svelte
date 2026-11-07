@@ -31,6 +31,12 @@
     );
   }
   let texte = $state(texteAus($state.snapshot(bausteine)));
+  // Inzwischen dazugekommene Teile (z. B. im Projektmenü) bekommen leere Felder.
+  $effect(() => {
+    for (const b of bausteine ?? []) {
+      if (!texte[b.id]) texte[b.id] = texteAus([$state.snapshot(b)])[b.id];
+    }
+  });
 
   let veraendert = $derived(
     JSON.stringify($state.snapshot(kopie)) !==

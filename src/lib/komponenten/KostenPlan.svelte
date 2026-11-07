@@ -62,6 +62,17 @@
   // Bausteine (Teile des Projekts, siehe bausteine.js) werden mit dem Plan
   // bearbeitet und gespeichert.
   let bausteineKopie = $state(structuredClone($state.snapshot(bausteine)));
+  // Teile, die inzwischen außerhalb dazukamen (z. B. im Projektmenü), kommen
+  // in die Kopie – sonst gingen sie beim nächsten Speichern verloren. Hier
+  // gelöschte Teile bleiben gelöscht, weil ihre Kennung schon bekannt ist.
+  const bekannteTeile = new Set(bausteineKopie.map((b) => b.id));
+  $effect(() => {
+    for (const b of bausteine) {
+      if (bekannteTeile.has(b.id)) continue;
+      bekannteTeile.add(b.id);
+      bausteineKopie.push(structuredClone($state.snapshot(b)));
+    }
+  });
   // Welche Kosten zu sehen sind: ALLE, GEMEINSAM oder eine Baustein-id.
   let filter = $state(ALLE);
   let einmalGespeichert = $state(false);
@@ -94,6 +105,7 @@
   // Der neue Baustein bekommt gleich den Cursor, damit man lostippen kann.
   async function bausteinHinzufuegen() {
     const id = neuePostenId();
+    bekannteTeile.add(id);
     bausteineKopie.push({ id, name: "" });
     await tick();
     document.getElementById(`baustein-name-${id}`)?.focus();

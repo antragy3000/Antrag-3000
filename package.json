@@ -20,6 +20,7 @@
     "bausteine": "node tools/bausteine-test.mjs",
     "teilantrag": "node tools/teilantrag-test.mjs",
     "abrechnung": "node tools/abrechnung-test.mjs",
+    "teilwahl": "node tools/teilwahl-test.mjs",
     "pruefsummen": "node tools/pruefsummen-test.mjs",
     "tokens": "node tools/tokens-sync.mjs",
     "tokens:check": "node tools/tokens-sync.mjs --check",
