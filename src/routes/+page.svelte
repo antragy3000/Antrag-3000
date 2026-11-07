@@ -40,6 +40,8 @@
   import { abdeckungVon, abdeckungAufraeumen, hatTeilAntraege } from "$lib/teilantrag";
   import { teilImBlick, teilAnlegen } from "$lib/teilwahl";
   import TeilBand from "$lib/komponenten/TeilBand.svelte";
+  import GruppenUebersicht from "$lib/komponenten/GruppenUebersicht.svelte";
+  import { gruppenUebersicht } from "$lib/gruppenUebersicht";
   import { bausteinTexteUebernehmen } from "$lib/bausteine";
   import { verwendungsnachweisAbschnitte } from "$lib/abrechnung";
   import { sachberichtFuerQuelle } from "$lib/sachbericht";
@@ -134,6 +136,28 @@
   // Blickwinkel auf dem Bildschirm, kommt nie in den Tresor (teilwahl.js).
   let teilWahl = $state(null);
   let teilAktiv = $derived(teilImBlick(teilWahl, aktivesProjekt));
+  // Gewählte Projektgruppe (id) – wie die Teil-Wahl nur ein Blickwinkel, der
+  // nicht in den Tresor kommt. Dann zeigt die Übersicht alle Ausgaben der
+  // Gruppe; die Bereiche einer einzelnen Ausgabe sind so lange gesperrt.
+  let gruppeBlick = $state(null);
+  let gruppeAktiv = $derived(
+    gruppeBlick && daten
+      ? ((daten.projektgruppen ?? []).find((g) => g.id === gruppeBlick && daten.projekte.some((p) => p.gruppeId === g.id)) ?? null)
+      : null
+  );
+  let gruppenDaten = $derived(
+    gruppeAktiv ? gruppenUebersicht(gruppeAktiv, daten.projekte, { nameVon: foerderNameIn }) : null
+  );
+  // Name einer Förderung, wie sie in diesem Projekt aufgelöst wird (Katalog,
+  // vom Team geteilte und eigene Förderungen dieses Projekts).
+  function foerderNameIn(id, projekt) {
+    const quellen = [katalog.daten.foerderungen, katalog.geteilt, projekt?.eigeneFoerderungen ?? [], projekt?.katalogGhosts ?? []];
+    for (const liste of quellen) {
+      const f = liste.find((x) => x.id === id);
+      if (f) return f.name;
+    }
+    return "";
+  }
   // Aufgeklappte Ausgaben im Projektmenü; ohne Eintrag ist nur die aktive offen.
   let aufgeklappt = $state({});
   // Hat irgendeine Ausgabe Teile? Dann bekommen alle Zeilen Platz für den Pfeil.
@@ -1869,8 +1893,19 @@
     if (id !== daten.aktivesProjektId && !verlassenErlaubt()) return;
     daten.aktivesProjektId = id;
     teilWahl = null;
+    gruppeBlick = null;
     projektMenuOffen = false;
     await tresorSpeichern();
+  }
+  // Eine Projektgruppe in den Blick nehmen: Die Übersicht zeigt ihre Ausgaben.
+  // Die aktive Ausgabe bleibt, wie sie ist – darum wird nichts gespeichert.
+  function gruppeWaehlen(gruppe) {
+    if (bereich !== "uebersicht" && !verlassenErlaubt()) return;
+    bereich = "uebersicht";
+    gruppeBlick = gruppe.id;
+    teilWahl = null;
+    teilNeuAbbrechen();
+    projektMenuOffen = false;
   }
   function istAufgeklappt(p) {
     return aufgeklappt[p.id] ?? p.id === daten.aktivesProjektId;
@@ -1884,6 +1919,7 @@
     if (wechsel && !verlassenErlaubt()) return;
     daten.aktivesProjektId = p.id;
     teilWahl = { projektId: p.id, teilId: teil.id };
+    gruppeBlick = null;
     projektMenuOffen = false;
     if (wechsel) await tresorSpeichern();
   }
@@ -2267,11 +2303,13 @@
                 }}
                 aria-haspopup="true"
                 aria-expanded={projektMenuOffen}
-                title={teilAktiv
-                  ? `${aktivesProjekt.name} › ${teilAktiv.name} – Projekt oder Teil wechseln`
-                  : "Projekt wechseln, umbenennen oder löschen"}
+                title={gruppeAktiv
+                  ? `Projektgruppe „${gruppeAktiv.name}" – Ausgabe wählen zum Bearbeiten`
+                  : teilAktiv
+                    ? `${aktivesProjekt.name} › ${teilAktiv.name} – Projekt oder Teil wechseln`
+                    : "Projekt wechseln, umbenennen oder löschen"}
               >
-                {#if schreibschutz}🔒 {/if}<span class="knopf-text">{aktivesProjekt?.name ?? "Projekt wählen"}{#if teilAktiv}<span class="pfad-trenner">›</span>{teilAktiv.name}{/if}</span><span class="pfeil">▾</span>
+                {#if gruppeAktiv}<span class="knopf-text">📚 {gruppeAktiv.name}</span>{:else}{#if schreibschutz}🔒 {/if}<span class="knopf-text">{aktivesProjekt?.name ?? "Projekt wählen"}{#if teilAktiv}<span class="pfad-trenner">›</span>{teilAktiv.name}{/if}</span>{/if}<span class="pfeil">▾</span>
               </button>
               {#if projektMenuOffen}
                 <div class="menu-backdrop" onclick={() => (projektMenuOffen = false)} role="presentation"></div>
@@ -2279,7 +2317,7 @@
                   {#each aktiveGruppen as g (g.gruppe?.id ?? "_ohne")}
                     {#if g.gruppe}
                       <div class="gruppe-kopf">
-                        <span class="gruppe-name" title="Projektgruppe">📚 {g.gruppe.name}</span>
+                        <button class="gruppe-name" class:aktiv={gruppeAktiv?.id === g.gruppe.id} title="Übersicht dieser Projektgruppe" onclick={() => gruppeWaehlen(g.gruppe)}>📚 {g.gruppe.name}</button>
                         <button class="zeile-icon" title="Projektgruppe umbenennen" aria-label={`Projektgruppe „${g.gruppe.name}" umbenennen`} onclick={() => gruppeUmbenennenOeffnen(g.gruppe)}>✏️</button>
                         <button class="zeile-icon" title="Projektgruppe auflösen" aria-label={`Projektgruppe „${g.gruppe.name}" auflösen`} onclick={() => gruppeAufloesenFuer(g.gruppe)}>✕</button>
                       </div>
@@ -2290,7 +2328,7 @@
                       {@const istAktiv = p.id === daten.aktivesProjektId}
                       <div
                         class="projekt-zeile"
-                        class:aktiv={istAktiv && !teilAktiv}
+                        class:aktiv={istAktiv && !teilAktiv && !gruppeAktiv}
                         class:im-pfad={istAktiv && !!teilAktiv}
                         class:in-gruppe={!!g.gruppe}
                       >
@@ -2382,11 +2420,11 @@
                       {#each archivGruppen as g (g.gruppe?.id ?? "_ohne")}
                         {#if g.gruppe}
                           <div class="gruppe-kopf">
-                            <span class="gruppe-name" title="Projektgruppe">📚 {g.gruppe.name}</span>
+                            <button class="gruppe-name" class:aktiv={gruppeAktiv?.id === g.gruppe.id} title="Übersicht dieser Projektgruppe" onclick={() => gruppeWaehlen(g.gruppe)}>📚 {g.gruppe.name}</button>
                           </div>
                         {/if}
                         {#each g.projekte as p (p.id)}
-                          <div class="projekt-zeile archiviert" class:aktiv={p.id === daten.aktivesProjektId} class:in-gruppe={!!g.gruppe}>
+                          <div class="projekt-zeile archiviert" class:aktiv={p.id === daten.aktivesProjektId && !gruppeAktiv} class:in-gruppe={!!g.gruppe}>
                             <button class="projekt-name" onclick={() => projektWaehlen(p.id)} title="Archiviert – nur ansehen">🔒 {p.name}</button>
                             <button class="zeile-icon" title="Aus dem Archiv holen" aria-label={`Projekt „${p.name}" aus dem Archiv holen`} onclick={() => projektEntarchivieren(p)}>↩︎</button>
                             <button class="zeile-icon" title="Löschen" aria-label={`Projekt „${p.name}" löschen`} onclick={() => loeschenOeffnenFuer(p)}>🗑</button>
@@ -2401,53 +2439,53 @@
           {/if}
         </div>
       </div>
-      <nav>
+      <nav title={gruppeAktiv ? "Zum Bearbeiten im Projektmenü eine Ausgabe oder einen Teil wählen" : undefined}>
         <button class:aktiv={bereich === "uebersicht"} onclick={() => zu("uebersicht")}>
           Übersicht
         </button>
         <span class="nav-trenner" aria-hidden="true"></span>
         <div class="modus-schalter" role="group" aria-label="Modus wählen">
-          <button class:aktiv={arbeitsModus === "antrag"} onclick={() => arbeitsModusWechseln("antrag")}>
+          <button class:aktiv={arbeitsModus === "antrag" && !gruppeAktiv} disabled={!!gruppeAktiv} onclick={() => arbeitsModusWechseln("antrag")}>
             Antrag
           </button>
-          <button class:aktiv={arbeitsModus === "abrechnung"} onclick={() => arbeitsModusWechseln("abrechnung")}>
+          <button class:aktiv={arbeitsModus === "abrechnung" && !gruppeAktiv} disabled={!!gruppeAktiv} onclick={() => arbeitsModusWechseln("abrechnung")}>
             Abrechnung
           </button>
         </div>
         <span class="nav-trenner" aria-hidden="true"></span>
         {#if arbeitsModus === "antrag"}
-          <button class:aktiv={bereich === "foerderungen"} onclick={() => zu("foerderungen")}>
+          <button class:aktiv={bereich === "foerderungen"} disabled={!!gruppeAktiv} onclick={() => zu("foerderungen")}>
             Förderungen
           </button>
           <span class="nav-trenner" aria-hidden="true"></span>
-          <button class:aktiv={bereich === "merkliste"} onclick={() => zu("merkliste")}>
-            Merkliste{#if aktivesProjekt?.merkliste.length}&nbsp;({aktivesProjekt.merkliste.length}){/if}
+          <button class:aktiv={bereich === "merkliste"} disabled={!!gruppeAktiv} onclick={() => zu("merkliste")}>
+            Merkliste{#if aktivesProjekt?.merkliste.length && !gruppeAktiv}&nbsp;({aktivesProjekt.merkliste.length}){/if}
           </button>
-          <button class:aktiv={bereich === "fristen"} onclick={() => zu("fristen")}>
+          <button class:aktiv={bereich === "fristen"} disabled={!!gruppeAktiv} onclick={() => zu("fristen")}>
             Fristen
           </button>
           <!-- Reiter „Dateien" (intern weiter "formular"): Arbeitsdokumente,
                Dateien teilen und Sammel-Formular. -->
-          <button class:aktiv={bereich === "formular"} onclick={() => zu("formular")}>
+          <button class:aktiv={bereich === "formular"} disabled={!!gruppeAktiv} onclick={() => zu("formular")}>
             Dateien
           </button>
-          <button class:aktiv={bereich === "kostenplan"} onclick={() => zu("kostenplan")}>
+          <button class:aktiv={bereich === "kostenplan"} disabled={!!gruppeAktiv} onclick={() => zu("kostenplan")}>
             Kostenplan
           </button>
         {:else}
-          <button class:aktiv={bereich === "belege"} onclick={() => zu("belege")}>
-            Belege{#if aktivesProjekt?.abrechnung?.belege?.length}&nbsp;({aktivesProjekt.abrechnung.belege.length}){/if}
+          <button class:aktiv={bereich === "belege"} disabled={!!gruppeAktiv} onclick={() => zu("belege")}>
+            Belege{#if aktivesProjekt?.abrechnung?.belege?.length && !gruppeAktiv}&nbsp;({aktivesProjekt.abrechnung.belege.length}){/if}
           </button>
-          <button class:aktiv={bereich === "kostenstellen"} onclick={() => zu("kostenstellen")}>
+          <button class:aktiv={bereich === "kostenstellen"} disabled={!!gruppeAktiv} onclick={() => zu("kostenstellen")}>
             Kostenstellen
           </button>
-          <button class:aktiv={bereich === "geldquellen"} onclick={() => zu("geldquellen")}>
+          <button class:aktiv={bereich === "geldquellen"} disabled={!!gruppeAktiv} onclick={() => zu("geldquellen")}>
             Geldquellen
           </button>
-          <button class:aktiv={bereich === "zuteilung"} onclick={() => zu("zuteilung")}>
+          <button class:aktiv={bereich === "zuteilung"} disabled={!!gruppeAktiv} onclick={() => zu("zuteilung")}>
             Zuteilung
           </button>
-          <button class:aktiv={bereich === "sachbericht"} onclick={() => zu("sachbericht")}>
+          <button class:aktiv={bereich === "sachbericht"} disabled={!!gruppeAktiv} onclick={() => zu("sachbericht")}>
             Sachbericht
           </button>
         {/if}
@@ -2468,19 +2506,21 @@
         ></span>
       </div>
     </header>
-    {#if schreibschutz}
+    {#if schreibschutz && !gruppeAktiv}
       <div class="archiv-banner" role="status">
         <span>🔒 Dieses Projekt ist <strong>archiviert</strong> und wird nur angezeigt – Änderungen sind gesperrt.</span>
         <button class="archiv-holen" onclick={() => projektEntarchivieren(aktivesProjekt)}>Aus dem Archiv holen</button>
       </div>
     {/if}
-    <main inert={schreibschutz}>
+    <main inert={schreibschutz && !gruppeAktiv}>
       {#if teilAktiv && !TEIL_BEREICHE.includes(bereich) && bereich !== "stammdaten"}
         <div class="teil-band-rahmen">
           <TeilBand teil={teilAktiv} ausgabeName={aktivesProjekt.name} ganzeAusgabe={() => (teilWahl = null)} ganz />
         </div>
       {/if}
-      {#if bereich === "uebersicht"}
+      {#if bereich === "uebersicht" && gruppenDaten}
+        <GruppenUebersicht uebersicht={gruppenDaten} aktivId={daten.aktivesProjektId} ausgabeOeffnen={projektWaehlen} />
+      {:else if bereich === "uebersicht"}
         <Uebersicht
           projekt={aktivesProjekt}
           foerderungen={alleFoerderungen}
@@ -3240,11 +3280,21 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 8px 6px 3px;
+    padding: 4px 0 0;
     margin-top: 2px;
   }
+  /* Der Gruppenname öffnet die Gruppen-Übersicht. */
   .gruppe-name {
     flex: 1 1 auto;
+    width: auto;
+    margin: 0;
+    padding: 5px 6px;
+    font-family: inherit;
+    text-align: left;
+    background: none;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
     font-size: 0.74rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -3253,6 +3303,15 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .gruppe-name:hover:not(:disabled) {
+    background: var(--lila-bg5);
+    color: var(--text);
+  }
+  .gruppe-name.aktiv,
+  .gruppe-name.aktiv:hover:not(:disabled) {
+    background: var(--akzent-rand3);
+    color: var(--text);
   }
   .projekt-zeile.in-gruppe .projekt-name {
     padding-left: 20px;
@@ -3860,7 +3919,12 @@
     background: none;
     border-radius: 8px;
   }
-  nav button:hover:not(.aktiv) {
+  /* Gruppe gewählt: Bereiche einer einzelnen Ausgabe sind gesperrt. */
+  nav button:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  nav button:hover:not(.aktiv):not(:disabled) {
     background: var(--flaeche-2b);
     color: var(--text);
   }
