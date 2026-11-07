@@ -2,19 +2,51 @@
   // Abrechnungs-Modus, Phase A3: Plan-/Ist-Übersicht je Kostenstelle.
   // Liest den KFP (Plan) und die Belege (Ist) – nur Anzeige, ändert nichts.
   import { kostenstellenUebersicht, bausteinUebersicht, betragFormat } from "$lib/abrechnung";
+  import { kostenstellenVonTeil } from "$lib/teilwahl";
+  import TeilBand from "./TeilBand.svelte";
 
-  let { kfp = { kosten: [], finanzierung: [] }, belege = [], projektName = "", bausteine = [] } = $props();
+  // `teil`: im Projektmenü gewählter Teil (oder null). Dann stehen nur seine
+  // Kostenstellen da; die Nummern bleiben wie im ganzen Plan.
+  let {
+    kfp = { kosten: [], finanzierung: [] },
+    belege = [],
+    projektName = "",
+    bausteine = [],
+    teil = null,
+    ganzeAusgabe = null,
+  } = $props();
 
   let u = $derived(kostenstellenUebersicht(kfp, belege));
   // Plan/Ist je Baustein; leer, wenn das Projekt keine Bausteine hat.
   let teile = $derived(bausteinUebersicht(kfp, belege, bausteine));
   let hatKostenstellen = $derived((kfp?.kosten ?? []).some((k) => (k.posten ?? []).length));
 
+  // Beim Blick auf einen Teil: nur seine Kostenstellen, Summen neu gerechnet.
+  let teilIds = $derived(kostenstellenVonTeil(teil, kfp, bausteine));
+  const summeVon = (liste, key) => liste.reduce((s, p) => s + p[key], 0);
+  let kategorien = $derived(
+    teil
+      ? u.kategorien
+          .map((kat) => {
+            const posten = kat.posten.filter((p) => teilIds.has(p.id));
+            const planSumme = summeVon(posten, "plan");
+            const istSumme = summeVon(posten, "ist");
+            return { ...kat, posten, planSumme, istSumme, restSumme: planSumme - istSumme };
+          })
+          .filter((kat) => kat.posten.length)
+      : u.kategorien
+  );
+  let planGesamt = $derived(teil ? summeVon(kategorien, "planSumme") : u.planGesamt);
+  let istGesamt = $derived(teil ? summeVon(kategorien, "istSumme") : u.istGesamt);
+
   // Negativer Rest = überzogen (Ist über Plan).
   const restKlasse = (rest) => (rest < -0.005 ? "ueber" : "");
 </script>
 
 <div class="bereich">
+  {#if teil}
+    <TeilBand {teil} ausgabeName={projektName} {ganzeAusgabe} />
+  {/if}
   <div class="kopf">
     <h2>Kostenstellen – Plan / Ist</h2>
     <p class="untertitel">
@@ -32,7 +64,7 @@
       </p>
     </div>
   {:else}
-    {#if teile.length}
+    {#if teile.length && !teil}
       <h3>Je Baustein</h3>
       <table class="ks-tab teile">
         <thead>
@@ -69,7 +101,12 @@
         </tr>
       </thead>
       <tbody>
-        {#each u.kategorien as kat}
+        {#if teil && !kategorien.length}
+          <tr>
+            <td colspan="5" class="leer-zeile">„{teil.name}“ hat im Kostenplan noch keine Kostenstelle.</td>
+          </tr>
+        {/if}
+        {#each kategorien as kat}
           <tr class="kat">
             <td>{kat.nummer} {kat.name}</td>
             <td class="num"></td>
@@ -88,7 +125,7 @@
           {/each}
         {/each}
 
-        {#if u.unzugeordnetAnzahl > 0}
+        {#if u.unzugeordnetAnzahl > 0 && !teil}
           <tr class="unzu">
             <td>Nicht zugeordnet</td>
             <td class="num">{u.unzugeordnetAnzahl}</td>
@@ -100,18 +137,18 @@
       </tbody>
       <tfoot>
         <tr>
-          <td>Gesamt</td>
+          <td>{teil ? `Gesamt „${teil.name}“` : "Gesamt"}</td>
           <td class="num"></td>
-          <td class="betrag">{betragFormat(u.planGesamt)}</td>
-          <td class="betrag">{betragFormat(u.istGesamt)}</td>
-          <td class="betrag {restKlasse(u.planGesamt - u.istGesamt)}">
-            {betragFormat(u.planGesamt - u.istGesamt)}
+          <td class="betrag">{betragFormat(planGesamt)}</td>
+          <td class="betrag">{betragFormat(istGesamt)}</td>
+          <td class="betrag {restKlasse(planGesamt - istGesamt)}">
+            {betragFormat(planGesamt - istGesamt)}
           </td>
         </tr>
       </tfoot>
     </table>
 
-    {#if u.unzugeordnetAnzahl > 0}
+    {#if u.unzugeordnetAnzahl > 0 && !teil}
       <p class="hinweis">
         {u.unzugeordnetAnzahl} Beleg(e) sind noch keiner Kostenstelle zugeordnet – du kannst die
         Kostenstelle im jeweiligen Beleg nachtragen (Reiter „Belege").
@@ -128,6 +165,10 @@
   }
   .kopf {
     margin-bottom: 20px;
+  }
+  .leer-zeile {
+    color: var(--text-muted);
+    font-style: italic;
   }
   h2 {
     margin: 0 0 4px;

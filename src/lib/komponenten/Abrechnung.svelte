@@ -4,6 +4,8 @@
   // Kostenstellen-Verknuepfung, Dateien und Foerderer-Zuordnung folgen in
   // spaeteren Phasen; die Felder existieren im Datenmodell bereits.
   import { fade } from "svelte/transition";
+  import TeilBand from "./TeilBand.svelte";
+  import { belegeFuerTeil, kostenstellenVonTeil } from "$lib/teilwahl";
   import {
     ZAHLUNGSARTEN,
     BELEG_STATUS,
@@ -42,6 +44,10 @@
     dateiOeffnen,
     dateiEntfernen,
     belegOrdnerOeffnen,
+    // Im Projektmenü gewählter Teil (oder null): Dann stehen nur Belege da,
+    // deren Kostenstelle zu diesem Teil gehört.
+    teil = null,
+    ganzeAusgabe = null,
   } = $props();
 
   // Lokale Arbeitskopie; jede Aenderung wird sofort verschluesselt
@@ -69,7 +75,8 @@
   let dateiBeschaeftigt = $state(false);
   let dateienBeleg = $derived(liste.find((b) => b.id === dateienOffenId) ?? null);
 
-  let summe = $derived(belegeSumme(liste));
+  let teilBelege = $derived(belegeFuerTeil(liste, teil, kfp, bausteine));
+  let summe = $derived(belegeSumme(teilBelege.belege));
 
   // Belegnummer je Kostenstelle (z. B. "3.1.1"); Belege ohne Kostenstelle
   // haben keine – dort zeigen wir die laufende Roh-Nummer als "#7".
@@ -97,6 +104,12 @@
     form = neuerBeleg(naechsteBelegNr(liste));
     formFehler = "";
     neuKsZuruecksetzen();
+    // Beim Blick auf einen Teil gehört der neue Beleg zunächst dorthin –
+    // sonst verschwände er nach dem Speichern aus der Liste.
+    if (teil) {
+      form.kostenstelle = [...kostenstellenVonTeil(teil, kfp, bausteine)][0] ?? null;
+      neuKsBaustein = teil.id;
+    }
     formOffen = true;
   }
 
@@ -204,7 +217,7 @@
 
   // Belege nach Datum sortiert (neueste zuletzt), Nummer als Zweitschluessel.
   let sortiert = $derived(
-    [...liste].sort((a, b) => {
+    [...teilBelege.belege].sort((a, b) => {
       const d = String(a.datum).localeCompare(String(b.datum));
       return d !== 0 ? d : Number(a.nr) - Number(b.nr);
     })
@@ -212,6 +225,18 @@
 </script>
 
 <div class="bereich">
+  {#if teil}
+    <TeilBand
+      {teil}
+      ausgabeName={projektName}
+      {ganzeAusgabe}
+      hinweis={teilBelege.ausgeblendet
+        ? teilBelege.ausgeblendet === 1
+          ? "Ein weiterer Beleg gehört zu einem anderen Teil, ist gemeinsam oder hat noch keine Kostenstelle."
+          : `${teilBelege.ausgeblendet} weitere Belege gehören zu anderen Teilen, sind gemeinsam oder haben noch keine Kostenstelle.`
+        : ""}
+    />
+  {/if}
   <div class="kopfzeile">
     <div class="titel-block">
       <h2>Abrechnung – Belege</h2>
@@ -233,6 +258,11 @@
     <div class="leer">
       <p>Noch keine Belege erfasst.</p>
       <button class="zweit" onclick={neu}>Ersten Beleg erfassen</button>
+    </div>
+  {:else if teil && sortiert.length === 0}
+    <div class="leer">
+      <p>Noch kein Beleg mit einer Kostenstelle von „{teil.name}“.</p>
+      <button class="zweit" onclick={neu}>Beleg für diesen Teil erfassen</button>
     </div>
   {:else}
     <table class="belege">
@@ -280,7 +310,7 @@
       </tbody>
       <tfoot>
         <tr>
-          <td colspan="5" class="summe-label">Summe ({liste.length} Belege)</td>
+          <td colspan="5" class="summe-label">Summe ({sortiert.length} Belege)</td>
           <td class="betrag summe">{betragFormat(summe)}</td>
           <td colspan="3"></td>
         </tr>

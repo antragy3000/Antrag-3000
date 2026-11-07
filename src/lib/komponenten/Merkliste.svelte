@@ -9,6 +9,8 @@
   import { vorigesErgebnis } from "$lib/ausgaben";
   import FoerderDetail from "./FoerderDetail.svelte";
   import EigeneFoerderung from "./EigeneFoerderung.svelte";
+  import TeilBand from "./TeilBand.svelte";
+  import { merklisteFuerTeil } from "$lib/teilwahl";
   import { LAENDER, SPARTEN, fristText } from "$lib/begriffe";
   import {
     ANTRAG_STATUS,
@@ -42,6 +44,10 @@
     vorigeAusgabe = null,
     teamModus = false,
     zumKostenplan = null,
+    // Im Projektmenü gewählter Teil (oder null): Dann stehen nur Förderungen
+    // da, deren Antrag diesen Teil abdeckt.
+    teil = null,
+    ganzeAusgabe = null,
   } = $props();
 
   // Wie viele Arbeitsdokumente sind dieser Förderung zugeordnet?
@@ -59,10 +65,14 @@
     return keys.some((k) => felder.includes(k));
   }
 
-  let gemerkte = $derived(
+  let alleGemerkten = $derived(
     merkliste
       .map((id) => foerderungen.find((f) => f.id === id))
       .filter(Boolean)
+  );
+  let teilFilter = $derived(merklisteFuerTeil(merkliste, antraege, teil, projekt?.bausteine ?? []));
+  let gemerkte = $derived(
+    teil ? alleGemerkten.filter((f) => teilFilter.ids.includes(f.id)) : alleGemerkten
   );
 
   // Hinweis-Zähler: gemerkte Förderungen, die nicht mehr im Katalog sind
@@ -84,10 +94,12 @@
   // Alle Paare gemerkter Förderungen, die sich gegenseitig ausschließen.
   let konflikte = $derived.by(() => {
     const paare = [];
-    for (let i = 0; i < gemerkte.length; i++) {
-      for (let j = i + 1; j < gemerkte.length; j++) {
-        if (unvertraeglich(gemerkte[i], gemerkte[j])) {
-          paare.push([gemerkte[i], gemerkte[j]]);
+    // Über alle gemerkten, auch die im Teil ausgeblendeten: Ein Ausschluss
+    // gilt unabhängig vom Blickwinkel.
+    for (let i = 0; i < alleGemerkten.length; i++) {
+      for (let j = i + 1; j < alleGemerkten.length; j++) {
+        if (unvertraeglich(alleGemerkten[i], alleGemerkten[j])) {
+          paare.push([alleGemerkten[i], alleGemerkten[j]]);
         }
       }
     }
@@ -174,6 +186,18 @@
 </script>
 
 <div class="bereich">
+  {#if teil}
+    <TeilBand
+      {teil}
+      ausgabeName={projekt?.name ?? ""}
+      {ganzeAusgabe}
+      hinweis={teilFilter.ausgeblendet
+        ? teilFilter.ausgeblendet === 1
+          ? "Eine weitere gemerkte Förderung deckt diesen Teil nicht ab und steht in der ganzen Ausgabe."
+          : `${teilFilter.ausgeblendet} weitere gemerkte Förderungen decken diesen Teil nicht ab und stehen in der ganzen Ausgabe.`
+        : ""}
+    />
+  {/if}
   <div class="kopfzeile">
     <h2>Merkliste <span class="anzahl">{gemerkte.length}</span></h2>
     <div class="kopf-knoepfe">
@@ -228,7 +252,12 @@
     </div>
   {/each}
 
-  {#if gemerkte.length === 0}
+  {#if teil && gemerkte.length === 0 && alleGemerkten.length}
+    <p class="leer">
+      Keine gemerkte Förderung deckt „{teil.name}“ ab. Ob ein Antrag einzelne Teile
+      oder das ganze Projekt abdeckt, legst du in seiner Detailansicht fest.
+    </p>
+  {:else if gemerkte.length === 0}
     <p class="leer">
       Noch nichts gemerkt. Markiere Förderungen mit dem ☆-Stern –
       in der Übersicht oder im Matching-Ergebnis – oder lege oben eine

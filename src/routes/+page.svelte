@@ -39,6 +39,7 @@
   import { kfpExport, neuePostenId } from "$lib/kfp";
   import { abdeckungVon, abdeckungAufraeumen, hatTeilAntraege } from "$lib/teilantrag";
   import { teilImBlick, teilAnlegen } from "$lib/teilwahl";
+  import TeilBand from "$lib/komponenten/TeilBand.svelte";
   import { bausteinTexteUebernehmen } from "$lib/bausteine";
   import { verwendungsnachweisAbschnitte } from "$lib/abrechnung";
   import { sachberichtFuerQuelle } from "$lib/sachbericht";
@@ -141,6 +142,9 @@
   let teilNeuFuer = $state(null);
   let teilNeuName = $state("");
   let teilNeuFehler = $state("");
+  // Bereiche, die beim Blick auf einen Teil filtern. Die übrigen (außer den
+  // Stammdaten) sagen in einem leisen Band, dass sie die ganze Ausgabe zeigen.
+  const TEIL_BEREICHE = ["formular", "kostenplan", "merkliste", "belege", "kostenstellen"];
   // Die vorige Ausgabe des aktiven Projekts; fehlt, wenn sie gelöscht wurde.
   let vorigeAusgabe = $derived(
     aktivesProjekt?.vorgaengerId ? (daten.projekte.find((p) => p.id === aktivesProjekt.vorgaengerId) ?? null) : null
@@ -2471,6 +2475,11 @@
       </div>
     {/if}
     <main inert={schreibschutz}>
+      {#if teilAktiv && !TEIL_BEREICHE.includes(bereich) && bereich !== "stammdaten"}
+        <div class="teil-band-rahmen">
+          <TeilBand teil={teilAktiv} ausgabeName={aktivesProjekt.name} ganzeAusgabe={() => (teilWahl = null)} ganz />
+        </div>
+      {/if}
       {#if bereich === "uebersicht"}
         <Uebersicht
           projekt={aktivesProjekt}
@@ -2712,6 +2721,8 @@
             projektName={aktivesProjekt.name}
             kfp={aktivesProjekt.kfp}
             bausteine={aktivesProjekt.bausteine ?? []}
+            teil={teilAktiv}
+            ganzeAusgabe={() => (teilWahl = null)}
             {kostenstelleAnlegen}
             dateiHinzufuegen={belegDateiHinzufuegen}
             dateiOeffnen={belegDateiOeffnen}
@@ -2726,6 +2737,8 @@
             belege={aktivesProjekt.abrechnung.belege}
             projektName={aktivesProjekt.name}
             bausteine={aktivesProjekt.bausteine ?? []}
+            teil={teilAktiv}
+            ganzeAusgabe={() => (teilWahl = null)}
           />
         {/key}
       {:else if bereich === "geldquellen"}
@@ -2810,6 +2823,8 @@
           {vorigeAusgabe}
           teamModus={daten.modus === "team"}
           zumKostenplan={() => (bereich = "kostenplan")}
+          teil={teilAktiv}
+          ganzeAusgabe={() => (teilWahl = null)}
           eigeneAnlegen={eigeneFoerderungAnlegen}
           oeffneKatalog={() => (katalogOffen = true)}
           aktualisierteIds={aktivesProjekt.katalogAktualisiert ?? []}
@@ -3098,6 +3113,12 @@
     border-radius: 8px;
     cursor: pointer;
     max-width: 360px;
+  }
+  /* Band „dieser Bereich zeigt die ganze Ausgabe" über ungefilterten Bereichen. */
+  .teil-band-rahmen {
+    max-width: 920px;
+    margin: 0 auto -16px;
+    padding: 24px 24px 0;
   }
   .knopf-text {
     overflow: hidden;

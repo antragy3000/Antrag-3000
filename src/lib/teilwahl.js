@@ -11,7 +11,9 @@
 // Reine Logik ohne Svelte – darum mit `npm run teilwahl` testbar.
 // ============================================================
 
-import { bausteinNamePruefen } from "./bausteine.js";
+import { bausteinNamePruefen, bausteinVon } from "./bausteine.js";
+import { abdeckungVon } from "./teilantrag.js";
+import { belegBaustein } from "./abrechnung.js";
 
 /// Der gewählte Teil des Projekts, oder null (= ganze Ausgabe). Null auch,
 /// wenn die Wahl zu einem anderen Projekt gehört oder der Teil inzwischen
@@ -46,4 +48,61 @@ export function teilAnlegen(projekt, eingabe, neueId = neueTeilId) {
   const teil = { id: neueId(), name: pruefung.name };
   projekt.bausteine.push(teil);
   return { ok: true, fehler: "", teil };
+}
+
+// ------------------------------------------------------------
+// Was ein gewählter Teil in Merkliste und Abrechnung zeigt. Alles
+// liefert neben der gefilterten Liste die Zahl der ausgeblendeten
+// Einträge, damit die Ansicht sagen kann, dass es mehr gibt.
+// ------------------------------------------------------------
+
+/// Deckt der Antrag den Teil ab? Ein Antrag über das ganze Projekt (oder
+/// ein noch nicht angelegter Antrag) deckt jeden Teil ab.
+/**
+ * @param {any} antrag
+ * @param {string} teilId
+ * @param {any[]} bausteine
+ */
+export function decktTeil(antrag, teilId, bausteine) {
+  const abdeckung = abdeckungVon(antrag, bausteine);
+  return abdeckung === null || abdeckung.includes(teilId);
+}
+
+/// Gemerkte Förderungen, deren Antrag den Teil abdeckt.
+/**
+ * @param {string[]} merkliste
+ * @param {Record<string, any>} antraege
+ * @param {any} teil
+ * @param {any[]} bausteine
+ */
+export function merklisteFuerTeil(merkliste, antraege, teil, bausteine) {
+  const ids = (merkliste ?? []).filter((id) => !teil || decktTeil(antraege?.[id], teil.id, bausteine));
+  return { ids, ausgeblendet: (merkliste ?? []).length - ids.length };
+}
+
+/// Belege, deren Kostenstelle zum Teil gehört. Gemeinsame Belege und
+/// Belege ohne Kostenstelle stehen nur in der ganzen Ausgabe.
+/**
+ * @param {any[]} belege
+ * @param {any} teil
+ * @param {any} kfp
+ * @param {any[]} bausteine
+ */
+export function belegeFuerTeil(belege, teil, kfp, bausteine) {
+  const liste = (belege ?? []).filter((b) => !teil || belegBaustein(b, kfp, bausteine) === teil.id);
+  return { belege: liste, ausgeblendet: (belege ?? []).length - liste.length };
+}
+
+/// Kennungen der Kostenstellen (Kosten-Posten) eines Teils.
+/**
+ * @param {any} teil
+ * @param {any} kfp
+ * @param {any[]} bausteine
+ */
+export function kostenstellenVonTeil(teil, kfp, bausteine) {
+  const ids = new Set();
+  for (const k of kfp?.kosten ?? []) {
+    for (const p of k.posten ?? []) if (p.id && teil && bausteinVon(p, bausteine) === teil.id) ids.add(p.id);
+  }
+  return ids;
 }
