@@ -2,7 +2,7 @@
 // Formular-Word erzeugen (CLAUDE.md):
 //
 // Aus dem Sammel-Formular entsteht im PROJEKT-Ordner
-//   Dokumente\Antrag 3000\[Projekt]\Projektbeschrieb - [Projekt].docx
+//   Dokumente\Antrag 3000\[Organisation]\[Projekt]\Projektbeschrieb - [Projekt].docx
 // eine menschenlesbare Kopie mit Warnhinweis am Dateianfang
 // (Aenderungen dort fliessen NICHT zurueck). Bewusst OHNE Stammdaten
 // und OHNE Kostenfinanzplan - diese sensiblen Daten sollen nicht
@@ -139,13 +139,14 @@ pub(crate) fn docx_bauen(
 #[tauri::command]
 pub fn formular_word_erzeugen(
     app: tauri::AppHandle,
+    org_ordner: String,
     projekt: String,
     titel: String,
     warnhinweis: String,
     abschnitte: Vec<DocAbschnitt>,
     logo: Option<String>,
 ) -> Result<String, String> {
-    let ordner_pfad = ordner::wurzel(&app)?.join(ordner::bereinigen(&projekt)?);
+    let ordner_pfad = ordner::org_wurzel(&app, &org_ordner)?.join(ordner::bereinigen(&projekt)?);
     fs::create_dir_all(&ordner_pfad).map_err(|e| format!("Ordner nicht anlegbar: {e}"))?;
 
     // Menschenlesbare Word-Datei (gemeinsamer Bau-Helfer).
@@ -175,6 +176,7 @@ pub fn formular_word_erzeugen(
 #[tauri::command]
 pub fn dokument_hochladen(
     app: tauri::AppHandle,
+    org_ordner: String,
     projekt: String,
     foerderung: String,
     dokumentart: String,
@@ -201,7 +203,7 @@ pub fn dokument_hochladen(
         return Err("Die Datei ist zu groß (höchstens 30 MB).".into());
     }
 
-    let dateien_ordner = ordner::wurzel(&app)?
+    let dateien_ordner = ordner::org_wurzel(&app, &org_ordner)?
         .join(ordner::bereinigen(&projekt)?)
         .join(ordner::bereinigen(&foerderung)?)
         .join("Dateien");
@@ -222,13 +224,14 @@ pub fn dokument_hochladen(
 #[tauri::command]
 pub fn verwendungsnachweis_word(
     app: tauri::AppHandle,
+    org_ordner: String,
     projekt: String,
     foerderer: String,
     titel: String,
     abschnitte: Vec<DocAbschnitt>,
     logo: Option<String>,
 ) -> Result<String, String> {
-    let ordner_pfad = ordner::wurzel(&app)?
+    let ordner_pfad = ordner::org_wurzel(&app, &org_ordner)?
         .join(ordner::bereinigen(&projekt)?)
         .join("_Abrechnung");
     fs::create_dir_all(&ordner_pfad).map_err(|e| format!("Ordner nicht anlegbar: {e}"))?;

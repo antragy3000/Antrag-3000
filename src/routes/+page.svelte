@@ -52,7 +52,7 @@
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
   import { boardAusTresor, geteilteFoerdererAusTresor } from "$lib/sync";
   import { verlassenErlaubt } from "$lib/ungespeichert";
-  import { orgName, orgListe, bekannteAbgleichen, namePruefen, neueOrgDaten, startOrg } from "$lib/organisationen.js";
+  import { orgName, orgListe, bekannteAbgleichen, namePruefen, neueOrgDaten, startOrg, orgOrdnerVon } from "$lib/organisationen.js";
   // Reine Tresor-Struktur-Helfer (Vorlagen + Migration) – ausgelagert nach
   // $lib/tresorFormat.js, damit diese Datei kleiner bleibt.
   import { offizielleFristenAus, neueId, neuesProjekt, leereStammdaten, frischerTresor, normalisieren, STANDARD_TEAM_SYNC } from "$lib/tresorFormat.js";
@@ -77,6 +77,13 @@
 
   // Die entschlüsselten Daten – leben nur im Arbeitsspeicher.
   let daten = $state(null);
+  // Der Ordner der aktiven Organisation unter Dokumente\Antrag 3000. Jeder
+  // Datei-Befehl bekommt ihn mit, siehe src-tauri/src/ordner.rs.
+  const orgOrdner = $derived(orgOrdnerVon(daten));
+  const ablagePfad = $derived(orgOrdner ? `Dokumente\\Antrag 3000\\${orgOrdner}` : "Dokumente\\Antrag 3000");
+  // Einmalige Meldungen zu den Ordnern (nach dem Umzug), unter der Kopfzeile.
+  /** @type {string[]} */
+  let ordnerHinweise = $state([]);
   // ID der geöffneten Organisation (eigene Tresor-Datei, Variante B+). Jedes
   // Speichern nennt sie, damit Rust in den richtigen Tresor schreibt.
   /** @type {string | null} */
@@ -326,6 +333,7 @@
     for (const o of offen) {
       const d = JSON.parse(o.daten);
       if (normalisieren(d)) await speichernFuer(o.id, d);
+      await ablageEinrichten(o.id, d);
       geladen.push({ id: o.id, daten: d });
     }
     const start = startOrg(geladen);
@@ -424,6 +432,7 @@
     beschaeftigt = true;
     try {
       const frisch = frischerTresor();
+      frisch.organisation.ordner = await invoke("org_ordner_anlegen", { name: orgName(frisch) });
       orgId = await invoke("tresor_erstellen", {
         passwort,
         daten: JSON.stringify(frisch),
@@ -507,6 +516,7 @@
     orgId = null;
     andereOrgs = [];
     alleOrgIds = [];
+    ordnerHinweise = [];
     orgMenuOffen = false;
     fehler = "";
     bereich = "uebersicht";
@@ -533,7 +543,55 @@
     await invoke("tresor_speichern", { org: id, daten: JSON.stringify(d) });
   }
 
-  // ---------- Organisationen (Variante B+, Etappe O2) ----------
+  // ---------- Organisationen (Variante B+, Etappen O2 und O3) ----------
+
+  // Sorgt beim Öffnen dafür, dass eine Organisation ihren eigenen Ordner hat:
+  //  1. Noch keiner (Tresor von vor O3)? Anlegen und MERKEN, dass der Umzug der
+  //     alten Projektordner offen ist. Gespeichert wird vor dem Umzug: Stürzt
+  //     die App mittendrin ab, geht es beim nächsten Mal an derselben Stelle weiter.
+  //  2. Umzug offen? Versuchen. Klappt er nicht (Datei in Word offen), bleibt
+  //     alles am alten Platz, die App arbeitet dort weiter und versucht es
+  //     beim nächsten Anmelden wieder (orgOrdnerVon liefert solange "").
+  //  3. Der Ordner heißt wie die Organisation; hat sich der angezeigte Name
+  //     geändert (z. B. über die Stammdaten), zieht er hier still nach.
+  // Nichts davon darf das Anmelden verhindern.
+  /** @param {string} id @param {any} d */
+  async function ablageEinrichten(id, d) {
+    const org = d.organisation;
+    try {
+      if (!org.ordner) {
+        org.ordner = await invoke("org_ordner_anlegen", { name: orgName(d) });
+        org.ordnerUmzug = true;
+        await speichernFuer(id, d);
+      }
+      if (org.ordnerUmzug) {
+        try {
+          const bericht = await invoke("org_ordner_umziehen", {
+            orgOrdner: org.ordner,
+            projekte: d.projekte.map((/** @type {any} */ p) => p.name),
+          });
+          delete org.ordnerUmzug;
+          await speichernFuer(id, d);
+          if (bericht.verschoben > 0) {
+            ordnerHinweise.push(`Die Projektordner von „${orgName(d)}“ liegen jetzt in Dokumente\\Antrag 3000\\${org.ordner}.`);
+          }
+          if (bericht.uebrig.length > 0) {
+            ordnerHinweise.push(`Diese Ordner blieben in Dokumente\\Antrag 3000 liegen, weil es den Namen schon gibt: ${bericht.uebrig.join(", ")}. Bitte einmal von Hand prüfen.`);
+          }
+        } catch {
+          ordnerHinweise.push(`Die Projektordner von „${orgName(d)}“ konnten noch nicht in ihren eigenen Ordner umziehen, vermutlich ist eine Datei darin geöffnet. Alles bleibt vorerst am alten Platz. Beim nächsten Anmelden versucht es die App erneut.`);
+          return;
+        }
+      }
+      const name = await invoke("org_ordner_umbenennen", { alt: org.ordner, name: orgName(d) });
+      if (name !== org.ordner) {
+        org.ordner = name;
+        await speichernFuer(id, d);
+      }
+    } catch {
+      // Beim nächsten Anmelden erneut; bis dahin gilt der bisherige Stand.
+    }
+  }
 
   // Jeder offene Tresor merkt sich die Namen der anderen (für gesperrte im
   // Umschalter). Gespeichert wird nur, wessen Liste sich geändert hat.
@@ -614,6 +672,7 @@
         if (bekannt.has(o.id)) continue; // schon offen: nichts überschreiben
         const d = JSON.parse(o.daten);
         if (normalisieren(d)) await speichernFuer(o.id, d);
+        await ablageEinrichten(o.id, d);
         neu.push({ id: o.id, daten: d });
       }
       if (neu.length === 0) {
@@ -668,6 +727,7 @@
         }
       }
       const neu = neueOrgDaten(frischerTresor(), $state.snapshot(daten), orgNeuPruefung.name);
+      neu.organisation.ordner = await invoke("org_ordner_anlegen", { name: orgNeuPruefung.name });
       const id = await invoke("tresor_erstellen", { passwort: orgNeuPasswort, daten: JSON.stringify(neu) });
       orgNeuPasswort = orgNeuPasswortWdh = "";
       // Gleiches Passwort + „Auf diesem Gerät merken": die neue auch merken.
@@ -690,24 +750,33 @@
   let orgUmbId = $state(null);
   let orgUmbName = $state("");
   const orgUmbPruefung = $derived(namePruefen(orgUmbName, orgEintraege, orgUmbId));
+  let orgUmbFehler = $state("");
   /** @param {{ id: string, name: string }} e */
   function orgUmbenennenFuer(e) {
     orgMenuOffen = false;
+    orgUmbFehler = "";
     orgUmbId = e.id;
     orgUmbName = e.name;
   }
   async function orgUmbenennen(event) {
     event.preventDefault();
     if (!orgUmbPruefung.ok || !orgUmbId) return;
-    if (orgUmbId === orgId) {
-      daten.organisation.name = orgUmbPruefung.name;
-      await tresorSpeichern();
-    } else {
-      const o = andereOrgs.find((x) => x.id === orgUmbId);
-      if (!o) return;
-      o.daten.organisation = { name: orgUmbPruefung.name };
-      await speichernFuer(o.id, o.daten);
+    const name = orgUmbPruefung.name;
+    const ziel = orgUmbId === orgId ? daten : andereOrgs.find((x) => x.id === orgUmbId)?.daten;
+    if (!ziel) return;
+    // ZUERST der Ordner, erst danach der Name (wie beim Projekt): Klappt der
+    // Umzug nicht, bleibt die Organisation unverändert.
+    if (ziel.organisation.ordner) {
+      try {
+        ziel.organisation.ordner = await invoke("org_ordner_umbenennen", { alt: ziel.organisation.ordner, name });
+      } catch (e) {
+        orgUmbFehler = `Der Ordner konnte nicht umbenannt werden, die Organisation bleibt unverändert. ${e}`;
+        return;
+      }
     }
+    ziel.organisation.name = name;
+    if (orgUmbId === orgId) await tresorSpeichern();
+    else await speichernFuer(orgUmbId, ziel);
     orgUmbId = null;
     await bekannteAbgleichenUndSpeichern();
   }
@@ -828,6 +897,7 @@
           ? [{ ueberschrift: "", absaetze: untertitel, tabelle: [] }, ...abschnitte]
           : abschnitte;
         await invoke("verwendungsnachweis_word", {
+          orgOrdner,
           projekt: aktivesProjekt.name,
           foerderer: q.name,
           titel,
@@ -836,6 +906,7 @@
         });
       } else {
         await invoke("verwendungsnachweis_pdf", {
+          orgOrdner,
           projekt: aktivesProjekt.name,
           foerderer: q.name,
           titel,
@@ -896,6 +967,7 @@
     if (!pfad) return null; // abgebrochen
     try {
       return await invoke("beleg_datei_hinzufuegen", {
+        orgOrdner,
         projekt: aktivesProjekt.name,
         quelle: pfad,
         wunschname,
@@ -909,6 +981,7 @@
   async function belegDateiOeffnen(name) {
     try {
       await invoke("beleg_datei_oeffnen", {
+        orgOrdner,
         projekt: aktivesProjekt.name,
         name,
       });
@@ -919,6 +992,7 @@
 
   async function belegDateiEntfernen(name) {
     await invoke("beleg_datei_entfernen", {
+      orgOrdner,
       projekt: aktivesProjekt.name,
       name,
     });
@@ -928,6 +1002,7 @@
   async function belegOrdnerOeffnen() {
     try {
       await invoke("beleg_ordner_oeffnen", {
+        orgOrdner,
         projekt: aktivesProjekt.name,
       });
     } catch (e) {
@@ -940,6 +1015,7 @@
   // zurück. (Datensouveränität: bewusste, informierte Entscheidung.)
   async function kfpExcelErzeugen(kfpDaten, bausteine = []) {
     return await invoke("kfp_excel_schreiben", {
+      orgOrdner,
       projekt: aktivesProjekt.name,
       kfp: kfpExport(kfpDaten, bausteine),
     });
@@ -960,6 +1036,7 @@
       aktivesProjekt.name
     );
     await invoke("formular_word_erzeugen", {
+      orgOrdner,
       projekt: aktivesProjekt.name,
       titel,
       warnhinweis,
@@ -980,6 +1057,7 @@
     if (!pfad) return null; // abgebrochen
     try {
       return await invoke("dokument_hochladen", {
+        orgOrdner,
         projekt: aktivesProjekt.name,
         foerderung: foerderungName,
         dokumentart,
@@ -1006,7 +1084,7 @@
         bausteine: $state.snapshot(aktivesProjekt.bausteine ?? []),
       }
     );
-    return { projekt: aktivesProjekt.name, foerderung: foerderung.name, titel, absender, abschnitte, anhaenge, logo: daten.stammdaten?.logo || null };
+    return { orgOrdner, projekt: aktivesProjekt.name, foerderung: foerderung.name, titel, absender, abschnitte, anhaenge, logo: daten.stammdaten?.logo || null };
   }
 
   // Vorschau erzeugen und im PDF-Programm öffnen.
@@ -2225,7 +2303,7 @@
     // Projekt danach auf einen falschen Ordner.
     if (name !== alterName) {
       try {
-        await invoke("ordner_umbenennen", { alt: alterName, neu: name });
+        await invoke("ordner_umbenennen", { orgOrdner, alt: alterName, neu: name });
       } catch (e) {
         umbenennenFehler = `Der Projektordner konnte nicht umbenannt werden, das Projekt bleibt unverändert. ${e}`;
         return;
@@ -2303,6 +2381,7 @@
   async function ordnerOeffnen(foerderungsName = null) {
     try {
       await invoke("ordner_oeffnen", {
+        orgOrdner,
         projekt: aktivesProjekt.name,
         foerderung: foerderungsName,
       });
@@ -2786,6 +2865,12 @@
         ></span>
       </div>
     </header>
+    {#if ordnerHinweise.length > 0}
+      <div class="archiv-banner" role="status">
+        <span>📁 {ordnerHinweise.join(" ")}</span>
+        <button class="archiv-holen" onclick={() => (ordnerHinweise = [])}>Verstanden</button>
+      </div>
+    {/if}
     {#if schreibschutz && !gruppeAktiv}
       <div class="archiv-banner" role="status">
         <span>🔒 Dieses Projekt ist <strong>archiviert</strong> und wird nur angezeigt – Änderungen sind gesperrt.</span>
@@ -3019,6 +3104,7 @@
       {:else if bereich === "kostenplan"}
         {#key daten.aktivesProjektId}
           <KostenPlan
+            ablage={ablagePfad}
             kfp={aktivesProjekt.kfp}
             bausteine={aktivesProjekt.bausteine ?? []}
             teilAntraege={hatTeilAntraege(aktivesProjekt)}
@@ -3351,7 +3437,7 @@
             Das Projekt <strong>„{aktivesProjekt?.name}"</strong> wird endgültig
             aus dem Tresor entfernt – mit Merkliste, Anträgen, Kostenplan und
             Abrechnung. Das lässt sich nicht rückgängig machen.
-            Der Ordner <strong>Dokumente\Antrag 3000\{aktivesProjekt?.name}</strong>
+            Der Ordner <strong>{ablagePfad}\{aktivesProjekt?.name}</strong>
             mit deinen Dateien und Belegen bleibt stehen.
           </p>
           <button class="gefahr" onclick={projektLoeschen}>Ja, löschen</button>
@@ -3432,6 +3518,7 @@
           <label for="org-umb">Name</label>
           <input id="org-umb" type="text" bind:value={orgUmbName} />
           {#if orgUmbPruefung.fehler}<p class="fehler" role="alert">{orgUmbPruefung.fehler}</p>{/if}
+          {#if orgUmbFehler}<p class="fehler" role="alert">{orgUmbFehler}</p>{/if}
           <p class="untertitel">Der Name ist nur für dich zum Unterscheiden. Was im Antrag als Absender steht, kommt aus den Stammdaten.</p>
           <button type="submit" disabled={!orgUmbPruefung.ok}>Speichern</button>
           <button type="button" class="leise" onclick={() => (orgUmbId = null)}>Abbrechen</button>
@@ -3447,8 +3534,9 @@
             <strong>„{orgEntfernenZiel.name}“</strong> verschwindet von diesem Gerät:
             Stammdaten, Projekte, Anträge und Abrechnung. Die verschlüsselte
             Tresor-Datei wird beiseitegelegt, nicht sofort gelöscht – zurückholen
-            lässt sie sich aber nur mit Hilfe. Die Dateien unter
-            <strong>Dokumente\Antrag 3000</strong> bleiben stehen.
+            lässt sie sich aber nur mit Hilfe. Ihr Ordner
+            <strong>Dokumente\Antrag 3000\{orgOrdnerVon(andereOrgs.find((o) => o.id === orgEntfernenZiel.id)?.daten)}</strong>
+            mit den Dateien bleibt stehen.
           </p>
           <p class="untertitel">
             Tipp: Vorher zu „{orgEntfernenZiel.name}“ wechseln und eine Sicherung machen.
@@ -3900,6 +3988,7 @@
     border-bottom: 1px solid var(--rand);
   }
   .archiv-holen {
+    width: auto;
     padding: 5px 12px;
     font-size: 0.85rem;
     font-weight: 600;

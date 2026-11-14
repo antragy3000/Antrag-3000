@@ -2,7 +2,7 @@
 // Projektnamen: Jedes Projekt braucht einen eigenen Ordner.
 //
 // Der Ordner eines Projekts ergibt sich allein aus seinem Namen
-// (Dokumente\Antrag 3000\[Projektname]). Zwei Projekte mit demselben
+// (Dokumente\Antrag 3000\[Organisation]\[Projektname]). Zwei Projekte mit demselben
 // Ordnernamen würden sich also Belege und Antragsdateien teilen. Darum
 // vergleicht diese Datei nicht die Namen selbst, sondern die Ordner, die
 // daraus entstehen: „Konzert:Mai", „Konzert_Mai" und „konzert_mai" landen

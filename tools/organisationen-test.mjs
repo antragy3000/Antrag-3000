@@ -14,6 +14,7 @@ import {
   neueOrgDaten,
   startOrg,
   orgFelderErgaenzen,
+  orgOrdnerVon,
   NAME_UNBEKANNT,
 } from "../src/lib/organisationen.js";
 
@@ -123,6 +124,24 @@ pruefe(neu.netzModus === "knopf", "Netz-Wahl des Geräts wird übernommen (keine
 pruefe(neu.katalogStand.f1 === "2026-10-01" && neu.katalogStand !== vorlage.katalogStand, "Stand der Förder-Datenbank als Kopie");
 pruefe(neu.sync === null && neu.teamCa === null, "keine Team-Anbindung (der Ausweis gehört zur alten Organisation)");
 pruefe(neu.projekte.length === 0 && neu.stammdaten.person.vorname === "", "Projekte und Stammdaten leer");
+
+pruefe(neu.organisation.ordner === undefined, "übernimmt nicht den Ordner der Vorlage");
+
+console.log("Ordner der Organisation");
+const mitOrdner = tresor("Verein");
+pruefe(orgOrdnerVon(mitOrdner) === "", "ohne Ordner: direkt in der Wurzel (Umzug steht noch aus)");
+mitOrdner.organisation.ordner = "Verein";
+pruefe(orgOrdnerVon(mitOrdner) === "Verein", "mit Ordner: der eigene");
+mitOrdner.organisation.ordnerUmzug = true;
+pruefe(orgOrdnerVon(mitOrdner) === "", "Umzug offen: die Dateien liegen noch in der Wurzel");
+delete mitOrdner.organisation.ordnerUmzug;
+pruefe(orgOrdnerVon(mitOrdner) === "Verein", "Umzug fertig: wieder der eigene");
+pruefe(orgOrdnerVon(null) === "" && orgOrdnerVon({}) === "", "ohne Daten: kein Absturz");
+const krumm = tresor("Verein");
+krumm.organisation.ordner = 42;
+pruefe(orgOrdnerVon(krumm) === "", "unbrauchbarer Wert wird ignoriert");
+orgFelderErgaenzen(mitOrdner);
+pruefe(mitOrdner.organisation.ordner === "Verein", "Ergänzen älterer Felder lässt den Ordner stehen");
 
 console.log("Start-Organisation");
 privat.daten.zuletztGeoeffnet = "2026-11-07T10:00:00.000Z";

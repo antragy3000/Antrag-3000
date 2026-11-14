@@ -43,7 +43,7 @@ nutzbare internationale Förderungen).
 - Keine zusätzlichen Abhängigkeiten ohne kurze Begründung einführen.
 
 ## Ordnerstruktur der Nutzdaten (vom Programm verwaltet)
-[Programmordner]/[Projektname]/[Förderungsname]/
+[Programmordner]/[Organisation]/[Projektname]/[Förderungsname]/
 - Pro Projekt: maschinenlesbare Antworten-Datei (Quelle der Wahrheit,
   JSON) + daraus erzeugte menschenlesbare Kopie (Markdown/Docx) mit
   Warnhinweis am Dateianfang. Rück-Sync menschlicher Änderungen nur über

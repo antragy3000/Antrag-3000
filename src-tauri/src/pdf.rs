@@ -754,6 +754,7 @@ fn stempel_auf_block(block: &[u8], text: &str) -> Vec<u8> {
 #[allow(clippy::too_many_arguments)]
 fn baue_antrags_pdf(
     app: &tauri::AppHandle,
+    org_ordner: &str,
     projekt: &str,
     foerderung: &str,
     titel: &str,
@@ -770,7 +771,7 @@ fn baue_antrags_pdf(
 
     let mut bloecke = vec![vorblatt];
 
-    let dateien = ordner::wurzel(app)?
+    let dateien = ordner::org_wurzel(app, org_ordner)?
         .join(ordner::bereinigen(projekt)?)
         .join(ordner::bereinigen(foerderung)?)
         .join("Dateien");
@@ -817,6 +818,7 @@ fn baue_antrags_pdf(
 #[tauri::command]
 pub fn antrags_pdf_vorschau(
     app: tauri::AppHandle,
+    org_ordner: String,
     projekt: String,
     foerderung: String,
     titel: String,
@@ -825,7 +827,7 @@ pub fn antrags_pdf_vorschau(
     anhaenge: Vec<String>,
     logo: Option<String>,
 ) -> Result<String, String> {
-    let bytes = baue_antrags_pdf(&app, &projekt, &foerderung, &titel, &absender, &abschnitte, &anhaenge, logo.as_deref())?;
+    let bytes = baue_antrags_pdf(&app, &org_ordner, &projekt, &foerderung, &titel, &absender, &abschnitte, &anhaenge, logo.as_deref())?;
     // Eindeutiger Name, damit ein erneutes Erzeugen nicht an einer noch im
     // PDF-Programm geoeffneten (gesperrten) Vorschaudatei scheitert.
     let nonce = std::time::SystemTime::now()
@@ -846,6 +848,7 @@ pub fn antrags_pdf_vorschau(
 #[tauri::command]
 pub fn antrags_pdf_speichern(
     app: tauri::AppHandle,
+    org_ordner: String,
     projekt: String,
     foerderung: String,
     titel: String,
@@ -854,8 +857,8 @@ pub fn antrags_pdf_speichern(
     anhaenge: Vec<String>,
     logo: Option<String>,
 ) -> Result<String, String> {
-    let bytes = baue_antrags_pdf(&app, &projekt, &foerderung, &titel, &absender, &abschnitte, &anhaenge, logo.as_deref())?;
-    let ordner_pfad = ordner::wurzel(&app)?
+    let bytes = baue_antrags_pdf(&app, &org_ordner, &projekt, &foerderung, &titel, &absender, &abschnitte, &anhaenge, logo.as_deref())?;
+    let ordner_pfad = ordner::org_wurzel(&app, &org_ordner)?
         .join(ordner::bereinigen(&projekt)?)
         .join(ordner::bereinigen(&foerderung)?);
     fs::create_dir_all(&ordner_pfad).map_err(|e| format!("Ordner nicht anlegbar: {e}"))?;
@@ -876,6 +879,7 @@ pub fn antrags_pdf_speichern(
 #[tauri::command]
 pub fn verwendungsnachweis_pdf(
     app: tauri::AppHandle,
+    org_ordner: String,
     projekt: String,
     foerderer: String,
     titel: String,
@@ -896,7 +900,7 @@ pub fn verwendungsnachweis_pdf(
     // Beleg-Dateien dieser Geldquelle aus dem (lesbaren) Belegordner anhaengen,
     // jede Seite mit rotem Stempel. Fehlende/ungueltige Dateien werden still
     // uebersprungen – der Nachweis selbst entsteht immer.
-    let belegordner = ordner::wurzel(&app)?
+    let belegordner = ordner::org_wurzel(&app, &org_ordner)?
         .join(ordner::bereinigen(&projekt)?)
         .join("Belege");
     let mut bloecke = vec![vorblatt];
@@ -936,7 +940,7 @@ pub fn verwendungsnachweis_pdf(
         zusammenfuegen(bloecke)?
     };
 
-    let ordner_pfad = ordner::wurzel(&app)?
+    let ordner_pfad = ordner::org_wurzel(&app, &org_ordner)?
         .join(ordner::bereinigen(&projekt)?)
         .join("_Abrechnung");
     fs::create_dir_all(&ordner_pfad).map_err(|e| format!("Ordner nicht anlegbar: {e}"))?;

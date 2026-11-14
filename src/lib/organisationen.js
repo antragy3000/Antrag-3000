@@ -15,6 +15,11 @@
 // (gesperrt)" zeigen kann, merkt sich jeder Tresor die Namen der anderen
 // in `bekannteOrganisationen` – verschlüsselt, wie alles im Tresor.
 //
+// Ordner: Jede Organisation hat unter Dokumente\Antrag 3000 einen eigenen Ordner
+// (organisation.ordner), darin liegen ihre Projektordner. Solange der einmalige
+// Umzug alter Projektordner offen ist (organisation.ordnerUmzug), liegen sie
+// noch direkt in der Wurzel; das Frontend gibt dann "" an Rust weiter.
+//
 // Bewusst ohne Imports: tresorFormat.js nutzt orgFelderErgaenzen, und der
 // Test (tools/organisationen-test.mjs) läuft so direkt in Node.
 // ============================================================
@@ -38,6 +43,17 @@ export function orgFelderErgaenzen(d) {
     veraendert = true;
   }
   return veraendert;
+}
+
+/**
+ * Der Ordner, in dem die Dateien dieser Organisation gerade liegen.
+ * "" = direkt in Dokumente\Antrag 3000 (Umzug noch offen).
+ * @param {any} daten
+ */
+export function orgOrdnerVon(daten) {
+  const org = daten?.organisation;
+  if (!org || org.ordnerUmzug) return "";
+  return typeof org.ordner === "string" ? org.ordner : "";
 }
 
 /**

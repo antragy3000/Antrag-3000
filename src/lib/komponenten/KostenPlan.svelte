@@ -38,6 +38,7 @@
     merkliste = [],
     foerderungen = [],
     projektName = "",
+    ablage = "Dokumente\\Antrag 3000",
     excelErzeugen,
     hinweisAusblenden = false,
     hinweisMerken,
@@ -697,7 +698,7 @@
       </p>
       <p class="pfad">
         Ablageort:<br />
-        <code>Dokumente\Antrag 3000\{projektName}\Kostenfinanzplan.xlsx</code>
+        <code>{ablage}\{projektName}\Kostenfinanzplan.xlsx</code>
       </p>
       <p class="klein">
         Liegt dein Dokumente-Ordner in einer Cloud (z. B. OneDrive), wird die

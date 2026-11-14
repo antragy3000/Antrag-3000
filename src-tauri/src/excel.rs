@@ -2,7 +2,7 @@
 // Kostenfinanzplan als Excel-Datei (.xlsx) im Projektordner.
 //
 // Wird bei JEDEM Speichern des Kostenplans neu geschrieben, damit im
-// allgemeinen Projektordner (Dokumente\Antrag 3000\[Projekt]\) immer
+// allgemeinen Projektordner (Dokumente\Antrag 3000\[Organisation]\[Projekt]\) immer
 // ein aktueller Stand liegt - unabhaengig von der Word-Erzeugung,
 // die pro Foerderung in den jeweiligen Unterordner schreibt.
 //
@@ -54,10 +54,11 @@ pub struct XKfp {
 #[tauri::command]
 pub fn kfp_excel_schreiben(
     app: tauri::AppHandle,
+    org_ordner: String,
     projekt: String,
     kfp: XKfp,
 ) -> Result<String, String> {
-    let ordner_pfad = ordner::wurzel(&app)?.join(ordner::bereinigen(&projekt)?);
+    let ordner_pfad = ordner::org_wurzel(&app, &org_ordner)?.join(ordner::bereinigen(&projekt)?);
     std::fs::create_dir_all(&ordner_pfad).map_err(|e| format!("Ordner nicht anlegbar: {e}"))?;
     let pfad = ordner_pfad.join("Kostenfinanzplan.xlsx");
 

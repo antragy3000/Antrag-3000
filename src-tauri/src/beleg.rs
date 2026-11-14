@@ -2,7 +2,7 @@
 // Abrechnungs-Modus: Beleg-Dateien (Fotos/Scans/PDF).
 //
 // Belege werden als LESBARE Dateien im Projektordner abgelegt:
-//   [Dokumente]\Antrag 3000\[Projekt]\Belege\[Empfaenger-Zweck_Datum_KS].pdf
+//   [Dokumente]\Antrag 3000\[Organisation]\[Projekt]\Belege\[Empfaenger-Zweck_Datum_KS].pdf
 // So kann man den Ordner im Explorer oeffnen, die Belege ansehen, drucken
 // und (z. B. fuer die Pruefung) weitergeben. Das ist eine bewusste,
 // vom Nutzer gewaehlte Ablage – wie die Checklisten-Dokumente beim Antrag
@@ -37,8 +37,8 @@ pub struct BelegDatei {
 }
 
 /// Der (lesbare) Belegordner EINES Projekts.
-fn belegordner(app: &tauri::AppHandle, projekt: &str) -> Result<PathBuf, String> {
-    Ok(ordner::wurzel(app)?
+fn belegordner(app: &tauri::AppHandle, org_ordner: &str, projekt: &str) -> Result<PathBuf, String> {
+    Ok(ordner::org_wurzel(app, org_ordner)?
         .join(ordner::bereinigen(projekt)?)
         .join("Belege"))
 }
@@ -90,6 +90,7 @@ fn freier_name(ordner_pfad: &std::path::Path, basis: &str, ext: &str) -> String 
 #[tauri::command]
 pub fn beleg_datei_hinzufuegen(
     app: tauri::AppHandle,
+    org_ordner: String,
     projekt: String,
     quelle: String,
     wunschname: String,
@@ -108,7 +109,7 @@ pub fn beleg_datei_hinzufuegen(
         return Err("Die Datei ist zu groß (max. 30 MB).".into());
     }
 
-    let ordner_pfad = belegordner(&app, &projekt)?;
+    let ordner_pfad = belegordner(&app, &org_ordner, &projekt)?;
     fs::create_dir_all(&ordner_pfad).map_err(|e| format!("Belegordner nicht anlegbar: {e}"))?;
 
     // Wunschnamen zu einem gueltigen Dateinamen bereinigen (verbotene Zeichen
@@ -126,10 +127,11 @@ pub fn beleg_datei_hinzufuegen(
 #[tauri::command]
 pub fn beleg_datei_oeffnen(
     app: tauri::AppHandle,
+    org_ordner: String,
     projekt: String,
     name: String,
 ) -> Result<(), String> {
-    let pfad = belegordner(&app, &projekt)?.join(pruefe_name(&name)?);
+    let pfad = belegordner(&app, &org_ordner, &projekt)?.join(pruefe_name(&name)?);
     if !pfad.exists() {
         return Err("Die Datei wurde im Belegordner nicht gefunden.".into());
     }
@@ -142,10 +144,11 @@ pub fn beleg_datei_oeffnen(
 #[tauri::command]
 pub fn beleg_datei_entfernen(
     app: tauri::AppHandle,
+    org_ordner: String,
     projekt: String,
     name: String,
 ) -> Result<(), String> {
-    let pfad = belegordner(&app, &projekt)?.join(pruefe_name(&name)?);
+    let pfad = belegordner(&app, &org_ordner, &projekt)?.join(pruefe_name(&name)?);
     if pfad.exists() {
         fs::remove_file(&pfad).map_err(|e| format!("Datei nicht loeschbar: {e}"))?;
     }
@@ -154,8 +157,8 @@ pub fn beleg_datei_entfernen(
 
 /// Den Belegordner des Projekts im Explorer oeffnen (legt ihn bei Bedarf an).
 #[tauri::command]
-pub fn beleg_ordner_oeffnen(app: tauri::AppHandle, projekt: String) -> Result<String, String> {
-    let pfad = belegordner(&app, &projekt)?;
+pub fn beleg_ordner_oeffnen(app: tauri::AppHandle, org_ordner: String, projekt: String) -> Result<String, String> {
+    let pfad = belegordner(&app, &org_ordner, &projekt)?;
     fs::create_dir_all(&pfad).map_err(|e| format!("Belegordner nicht anlegbar: {e}"))?;
     tauri_plugin_opener::open_path(pfad.clone(), None::<&str>)
         .map_err(|e| format!("Belegordner laesst sich nicht oeffnen: {e}"))?;
