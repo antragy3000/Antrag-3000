@@ -485,6 +485,7 @@ pub(crate) fn offener_stand(
 }
 
 /// Womit der Zugang vor einem Passwortwechsel nachgewiesen wird.
+#[derive(Clone, Copy)]
 enum Nachweis<'a> {
     /// Das bisherige Passwort (normaler Weg).
     Passwort(&'a str),
@@ -534,9 +535,167 @@ fn mit_neuem_passwort(
     Ok((inhalt, schluessel, salt))
 }
 
+/// Ergebnis eines Passwortwechsels fuer das Frontend.
+#[derive(Serialize, Debug)]
+pub struct PasswortWechsel {
+    /// Alle Organisationen, die jetzt das neue Passwort haben (die aktive zuerst).
+    geaendert: Vec<String>,
+    /// false, wenn ein "Merken" dabei entfernt werden musste.
+    merken_ok: bool,
+    /// true, wenn eine Vorversion mit dem alten Passwort nicht geloescht
+    /// werden konnte (sollte nie passieren; das Frontend warnt dann).
+    vorversion_rest: bool,
+}
+
+/// Eine fertig neu verschluesselte Tresor-Datei, noch nicht geschrieben.
+struct Neufassung {
+    id: String,
+    pfad: PathBuf,
+    inhalt: Vec<u8>,
+    schluessel: Zeroizing<[u8; 32]>,
+    salt: [u8; SALT_LAENGE],
+}
+
+/// Kern des Passwortwechsels (ohne Tauri, damit testbar).
+///
+/// Welche Organisationen "dasselbe Passwort haben", steht nirgends – das ist
+/// Absicht (keine Liste "wer gehoert zu wem"). Darum gilt: Eine Organisation
+/// teilt das Passwort, wenn sich ihre Datei mit dem ALTEN Passwort oeffnen
+/// laesst. Das wird je Datei geprueft (jede hat ihr eigenes Salt). So kommen
+/// auch Organisationen mit, die gerade gesperrt sind, und eine Organisation
+/// mit eigenem Passwort bleibt garantiert unberuehrt.
+///
+/// Ablauf "alles oder nichts":
+///  1. Alles im Arbeitsspeicher vorbereiten (pruefen, neu verschluesseln).
+///     Faellt hier etwas um, ist noch nichts geschrieben.
+///  2. Alle Dateien schreiben (die Vorversion bleibt als .bak liegen) und mit
+///     dem neuen Schluessel kontrollieren. Scheitert eine, kommen alle schon
+///     geschriebenen aus ihrer .bak zurueck: Dann gilt ueberall das alte Passwort.
+///  3. Erst dann die .bak loeschen – sie waere noch mit dem alten Passwort lesbar.
+///
+/// `daten` ist der aktuelle Stand der aktiven Organisation (wie beim Speichern);
+/// die anderen werden mit dem Inhalt ihrer Datei neu verschluesselt.
+fn passwort_wechseln(
+    orgs: &Path,
+    aktiv: &str,
+    nachweis: Nachweis,
+    neues_passwort: &str,
+    daten: &str,
+    geteilte: bool,
+    schreiben: impl Fn(&PathBuf, &[u8]) -> Result<(), String>,
+) -> Result<(Vec<Neufassung>, bool), String> {
+    if !id_gueltig(aktiv) {
+        return Err(FREMDE_ORG.into());
+    }
+    // 1. Vorbereiten
+    let pfad = orgs.join(format!("{aktiv}.enc"));
+    let alt = fs::read(&pfad).map_err(|e| format!("Tresor nicht lesbar: {e}"))?;
+    let (inhalt, schluessel, salt) = mit_neuem_passwort(&alt, nachweis, neues_passwort, daten)?;
+    let mut neu = vec![Neufassung { id: aktiv.to_string(), pfad, inhalt, schluessel: Zeroizing::new(schluessel), salt }];
+
+    if let (true, Nachweis::Passwort(altes)) = (geteilte, &nachweis) {
+        for id in org_ids(orgs).into_iter().filter(|i| i != aktiv) {
+            let pfad = orgs.join(format!("{id}.enc"));
+            let Ok(inhalt_alt) = fs::read(&pfad) else { continue };
+            let Ok(salt_alt) = salt_lesen(&inhalt_alt) else { continue };
+            let schluessel_alt = Zeroizing::new(schluessel_ableiten(altes, &salt_alt)?);
+            // Laesst sie sich mit dem alten Passwort nicht oeffnen, hat sie ein
+            // anderes (oder ist beschaedigt): dann bleibt sie, wie sie ist.
+            let Ok(klartext) = inhalt_oeffnen(&inhalt_alt, &schluessel_alt) else { continue };
+            let klartext = Zeroizing::new(klartext);
+            let mut salt = [0u8; SALT_LAENGE];
+            OsRng.fill_bytes(&mut salt);
+            let schluessel = Zeroizing::new(schluessel_ableiten(neues_passwort, &salt)?);
+            let inhalt = verschluesseln(&klartext, &schluessel, &salt)?;
+            neu.push(Neufassung { id, pfad, inhalt, schluessel, salt });
+        }
+    }
+
+    // 2. Schreiben und kontrollieren
+    let zurueckholen = |geschrieben: &[&Neufassung]| {
+        for n in geschrieben {
+            let bak = n.pfad.with_extension("enc.bak");
+            if bak.exists() {
+                let _ = fs::remove_file(&n.pfad);
+                let _ = fs::rename(&bak, &n.pfad);
+            }
+        }
+    };
+    let mut geschrieben: Vec<&Neufassung> = Vec::new();
+    for n in &neu {
+        if let Err(e) = schreiben(&n.pfad, &n.inhalt) {
+            // Ging beim Schreiben DIESER Datei die Hauptdatei verloren, die
+            // gerade beiseitegelegte Fassung zurueckholen. Sonst ist sie heil.
+            let bak = n.pfad.with_extension("enc.bak");
+            if !n.pfad.exists() && bak.exists() {
+                let _ = fs::rename(&bak, &n.pfad);
+            }
+            zurueckholen(&geschrieben);
+            return Err(format!("{e} – das alte Passwort gilt weiter."));
+        }
+        geschrieben.push(n);
+    }
+    for n in &neu {
+        let passt = fs::read(&n.pfad)
+            .map_err(|e| e.to_string())
+            .and_then(|g| inhalt_oeffnen(&g, &n.schluessel))
+            .map(|mut k| k.zeroize())
+            .is_ok();
+        if !passt {
+            zurueckholen(&geschrieben);
+            return Err("Kontrolle fehlgeschlagen – das alte Passwort gilt weiter.".into());
+        }
+    }
+
+    // 3. Vorversionen mit dem alten Passwort entfernen
+    let mut vorversion_rest = false;
+    for n in &neu {
+        let bak = n.pfad.with_extension("enc.bak");
+        if bak.exists() && fs::remove_file(&bak).is_err() {
+            vorversion_rest = true;
+        }
+    }
+    Ok((neu, vorversion_rest))
+}
+
+/// Gemeinsamer Abschluss nach dem Wechsel: "Merken" erneuern (sonst passte es
+/// nicht mehr) und die Schluessel der offenen Organisationen austauschen.
+/// Gesperrte, die mitgeaendert wurden, bleiben gesperrt.
+fn passwort_abschliessen(
+    orgs: &Path,
+    geheim: &mut HashMap<String, Geheimnis>,
+    neu: Vec<Neufassung>,
+    vorversion_rest: bool,
+) -> PasswortWechsel {
+    let mut merken_ok = true;
+    let mut geaendert = Vec::with_capacity(neu.len());
+    for n in neu {
+        let m_pfad = orgs.join(format!("{}.merken", n.id));
+        let mut gemerkt = false;
+        if m_pfad.exists() {
+            let erneuert = dpapi_schuetzen(&n.schluessel[..])
+                .and_then(|geschuetzt| fs::write(&m_pfad, geschuetzt).map_err(|e| e.to_string()));
+            if erneuert.is_ok() {
+                gemerkt = true;
+            } else {
+                let _ = fs::remove_file(&m_pfad);
+                merken_ok = false;
+            }
+        }
+        if let Some(g) = geheim.get(&n.id) {
+            // Der "vergessen"-Weg bleibt offen, solange das Merken noch gilt.
+            let ueber_merken = g.ueber_merken && gemerkt;
+            geheim.insert(n.id.clone(), Geheimnis { schluessel: *n.schluessel, salt: n.salt, ueber_merken });
+        }
+        geaendert.push(n.id);
+    }
+    PasswortWechsel { geaendert, merken_ok, vorversion_rest }
+}
+
 /// Passwort einer Organisation aendern (sie muss offen sein) – mit dem
-/// bisherigen Passwort als Nachweis. `daten` ist ihr aktueller Datenstand (wie
-/// bei tresor_speichern). Rueckgabe siehe passwort_abschliessen.
+/// bisherigen Passwort als Nachweis. Mit `geteilte` aendert es sich auch bei
+/// allen anderen Organisationen, die sich mit dem bisherigen Passwort oeffnen
+/// lassen (siehe passwort_wechseln). `daten` ist der aktuelle Stand der aktiven.
 #[tauri::command]
 pub fn tresor_passwort_aendern(
     app: tauri::AppHandle,
@@ -545,21 +704,29 @@ pub fn tresor_passwort_aendern(
     mut altes_passwort: String,
     mut neues_passwort: String,
     daten: String,
-) -> Result<bool, String> {
+    geteilte: bool,
+) -> Result<PasswortWechsel, String> {
     let mut geheim = state.geheim.lock().unwrap();
     let ergebnis = (|| {
         if !geheim.contains_key(&org) {
             return Err("Der Tresor ist nicht entsperrt.".to_string());
         }
-        let pfad = tresor_pfad(&app, &org)?;
-        let inhalt_alt = fs::read(&pfad).map_err(|e| format!("Tresor nicht lesbar: {e}"))?;
-        let neu = mit_neuem_passwort(&inhalt_alt, Nachweis::Passwort(&altes_passwort), &neues_passwort, &daten)?;
-        Ok((pfad, neu))
+        let orgs = org_ordner(&app)?;
+        let (neu, rest) = passwort_wechseln(
+            &orgs,
+            &org,
+            Nachweis::Passwort(&altes_passwort),
+            &neues_passwort,
+            &daten,
+            geteilte,
+            |p, i| sicher_schreiben(p, i),
+        )?;
+        Ok((orgs, neu, rest))
     })();
     altes_passwort.zeroize();
     neues_passwort.zeroize();
-    let (pfad, (inhalt, schluessel, salt)) = ergebnis?;
-    passwort_abschliessen(&app, &mut geheim, &org, &pfad, inhalt, schluessel, salt)
+    let (orgs, neu, rest) = ergebnis?;
+    Ok(passwort_abschliessen(&orgs, &mut geheim, neu, rest))
 }
 
 /// Wurde diese Organisation ueber "Auf diesem Geraet merken" geoeffnet?
@@ -576,6 +743,9 @@ pub fn tresor_ueber_merken(state: tauri::State<TresorZustand>, org: String) -> b
 /// bewusste Abwaegung von "Auf diesem Geraet merken") – die Abfrage des alten
 /// Passworts schuetzt in genau dieser Lage nicht zusaetzlich. Als Nachweis
 /// dient der Schluessel der offenen Sitzung; er muss die Tresor-Datei oeffnen.
+///
+/// Gilt NUR fuer diese eine Organisation: Ohne das alte Passwort laesst sich
+/// nicht pruefen, welche anderen es geteilt haben.
 #[tauri::command]
 pub fn tresor_passwort_neu_setzen(
     app: tauri::AppHandle,
@@ -583,10 +753,10 @@ pub fn tresor_passwort_neu_setzen(
     org: String,
     mut neues_passwort: String,
     daten: String,
-) -> Result<bool, String> {
+) -> Result<PasswortWechsel, String> {
     let mut geheim = state.geheim.lock().unwrap();
-    let mut sitzungs_schluessel = match geheim.get(&org) {
-        Some(g) if g.ueber_merken => g.schluessel,
+    let sitzungs_schluessel = match geheim.get(&org) {
+        Some(g) if g.ueber_merken => Zeroizing::new(g.schluessel),
         Some(_) => {
             neues_passwort.zeroize();
             return Err("nur_ueber_merken".into());
@@ -596,85 +766,28 @@ pub fn tresor_passwort_neu_setzen(
             return Err("Der Tresor ist nicht entsperrt.".into());
         }
     };
-    let ergebnis = tresor_pfad(&app, &org).and_then(|pfad| {
-        let alt = fs::read(&pfad).map_err(|e| format!("Tresor nicht lesbar: {e}"))?;
-        let neu = mit_neuem_passwort(&alt, Nachweis::Schluessel(&sitzungs_schluessel), &neues_passwort, &daten)?;
-        Ok((pfad, neu))
+    let ergebnis = org_ordner(&app).and_then(|orgs| {
+        let (neu, rest) = passwort_wechseln(
+            &orgs,
+            &org,
+            Nachweis::Schluessel(&sitzungs_schluessel),
+            &neues_passwort,
+            &daten,
+            false,
+            |p, i| sicher_schreiben(p, i),
+        )?;
+        Ok((orgs, neu, rest))
     });
-    sitzungs_schluessel.zeroize();
     neues_passwort.zeroize();
-    let (pfad, (inhalt, schluessel, salt)) = ergebnis?;
-    passwort_abschliessen(&app, &mut geheim, &org, &pfad, inhalt, schluessel, salt)
-}
-
-/// Gemeinsamer Abschluss beider Wege:
-///  - neue Datei schreiben und zur Kontrolle mit dem neuen Schluessel oeffnen,
-///  - die Vorversion .bak LOESCHEN – sie waere noch mit dem alten Passwort
-///    lesbar, und genau das soll ein Passwortwechsel verhindern,
-///  - "Auf diesem Geraet merken" mit dem neuen Schluessel erneuern,
-///  - den Schluessel der Sitzung austauschen.
-/// Rueckgabe: true, wenn das Merken erneuert wurde (bzw. keins aktiv war);
-/// false, wenn es entfernt werden musste.
-fn passwort_abschliessen(
-    app: &tauri::AppHandle,
-    geheim: &mut HashMap<String, Geheimnis>,
-    org: &str,
-    pfad: &PathBuf,
-    inhalt: Vec<u8>,
-    mut schluessel: [u8; 32],
-    salt: [u8; SALT_LAENGE],
-) -> Result<bool, String> {
-    if let Err(e) = sicher_schreiben(pfad, &inhalt) {
-        schluessel.zeroize();
-        return Err(e);
-    }
-    // Kontrolle: die geschriebene Datei muss sich mit dem neuen Schluessel oeffnen.
-    let kontrolle = fs::read(pfad)
-        .map_err(|e| format!("Kontrolle nicht lesbar: {e}"))
-        .and_then(|geschrieben| inhalt_oeffnen(&geschrieben, &schluessel));
-    match kontrolle {
-        Ok(mut k) => k.zeroize(),
-        Err(_) => {
-            // Sollte nie passieren: alte Fassung aus der .bak zurueckholen.
-            let bak = pfad.with_extension("enc.bak");
-            let _ = fs::rename(&bak, pfad);
-            schluessel.zeroize();
-            return Err("Kontrolle fehlgeschlagen – das alte Passwort gilt weiter.".into());
-        }
-    }
-    let bak = pfad.with_extension("enc.bak");
-    if bak.exists() {
-        if let Err(e) = fs::remove_file(&bak) {
-            schluessel.zeroize();
-            return Err(format!("Alte Vorversion nicht loeschbar: {e}"));
-        }
-    }
-
-    // "Merken" erneuern, falls aktiv – sonst passte es nicht mehr zum Tresor.
-    let mut merken_ok = true;
-    if let Ok(m_pfad) = merken_pfad(app, org) {
-        if m_pfad.exists() {
-            let erneuert = dpapi_schuetzen(&schluessel)
-                .and_then(|geschuetzt| fs::write(&m_pfad, geschuetzt).map_err(|e| e.to_string()));
-            if erneuert.is_err() {
-                let _ = fs::remove_file(&m_pfad);
-                merken_ok = false;
-            }
-        }
-    }
-
-    // Der "vergessen"-Weg bleibt offen, solange das Merken noch gilt.
-    let ueber_merken = geheim.get(org).map(|g| g.ueber_merken).unwrap_or(false) && merken_ok;
-    geheim.insert(org.to_string(), Geheimnis { schluessel, salt, ueber_merken });
-    schluessel.zeroize(); // lokale Kopie (Audit A1)
-    Ok(merken_ok)
+    let (orgs, neu, rest) = ergebnis?;
+    Ok(passwort_abschliessen(&orgs, &mut geheim, neu, rest))
 }
 
 /// "Neu aufsetzen" bei Passwortverlust: ALLE Tresore werden NICHT geloescht,
 /// sondern mit Datum beiseitegelegt (falls das Passwort doch wieder einfaellt):
 /// organisationen\alt-2026-06-12-<id>.enc. Danach kann ein frischer Tresor
-/// angelegt werden. (Das gezielte Neu-Aufsetzen EINER Organisation mit eigenem
-/// Passwort folgt in Etappe O4.)
+/// angelegt werden. (Fuer EINE gesperrte Organisation siehe
+/// tresor_gesperrte_neu_aufsetzen.)
 #[tauri::command]
 pub fn tresor_neu_aufsetzen(
     app: tauri::AppHandle,
@@ -697,6 +810,44 @@ pub fn tresor_neu_aufsetzen(
     }
     geheim.clear();
     Ok(())
+}
+
+/// Passwort EINER Organisation vergessen, die anderen sind offen: Nur sie wird
+/// beiseitegelegt (wie beim Neu-Aufsetzen, nicht geloescht). Geht nur fuer eine
+/// GESPERRTE Organisation und nur in einer offenen Sitzung – eine offene wuerde
+/// man ueber "Entfernen" loswerden, und vom Sperr-Bildschirm aus kennt die App
+/// die Namen nicht (sie stehen verschluesselt in den Tresoren).
+#[tauri::command]
+pub fn tresor_gesperrte_neu_aufsetzen(
+    app: tauri::AppHandle,
+    state: tauri::State<TresorZustand>,
+    org: String,
+    datum: String,
+) -> Result<(), String> {
+    if datum.is_empty() || datum.len() > 10 || !datum.chars().all(|c| c.is_ascii_digit() || c == '-') {
+        return Err("Ungueltiges Datum.".into());
+    }
+    let orgs = org_ordner(&app)?;
+    let geheim = state.geheim.lock().unwrap();
+    gesperrte_beiseitelegen(&orgs, &geheim, &org, &datum)
+}
+
+fn gesperrte_beiseitelegen(
+    orgs: &Path,
+    geheim: &HashMap<String, Geheimnis>,
+    org: &str,
+    datum: &str,
+) -> Result<(), String> {
+    if !id_gueltig(org) || !org_ids(orgs).iter().any(|i| i == org) {
+        return Err(FREMDE_ORG.into());
+    }
+    if geheim.is_empty() {
+        return Err("Der Tresor ist nicht entsperrt.".into());
+    }
+    if geheim.contains_key(org) {
+        return Err("Diese Organisation ist offen. Zum Loswerden gibt es „Entfernen“.".into());
+    }
+    beiseitelegen(orgs, org, datum)
 }
 
 /// Legt Tresor (+ Vorversion) einer Organisation unter einem freien
@@ -837,11 +988,23 @@ fn gemerkter_schluessel(geschuetzt: &[u8]) -> Option<[u8; 32]> {
     ergebnis
 }
 
-/// Alle gemerkten Zugaenge dieses Geraets entfernen (kuenftig wieder Passwort).
+/// Welche Organisationen sind auf diesem Geraet gemerkt? (Nur IDs.)
 #[tauri::command]
-pub fn merken_vergessen(app: tauri::AppHandle) -> Result<(), String> {
+pub fn merken_liste(app: tauri::AppHandle) -> Result<Vec<String>, String> {
     let orgs = org_ordner(&app)?;
-    for id in org_ids(&orgs) {
+    Ok(org_ids(&orgs).into_iter().filter(|id| orgs.join(format!("{id}.merken")).exists()).collect())
+}
+
+/// Gemerkte Zugaenge entfernen (kuenftig wieder Passwort): ohne `orgs` alle
+/// dieses Geraets ("Geraet vergessen"), sonst nur die genannten.
+#[tauri::command]
+pub fn merken_vergessen(app: tauri::AppHandle, orgs: Option<Vec<String>>) -> Result<(), String> {
+    let ordner = org_ordner(&app)?;
+    merken_entfernen(&ordner, orgs.as_deref())
+}
+
+fn merken_entfernen(orgs: &Path, nur: Option<&[String]>) -> Result<(), String> {
+    for id in org_ids(orgs).into_iter().filter(|id| nur.map_or(true, |l| l.contains(id))) {
         let pfad = orgs.join(format!("{id}.merken"));
         if pfad.exists() {
             fs::remove_file(&pfad).map_err(|e| format!("Konnte nicht entfernen: {e}"))?;
@@ -943,6 +1106,140 @@ mod tests {
             .decrypt(Nonce::from_slice(nonce), &inhalt[KOPF_LAENGE..])
             .ok()?;
         String::from_utf8(klar).ok()
+    }
+
+    /// Testordner mit Organisationen (id, passwort, daten).
+    fn orgs_ordner(zweck: &str, orgs: &[(&str, &str, &str)]) -> PathBuf {
+        let eindeutig = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let o = std::env::temp_dir().join(format!("a3000-o4-{zweck}-{eindeutig}"));
+        fs::create_dir_all(&o).unwrap();
+        for (id, pw, daten) in orgs {
+            fs::write(o.join(format!("{id}.enc")), tresor_inhalt(pw, daten)).unwrap();
+        }
+        o
+    }
+    const A: &str = "aaaaaaaaaaaaaaaa";
+    const B: &str = "bbbbbbbbbbbbbbbb";
+    const C: &str = "cccccccccccccccc";
+    fn datei(o: &Path, id: &str) -> Vec<u8> {
+        fs::read(o.join(format!("{id}.enc"))).unwrap()
+    }
+    fn normal_schreiben(p: &PathBuf, i: &[u8]) -> Result<(), String> {
+        sicher_schreiben(p, i)
+    }
+
+    #[test]
+    fn passwortwechsel_erfasst_genau_die_geteilten() {
+        let o = orgs_ordner("geteilt", &[(A, "gemeinsam1", "{\"a\":1}"), (B, "gemeinsam1", "{\"b\":1}"), (C, "eigenes-pw", "{\"c\":1}")]);
+        let (neu, rest) =
+            passwort_wechseln(&o, A, Nachweis::Passwort("gemeinsam1"), "nagelneu99", "{\"a\":2}", true, normal_schreiben).unwrap();
+        let ids: Vec<&str> = neu.iter().map(|n| n.id.as_str()).collect();
+        assert_eq!(ids, vec![A, B], "aktive zuerst, dazu nur die mit demselben Passwort");
+        assert!(!rest);
+        assert_eq!(oeffnen(&datei(&o, A), "nagelneu99").as_deref(), Some("{\"a\":2}"), "aktive mit neuem Stand");
+        assert_eq!(oeffnen(&datei(&o, B), "nagelneu99").as_deref(), Some("{\"b\":1}"), "geteilte mit ihrem Inhalt");
+        assert!(oeffnen(&datei(&o, A), "gemeinsam1").is_none());
+        assert!(oeffnen(&datei(&o, B), "gemeinsam1").is_none());
+        assert_eq!(oeffnen(&datei(&o, C), "eigenes-pw").as_deref(), Some("{\"c\":1}"), "eigenes Passwort bleibt unberuehrt");
+        for id in [A, B, C] {
+            assert!(!o.join(format!("{id}.enc.bak")).exists(), "keine Vorversion mit altem Passwort");
+        }
+        let _ = fs::remove_dir_all(&o);
+    }
+
+    #[test]
+    fn nach_dem_wechsel_speichert_die_sitzung_mit_neuem_passwort() {
+        let o = orgs_ordner("sitzung", &[(A, "gemeinsam1", "a"), (B, "gemeinsam1", "b")]);
+        let mut geheim = HashMap::new();
+        geheim.insert(A.to_string(), Geheimnis { schluessel: [9; 32], salt: [0; SALT_LAENGE], ueber_merken: false });
+        let (neu, rest) = passwort_wechseln(&o, A, Nachweis::Passwort("gemeinsam1"), "nagelneu99", "a", true, normal_schreiben).unwrap();
+        let ergebnis = passwort_abschliessen(&o, &mut geheim, neu, rest);
+        assert_eq!(ergebnis.geaendert, vec![A.to_string(), B.to_string()]);
+        assert!(ergebnis.merken_ok);
+        assert!(!geheim.contains_key(B), "die gesperrte bleibt gesperrt");
+        let g = geheim.get(A).unwrap();
+        assert_eq!(salt_lesen(&datei(&o, A)).unwrap(), g.salt, "Sitzung kennt das neue Salt");
+        // So speichert die App danach: muss mit dem neuen Passwort aufgehen.
+        let gespeichert = verschluesseln("a-weiter", &g.schluessel, &g.salt).unwrap();
+        assert_eq!(oeffnen(&gespeichert, "nagelneu99").as_deref(), Some("a-weiter"));
+        let _ = fs::remove_dir_all(&o);
+    }
+
+    #[test]
+    fn passwortwechsel_ohne_geteilte_nur_die_aktive() {
+        let o = orgs_ordner("einzeln", &[(A, "gemeinsam1", "a"), (B, "gemeinsam1", "b")]);
+        let (neu, _) = passwort_wechseln(&o, A, Nachweis::Passwort("gemeinsam1"), "nagelneu99", "a", false, normal_schreiben).unwrap();
+        assert_eq!(neu.len(), 1);
+        assert_eq!(oeffnen(&datei(&o, B), "gemeinsam1").as_deref(), Some("b"));
+        let _ = fs::remove_dir_all(&o);
+    }
+
+    #[test]
+    fn passwortwechsel_ist_alles_oder_nichts() {
+        let o = orgs_ordner("rollback", &[(A, "gemeinsam1", "a"), (B, "gemeinsam1", "b")]);
+        let zaehler = std::cell::Cell::new(0);
+        let klemmt = |p: &PathBuf, i: &[u8]| {
+            zaehler.set(zaehler.get() + 1);
+            if zaehler.get() == 2 {
+                return Err("Platte voll".to_string());
+            }
+            sicher_schreiben(p, i)
+        };
+        let fehler = passwort_wechseln(&o, A, Nachweis::Passwort("gemeinsam1"), "nagelneu99", "a-neu", true, klemmt)
+            .err()
+            .unwrap();
+        assert!(fehler.contains("alte Passwort gilt weiter"));
+        assert_eq!(oeffnen(&datei(&o, A), "gemeinsam1").as_deref(), Some("a"), "erste Datei ist zurueck");
+        assert_eq!(oeffnen(&datei(&o, B), "gemeinsam1").as_deref(), Some("b"));
+        assert!(oeffnen(&datei(&o, A), "nagelneu99").is_none());
+        let _ = fs::remove_dir_all(&o);
+    }
+
+    #[test]
+    fn passwortwechsel_mit_falschem_alten_schreibt_nichts() {
+        let o = orgs_ordner("falsch", &[(A, "gemeinsam1", "a"), (B, "gemeinsam1", "b")]);
+        let vorher = datei(&o, A);
+        let e = passwort_wechseln(&o, A, Nachweis::Passwort("vertippt!"), "nagelneu99", "a", true, normal_schreiben).err().unwrap();
+        assert_eq!(e, "falsches_passwort");
+        assert_eq!(datei(&o, A), vorher);
+        let _ = fs::remove_dir_all(&o);
+    }
+
+    #[test]
+    fn gesperrte_neu_aufsetzen_trifft_nur_sie() {
+        let o = orgs_ordner("einzel-neu", &[(A, "gemeinsam1", "a"), (B, "eigenes-pw", "b")]);
+        fs::write(o.join(format!("{A}.merken")), b"x").unwrap();
+        fs::write(o.join(format!("{B}.merken")), b"x").unwrap();
+        let mut geheim = HashMap::new();
+        // ohne offene Sitzung: nein
+        assert!(gesperrte_beiseitelegen(&o, &geheim, B, "2026-11-14").is_err());
+        geheim.insert(A.to_string(), Geheimnis { schluessel: [1; 32], salt: [0; SALT_LAENGE], ueber_merken: false });
+        // die offene selbst: nein
+        assert!(gesperrte_beiseitelegen(&o, &geheim, A, "2026-11-14").is_err());
+        // unbekannte: nein
+        assert!(gesperrte_beiseitelegen(&o, &geheim, C, "2026-11-14").is_err());
+        gesperrte_beiseitelegen(&o, &geheim, B, "2026-11-14").unwrap();
+        assert_eq!(org_ids(&o), vec![A.to_string()]);
+        assert!(o.join(format!("alt-2026-11-14-{B}.enc")).exists());
+        assert!(!o.join(format!("{B}.merken")).exists());
+        assert!(o.join(format!("{A}.merken")).exists(), "Merken der anderen bleibt");
+        let _ = fs::remove_dir_all(&o);
+    }
+
+    #[test]
+    fn merken_gezielt_vergessen() {
+        let o = orgs_ordner("merken", &[(A, "p1p1p1p1", "a"), (B, "p1p1p1p1", "b")]);
+        fs::write(o.join(format!("{A}.merken")), b"x").unwrap();
+        fs::write(o.join(format!("{B}.merken")), b"x").unwrap();
+        merken_entfernen(&o, Some(&[B.to_string()])).unwrap();
+        assert!(o.join(format!("{A}.merken")).exists());
+        assert!(!o.join(format!("{B}.merken")).exists());
+        merken_entfernen(&o, None).unwrap();
+        assert!(!o.join(format!("{A}.merken")).exists());
+        let _ = fs::remove_dir_all(&o);
     }
 
     #[test]

@@ -52,7 +52,7 @@
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
   import { boardAusTresor, geteilteFoerdererAusTresor } from "$lib/sync";
   import { verlassenErlaubt } from "$lib/ungespeichert";
-  import { orgName, orgListe, bekannteAbgleichen, namePruefen, neueOrgDaten, startOrg, orgOrdnerVon } from "$lib/organisationen.js";
+  import { orgName, orgListe, bekannteAbgleichen, namePruefen, neueOrgDaten, startOrg, orgOrdnerVon, NAME_UNBEKANNT } from "$lib/organisationen.js";
   // Reine Tresor-Struktur-Helfer (Vorlagen + Migration) – ausgelagert nach
   // $lib/tresorFormat.js, damit diese Datei kleiner bleibt.
   import { offizielleFristenAus, neueId, neuesProjekt, leereStammdaten, frischerTresor, normalisieren, STANDARD_TEAM_SYNC } from "$lib/tresorFormat.js";
@@ -68,6 +68,9 @@
   let merkenMoeglich = $state(false); // Plattform unterstützt DPAPI-Merken?
   let merkenAktiv = $state(false); // auf diesem Gerät bereits hinterlegt?
   let merkenWunsch = $state(false); // Häkchen auf dem Entsperr-Bildschirm
+  /** @type {string[]} */
+  let gemerkte = $state([]); // IDs der Organisationen, die auf diesem Gerät gemerkt sind
+  const aktivGemerkt = $derived(!!orgId && gemerkte.includes(orgId));
 
   let passwort = $state("");
   let passwortWdh = $state("");
@@ -302,12 +305,7 @@
       return;
     }
     // Tresor vorhanden: Gibt es ein gemerktes, passwortloses Entsperren?
-    try {
-      merkenAktiv = await invoke("merken_status");
-    } catch {
-      merkenAktiv = false;
-    }
-    merkenWunsch = merkenAktiv;
+    await merkenVorbelegen();
     if (merkenAktiv) {
       try {
         const offen = await invoke("merken_entsperren");
@@ -315,8 +313,7 @@
         return;
       } catch {
         // Gemerkter Zugang ungültig/entfernt → normales Entsperren.
-        merkenAktiv = false;
-        merkenWunsch = false;
+        await merkenVorbelegen();
       }
     }
     ansicht = "entsperren";
@@ -342,6 +339,7 @@
     daten = aktiv.daten;
     andereOrgs = geladen.filter((o) => o !== aktiv);
     alleOrgIds = await invoke("tresor_liste").catch(() => []);
+    await gemerkteLaden();
     await bekannteAbgleichenUndSpeichern();
     passwort = "";
     wiederherstellHinweis = "";
@@ -409,13 +407,49 @@
     }
   }
 
+  // Haken „Auf diesem Gerät merken" auf dem Sperr-Bildschirm vorbelegen.
+  // Mit mehreren Organisationen ist er nur dann gesetzt, wenn ALLE gemerkt
+  // sind. Und er wirkt beim Entsperren nur, wenn man ihn selbst umstellt –
+  // sonst würde er die Einstellung je Organisation (Passwort-Karte) beim
+  // nächsten Anmelden stillschweigend überschreiben.
+  let merkenWunschStart = false;
+  async function merkenVorbelegen() {
+    /** @type {string[]} */
+    const gemerkt = merkenMoeglich ? await invoke("merken_liste").catch(() => []) : [];
+    /** @type {string[]} */
+    const alle = await invoke("tresor_liste").catch(() => []);
+    merkenAktiv = gemerkt.length > 0;
+    merkenWunsch = alle.length > 0 && alle.every((id) => gemerkt.includes(id));
+    merkenWunschStart = merkenWunsch;
+  }
+
+  // Welche Organisationen sind auf diesem Gerät gemerkt? (Nur IDs.)
+  async function gemerkteLaden() {
+    gemerkte = merkenMoeglich ? await invoke("merken_liste").catch(() => []) : [];
+    merkenAktiv = gemerkte.length > 0;
+  }
+
+  // „Auf diesem Gerät merken" für die AKTIVE Organisation an- oder ausschalten
+  // (z. B. für eine mit eigenem Passwort, die beim Anmelden nicht dabei war).
+  /** @param {boolean} an */
+  async function aktivMerken(an) {
+    if (!orgId) return;
+    try {
+      if (an) await invoke("merken_anlegen", { orgs: [orgId] });
+      else await invoke("merken_vergessen", { orgs: [orgId] });
+    } catch (e) {
+      alert("Das ließ sich nicht umstellen.\n" + e);
+    }
+    await gemerkteLaden();
+  }
+
   // Den gemerkten Zugang dieses Geräts wieder entfernen.
   async function merkenVergessen() {
     try {
       await invoke("merken_vergessen");
     } catch { /* nicht fatal */ }
     merkenAktiv = false;
-    merkenWunsch = false;
+    merkenWunsch = merkenWunschStart = false;
   }
 
   async function einrichten(event) {
@@ -460,13 +494,13 @@
     try {
       const offen = await invoke("tresor_entsperren", { passwort });
       // Merken-Wunsch umsetzen (Tresor ist jetzt offen → Schlüssel vorhanden).
+      // Nur wenn der Haken umgestellt wurde (siehe merkenVorbelegen), und nur
+      // für die Organisationen, die DIESES Passwort geöffnet hat.
+      const ids = offen.map((/** @type {{ id: string }} */ o) => o.id);
       try {
-        if (merkenWunsch) {
-          await invoke("merken_anlegen");
-          merkenAktiv = true;
-        } else if (merkenAktiv) {
-          await invoke("merken_vergessen");
-          merkenAktiv = false;
+        if (merkenWunsch !== merkenWunschStart) {
+          if (merkenWunsch) await invoke("merken_anlegen", { orgs: ids });
+          else await invoke("merken_vergessen", { orgs: ids });
         }
       } catch { /* Merken ist Komfort, kein harter Fehler */ }
       await nachEntsperren(offen);
@@ -516,11 +550,13 @@
     orgId = null;
     andereOrgs = [];
     alleOrgIds = [];
+    gemerkte = [];
     ordnerHinweise = [];
     orgMenuOffen = false;
     fehler = "";
     bereich = "uebersicht";
     arbeitsModus = "antrag";
+    await merkenVorbelegen();
     ansicht = "entsperren";
   }
 
@@ -533,8 +569,7 @@
     passwort = "";
     passwortWdh = "";
     wiederherstellHinweis = hinweis;
-    merkenAktiv = await invoke("merken_status").catch(() => false);
-    merkenWunsch = merkenAktiv;
+    await merkenVorbelegen();
   }
 
   // Speichert den Datenstand einer (nicht unbedingt aktiven) Organisation.
@@ -656,6 +691,7 @@
   function orgOeffnenFuer(e) {
     orgMenuOffen = false;
     orgOeffnenZiel = e;
+    orgNeuAufsetzen = false;
     orgOeffnenPasswort = "";
     orgOeffnenFehler = "";
   }
@@ -687,6 +723,37 @@
     } catch (e) {
       orgOeffnenPasswort = "";
       orgOeffnenFehler = String(e) === "falsches_passwort" ? "Falsches Passwort." : String(e);
+    } finally {
+      beschaeftigt = false;
+    }
+  }
+
+  // --- Gesperrte Organisation neu aufsetzen (Passwort vergessen) ---
+  // Nur ihre Tresor-Datei wird beiseitegelegt; die anderen bleiben, ihr Ordner
+  // mit den Dateien auch. Danach lässt sich gleich eine neue anlegen.
+  let orgNeuAufsetzen = $state(false);
+  let orgNeuAufsetzenText = $state("");
+  async function gesperrteNeuAufsetzen() {
+    const ziel = orgOeffnenZiel;
+    if (!ziel || orgNeuAufsetzenText !== "NEU AUFSETZEN") return;
+    orgOeffnenFehler = "";
+    beschaeftigt = true;
+    try {
+      const datum = new Date().toISOString().slice(0, 10);
+      await invoke("tresor_gesperrte_neu_aufsetzen", { org: ziel.id, datum });
+      alleOrgIds = await invoke("tresor_liste").catch(() => alleOrgIds.filter((i) => i !== ziel.id));
+      await gemerkteLaden();
+      await bekannteAbgleichenUndSpeichern();
+      orgOeffnenZiel = null;
+      orgNeuAufsetzen = false;
+      orgNeuAufsetzenText = "";
+      // Gleich eine neue mit demselben Namen anbieten.
+      orgNeuName = ziel.name === NAME_UNBEKANNT ? "" : ziel.name;
+      orgNeuArt = "eigen";
+      orgNeuFehler = "";
+      orgNeuOffen = true;
+    } catch (e) {
+      orgOeffnenFehler = String(e);
     } finally {
       beschaeftigt = false;
     }
@@ -732,8 +799,9 @@
       orgNeuPasswort = orgNeuPasswortWdh = "";
       // Gleiches Passwort + „Auf diesem Gerät merken": die neue auch merken.
       // Eine mit eigenem Passwort bewusst nicht – sonst wäre es keins.
-      if (orgNeuArt === "gleich" && merkenAktiv) await invoke("merken_anlegen", { orgs: [id] }).catch(() => {});
+      if (orgNeuArt === "gleich" && aktivGemerkt) await invoke("merken_anlegen", { orgs: [id] }).catch(() => {});
       alleOrgIds = await invoke("tresor_liste").catch(() => [...alleOrgIds, id]);
+      await gemerkteLaden();
       andereOrgs = [...andereOrgs, { id, daten: neu }];
       orgNeuOffen = false;
       await bekannteAbgleichenUndSpeichern();
@@ -2575,6 +2643,12 @@
         beginnst mit einem leeren Tresor und neuem Passwort von vorn.
         Ohne das alte Passwort bleiben die alten Daten unlesbar.
       </p>
+      <p class="untertitel">
+        Hast du mehrere Organisationen, betrifft das <strong>alle</strong> auf diesem Gerät.
+        Fehlt dir nur das Passwort einer einzelnen: Öffne die App mit einem anderen Passwort
+        und setze sie im Umschalter oben links neu auf (die gesperrte anklicken,
+        „Passwort vergessen?“).
+      </p>
 
       <label for="bestaetigung">Tippe zur Bestätigung: <strong>NEU AUFSETZEN</strong></label>
       <input id="bestaetigung" type="text" bind:value={bestaetigung} />
@@ -3052,10 +3126,16 @@
 
             <div class="einzel-panel passwort-karte">
               <h2>Tresor-Passwort</h2>
-              <p class="dezent">Dein Passwort schützt alle Daten in diesem Tresor. Hier kannst du es
+              <p class="dezent">Dein Passwort schützt alle Daten dieser Organisation. Hier kannst du es
                 ändern – normalerweise mit deinem aktuellen Passwort. Hast du es vergessen und die
                 App über „Auf diesem Gerät merken“ geöffnet, geht es auch ohne.</p>
               <button class="primaer" onclick={() => (passwortOffen = true)}>🔑 Passwort ändern</button>
+              {#if merkenMoeglich}
+                <label class="merken-org">
+                  <input type="checkbox" checked={aktivGemerkt} onchange={(e) => aktivMerken(e.currentTarget.checked)} />
+                  „{orgName(daten)}“ auf diesem Gerät merken (ohne Passwort starten)
+                </label>
+              {/if}
             </div>
           </div>
         </div>
@@ -3308,6 +3388,9 @@
     {#if passwortOffen}
       <PasswortAendern
         org={orgId}
+        name={orgName(daten)}
+        mehrere={alleOrgIds.length > 1}
+        namenVon={(/** @type {string[]} */ ids) => ids.map((id) => orgEintraege.find((e) => e.id === id)?.name ?? NAME_UNBEKANNT)}
         aktuelleDaten={() => JSON.stringify($state.snapshot(daten))}
         schliessen={() => (passwortOffen = false)}
       />
@@ -3499,14 +3582,38 @@
     {#if orgOeffnenZiel}
       <div class="schleier" onclick={() => (orgOeffnenZiel = null)} role="presentation">
         <form class="karte" onsubmit={orgOeffnen} onclick={(e) => e.stopPropagation()}>
-          <h1>„{orgOeffnenZiel.name}“ öffnen</h1>
-          <p class="untertitel">Diese Organisation hat ein eigenes Passwort.</p>
-          <label for="org-oeffnen-pw">Passwort</label>
-          <!-- svelte-ignore a11y_autofocus -->
-          <input id="org-oeffnen-pw" type="password" bind:value={orgOeffnenPasswort} autocomplete="current-password" autofocus oninput={() => (orgOeffnenFehler = "")} />
-          {#if orgOeffnenFehler}<p class="fehler" role="alert">{orgOeffnenFehler}</p>{/if}
-          <button type="submit" disabled={!orgOeffnenPasswort || beschaeftigt}>{beschaeftigt ? "Öffne …" : "Öffnen"}</button>
-          <button type="button" class="leise" onclick={() => (orgOeffnenZiel = null)}>Abbrechen</button>
+          {#if !orgNeuAufsetzen}
+            <h1>„{orgOeffnenZiel.name}“ öffnen</h1>
+            <p class="untertitel">Diese Organisation ist noch gesperrt. Gib ihr Passwort ein.</p>
+            <label for="org-oeffnen-pw">Passwort</label>
+            <!-- svelte-ignore a11y_autofocus -->
+            <input id="org-oeffnen-pw" type="password" bind:value={orgOeffnenPasswort} autocomplete="current-password" autofocus oninput={() => (orgOeffnenFehler = "")} />
+            {#if orgOeffnenFehler}<p class="fehler" role="alert">{orgOeffnenFehler}</p>{/if}
+            <button type="submit" disabled={!orgOeffnenPasswort || beschaeftigt}>{beschaeftigt ? "Öffne …" : "Öffnen"}</button>
+            <button type="button" class="leise" onclick={() => (orgOeffnenZiel = null)}>Abbrechen</button>
+            <button type="button" class="leise" onclick={() => { orgOeffnenFehler = ""; orgNeuAufsetzenText = ""; orgNeuAufsetzen = true; }}>
+              Passwort vergessen? Diese Organisation neu aufsetzen …
+            </button>
+          {:else}
+            <h1>„{orgOeffnenZiel.name}“ neu aufsetzen?</h1>
+            <p class="untertitel warntext">
+              Nur diese Organisation wird beiseitegelegt (nicht gelöscht): Stammdaten,
+              Projekte, Anträge und Abrechnung bleiben ohne ihr Passwort unlesbar.
+              Deine anderen Organisationen bleiben, wie sie sind.
+            </p>
+            <p class="untertitel">
+              Ihr Ordner unter <strong>Dokumente\Antrag 3000</strong> mit den Dateien bleibt stehen.
+              Legst du danach eine neue Organisation mit demselben Namen an, bekommt sie einen
+              eigenen, neuen Ordner (z. B. „Name (2)“).
+            </p>
+            <label for="org-neu-aufsetzen">Tippe zur Bestätigung: <strong>NEU AUFSETZEN</strong></label>
+            <input id="org-neu-aufsetzen" type="text" bind:value={orgNeuAufsetzenText} />
+            {#if orgOeffnenFehler}<p class="fehler" role="alert">{orgOeffnenFehler}</p>{/if}
+            <button type="button" class="gefahr" disabled={orgNeuAufsetzenText !== "NEU AUFSETZEN" || beschaeftigt} onclick={gesperrteNeuAufsetzen}>
+              Ja, neu aufsetzen
+            </button>
+            <button type="button" class="leise" onclick={() => { orgOeffnenFehler = ""; orgNeuAufsetzen = false; }}>Zurück</button>
+          {/if}
         </form>
       </div>
     {/if}
@@ -3986,6 +4093,19 @@
     color: var(--warnung-text3);
     font-size: 0.9rem;
     border-bottom: 1px solid var(--rand);
+  }
+  .einzel-panel .merken-org {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    margin-top: 14px;
+    font-size: 0.9rem;
+    font-weight: 400;
+  }
+  .einzel-panel .merken-org input {
+    width: auto;
+    margin-top: 3px;
+    flex: none;
   }
   .archiv-holen {
     width: auto;

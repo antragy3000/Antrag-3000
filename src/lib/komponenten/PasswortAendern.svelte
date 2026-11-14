@@ -8,20 +8,30 @@
   // Gerät merken" geöffnet, darf ein neues Passwort OHNE das alte gesetzt
   // werden (tresor_passwort_neu_setzen). Ob das geht, entscheidet Rust –
   // die Anzeige hier fragt nur nach (tresor_ueber_merken).
+  //
+  // Organisationen (Etappe O4): Teilen sich mehrere Organisationen ein
+  // Passwort, ändert es sich auf Wunsch bei allen. Welche das sind, prüft Rust
+  // (jede, die sich mit dem bisherigen Passwort öffnen lässt). Der
+  // „vergessen"-Weg gilt nur für die aktive – ohne das alte Passwort lässt
+  // sich nicht prüfen, wer es geteilt hat.
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
 
   // aktuelleDaten(): JSON-Text des aktuellen Tresor-Inhalts (wie beim Speichern).
   // org: ID der offenen Organisation (eigene Tresor-Datei, Variante B+).
-  let { org, aktuelleDaten, schliessen } = $props();
+  // name: Name der aktiven Organisation; mehrere: gibt es auf diesem Gerät
+  // weitere Organisationen?; namenVon(ids): Namen zu IDs für die Erfolgsmeldung.
+  let { org, aktuelleDaten, schliessen, name = "", mehrere = false, namenVon = (/** @type {string[]} */ ids) => ids } = $props();
 
   let alt = $state("");
   let neu = $state("");
   let wiederholen = $state("");
   let fehler = $state("");
   let beschaeftigt = $state(false);
-  /** @type {null | { merkenOk: boolean }} */
+  /** @type {null | { merkenOk: boolean, andere: string[], rest: boolean }} */
   let fertig = $state(null);
+  // Auch bei den anderen Organisationen mit demselben Passwort ändern?
+  let geteilte = $state(true);
   // Darf der „vergessen"-Weg angeboten werden? Und ist er gerade gewählt?
   let vergessenMoeglich = $state(false);
   let vergessen = $state(false);
@@ -42,15 +52,21 @@
     if (!vergessen && neu === alt) return (fehler = "Das neue Passwort ist dasselbe wie das alte.");
     beschaeftigt = true;
     try {
-      const merkenOk = vergessen
+      /** @type {{ geaendert: string[], merken_ok: boolean, vorversion_rest: boolean }} */
+      const ergebnis = vergessen
         ? await invoke("tresor_passwort_neu_setzen", { org, neuesPasswort: neu, daten: aktuelleDaten() })
         : await invoke("tresor_passwort_aendern", {
             org,
             altesPasswort: alt,
             neuesPasswort: neu,
             daten: aktuelleDaten(),
+            geteilte: mehrere && geteilte,
           });
-      fertig = { merkenOk: !!merkenOk };
+      fertig = {
+        merkenOk: !!ergebnis.merken_ok,
+        andere: namenVon(ergebnis.geaendert.filter((/** @type {string} */ id) => id !== org)),
+        rest: !!ergebnis.vorversion_rest,
+      };
     } catch (e) {
       const code = String(e);
       fehler =
@@ -81,7 +97,16 @@
   <div class="dialog" onclick={(e) => e.stopPropagation()} role="presentation">
     <h2>{vergessen ? "Neues Passwort festlegen" : "Tresor-Passwort ändern"}</h2>
     {#if fertig}
-      <p class="ok">✓ Dein Tresor ist jetzt mit dem neuen Passwort verschlüsselt.</p>
+      <p class="ok">✓ {name ? `„${name}“` : "Dein Tresor"} ist jetzt mit dem neuen Passwort verschlüsselt.</p>
+      {#if fertig.andere.length > 0}
+        <p>Das neue Passwort gilt auch für: <strong>{fertig.andere.join(", ")}</strong>.</p>
+      {:else if mehrere && !vergessen}
+        <p class="klein">Die anderen Organisationen auf diesem Gerät behalten ihr Passwort.</p>
+      {/if}
+      {#if fertig.rest}
+        <p class="warn">Eine ältere Fassung mit dem alten Passwort ließ sich nicht löschen. Starte
+          die App neu und ändere das Passwort im Zweifel noch einmal.</p>
+      {/if}
       {#if !fertig.merkenOk}
         <p class="warn">„Auf diesem Gerät merken" musste dabei ausgeschaltet werden. Du kannst
           es beim nächsten Entsperren wieder einschalten.</p>
@@ -94,6 +119,10 @@
         <p class="klein">Weil du die App über <strong>„Auf diesem Gerät merken“</strong> geöffnet
           hast, kannst du hier ein neues Passwort festlegen, ohne das alte zu kennen. Ab dann gilt
           nur noch das neue.</p>
+        {#if mehrere}
+          <p class="klein">Das gilt nur für <strong>{name ? `„${name}“` : "diese Organisation"}</strong>.
+            Andere Organisationen, die über „merken“ offen sind, wechselst du einzeln.</p>
+        {/if}
         <p class="warn">Ältere <strong>Sicherungen</strong> lassen sich danach nur noch mit dem
           <strong>alten</strong> (vergessenen) Passwort öffnen. Mach deshalb gleich danach eine
           neue Sicherung.</p>
@@ -113,6 +142,12 @@
       <label for="pw-neu2">Neues Passwort wiederholen</label>
       <input id="pw-neu2" type="password" autocomplete="new-password" bind:value={wiederholen} disabled={beschaeftigt}
         onkeydown={(e) => e.key === "Enter" && aendern()} />
+      {#if mehrere && !vergessen}
+        <label class="haken">
+          <input type="checkbox" bind:checked={geteilte} disabled={beschaeftigt} />
+          Auch bei den anderen Organisationen ändern, die dasselbe Passwort haben
+        </label>
+      {/if}
       {#if fehler}<p class="fehler">⚠ {fehler}</p>{/if}
       <div class="knoepfe">
         {#if vergessen}
@@ -158,6 +193,18 @@
   .klein {
     font-size: 0.85rem;
     color: var(--text-muted);
+  }
+  .haken {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    margin: 4px 0 10px;
+    font-size: 0.88rem;
+    font-weight: 400;
+  }
+  .haken input {
+    width: auto;
+    margin-top: 3px;
   }
   .ok {
     color: var(--erfolg-text);
