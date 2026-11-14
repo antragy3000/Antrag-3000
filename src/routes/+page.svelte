@@ -52,6 +52,7 @@
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
   import { boardAusTresor, geteilteFoerdererAusTresor } from "$lib/sync";
   import { verlassenErlaubt } from "$lib/ungespeichert";
+  import { orgName, orgListe, bekannteAbgleichen, namePruefen, neueOrgDaten, startOrg } from "$lib/organisationen.js";
   // Reine Tresor-Struktur-Helfer (Vorlagen + Migration) – ausgelagert nach
   // $lib/tresorFormat.js, damit diese Datei kleiner bleibt.
   import { offizielleFristenAus, neueId, neuesProjekt, leereStammdaten, frischerTresor, normalisieren, STANDARD_TEAM_SYNC } from "$lib/tresorFormat.js";
@@ -80,6 +81,20 @@
   // Speichern nennt sie, damit Rust in den richtigen Tresor schreibt.
   /** @type {string | null} */
   let orgId = $state(null);
+  // Die ANDEREN offenen Organisationen (gleiches Passwort oder dazu geöffnet):
+  // [{id, daten}] als schlichte Objekte; die aktive steht in `daten`.
+  // Neu zuweisen statt verändern, damit der Umschalter mitbekommt.
+  /** @type {{ id: string, daten: any }[]} */
+  let andereOrgs = $state.raw([]);
+  // IDs aller Organisationen auf diesem Gerät (auch gesperrter), von Rust.
+  /** @type {string[]} */
+  let alleOrgIds = $state.raw([]);
+  let orgMenuOffen = $state(false);
+  // Liste für den Umschalter. `andereOrgs` wird bei jeder Änderung neu
+  // zugewiesen; Namen der aktiven liest orgName(daten) direkt.
+  const orgEintraege = $derived(
+    daten ? orgListe([{ id: orgId, daten }, ...andereOrgs], alleOrgIds, orgId) : [],
+  );
 
   // Welcher Bereich ist nach dem Entsperren aktiv?
   let bereich = $state("uebersicht"); // uebersicht | foerderungen | merkliste | fristen | formular | kostenplan | belege | stammdaten
@@ -305,11 +320,21 @@
   // Organisation {id, daten}; bis zum Umschalter (Etappe O2) gibt es genau eine.
   /** @param {{ id: string, daten: string }[]} offen */
   async function nachEntsperren(offen) {
-    const erste = offen[0];
-    orgId = erste.id;
-    daten = JSON.parse(erste.daten);
-    // Ältere Datenstände (z. B. aus Schritt 3) sanft überführen.
-    if (normalisieren(daten)) await tresorSpeichern();
+    // Alle geöffneten Organisationen einlesen; ältere Stände (z. B. aus
+    // Schritt 3) sanft überführen und dann gleich zurückschreiben.
+    const geladen = [];
+    for (const o of offen) {
+      const d = JSON.parse(o.daten);
+      if (normalisieren(d)) await speichernFuer(o.id, d);
+      geladen.push({ id: o.id, daten: d });
+    }
+    const start = startOrg(geladen);
+    const aktiv = geladen.find((o) => o.id === start) ?? geladen[0];
+    orgId = aktiv.id;
+    daten = aktiv.daten;
+    andereOrgs = geladen.filter((o) => o !== aktiv);
+    alleOrgIds = await invoke("tresor_liste").catch(() => []);
+    await bekannteAbgleichenUndSpeichern();
     passwort = "";
     wiederherstellHinweis = "";
     ansicht = "offen";
@@ -404,6 +429,8 @@
         daten: JSON.stringify(frisch),
       });
       daten = frisch;
+      andereOrgs = [];
+      alleOrgIds = [orgId];
       passwort = passwortWdh = "";
       ansicht = "offen";
       // Erstes Aktivieren: zuerst den Datenschutz-Hinweis zeigen. Erst nach
@@ -478,6 +505,9 @@
     invoke("temp_aufraeumen").catch(() => {});
     daten = null;
     orgId = null;
+    andereOrgs = [];
+    alleOrgIds = [];
+    orgMenuOffen = false;
     fehler = "";
     bereich = "uebersicht";
     arbeitsModus = "antrag";
@@ -495,6 +525,214 @@
     wiederherstellHinweis = hinweis;
     merkenAktiv = await invoke("merken_status").catch(() => false);
     merkenWunsch = merkenAktiv;
+  }
+
+  // Speichert den Datenstand einer (nicht unbedingt aktiven) Organisation.
+  /** @param {string} id @param {any} d */
+  async function speichernFuer(id, d) {
+    await invoke("tresor_speichern", { org: id, daten: JSON.stringify(d) });
+  }
+
+  // ---------- Organisationen (Variante B+, Etappe O2) ----------
+
+  // Jeder offene Tresor merkt sich die Namen der anderen (für gesperrte im
+  // Umschalter). Gespeichert wird nur, wessen Liste sich geändert hat.
+  async function bekannteAbgleichenUndSpeichern() {
+    if (!daten || !orgId) return;
+    const offene = [{ id: orgId, daten }, ...andereOrgs];
+    const geaendert = bekannteAbgleichen(offene, alleOrgIds);
+    for (const id of geaendert) {
+      if (id === orgId) await tresorSpeichern();
+      else await speichernFuer(id, andereOrgs.find((o) => o.id === id)?.daten);
+    }
+    andereOrgs = [...andereOrgs];
+  }
+
+  const warten = (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms));
+
+  // Zur Ansicht nach dem Wechsel: wie frisch entsperrt.
+  function ansichtZuruecksetzen() {
+    bereich = "uebersicht";
+    arbeitsModus = "antrag";
+    teilWahl = null;
+    gruppeBlick = null;
+    projektMenuOffen = false;
+    orgMenuOffen = false;
+    aufgeklappt = {};
+    archivOffen = false;
+    fehler = "";
+  }
+
+  // Auf eine andere OFFENE Organisation umschalten. Vorher läuft keine
+  // Team-Synchronisation mehr (sie schriebe sonst in die falsche Organisation),
+  // und der aktuelle Stand ist gespeichert.
+  /** @param {string} id */
+  async function orgWechseln(id) {
+    orgMenuOffen = false;
+    if (id === orgId) return;
+    const ziel = andereOrgs.find((o) => o.id === id);
+    if (!ziel || !verlassenErlaubt()) return;
+    syncLoopStoppen();
+    while (tickAktiv) await warten(100);
+    syncVerbunden = false;
+    syncMeldung = null;
+    zuletztGeprueft = null;
+    await tresorSpeichern();
+    const bisher = { id: orgId, daten: $state.snapshot(daten) };
+    andereOrgs = [...andereOrgs.filter((o) => o.id !== id), bisher];
+    orgId = id;
+    daten = ziel.daten;
+    daten.zuletztGeoeffnet = new Date().toISOString();
+    ansichtZuruecksetzen();
+    await tresorSpeichern();
+    // Wie nach dem Entsperren: bei „Automatisch" die Team-Verbindung prüfen.
+    if (daten.netzModus === "auto" && daten.sync && online) verbindungPruefen(true).catch(() => {});
+  }
+
+  // --- Dialog: gesperrte Organisation mit ihrem Passwort öffnen ---
+  /** @type {null | { id: string, name: string }} */
+  let orgOeffnenZiel = $state(null);
+  let orgOeffnenPasswort = $state("");
+  let orgOeffnenFehler = $state("");
+  /** @param {{ id: string, name: string }} e */
+  function orgOeffnenFuer(e) {
+    orgMenuOffen = false;
+    orgOeffnenZiel = e;
+    orgOeffnenPasswort = "";
+    orgOeffnenFehler = "";
+  }
+  async function orgOeffnen(event) {
+    event.preventDefault();
+    orgOeffnenFehler = "";
+    beschaeftigt = true;
+    try {
+      const offen = await invoke("tresor_entsperren", { passwort: orgOeffnenPasswort });
+      orgOeffnenPasswort = "";
+      const bekannt = new Set([orgId, ...andereOrgs.map((o) => o.id)]);
+      const neu = [];
+      for (const o of offen) {
+        if (bekannt.has(o.id)) continue; // schon offen: nichts überschreiben
+        const d = JSON.parse(o.daten);
+        if (normalisieren(d)) await speichernFuer(o.id, d);
+        neu.push({ id: o.id, daten: d });
+      }
+      if (neu.length === 0) {
+        orgOeffnenFehler = "Dieses Passwort öffnet keine weitere Organisation.";
+        return;
+      }
+      andereOrgs = [...andereOrgs, ...neu];
+      await bekannteAbgleichenUndSpeichern();
+      const gewuenscht = neu.find((o) => o.id === orgOeffnenZiel?.id) ?? neu[0];
+      orgOeffnenZiel = null;
+      await orgWechseln(gewuenscht.id);
+    } catch (e) {
+      orgOeffnenPasswort = "";
+      orgOeffnenFehler = String(e) === "falsches_passwort" ? "Falsches Passwort." : String(e);
+    } finally {
+      beschaeftigt = false;
+    }
+  }
+
+  // --- Dialog: neue Organisation ---
+  let orgNeuOffen = $state(false);
+  let orgNeuName = $state("");
+  let orgNeuArt = $state("gleich"); // "gleich" | "eigen"
+  let orgNeuPasswort = $state("");
+  let orgNeuPasswortWdh = $state("");
+  let orgNeuFehler = $state("");
+  const orgNeuPruefung = $derived(namePruefen(orgNeuName, orgEintraege));
+  function orgNeuOeffnen() {
+    orgMenuOffen = false;
+    orgNeuName = "";
+    orgNeuArt = "gleich";
+    orgNeuPasswort = orgNeuPasswortWdh = "";
+    orgNeuFehler = "";
+    orgNeuOffen = true;
+  }
+  async function orgAnlegen(event) {
+    event.preventDefault();
+    orgNeuFehler = "";
+    if (!orgNeuPruefung.ok) return;
+    if (orgNeuArt === "eigen") {
+      if ([...orgNeuPasswort].length < 8) return (orgNeuFehler = "Das Passwort muss mindestens 8 Zeichen haben.");
+      if (orgNeuPasswort !== orgNeuPasswortWdh) return (orgNeuFehler = "Die beiden Passwörter stimmen nicht überein.");
+    }
+    if (!verlassenErlaubt()) return;
+    beschaeftigt = true;
+    try {
+      if (orgNeuArt === "gleich") {
+        const passt = await invoke("tresor_passwort_pruefen", { org: orgId, passwort: orgNeuPasswort });
+        if (!passt) {
+          orgNeuPasswort = "";
+          return (orgNeuFehler = `Das ist nicht das Passwort von „${orgName(daten)}“.`);
+        }
+      }
+      const neu = neueOrgDaten(frischerTresor(), $state.snapshot(daten), orgNeuPruefung.name);
+      const id = await invoke("tresor_erstellen", { passwort: orgNeuPasswort, daten: JSON.stringify(neu) });
+      orgNeuPasswort = orgNeuPasswortWdh = "";
+      // Gleiches Passwort + „Auf diesem Gerät merken": die neue auch merken.
+      // Eine mit eigenem Passwort bewusst nicht – sonst wäre es keins.
+      if (orgNeuArt === "gleich" && merkenAktiv) await invoke("merken_anlegen", { orgs: [id] }).catch(() => {});
+      alleOrgIds = await invoke("tresor_liste").catch(() => [...alleOrgIds, id]);
+      andereOrgs = [...andereOrgs, { id, daten: neu }];
+      orgNeuOffen = false;
+      await bekannteAbgleichenUndSpeichern();
+      await orgWechseln(id);
+    } catch (e) {
+      orgNeuFehler = String(e);
+    } finally {
+      beschaeftigt = false;
+    }
+  }
+
+  // --- Dialog: Organisation umbenennen (nur offene) ---
+  /** @type {string | null} */
+  let orgUmbId = $state(null);
+  let orgUmbName = $state("");
+  const orgUmbPruefung = $derived(namePruefen(orgUmbName, orgEintraege, orgUmbId));
+  /** @param {{ id: string, name: string }} e */
+  function orgUmbenennenFuer(e) {
+    orgMenuOffen = false;
+    orgUmbId = e.id;
+    orgUmbName = e.name;
+  }
+  async function orgUmbenennen(event) {
+    event.preventDefault();
+    if (!orgUmbPruefung.ok || !orgUmbId) return;
+    if (orgUmbId === orgId) {
+      daten.organisation.name = orgUmbPruefung.name;
+      await tresorSpeichern();
+    } else {
+      const o = andereOrgs.find((x) => x.id === orgUmbId);
+      if (!o) return;
+      o.daten.organisation = { name: orgUmbPruefung.name };
+      await speichernFuer(o.id, o.daten);
+    }
+    orgUmbId = null;
+    await bekannteAbgleichenUndSpeichern();
+  }
+
+  // --- Dialog: Organisation entfernen (nur offene, nicht die aktive) ---
+  /** @type {null | { id: string, name: string }} */
+  let orgEntfernenZiel = $state(null);
+  let orgEntfernenFehler = $state("");
+  async function orgEntfernen() {
+    const ziel = orgEntfernenZiel;
+    if (!ziel || ziel.id === orgId) return;
+    orgEntfernenFehler = "";
+    beschaeftigt = true;
+    try {
+      const datum = new Date().toISOString().slice(0, 10);
+      await invoke("tresor_entfernen", { org: ziel.id, datum });
+      andereOrgs = andereOrgs.filter((o) => o.id !== ziel.id);
+      alleOrgIds = await invoke("tresor_liste").catch(() => alleOrgIds.filter((i) => i !== ziel.id));
+      orgEntfernenZiel = null;
+      await bekannteAbgleichenUndSpeichern();
+    } catch (e) {
+      orgEntfernenFehler = String(e);
+    } finally {
+      beschaeftigt = false;
+    }
   }
 
   // Speichert den gesamten Datenstand verschlüsselt in den Tresor.
@@ -2299,6 +2537,38 @@
           </svg>
         </span>
         <div class="projektwahl">
+          <div class="projekt-menu">
+            <button
+              class="projekt-knopf org-knopf"
+              onclick={() => (orgMenuOffen = !orgMenuOffen)}
+              aria-haspopup="true"
+              aria-expanded={orgMenuOffen}
+              title="Organisation wechseln, anlegen oder umbenennen"
+            >
+              <span class="knopf-text">{orgName(daten)}</span><span class="pfeil">▾</span>
+            </button>
+            {#if orgMenuOffen}
+              <div class="menu-backdrop" onclick={() => (orgMenuOffen = false)} role="presentation"></div>
+              <div class="projekt-liste" role="menu">
+                <div class="menu-titel">Organisationen</div>
+                {#each orgEintraege as e (e.id)}
+                  <div class="projekt-zeile" class:aktiv={e.aktiv}>
+                    {#if e.offen}
+                      <button class="projekt-name" onclick={() => orgWechseln(e.id)}>{e.name}</button>
+                      <button class="zeile-icon" title="Umbenennen" aria-label={`Organisation „${e.name}" umbenennen`} onclick={() => orgUmbenennenFuer(e)}>✏️</button>
+                      {#if !e.aktiv}
+                        <button class="zeile-icon" title="Von diesem Gerät entfernen" aria-label={`Organisation „${e.name}" entfernen`} onclick={() => { orgMenuOffen = false; orgEntfernenFehler = ""; orgEntfernenZiel = e; }}>🗑</button>
+                      {/if}
+                    {:else}
+                      <button class="projekt-name gesperrt" title="Mit ihrem Passwort öffnen" onclick={() => orgOeffnenFuer(e)}>🔒 {e.name}</button>
+                    {/if}
+                  </div>
+                {/each}
+                <button class="projekt-neu" onclick={orgNeuOeffnen}>+ Neue Organisation</button>
+              </div>
+            {/if}
+          </div>
+          <span class="pfad-trenner org-trenner" aria-hidden="true">›</span>
           {#if daten.projekte.length === 0}
             <button class="leise" onclick={neuesProjektOeffnen}>
               + Erstes Projekt erstellen
@@ -3091,6 +3361,104 @@
         </div>
       </div>
     {/if}
+
+    {#if orgNeuOffen}
+      <div class="schleier" onclick={() => (orgNeuOffen = false)} role="presentation">
+        <form class="karte" onsubmit={orgAnlegen} onclick={(e) => e.stopPropagation()}>
+          <h1>Neue Organisation</h1>
+          <p class="untertitel">
+            Eine Organisation hat eigene Stammdaten, eigene Projekte und ein
+            eigenes Team. Sie startet leer.
+          </p>
+          <label for="org-neu-name">Name</label>
+          <input id="org-neu-name" type="text" bind:value={orgNeuName} placeholder="z. B. Kulturverein Blau" />
+          {#if orgNeuPruefung.fehler}<p class="fehler" role="alert">{orgNeuPruefung.fehler}</p>{/if}
+
+          <fieldset class="org-passwort-wahl">
+            <legend>Passwort</legend>
+            <label class="wahl">
+              <input type="radio" name="org-art" value="gleich" bind:group={orgNeuArt} onchange={() => (orgNeuFehler = "")} />
+              <span><strong>Gleiches Passwort wie „{orgName(daten)}“</strong><br />
+                Beim Anmelden öffnen sich beide; Umschalten mit einem Klick.</span>
+            </label>
+            <label class="wahl">
+              <input type="radio" name="org-art" value="eigen" bind:group={orgNeuArt} onchange={() => (orgNeuFehler = "")} />
+              <span><strong>Eigenes Passwort</strong><br />
+                Bleibt zu, bis du sie mit ihrem Passwort öffnest.</span>
+            </label>
+          </fieldset>
+
+          {#if orgNeuArt === "gleich"}
+            <label for="org-neu-pw">Zur Bestätigung: Passwort von „{orgName(daten)}“</label>
+            <input id="org-neu-pw" type="password" bind:value={orgNeuPasswort} autocomplete="current-password" oninput={() => (orgNeuFehler = "")} />
+          {:else}
+            <label for="org-neu-pw">Neues Passwort (mindestens 8 Zeichen)</label>
+            <input id="org-neu-pw" type="password" bind:value={orgNeuPasswort} autocomplete="new-password" oninput={() => (orgNeuFehler = "")} />
+            <label for="org-neu-pw2">Passwort wiederholen</label>
+            <input id="org-neu-pw2" type="password" bind:value={orgNeuPasswortWdh} autocomplete="new-password" oninput={() => (orgNeuFehler = "")} />
+            <p class="untertitel warntext">
+              Auch dieses Passwort lässt sich nicht wiederherstellen.
+            </p>
+          {/if}
+          {#if orgNeuFehler}<p class="fehler" role="alert">{orgNeuFehler}</p>{/if}
+
+          <button type="submit" disabled={!orgNeuPruefung.ok || !orgNeuPasswort || beschaeftigt}>
+            {beschaeftigt ? "Lege an …" : "Organisation anlegen"}
+          </button>
+          <button type="button" class="leise" onclick={() => (orgNeuOffen = false)}>Abbrechen</button>
+        </form>
+      </div>
+    {/if}
+
+    {#if orgOeffnenZiel}
+      <div class="schleier" onclick={() => (orgOeffnenZiel = null)} role="presentation">
+        <form class="karte" onsubmit={orgOeffnen} onclick={(e) => e.stopPropagation()}>
+          <h1>„{orgOeffnenZiel.name}“ öffnen</h1>
+          <p class="untertitel">Diese Organisation hat ein eigenes Passwort.</p>
+          <label for="org-oeffnen-pw">Passwort</label>
+          <!-- svelte-ignore a11y_autofocus -->
+          <input id="org-oeffnen-pw" type="password" bind:value={orgOeffnenPasswort} autocomplete="current-password" autofocus oninput={() => (orgOeffnenFehler = "")} />
+          {#if orgOeffnenFehler}<p class="fehler" role="alert">{orgOeffnenFehler}</p>{/if}
+          <button type="submit" disabled={!orgOeffnenPasswort || beschaeftigt}>{beschaeftigt ? "Öffne …" : "Öffnen"}</button>
+          <button type="button" class="leise" onclick={() => (orgOeffnenZiel = null)}>Abbrechen</button>
+        </form>
+      </div>
+    {/if}
+
+    {#if orgUmbId}
+      <div class="schleier" onclick={() => (orgUmbId = null)} role="presentation">
+        <form class="karte" onsubmit={orgUmbenennen} onclick={(e) => e.stopPropagation()}>
+          <h1>Organisation umbenennen</h1>
+          <label for="org-umb">Name</label>
+          <input id="org-umb" type="text" bind:value={orgUmbName} />
+          {#if orgUmbPruefung.fehler}<p class="fehler" role="alert">{orgUmbPruefung.fehler}</p>{/if}
+          <p class="untertitel">Der Name ist nur für dich zum Unterscheiden. Was im Antrag als Absender steht, kommt aus den Stammdaten.</p>
+          <button type="submit" disabled={!orgUmbPruefung.ok}>Speichern</button>
+          <button type="button" class="leise" onclick={() => (orgUmbId = null)}>Abbrechen</button>
+        </form>
+      </div>
+    {/if}
+
+    {#if orgEntfernenZiel}
+      <div class="schleier" onclick={() => (orgEntfernenZiel = null)} role="presentation">
+        <div class="karte" onclick={(e) => e.stopPropagation()} role="presentation">
+          <h1>Organisation entfernen?</h1>
+          <p class="untertitel">
+            <strong>„{orgEntfernenZiel.name}“</strong> verschwindet von diesem Gerät:
+            Stammdaten, Projekte, Anträge und Abrechnung. Die verschlüsselte
+            Tresor-Datei wird beiseitegelegt, nicht sofort gelöscht – zurückholen
+            lässt sie sich aber nur mit Hilfe. Die Dateien unter
+            <strong>Dokumente\Antrag 3000</strong> bleiben stehen.
+          </p>
+          <p class="untertitel">
+            Tipp: Vorher zu „{orgEntfernenZiel.name}“ wechseln und eine Sicherung machen.
+          </p>
+          {#if orgEntfernenFehler}<p class="fehler" role="alert">{orgEntfernenFehler}</p>{/if}
+          <button class="gefahr" onclick={orgEntfernen} disabled={beschaeftigt}>Ja, entfernen</button>
+          <button class="leise" onclick={() => (orgEntfernenZiel = null)}>Abbrechen</button>
+        </div>
+      </div>
+    {/if}
   </div>
 {/if}
 
@@ -3183,6 +3551,47 @@
   }
   .projekt-knopf:hover {
     border-color: var(--akzent);
+  }
+  /* Organisations-Umschalter: eine Stufe leiser als die Projektwahl. */
+  .org-knopf {
+    font-weight: 500;
+    max-width: 220px;
+  }
+  .org-trenner {
+    margin: 0 2px;
+  }
+  .menu-titel {
+    padding: 6px 10px 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .projekt-name.gesperrt {
+    color: var(--text-muted);
+  }
+  .org-passwort-wahl {
+    margin: 14px 0 4px;
+    padding: 0;
+    border: none;
+  }
+  .org-passwort-wahl legend {
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .org-passwort-wahl .wahl {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin: 0 0 8px;
+    font-weight: 400;
+    line-height: 1.45;
+    cursor: pointer;
+  }
+  .org-passwort-wahl .wahl input {
+    width: auto;
+    margin: 3px 0 0;
   }
   .projekt-knopf .pfeil {
     color: var(--text-muted);

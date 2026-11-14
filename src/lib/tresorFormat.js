@@ -14,6 +14,7 @@ import { katalog } from "./katalog.svelte.js";
 import { gruppenUmstellen } from "./projektgruppen";
 import { bausteineUmstellen } from "./bausteine";
 import { abdeckungAufraeumen } from "./teilantrag";
+import { orgFelderErgaenzen } from "./organisationen.js";
 
 // Die editierbaren „offiziellen Fristen" im Tresor sind konkrete Datums-
 // Strings (per Datumsfeld bearbeitbar). Wiederkehrende Daten ohne Jahr aus
@@ -121,6 +122,11 @@ export function frischerTresor() {
     katalogMeldungen: [],
     katalogStand: {},
     katalogFeldDiff: {},
+    // Organisationen (B+): eigener Name dieser Organisation ("" = aus den
+    // Stammdaten ableiten) und die Namen der anderen Organisationen auf
+    // diesem Gerät [{id,name}], damit gesperrte im Umschalter erkennbar sind.
+    organisation: { name: "" },
+    bekannteOrganisationen: [],
   };
 }
 
@@ -469,6 +475,8 @@ export function normalisieren(d) {
     d.katalogFeldDiff = {};
     veraendert = true;
   }
+  // Organisationen (B+): ältere Tresore haben noch keinen eigenen Namen.
+  if (orgFelderErgaenzen(d)) veraendert = true;
   if (d.version !== 2) {
     d.version = 2;
     veraendert = true;

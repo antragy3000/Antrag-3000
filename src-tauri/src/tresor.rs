@@ -389,6 +389,74 @@ pub fn tresor_sperren(state: tauri::State<TresorZustand>) {
     state.geheim.lock().unwrap().clear();
 }
 
+/// IDs aller Organisationen auf diesem Geraet (auch gesperrter). Nur die
+/// Zufalls-IDs – Namen kennt Rust nicht, die stehen verschluesselt im Tresor.
+#[tauri::command]
+pub fn tresor_liste(app: tauri::AppHandle) -> Result<Vec<String>, String> {
+    Ok(org_ids(&org_ordner(&app)?))
+}
+
+/// Stimmt dieses Passwort fuer diese (offene) Organisation? Dient der
+/// Bestaetigung, wenn eine neue Organisation "dasselbe Passwort" bekommen
+/// soll – sonst laege bei einem Tippfehler unbemerkt ein anderes Passwort
+/// auf ihr. Nur fuer offene Organisationen, damit das kein Weg zum Raten an
+/// gesperrten wird.
+#[tauri::command]
+pub fn tresor_passwort_pruefen(
+    app: tauri::AppHandle,
+    state: tauri::State<TresorZustand>,
+    org: String,
+    mut passwort: String,
+) -> Result<bool, String> {
+    let ergebnis = (|| {
+        if !state.geheim.lock().unwrap().contains_key(&org) {
+            return Err("Der Tresor ist nicht entsperrt.".to_string());
+        }
+        let inhalt = fs::read(tresor_pfad(&app, &org)?).map_err(|e| format!("Tresor nicht lesbar: {e}"))?;
+        let salt = salt_lesen(&inhalt)?;
+        let mut schluessel = schluessel_ableiten(&passwort, &salt)?;
+        let passt = inhalt_oeffnen(&inhalt, &schluessel).map(|mut k| k.zeroize()).is_ok();
+        schluessel.zeroize();
+        Ok(passt)
+    })();
+    passwort.zeroize();
+    ergebnis
+}
+
+/// Eine (offene) Organisation entfernen. Die Datei wird – wie beim Neu-
+/// Aufsetzen – verschluesselt beiseitegelegt (alt-<datum>-<id>.enc), nicht
+/// sofort geloescht; ihr "Merken" verschwindet. Die letzte Organisation
+/// laesst sich so nicht entfernen (dafuer gibt es "Neu aufsetzen").
+#[tauri::command]
+pub fn tresor_entfernen(
+    app: tauri::AppHandle,
+    state: tauri::State<TresorZustand>,
+    org: String,
+    datum: String,
+) -> Result<(), String> {
+    if datum.is_empty() || datum.len() > 10 || !datum.chars().all(|c| c.is_ascii_digit() || c == '-') {
+        return Err("Ungueltiges Datum.".into());
+    }
+    if !id_gueltig(&org) {
+        return Err(FREMDE_ORG.into());
+    }
+    let orgs = org_ordner(&app)?;
+    let mut geheim = state.geheim.lock().unwrap();
+    if !geheim.contains_key(&org) {
+        return Err("Die Organisation ist nicht entsperrt.".into());
+    }
+    let ids = org_ids(&orgs);
+    if !ids.iter().any(|i| i == &org) {
+        return Err(FREMDE_ORG.into());
+    }
+    if ids.len() < 2 {
+        return Err("Die letzte Organisation kann nicht entfernt werden.".into());
+    }
+    beiseitelegen(&orgs, &org, &datum)?;
+    geheim.remove(&org);
+    Ok(())
+}
+
 /// Fuer die Sicherung mit Dateien: Schluessel und Salt einer offenen
 /// Organisation samt der dazu passenden Tresor-Datei. Das Schloss haelt
 /// gleichzeitiges Speichern fern, und gesichert wird nur ein Tresor, der sich
@@ -692,17 +760,22 @@ pub fn merken_status(app: tauri::AppHandle) -> Result<bool, String> {
     Ok(org_ids(&orgs).iter().any(|id| orgs.join(format!("{id}.merken")).exists()))
 }
 
-/// Alle gerade offenen Organisationen fuer dieses Geraet merken.
+/// Offene Organisationen fuer dieses Geraet merken: ohne `orgs` alle offenen
+/// (beim Anmelden), sonst nur die genannten (z. B. eine neue Organisation mit
+/// demselben Passwort). Eine Organisation mit EIGENEM Passwort, die erst
+/// spaeter in der Sitzung geoeffnet wurde, wird so nicht ungefragt gemerkt.
 #[tauri::command]
 pub fn merken_anlegen(
     app: tauri::AppHandle,
     state: tauri::State<TresorZustand>,
+    orgs: Option<Vec<String>>,
 ) -> Result<(), String> {
     let geheim = state.geheim.lock().unwrap();
     if geheim.is_empty() {
         return Err("Der Tresor ist nicht entsperrt.".into());
     }
-    for (id, g) in geheim.iter() {
+    let gewuenscht = |id: &String| orgs.as_ref().map_or(true, |liste| liste.contains(id));
+    for (id, g) in geheim.iter().filter(|(id, _)| gewuenscht(id)) {
         let geschuetzt = dpapi_schuetzen(&g.schluessel)?;
         fs::write(merken_pfad(&app, id)?, geschuetzt)
             .map_err(|e| format!("Konnte das Merken nicht speichern: {e}"))?;
