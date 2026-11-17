@@ -151,7 +151,7 @@ Beteiligte/Mitwirkende/Partner*innen).
   die App zurück.
 - **↗ In CryptPad öffnen / ↙ Aus CryptPad übernehmen**: bringt die Texte über die
   Zwischenablage in ein CryptPad-Dokument und wieder zurück. Die App sendet dabei
-  selbst nichts. Die bebilderte Anleitung steht im Handbuch, Kapitel 15.
+  selbst nichts. Die bebilderte Anleitung steht im Handbuch, Kapitel 16.
 
 ### Kostenplan (Kostenfinanzplan)
 Ausgaben und Finanzierung in **Kategorien** (1, 2, 3 …) mit **Positionen**
@@ -249,7 +249,7 @@ Passt alles, hast du zwei Möglichkeiten:
 ## Sachbericht (Abrechnung)
 Unter **Abrechnung → Sachbericht** schreibst du eine gemeinsame Vorlage und passt sie
 bei Bedarf je Geldquelle an („Für diesen Förderer anpassen"). Ohne eigenen Text
-erscheint im Verwendungsnachweis die Vorlage. Mehr dazu: Handbuch, Kapitel 22.
+erscheint im Verwendungsnachweis die Vorlage. Mehr dazu: Handbuch, Kapitel 23.
 
 ## Sicherung (Backup)
 Oben rechts **🛡 Sicherung**:
