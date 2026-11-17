@@ -109,7 +109,7 @@ const FREMDE_ORG: &str = "Unbekannte Organisation.";
 /// Nur genau 16 Kleinbuchstaben-Hexzeichen. Die ID kommt (auch) aus dem
 /// Frontend und wird Teil eines Dateinamens – mehr als das darf nicht
 /// durchgehen (kein "..", kein "\", kein Laufwerk).
-fn id_gueltig(id: &str) -> bool {
+pub(crate) fn id_gueltig(id: &str) -> bool {
     id.len() == 16 && id.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 

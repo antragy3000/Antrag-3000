@@ -471,6 +471,7 @@
         passwort,
         daten: JSON.stringify(frisch),
       });
+      await ordnerBeanspruchen(orgId, frisch);
       daten = frisch;
       andereOrgs = [];
       alleOrgIds = [orgId];
@@ -637,13 +638,32 @@
           return;
         }
       }
-      const name = await invoke("org_ordner_umbenennen", { alt: org.ordner, name: orgName(d) });
+      // Sucht den Ordner über die ID in seiner Marke (nicht nur über den
+      // gespeicherten Namen) und beansprucht ihn – so teilen sich zwei
+      // Organisationen nie einen Ordner, auch nicht nach dem Einspielen.
+      const name = await invoke("org_ordner_umbenennen", { org: id, alt: org.ordner, name: orgName(d) });
       if (name !== org.ordner) {
         org.ordner = name;
         await speichernFuer(id, d);
       }
     } catch {
       // Beim nächsten Anmelden erneut; bis dahin gilt der bisherige Stand.
+    }
+  }
+
+  // Gleich nach dem Anlegen: Die ID der neuen Organisation in die Marke ihres
+  // Ordners schreiben (vorher gab es die ID noch nicht). Klappt es nicht,
+  // holt ablageEinrichten es beim nächsten Anmelden nach.
+  /** @param {string} id @param {any} d */
+  async function ordnerBeanspruchen(id, d) {
+    try {
+      const name = await invoke("org_ordner_umbenennen", { org: id, alt: d.organisation.ordner, name: orgName(d) });
+      if (name !== d.organisation.ordner) {
+        d.organisation.ordner = name;
+        await speichernFuer(id, d);
+      }
+    } catch {
+      /* beim nächsten Anmelden */
     }
   }
 
@@ -823,6 +843,7 @@
       neu.organisation.ordner = await invoke("org_ordner_anlegen", { name: orgNeuPruefung.name });
       const id = await invoke("tresor_erstellen", { passwort: orgNeuPasswort, daten: JSON.stringify(neu) });
       orgNeuPasswort = orgNeuPasswortWdh = "";
+      await ordnerBeanspruchen(id, neu);
       // Gleiches Passwort + „Auf diesem Gerät merken": die neue auch merken.
       // Eine mit eigenem Passwort bewusst nicht – sonst wäre es keins.
       if (orgNeuArt === "gleich" && aktivGemerkt) await invoke("merken_anlegen", { orgs: [id] }).catch(() => {});
@@ -862,7 +883,7 @@
     // Umzug nicht, bleibt die Organisation unverändert.
     if (ziel.organisation.ordner) {
       try {
-        ziel.organisation.ordner = await invoke("org_ordner_umbenennen", { alt: ziel.organisation.ordner, name });
+        ziel.organisation.ordner = await invoke("org_ordner_umbenennen", { org: orgUmbId, alt: ziel.organisation.ordner, name });
       } catch (e) {
         orgUmbFehler = `Der Ordner konnte nicht umbenannt werden, die Organisation bleibt unverändert. ${e}`;
         return;

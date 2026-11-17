@@ -21,8 +21,15 @@ use tauri::Manager;
 /// Markiert einen Ordner als Ordner einer Organisation. Der Umzug alter
 /// Projektordner laesst solche Ordner in Ruhe: Ein Projekt, das zufaellig so
 /// heisst wie eine andere Organisation, darf deren Ordner nie mitnehmen.
+///
+/// Die Marke traegt ausserdem die ID der Organisation ("id=..."). Sie ist die
+/// eigentliche Antwort auf "welcher Ordner gehoert wem?" – der Name im Tresor
+/// ist nur ein Hinweis. So koennen zwei Organisationen nie denselben Ordner
+/// benutzen, auch nicht nach dem Einspielen einer Sicherung oder Weitergabe,
+/// deren Ordner hier schon unter gleichem Namen existiert.
 const MARKE: &str = ".antrag3000-organisation";
 const MARKE_TEXT: &str = "Dieser Ordner gehoert zu einer Organisation in Antrag 3000. Bitte diese Datei nicht loeschen.\n";
+const MARKE_ID: &str = "id=";
 
 /// Wurzelordner aller Nutzdaten: Dokumente\Antrag 3000
 pub(crate) fn wurzel(app: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -87,13 +94,86 @@ pub(crate) fn org_wurzel(app: &tauri::AppHandle, org_ordner: &str) -> Result<Pat
     org_pfad(&wurzel(app)?, org_ordner)
 }
 
-fn marke_setzen(ordner: &Path) -> Result<(), String> {
-    fs::create_dir_all(ordner).map_err(|e| format!("Ordner nicht anlegbar: {e}"))?;
+/// Was die Marke eines Ordners ueber seinen Besitzer sagt.
+#[derive(Debug, PartialEq)]
+pub(crate) enum Besitz {
+    /// Keine Marke (oder kein Ordner).
+    KeineMarke,
+    /// Marke ohne ID: angelegt, aber noch von keiner Organisation beansprucht
+    /// (z. B. aus Version 0.6 vor dieser Etappe oder gerade erst reserviert).
+    OhneId,
+    Id(String),
+}
+
+pub(crate) fn besitz(ordner: &Path) -> Besitz {
     let marke = ordner.join(MARKE);
-    if !marke.exists() {
-        fs::write(&marke, MARKE_TEXT).map_err(|e| format!("Ordner nicht beschreibbar: {e}"))?;
+    match fs::read_to_string(&marke) {
+        Ok(text) => text
+            .lines()
+            .find_map(|z| z.trim().strip_prefix(MARKE_ID))
+            .map(str::trim)
+            .filter(|id| crate::tresor::id_gueltig(id))
+            .map(|id| Besitz::Id(id.to_string()))
+            .unwrap_or(Besitz::OhneId),
+        Err(_) if marke.exists() => Besitz::OhneId,
+        Err(_) => Besitz::KeineMarke,
+    }
+}
+
+/// Legt Ordner und Marke an. Mit `id` beansprucht die Organisation eine Marke,
+/// die noch keine ID traegt. Eine fremde ID wird nie ueberschrieben – wem ein
+/// Ordner gehoert, entscheidet allein eigener_ordner().
+fn marke_setzen(ordner: &Path, id: Option<&str>) -> Result<(), String> {
+    fs::create_dir_all(ordner).map_err(|e| format!("Ordner nicht anlegbar: {e}"))?;
+    let schreiben = match (besitz(ordner), id) {
+        (Besitz::KeineMarke, _) => true,
+        (Besitz::OhneId, Some(_)) => true,
+        _ => false,
+    };
+    if schreiben {
+        let text = match id {
+            Some(id) => format!("{MARKE_TEXT}{MARKE_ID}{id}\n"),
+            None => MARKE_TEXT.to_string(),
+        };
+        fs::write(ordner.join(MARKE), text).map_err(|e| format!("Ordner nicht beschreibbar: {e}"))?;
     }
     Ok(())
+}
+
+/// Welcher Ordner gehoert der Organisation `id`? In dieser Reihenfolge:
+///  1. der gespeicherte, wenn seine Marke ihre ID traegt;
+///  2. sonst irgendein Ordner der Wurzel mit ihrer ID (z. B. nach dem
+///     Einspielen einer Sicherung unter freiem Namen);
+///  3. sonst der gespeicherte, wenn er niemandem gehoert (Marke ohne ID, keine
+///     Marke oder gar nicht mehr da – dann wird er neu angelegt);
+///  4. sonst (der gespeicherte gehoert einer ANDEREN Organisation) ein neuer.
+/// Liefert nur den Namen; angelegt und beansprucht wird in org_ordner_abgleichen.
+fn eigener_ordner(wurzel: &Path, id: &str, gespeichert: &str, name: &str) -> Result<String, String> {
+    let meine = Besitz::Id(id.to_string());
+    let gespeichert = if gespeichert.is_empty() { None } else { Some(bereinigen(gespeichert)?) };
+    if let Some(g) = &gespeichert {
+        if besitz(&wurzel.join(g)) == meine {
+            return Ok(g.clone());
+        }
+    }
+    if let Ok(eintraege) = fs::read_dir(wurzel) {
+        let mut treffer: Vec<String> = eintraege
+            .flatten()
+            .filter(|e| e.file_type().map(|a| a.is_dir()).unwrap_or(false))
+            .filter(|e| besitz(&e.path()) == meine)
+            .filter_map(|e| e.file_name().into_string().ok())
+            .collect();
+        treffer.sort();
+        if let Some(n) = treffer.into_iter().next() {
+            return Ok(n);
+        }
+    }
+    if let Some(g) = gespeichert {
+        if !matches!(besitz(&wurzel.join(&g)), Besitz::Id(_)) {
+            return Ok(g);
+        }
+    }
+    freier_org_name(wurzel, name, None)
 }
 
 /// Der erste freie Ordnername fuer `name`: "Verein", sonst "Verein (2)" usw.
@@ -119,7 +199,7 @@ fn freier_org_name(wurzel: &Path, name: &str, eigen: Option<&str>) -> Result<Str
 fn org_ordner_neu(wurzel: &Path, name: &str) -> Result<String, String> {
     fs::create_dir_all(wurzel).map_err(|e| format!("Ordner nicht anlegbar: {e}"))?;
     let frei = freier_org_name(wurzel, name, None)?;
-    marke_setzen(&wurzel.join(&frei))?;
+    marke_setzen(&wurzel.join(&frei), None)?;
     Ok(frei)
 }
 
@@ -130,26 +210,32 @@ pub fn org_ordner_anlegen(app: tauri::AppHandle, name: String) -> Result<String,
     org_ordner_neu(&wurzel(&app)?, &name)
 }
 
-/// Bringt den Ordner auf den Namen der Organisation und stellt sicher, dass es
-/// ihn gibt. Passt der Name schon, passiert nichts. Gibt den Namen zurueck, der
-/// danach gilt. Scheitert das Umbenennen (Datei offen), bleibt alles, wie es war.
-fn org_ordner_abgleichen(wurzel: &Path, alt: &str, name: &str) -> Result<String, String> {
-    let alt_sauber = bereinigen(alt)?;
-    let neu = freier_org_name(wurzel, name, Some(&alt_sauber))?;
-    if neu != alt_sauber {
-        ordner_verschieben(&wurzel.join(&alt_sauber), &wurzel.join(&neu))?;
+/// Findet den Ordner der Organisation `id` (siehe eigener_ordner), bringt ihn
+/// auf ihren Namen, stellt sicher, dass es ihn gibt, und schreibt ihre ID in
+/// die Marke. Passt alles schon, passiert nichts. Gibt den Namen zurueck, der
+/// danach gilt – das Frontend speichert ihn im Tresor. Scheitert das
+/// Umbenennen (Datei offen), bleibt alles, wie es war.
+fn org_ordner_abgleichen(wurzel: &Path, id: &str, alt: &str, name: &str) -> Result<String, String> {
+    if !crate::tresor::id_gueltig(id) {
+        return Err("Unbekannte Organisation.".into());
     }
-    marke_setzen(&wurzel.join(&neu))?;
+    let eigen = eigener_ordner(wurzel, id, alt, name)?;
+    let neu = freier_org_name(wurzel, name, Some(&eigen))?;
+    if neu != eigen {
+        ordner_verschieben(&wurzel.join(&eigen), &wurzel.join(&neu))?;
+    }
+    marke_setzen(&wurzel.join(&neu), Some(id))?;
     Ok(neu)
 }
 
 #[tauri::command]
 pub fn org_ordner_umbenennen(
     app: tauri::AppHandle,
+    org: String,
     alt: String,
     name: String,
 ) -> Result<String, String> {
-    org_ordner_abgleichen(&wurzel(&app)?, &alt, &name)
+    org_ordner_abgleichen(&wurzel(&app)?, &org, &alt, &name)
 }
 
 /// Ergebnis des Umzugs: wie viele Projektordner umgezogen sind und welche
@@ -181,7 +267,7 @@ fn projekte_umziehen(
         return Err("Die Organisation hat noch keinen Ordner.".into());
     }
     let ziel = org_pfad(wurzel, org_ordner)?;
-    marke_setzen(&ziel)?;
+    marke_setzen(&ziel, None)?;
 
     let mut bewegt: Vec<(PathBuf, PathBuf)> = Vec::new();
     let mut uebrig = Vec::new();
@@ -380,24 +466,84 @@ mod tests {
         let _ = fs::remove_dir_all(&w);
     }
 
+    const ID_A: &str = "aaaaaaaaaaaaaaaa";
+    const ID_B: &str = "bbbbbbbbbbbbbbbb";
+
     #[test]
     fn abgleich_benennt_um_und_trifft_keinen_fremden_ordner() {
         let w = testordner("abgleich");
         let a = org_ordner_neu(&w, "Alt").unwrap();
         fs::create_dir(w.join("Alt").join("Sommerfest")).unwrap();
-        assert_eq!(org_ordner_abgleichen(&w, &a, "Neu").unwrap(), "Neu");
+        assert_eq!(org_ordner_abgleichen(&w, ID_A, &a, "Neu").unwrap(), "Neu");
         assert!(w.join("Neu").join("Sommerfest").exists());
         assert!(!w.join("Alt").exists());
+        assert_eq!(besitz(&w.join("Neu")), Besitz::Id(ID_A.into()));
         // Name schon vergeben: naechster freier Name, der fremde bleibt, wie er ist.
         org_ordner_neu(&w, "Belegt").unwrap();
-        assert_eq!(org_ordner_abgleichen(&w, "Neu", "Belegt").unwrap(), "Belegt (2)");
+        assert_eq!(org_ordner_abgleichen(&w, ID_A, "Neu", "Belegt").unwrap(), "Belegt (2)");
         assert!(!w.join("Belegt").join("Sommerfest").exists());
         // Nichts zu tun, wenn es schon stimmt (auch mit Nummer im Namen).
-        assert_eq!(org_ordner_abgleichen(&w, "Belegt (2)", "Belegt").unwrap(), "Belegt (2)");
+        assert_eq!(org_ordner_abgleichen(&w, ID_A, "Belegt (2)", "Belegt").unwrap(), "Belegt (2)");
         // Vom Nutzer geloeschter Ordner kommt wieder.
         fs::remove_dir_all(w.join("Belegt (2)")).unwrap();
-        assert_eq!(org_ordner_abgleichen(&w, "Belegt (2)", "Wieder").unwrap(), "Wieder");
-        assert!(w.join("Wieder").join(MARKE).exists());
+        assert_eq!(org_ordner_abgleichen(&w, ID_A, "Belegt (2)", "Wieder").unwrap(), "Wieder");
+        assert_eq!(besitz(&w.join("Wieder")), Besitz::Id(ID_A.into()));
+        // Ungueltige ID wird abgewiesen.
+        assert!(org_ordner_abgleichen(&w, "../x", "Wieder", "Wieder").is_err());
+        let _ = fs::remove_dir_all(&w);
+    }
+
+    #[test]
+    fn zwei_organisationen_mit_demselben_ordner_bekommen_je_einen_eigenen() {
+        // Lage nach dem Einspielen einer Kopie: Beide Tresore sagen "Verein".
+        let w = testordner("doppelt");
+        let v = org_ordner_neu(&w, "Verein").unwrap();
+        fs::create_dir(w.join("Verein").join("Sommerfest")).unwrap();
+        // A oeffnet zuerst und beansprucht den Ordner.
+        assert_eq!(org_ordner_abgleichen(&w, ID_A, &v, "Verein").unwrap(), "Verein");
+        // B bekommt einen eigenen, leeren Ordner – A behaelt seine Dateien.
+        let b = org_ordner_abgleichen(&w, ID_B, &v, "Verein").unwrap();
+        assert_eq!(b, "Verein (2)");
+        assert_eq!(besitz(&w.join("Verein (2)")), Besitz::Id(ID_B.into()));
+        assert!(w.join("Verein").join("Sommerfest").exists());
+        // Benennt B sich um, bleibt der Ordner von A unberuehrt.
+        assert_eq!(org_ordner_abgleichen(&w, ID_B, &v, "Duo").unwrap(), "Duo");
+        assert!(w.join("Verein").join("Sommerfest").exists());
+        assert_eq!(besitz(&w.join("Verein")), Besitz::Id(ID_A.into()));
+        assert!(!w.join("Verein (2)").exists());
+        let _ = fs::remove_dir_all(&w);
+    }
+
+    #[test]
+    fn ordner_wird_ueber_die_id_gefunden_auch_unter_anderem_namen() {
+        // Eine Sicherung wurde unter freiem Namen eingespielt: der Tresor sagt
+        // noch "Verein", seine Dateien liegen in "Verein (2)" mit seiner ID.
+        let w = testordner("finden");
+        let v = org_ordner_neu(&w, "Verein").unwrap();
+        org_ordner_abgleichen(&w, ID_A, &v, "Verein").unwrap();
+        marke_setzen(&w.join("Verein (2)"), Some(ID_B)).unwrap();
+        fs::create_dir(w.join("Verein (2)").join("Festival")).unwrap();
+        // Name passt nicht mehr ganz – der Ordner von B heisst danach wie B.
+        assert_eq!(org_ordner_abgleichen(&w, ID_B, "Verein", "Verein").unwrap(), "Verein (2)");
+        assert_eq!(org_ordner_abgleichen(&w, ID_B, "Verein", "Duo Lichtung").unwrap(), "Duo Lichtung");
+        assert!(w.join("Duo Lichtung").join("Festival").exists());
+        assert_eq!(besitz(&w.join("Verein")), Besitz::Id(ID_A.into()));
+        let _ = fs::remove_dir_all(&w);
+    }
+
+    #[test]
+    fn fremde_id_in_der_marke_wird_nie_ueberschrieben() {
+        let w = testordner("marke");
+        marke_setzen(&w.join("X"), Some(ID_A)).unwrap();
+        marke_setzen(&w.join("X"), Some(ID_B)).unwrap();
+        assert_eq!(besitz(&w.join("X")), Besitz::Id(ID_A.into()));
+        // Marke ohne ID wird beansprucht, kaputte ID zaehlt als "ohne".
+        fs::create_dir_all(w.join("Y")).unwrap();
+        fs::write(w.join("Y").join(MARKE), "id=../../etc\n").unwrap();
+        assert_eq!(besitz(&w.join("Y")), Besitz::OhneId);
+        marke_setzen(&w.join("Y"), Some(ID_B)).unwrap();
+        assert_eq!(besitz(&w.join("Y")), Besitz::Id(ID_B.into()));
+        assert_eq!(besitz(&w.join("gibt-es-nicht")), Besitz::KeineMarke);
         let _ = fs::remove_dir_all(&w);
     }
 
