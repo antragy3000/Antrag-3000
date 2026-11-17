@@ -27,7 +27,7 @@ use tauri::Manager;
 /// ist nur ein Hinweis. So koennen zwei Organisationen nie denselben Ordner
 /// benutzen, auch nicht nach dem Einspielen einer Sicherung oder Weitergabe,
 /// deren Ordner hier schon unter gleichem Namen existiert.
-const MARKE: &str = ".antrag3000-organisation";
+pub(crate) const MARKE: &str = ".antrag3000-organisation";
 const MARKE_TEXT: &str = "Dieser Ordner gehoert zu einer Organisation in Antrag 3000. Bitte diese Datei nicht loeschen.\n";
 const MARKE_ID: &str = "id=";
 
@@ -105,16 +105,19 @@ pub(crate) enum Besitz {
     Id(String),
 }
 
+/// Die (gueltige) ID aus dem Text einer Marke.
+pub(crate) fn marke_id(text: &str) -> Option<String> {
+    text.lines()
+        .find_map(|z| z.trim().strip_prefix(MARKE_ID))
+        .map(str::trim)
+        .filter(|id| crate::tresor::id_gueltig(id))
+        .map(str::to_string)
+}
+
 pub(crate) fn besitz(ordner: &Path) -> Besitz {
     let marke = ordner.join(MARKE);
     match fs::read_to_string(&marke) {
-        Ok(text) => text
-            .lines()
-            .find_map(|z| z.trim().strip_prefix(MARKE_ID))
-            .map(str::trim)
-            .filter(|id| crate::tresor::id_gueltig(id))
-            .map(|id| Besitz::Id(id.to_string()))
-            .unwrap_or(Besitz::OhneId),
+        Ok(text) => marke_id(&text).map(Besitz::Id).unwrap_or(Besitz::OhneId),
         Err(_) if marke.exists() => Besitz::OhneId,
         Err(_) => Besitz::KeineMarke,
     }
@@ -123,7 +126,7 @@ pub(crate) fn besitz(ordner: &Path) -> Besitz {
 /// Legt Ordner und Marke an. Mit `id` beansprucht die Organisation eine Marke,
 /// die noch keine ID traegt. Eine fremde ID wird nie ueberschrieben – wem ein
 /// Ordner gehoert, entscheidet allein eigener_ordner().
-fn marke_setzen(ordner: &Path, id: Option<&str>) -> Result<(), String> {
+pub(crate) fn marke_setzen(ordner: &Path, id: Option<&str>) -> Result<(), String> {
     fs::create_dir_all(ordner).map_err(|e| format!("Ordner nicht anlegbar: {e}"))?;
     let schreiben = match (besitz(ordner), id) {
         (Besitz::KeineMarke, _) => true,
@@ -180,7 +183,7 @@ fn eigener_ordner(wurzel: &Path, id: &str, gespeichert: &str, name: &str) -> Res
 /// `eigen` ist der bisherige Ordner der Organisation; er gilt nicht als belegt.
 /// Windows unterscheidet Gross- und Kleinschreibung nicht, darum vergleicht
 /// canonicalize die echten Ordner statt der Schreibweisen.
-fn freier_org_name(wurzel: &Path, name: &str, eigen: Option<&str>) -> Result<String, String> {
+pub(crate) fn freier_org_name(wurzel: &Path, name: &str, eigen: Option<&str>) -> Result<String, String> {
     let basis = bereinigen(name).unwrap_or_else(|_| "Organisation".into());
     let eigen_pfad = eigen.and_then(|e| fs::canonicalize(wurzel.join(e)).ok());
     for n in 1..1000 {

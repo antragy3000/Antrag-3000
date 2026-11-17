@@ -98,6 +98,7 @@ pub fn run() {
             backup::tresor_backup_einspielen,
             backup::sicherung_art,
             backup::sicherung_erstellen,
+            backup::sicherung_pruefen,
             backup::sicherung_einspielen
         ])
         .run(tauri::generate_context!())

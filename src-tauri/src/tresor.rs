@@ -143,7 +143,7 @@ fn umziehen(basis: &Path) -> Result<(), String> {
 }
 
 /// Ordner aller Organisationen; erledigt vorher den Umzug (falls noetig).
-fn org_ordner(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+pub(crate) fn org_ordner(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     let basis = datenordner(app)?;
     umziehen(&basis)?;
     Ok(basis.join(ORDNER_ORGS))
@@ -176,14 +176,18 @@ pub(crate) fn tresor_pfad(app: &tauri::AppHandle, org: &str) -> Result<PathBuf, 
 
 /// Pfad fuer eine NEUE Organisation: frische Zufalls-ID, die es noch nicht gibt.
 pub(crate) fn neuer_tresor_pfad(app: &tauri::AppHandle) -> Result<(String, PathBuf), String> {
-    let orgs = org_ordner(app)?;
+    Ok(neue_id_in(&org_ordner(app)?))
+}
+
+/// Frische Zufalls-ID im Ordner `orgs` (ohne Tauri, damit testbar).
+pub(crate) fn neue_id_in(orgs: &Path) -> (String, PathBuf) {
     loop {
         let mut zufall = [0u8; 8];
         OsRng.fill_bytes(&mut zufall);
         let id: String = zufall.iter().map(|b| format!("{b:02x}")).collect();
         let pfad = orgs.join(format!("{id}.enc"));
         if id != ERSTE_ORG && !pfad.exists() {
-            return Ok((id, pfad));
+            return (id, pfad);
         }
     }
 }
@@ -256,7 +260,7 @@ pub(crate) fn schluessel_ableiten(passwort: &str, salt: &[u8]) -> Result<[u8; 32
 }
 
 /// Daten verschluesseln und als kompletten Dateiinhalt zurueckgeben.
-fn verschluesseln(daten: &str, schluessel: &[u8; 32], salt: &[u8; SALT_LAENGE]) -> Result<Vec<u8>, String> {
+pub(crate) fn verschluesseln(daten: &str, schluessel: &[u8; 32], salt: &[u8; SALT_LAENGE]) -> Result<Vec<u8>, String> {
     // Nonce: bei jedem Speichern frisch aus dem Betriebssystem-Zufall.
     let mut nonce = [0u8; NONCE_LAENGE];
     OsRng.fill_bytes(&mut nonce);
@@ -482,6 +486,41 @@ pub(crate) fn offener_stand(
         Err(_) => return Err(unpassend.into()),
     }
     Ok((Zeroizing::new(geheim.schluessel), geheim.salt, inhalt))
+}
+
+/// Fuer "alle Organisationen sichern": jede Tresor-Datei so, wie sie ist
+/// (verschluesselt – auch gesperrte und solche mit eigenem Passwort). Die
+/// aktive kommt schon geprueft aus offener_stand. Das Schloss haelt
+/// gleichzeitiges Speichern fern.
+pub(crate) fn alle_tresore(
+    app: &tauri::AppHandle,
+    aktiv: &str,
+    aktiv_inhalt: Vec<u8>,
+) -> Result<Vec<(String, Vec<u8>)>, String> {
+    let orgs = org_ordner(app)?;
+    let zustand = app.state::<TresorZustand>();
+    let _geheim = zustand.geheim.lock().unwrap();
+    let mut alle = vec![(aktiv.to_string(), aktiv_inhalt)];
+    for id in org_ids(&orgs) {
+        if id == aktiv {
+            continue;
+        }
+        let inhalt = fs::read(orgs.join(format!("{id}.enc"))).map_err(|e| format!("Tresor nicht lesbar: {e}"))?;
+        salt_lesen(&inhalt).map_err(|_| "Eine Organisation auf diesem Gerät ist beschädigt und lässt sich nicht sichern.".to_string())?;
+        alle.push((id, inhalt));
+    }
+    Ok(alle)
+}
+
+/// Oeffnet einen Tresor-Inhalt mit einem Passwort (eigenes Salt aus dem
+/// Kopf). None, wenn das Passwort nicht passt – z. B. eine Organisation mit
+/// eigenem Passwort in einer Sicherung aller Organisationen.
+pub(crate) fn mit_passwort_oeffnen(inhalt: &[u8], passwort: &str) -> Option<String> {
+    let salt = salt_lesen(inhalt).ok()?;
+    let mut schluessel = schluessel_ableiten(passwort, &salt).ok()?;
+    let daten = inhalt_oeffnen(inhalt, &schluessel).ok();
+    schluessel.zeroize();
+    daten
 }
 
 /// Womit der Zugang vor einem Passwortwechsel nachgewiesen wird.

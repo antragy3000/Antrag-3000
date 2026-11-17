@@ -3413,7 +3413,7 @@
     </main>
 
     {#if sicherungOffen}
-      <Sicherung org={orgId} schliessen={() => (sicherungOffen = false)} {nachWiederherstellung} vorSichern={tresorSpeichern} />
+      <Sicherung org={orgId} {orgOrdner} name={orgName(daten)} eintraege={orgEintraege} schliessen={() => (sicherungOffen = false)} {nachWiederherstellung} vorSichern={tresorSpeichern} />
     {/if}
 
     {#if updateOffen}

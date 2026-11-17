@@ -170,6 +170,42 @@ export function neueOrgDaten(frisch, vorlage, name) {
   return d;
 }
 
+/** ID der ersten Organisation – auf JEDEM Gerät dieselbe (siehe tresor.rs). */
+export const ERSTE_ORG = "0000000000000000";
+
+/**
+ * Vorschlag je Organisation, bevor eine Sicherung eingespielt wird.
+ * `orgs` kommt aus sicherung_pruefen ({id, vorhanden, daten|null}), `lokale`
+ * sind die Organisationen auf diesem Gerät ({id, name}, wie orgListe).
+ *
+ * Gleiche ID heißt gleiche Organisation – mit EINER Ausnahme: Die erste
+ * Organisation hat auf jedem Gerät dieselbe ID. Eine Sicherung vom alten
+ * Computer darf nicht still eine fremde ersetzen; dort wird nur bei gleichem
+ * Namen „ersetzen" vorgeschlagen, sonst „als Kopie dazu" (andere: true).
+ * Jede andere ID ist zufällig und damit eindeutig: „ersetzen", auch wenn die
+ * Organisation seither umbenannt wurde oder ein eigenes Passwort hat.
+ * @param {{ id: string, vorhanden: boolean, daten: string | null }[]} orgs
+ * @param {{ id: string, name: string }[]} lokale
+ * @returns {{ id: string, name: string | null, vorhanden: boolean, lokalName: string | null, wahl: string, andere: boolean }[]}
+ */
+export function einspielVorschlag(orgs, lokale) {
+  const lokal = new Map((lokale ?? []).map((e) => [e.id, e.name]));
+  return (orgs ?? []).map((o) => {
+    /** @type {any} */
+    let d = null;
+    try {
+      d = o.daten ? JSON.parse(o.daten) : null;
+    } catch {
+      d = null;
+    }
+    const name = d ? orgName(d) : null;
+    const lokalName = o.vorhanden ? lokal.get(o.id) ?? null : null;
+    const andere = !!o.vorhanden && o.id === ERSTE_ORG && !(name && name === lokalName);
+    const wahl = !o.vorhanden ? "dazu" : andere ? "kopie" : "ersetzen";
+    return { id: o.id, name, vorhanden: !!o.vorhanden, lokalName, wahl, andere };
+  });
+}
+
 /**
  * Wo die Daten einer OFFENEN Organisation gerade liegen – für Ergebnisse aus
  * dem Netz, die erst ankommen, nachdem man womöglich umgeschaltet hat (Team

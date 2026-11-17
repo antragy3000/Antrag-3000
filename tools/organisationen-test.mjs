@@ -16,6 +16,7 @@ import {
   orgFelderErgaenzen,
   orgOrdnerVon,
   offeneOrgFinden,
+  einspielVorschlag,
   NAME_UNBEKANNT,
 } from "../src/lib/organisationen.js";
 
@@ -155,6 +156,40 @@ console.log("Netz-Ergebnis nach einem Wechsel");
   pruefe(offeneOrgFinden(a.id, b.id, b.daten, []) === null, "A inzwischen gesperrt/entfernt: Ergebnis wird verworfen");
   pruefe(offeneOrgFinden(a.id, null, null, []) === null, "ganz gesperrt: verworfen");
   pruefe(offeneOrgFinden(null, b.id, b.daten, [a]) === null, "ohne ID: nichts");
+}
+
+console.log("Sicherung einspielen: Vorschlag je Organisation");
+{
+  const d = (/** @type {string} */ name) => JSON.stringify(tresor(name));
+  const v = einspielVorschlag(
+    [
+      { id: "0000000000000000", vorhanden: true, daten: d("Ich privat") },
+      { id: "aaaaaaaaaaaaaaaa", vorhanden: true, daten: d("Verein Blau") },
+      { id: "bbbbbbbbbbbbbbbb", vorhanden: true, daten: null },
+      { id: "cccccccccccccccc", vorhanden: false, daten: d("Duo") },
+      { id: "dddddddddddddddd", vorhanden: false, daten: "kaputt{" },
+      { id: "eeeeeeeeeeeeeeee", vorhanden: true, daten: d("Alter Name") },
+    ],
+    [
+      { id: "0000000000000000", name: "Kulturverein Rot" },
+      { id: "aaaaaaaaaaaaaaaa", name: "Verein Blau" },
+      { id: "bbbbbbbbbbbbbbbb", name: "Verein Grün" },
+      { id: "eeeeeeeeeeeeeeee", name: "Neuer Name" },
+    ],
+  );
+  const erst = einspielVorschlag(
+    [{ id: "0000000000000000", vorhanden: true, daten: d("Ich privat") }],
+    [{ id: "0000000000000000", name: "Ich privat" }],
+  );
+  const erstGesperrt = einspielVorschlag([{ id: "0000000000000000", vorhanden: true, daten: null }], []);
+  pruefe(v[0].wahl === "kopie" && v[0].andere && v[0].lokalName === "Kulturverein Rot", "erste Organisation, anderer Name: als Kopie, nie still ersetzen");
+  pruefe(erst[0].wahl === "ersetzen" && !erst[0].andere, "erste Organisation, gleicher Name: ersetzen");
+  pruefe(erstGesperrt[0].wahl === "kopie" && erstGesperrt[0].andere, "erste Organisation, Name unbekannt: als Kopie");
+  pruefe(v[1].wahl === "ersetzen" && !v[1].andere, "zufällige ID, gleicher Name: ersetzen");
+  pruefe(v[2].wahl === "ersetzen" && v[2].name === null, "zufällige ID, eigenes Passwort: ersetzen (ID ist eindeutig)");
+  pruefe(v[5].wahl === "ersetzen" && !v[5].andere, "zufällige ID, seither umbenannt: ersetzen, keine Warnung");
+  pruefe(v[3].wahl === "dazu" && v[3].name === "Duo", "neu: kommt dazu");
+  pruefe(v[4].name === null && v[4].wahl === "dazu", "unlesbarer Inhalt bricht nichts");
 }
 
 console.log("Start-Organisation");
