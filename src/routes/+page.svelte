@@ -605,11 +605,15 @@
   //  1. Noch keiner (Tresor von vor O3)? Anlegen und MERKEN, dass der Umzug der
   //     alten Projektordner offen ist. Gespeichert wird vor dem Umzug: Stürzt
   //     die App mittendrin ab, geht es beim nächsten Mal an derselben Stelle weiter.
-  //  2. Umzug offen? Versuchen. Klappt er nicht (Datei in Word offen), bleibt
-  //     alles am alten Platz, die App arbeitet dort weiter und versucht es
-  //     beim nächsten Anmelden wieder (orgOrdnerVon liefert solange "").
-  //  3. Der Ordner heißt wie die Organisation; hat sich der angezeigte Name
-  //     geändert (z. B. über die Stammdaten), zieht er hier still nach.
+  //  2. Den eigenen Ordner über die ID in seiner Marke finden (nicht nur über
+  //     den gespeicherten Namen) und beanspruchen – so teilen sich zwei
+  //     Organisationen nie einen Ordner, auch nicht nach dem Einspielen. Hat
+  //     sich der angezeigte Name geändert (z. B. über die Stammdaten), zieht
+  //     der Ordnername hier still nach.
+  //  3. Erst DANACH den offenen Umzug versuchen, und zwar in genau diesen
+  //     Ordner (Rust prüft die ID noch einmal). Klappt er nicht (Datei in Word
+  //     offen), bleibt alles am alten Platz, die App arbeitet dort weiter und
+  //     versucht es beim nächsten Anmelden wieder (orgOrdnerVon liefert solange "").
   // Nichts davon darf das Anmelden verhindern.
   /** @param {string} id @param {any} d */
   async function ablageEinrichten(id, d) {
@@ -620,9 +624,15 @@
         org.ordnerUmzug = true;
         await speichernFuer(id, d);
       }
+      const name = await invoke("org_ordner_umbenennen", { org: id, alt: org.ordner, name: orgName(d) });
+      if (name !== org.ordner) {
+        org.ordner = name;
+        await speichernFuer(id, d);
+      }
       if (org.ordnerUmzug) {
         try {
           const bericht = await invoke("org_ordner_umziehen", {
+            org: id,
             orgOrdner: org.ordner,
             projekte: d.projekte.map((/** @type {any} */ p) => p.name),
           });
@@ -636,16 +646,7 @@
           }
         } catch {
           ordnerHinweise.push(`Die Projektordner von „${orgName(d)}“ konnten noch nicht in ihren eigenen Ordner umziehen, vermutlich ist eine Datei darin geöffnet. Alles bleibt vorerst am alten Platz. Beim nächsten Anmelden versucht es die App erneut.`);
-          return;
         }
-      }
-      // Sucht den Ordner über die ID in seiner Marke (nicht nur über den
-      // gespeicherten Namen) und beansprucht ihn – so teilen sich zwei
-      // Organisationen nie einen Ordner, auch nicht nach dem Einspielen.
-      const name = await invoke("org_ordner_umbenennen", { org: id, alt: org.ordner, name: orgName(d) });
-      if (name !== org.ordner) {
-        org.ordner = name;
-        await speichernFuer(id, d);
       }
     } catch {
       // Beim nächsten Anmelden erneut; bis dahin gilt der bisherige Stand.

@@ -260,8 +260,14 @@ pub struct OrdnerUmzug {
 /// Nur Ordner bekannter Projekte werden angefasst, nie etwas anderes. Liegt am
 /// Ziel schon ein Ordner oder ist die Quelle der Ordner einer Organisation,
 /// bleibt die Quelle stehen (nichts wird zusammengemischt oder ueberschrieben).
+///
+/// Ziel ist nur ein Ordner, dessen Marke schon die ID der Organisation traegt.
+/// Der Name allein reicht nicht: Nach dem Einspielen einer Sicherung kann ein
+/// gleichnamiger Ordner einer ANDEREN Organisation gehoeren. Darum beansprucht
+/// das Frontend den Ordner zuerst (org_ordner_umbenennen) und zieht erst dann um.
 fn projekte_umziehen(
     wurzel: &Path,
+    id: &str,
     org_ordner: &str,
     projekte: &[String],
     verschieben: impl Fn(&Path, &Path) -> std::io::Result<()>,
@@ -270,7 +276,9 @@ fn projekte_umziehen(
         return Err("Die Organisation hat noch keinen Ordner.".into());
     }
     let ziel = org_pfad(wurzel, org_ordner)?;
-    marke_setzen(&ziel, None)?;
+    if !crate::tresor::id_gueltig(id) || besitz(&ziel) != Besitz::Id(id.to_string()) {
+        return Err("Der Ordner gehoert (noch) nicht dieser Organisation.".into());
+    }
 
     let mut bewegt: Vec<(PathBuf, PathBuf)> = Vec::new();
     let mut uebrig = Vec::new();
@@ -299,10 +307,11 @@ fn projekte_umziehen(
 #[tauri::command]
 pub fn org_ordner_umziehen(
     app: tauri::AppHandle,
+    org: String,
     org_ordner: String,
     projekte: Vec<String>,
 ) -> Result<OrdnerUmzug, String> {
-    projekte_umziehen(&wurzel(&app)?, &org_ordner, &projekte, |v, n| fs::rename(v, n))
+    projekte_umziehen(&wurzel(&app)?, &org, &org_ordner, &projekte, |v, n| fs::rename(v, n))
 }
 
 /// Legt den Ordner (Projekt, optional mit Foerderungs-Unterordner)
@@ -557,16 +566,17 @@ mod tests {
         fs::write(w.join("Sommerfest").join("a.pdf"), "x").unwrap();
         fs::create_dir(w.join("Fremd")).unwrap();
         let name = org_ordner_neu(&w, "Mira Kern").unwrap();
+        marke_setzen(&w.join(&name), Some(ID_A)).unwrap();
         let projekte = liste(&["Sommerfest", "Noch ohne Ordner"]);
 
-        let b = projekte_umziehen(&w, &name, &projekte, normal).unwrap();
+        let b = projekte_umziehen(&w, ID_A, &name, &projekte, normal).unwrap();
         assert_eq!(b.verschoben, 1);
         assert!(b.uebrig.is_empty());
         assert!(w.join("Mira Kern").join("Sommerfest").join("a.pdf").exists());
         assert!(!w.join("Sommerfest").exists());
         assert!(w.join("Fremd").exists(), "nicht zugeordnete Ordner bleiben");
 
-        let b = projekte_umziehen(&w, &name, &projekte, normal).unwrap();
+        let b = projekte_umziehen(&w, ID_A, &name, &projekte, normal).unwrap();
         assert_eq!(b.verschoben, 0, "zweiter Lauf hat nichts mehr zu tun");
         let _ = fs::remove_dir_all(&w);
     }
@@ -577,7 +587,8 @@ mod tests {
         let verein = org_ordner_neu(&w, "Verein").unwrap();
         fs::write(w.join("Verein").join("geheim.pdf"), "x").unwrap();
         let ich = org_ordner_neu(&w, "Ich").unwrap();
-        let b = projekte_umziehen(&w, &ich, &liste(&[&verein]), normal).unwrap();
+        marke_setzen(&w.join(&ich), Some(ID_A)).unwrap();
+        let b = projekte_umziehen(&w, ID_A, &ich, &liste(&[&verein]), normal).unwrap();
         assert_eq!(b.verschoben, 0);
         assert_eq!(b.uebrig, vec!["Verein".to_string()]);
         assert!(w.join("Verein").join("geheim.pdf").exists());
@@ -586,14 +597,40 @@ mod tests {
     }
 
     #[test]
+    fn umzug_nur_in_den_eigenen_beanspruchten_ordner() {
+        let w = testordner("umzug-besitz");
+        fs::create_dir(w.join("Fest")).unwrap();
+        fs::write(w.join("Fest").join("a.pdf"), "x").unwrap();
+        // Gleichnamiger Ordner gehoert einer anderen Organisation (z. B. nach
+        // dem Einspielen einer Sicherung): nichts darf dort hinein.
+        let verein = org_ordner_neu(&w, "Verein").unwrap();
+        marke_setzen(&w.join(&verein), Some(ID_B)).unwrap();
+        assert!(projekte_umziehen(&w, ID_A, &verein, &liste(&["Fest"]), normal).is_err());
+        // Noch nicht beanspruchter oder fehlender Ordner: ebenfalls nicht.
+        let frei = org_ordner_neu(&w, "Frei").unwrap();
+        assert!(projekte_umziehen(&w, ID_A, &frei, &liste(&["Fest"]), normal).is_err());
+        assert!(projekte_umziehen(&w, ID_A, "Gibt es nicht", &liste(&["Fest"]), normal).is_err());
+        assert!(projekte_umziehen(&w, "../x", &frei, &liste(&["Fest"]), normal).is_err());
+        assert!(w.join("Fest").join("a.pdf").exists(), "alles blieb am alten Platz");
+        assert!(!w.join("Gibt es nicht").exists(), "es wurde nichts angelegt");
+        // Erst nach dem Beanspruchen klappt es.
+        marke_setzen(&w.join(&frei), Some(ID_A)).unwrap();
+        let b = projekte_umziehen(&w, ID_A, &frei, &liste(&["Fest"]), normal).unwrap();
+        assert_eq!(b.verschoben, 1);
+        assert!(w.join("Frei").join("Fest").join("a.pdf").exists());
+        let _ = fs::remove_dir_all(&w);
+    }
+
+    #[test]
     fn umzug_mischt_nichts_zusammen() {
         let w = testordner("konflikt");
         let ich = org_ordner_neu(&w, "Ich").unwrap();
+        marke_setzen(&w.join(&ich), Some(ID_A)).unwrap();
         fs::create_dir(w.join("Ich").join("Fest")).unwrap();
         fs::write(w.join("Ich").join("Fest").join("neu.pdf"), "neu").unwrap();
         fs::create_dir(w.join("Fest")).unwrap();
         fs::write(w.join("Fest").join("alt.pdf"), "alt").unwrap();
-        let b = projekte_umziehen(&w, &ich, &liste(&["Fest"]), normal).unwrap();
+        let b = projekte_umziehen(&w, ID_A, &ich, &liste(&["Fest"]), normal).unwrap();
         assert_eq!(b.uebrig, vec!["Fest".to_string()]);
         assert!(w.join("Fest").join("alt.pdf").exists());
         assert!(!w.join("Ich").join("Fest").join("alt.pdf").exists());
@@ -608,6 +645,7 @@ mod tests {
             fs::write(w.join(p).join("x.pdf"), p).unwrap();
         }
         let ich = org_ordner_neu(&w, "Ich").unwrap();
+        marke_setzen(&w.join(&ich), Some(ID_A)).unwrap();
         // "Drei" laesst sich nicht bewegen, als waere darin eine Datei offen.
         let klemmt = |v: &Path, n: &Path| {
             if v.ends_with("Drei") {
@@ -616,7 +654,7 @@ mod tests {
                 fs::rename(v, n)
             }
         };
-        let fehler = projekte_umziehen(&w, &ich, &liste(&["Eins", "Zwei", "Drei"]), klemmt).unwrap_err();
+        let fehler = projekte_umziehen(&w, ID_A, &ich, &liste(&["Eins", "Zwei", "Drei"]), klemmt).unwrap_err();
         assert!(fehler.contains("Drei"));
         for p in ["Eins", "Zwei", "Drei"] {
             assert!(w.join(p).join("x.pdf").exists(), "{p} ist wieder am alten Platz");
