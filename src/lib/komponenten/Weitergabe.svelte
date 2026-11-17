@@ -9,7 +9,7 @@
   // Team-Verbindung bekommen – die bleibt auf diesem Gerät.
   import { invoke } from "@tauri-apps/api/core";
   import { save, open } from "@tauri-apps/plugin-dialog";
-  import { namePruefen, weitergabeName, weitergabeUebernehmen, freierOrgName } from "$lib/organisationen.js";
+  import { namePruefen, weitergabeName, weitergabeUebernehmen, weitergabeAufbauPruefen, freierOrgName } from "$lib/organisationen.js";
   import { frischerTresor, normalisieren } from "$lib/tresorFormat.js";
 
   let {
@@ -155,6 +155,12 @@
     } catch {
       return { ok: false, fehler: "Die Datei enthält keine lesbare Organisation." };
     }
+    // Erst nach normalisieren(): ältere, ehrliche Stände sind dann ergänzt;
+    // was jetzt noch nicht passt, wurde eingeschmuggelt (siehe organisationen.js).
+    const aufbau = weitergabeAufbauPruefen(r.daten);
+    // Die Stelle (nur Feldnamen, keine Inhalte) hilft, falls einmal eine
+    // ehrliche Datei abgewiesen wird.
+    if (!aufbau.ok) return { ok: false, fehler: `${aufbau.fehler} (Stelle: ${aufbau.stelle})` };
     return r;
   }
 

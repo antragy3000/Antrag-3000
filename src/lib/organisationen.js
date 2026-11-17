@@ -288,6 +288,147 @@ export function weitergabeUebernehmen(frisch, vorlage, roh, name) {
   return { ok: true, daten: d };
 }
 
+// --- Aufbau einer übernommenen Organisation prüfen -------------------------
+// Eine präparierte .a3korganisation kann Werte der falschen Art einschmuggeln
+// (Zahl statt Text, null in einer Liste …). normalisieren() ergänzt nur, was
+// FEHLT; die Anzeige stürzt dann an solchen Stellen ab (Einbruchtest O7: z. B.
+// Kostenplan, Teile, Belege, Projekt-Menü). Darum wird die Organisation NACH
+// normalisieren() gegen diesen Bauplan geprüft und bei einer Abweichung ganz
+// abgelehnt – nichts wird still „repariert“ oder weggelassen.
+//
+// Der Bauplan verlangt nur, was eine Datei aus der App selbst immer erfüllt:
+// Listen sind Listen, Einträge haben die Art, die die App anlegt, und Kennungen
+// und Namen sind Text. Unbekannte zusätzliche Felder stören nicht (offene
+// Objekte); die meisten Felder sind optional, geprüft wird dann nur ihre Art.
+
+const TEXT = "text";
+const ZAHL_ODER_TEXT = "zahl-oder-text";
+const JA_NEIN = "ja-nein";
+/** @param {any} art */ const liste = (art) => ({ liste: art });
+/** @param {any} art */ const oderNull = (art) => ({ oderNull: art });
+/** @param {Record<string, any>} felder @param {string[]} [pflicht] */
+const objekt = (felder, pflicht = []) => ({ objekt: felder, pflicht });
+/** Objekt mit beliebigen Schlüsseln (z. B. Anträge je Förder-ID). @param {any} art */
+const zuordnung = (art) => ({ zuordnung: art });
+/** Eine der genannten Arten. @param {...any} arten */
+const eines = (...arten) => ({ eines: arten });
+
+const DATEI_VERWEIS = objekt({ name: TEXT, ref: TEXT });
+// Frist einer Förderung: "JJJJ-MM-TT"/"MM-TT" oder – aus Katalog und Team –
+// { datum, hinweis } (siehe fristNormalisieren in begriffe.js, sync.js).
+const FRIST = eines(TEXT, objekt({ datum: TEXT, hinweis: TEXT }, ["datum"]));
+const FOERDERUNG = objekt(
+  {
+    id: TEXT, name: TEXT, foerdergeber: TEXT, beschreibung: TEXT, webseite: TEXT, land: TEXT,
+    einreich_url: TEXT, frist_hinweis: TEXT, foerderhoehe_text: TEXT,
+    fristen: liste(FRIST), unvertraeglich_mit: liste(TEXT), checkliste_vorschlag: liste(TEXT),
+    harte_kriterien: objekt({ wohnsitz: liste(TEXT), durchfuehrungsort: liste(TEXT), traegerschaft: liste(TEXT) }),
+    weiche_kriterien: objekt({ sparten: liste(TEXT), projektarten: liste(TEXT) }, ["sparten", "projektarten"]),
+  },
+  ["id", "name", "weiche_kriterien"],
+);
+const PROJEKT = objekt(
+  {
+    id: TEXT, name: TEXT, erstellt: TEXT, ablageUrl: TEXT,
+    gruppeId: oderNull(TEXT), vorgaengerId: oderNull(TEXT),
+    archiviert: JA_NEIN, kfpHinweisAusblenden: JA_NEIN, cryptpadHinweisAus: JA_NEIN,
+    bausteine: liste(objekt({ id: TEXT, name: TEXT, beschreibung: TEXT, ort: TEXT, zeitraum: TEXT }, ["id", "name"])),
+    fragebogen: oderNull(objekt({ sparten: liste(TEXT), projektarten: liste(TEXT) })),
+    merkliste: liste(TEXT),
+    formular: objekt({ _eigeneFelder: liste(objekt({ id: TEXT, titel: TEXT, text: TEXT }, ["id"])) }),
+    kfp: objekt(
+      {
+        kosten: liste(objekt({ name: TEXT, posten: liste(objekt({ id: TEXT, bezeichnung: TEXT, erlaeuterung: TEXT, betrag: ZAHL_ODER_TEXT, bausteinId: oderNull(TEXT) })) }, ["posten"])),
+        finanzierung: liste(objekt({ name: TEXT, posten: liste(objekt({ foerderId: oderNull(TEXT), bezeichnung: TEXT, betrag: ZAHL_ODER_TEXT, anteile: zuordnung(ZAHL_ODER_TEXT) })) }, ["posten"])),
+      },
+      ["kosten", "finanzierung"],
+    ),
+    antraege: zuordnung(objekt({
+      status: TEXT, statusFrei: TEXT,
+      abdeckung: oderNull(liste(TEXT)),
+      offizielleFristen: liste(TEXT),
+      eigeneFristen: liste(objekt({ datum: TEXT, titel: TEXT })),
+      kontakt: objekt({ ansprechpartner: TEXT, email: TEXT, telefon: TEXT, notiz: TEXT }),
+      checkliste: liste(objekt({ text: TEXT, status: TEXT, statusFrei: TEXT, datei: TEXT })),
+    })),
+    eigeneFoerderungen: liste(FOERDERUNG),
+    katalogGhosts: liste(FOERDERUNG),
+    katalogAktualisiert: liste(TEXT),
+    interneFristen: liste(objekt({ id: TEXT, datum: TEXT, titel: TEXT }, ["id"])),
+    abrechnung: objekt(
+      {
+        sachbericht: TEXT,
+        belege: liste(objekt({
+          id: TEXT, nr: ZAHL_ODER_TEXT, datum: TEXT, empfaenger: TEXT, zweck: TEXT, brutto: ZAHL_ODER_TEXT,
+          mwst_satz: ZAHL_ODER_TEXT, zahlungsart: TEXT, kostenstelle: oderNull(TEXT), status: TEXT, notiz: TEXT,
+          dateien: liste(DATEI_VERWEIS), zuordnungen: liste(objekt({ quelleId: TEXT, betrag: ZAHL_ODER_TEXT })),
+        }, ["id"])),
+        quellen: liste(objekt({
+          id: TEXT, typ: TEXT, foerderId: oderNull(TEXT), name: TEXT, soll: ZAHL_ODER_TEXT, nachweisFrist: TEXT,
+          sachbericht: TEXT, dateien: liste(DATEI_VERWEIS),
+        }, ["id"])),
+      },
+      ["belege", "quellen"],
+    ),
+    arbeitsdokumente: liste(objekt({ id: TEXT, titel: TEXT, url: TEXT, foerderungen: liste(TEXT) }, ["id"])),
+  },
+  ["id", "name", "merkliste", "formular", "kfp", "antraege", "abrechnung"],
+);
+const PROJEKTGRUPPE = objekt({ id: TEXT, name: TEXT }, ["id", "name"]);
+
+/**
+ * Liefert den Pfad der ersten Abweichung vom Bauplan oder null.
+ * @param {any} wert @param {any} art @param {string} pfad
+ * @returns {string | null}
+ */
+function abweichung(wert, art, pfad) {
+  if (art === TEXT) return typeof wert === "string" ? null : pfad;
+  if (art === JA_NEIN) return typeof wert === "boolean" ? null : pfad;
+  if (art === ZAHL_ODER_TEXT) return typeof wert === "string" || (typeof wert === "number" && Number.isFinite(wert)) ? null : pfad;
+  if (art.oderNull) return wert === null ? null : abweichung(wert, art.oderNull, pfad);
+  if (art.eines) return art.eines.some((/** @type {any} */ a) => abweichung(wert, a, pfad) === null) ? null : pfad;
+  if (art.liste) {
+    if (!Array.isArray(wert)) return pfad;
+    for (let i = 0; i < wert.length; i++) {
+      const a = abweichung(wert[i], art.liste, `${pfad}.${i}`);
+      if (a) return a;
+    }
+    return null;
+  }
+  if (art.zuordnung) {
+    if (!istObjekt(wert)) return pfad;
+    for (const [k, v] of Object.entries(wert)) {
+      const a = abweichung(v, art.zuordnung, `${pfad}.${k}`);
+      if (a) return a;
+    }
+    return null;
+  }
+  if (!istObjekt(wert)) return pfad;
+  for (const k of art.pflicht) if (wert[k] === undefined) return `${pfad}.${k}`;
+  for (const [k, unterArt] of Object.entries(art.objekt)) {
+    if (wert[k] === undefined) continue;
+    const a = abweichung(wert[k], unterArt, `${pfad}.${k}`);
+    if (a) return a;
+  }
+  return null;
+}
+
+/**
+ * Prüft eine übernommene Organisation (nach normalisieren()) gegen den Bauplan.
+ * @param {any} d
+ * @returns {{ ok: true } | { ok: false, fehler: string, stelle: string }}
+ */
+export function weitergabeAufbauPruefen(d) {
+  const stelle =
+    abweichung(d?.projekte, liste(PROJEKT), "projekte") ??
+    abweichung(d?.projektgruppen, liste(PROJEKTGRUPPE), "projektgruppen") ??
+    abweichung(d?.aktivesProjektId, oderNull(TEXT), "aktivesProjektId");
+  if (stelle) {
+    return { ok: false, fehler: "Die Datei enthält keine lesbare Organisation (Aufbau beschädigt).", stelle };
+  }
+  return { ok: true };
+}
+
 /** ID der ersten Organisation – auf JEDEM Gerät dieselbe (siehe tresor.rs). */
 export const ERSTE_ORG = "0000000000000000";
 

@@ -19,6 +19,7 @@ import {
   einspielVorschlag,
   weitergabeInhalt,
   weitergabeUebernehmen,
+  weitergabeAufbauPruefen,
   weitergabeName,
   freierOrgName,
   WEITERGABE_FELDER,
@@ -264,6 +265,103 @@ console.log("Organisation weitergeben");
   const liste = [{ id: "a", name: "Verein Blau" }, { id: "b", name: "Verein Blau (2)" }];
   pruefe(freierOrgName("Verein Blau", liste) === "Verein Blau (3)", "Name schon vergeben: freier Name");
   pruefe(freierOrgName("Duo", liste) === "Duo", "freier Name bleibt");
+}
+
+console.log("Aufbau einer übernommenen Organisation");
+{
+  // Ein ehrliches Projekt, wie es nach normalisieren() aussieht – einmal leer
+  // (frisch angelegt), einmal reich gefüllt (Vorlage: tools/sync-waechter.mjs,
+  // eigene Förderung nach dem Muster aus +page.svelte).
+  const leer = () => ({
+    id: "p0", name: "Neu", erstellt: "2026-11-17", gruppeId: null, vorgaengerId: null, archiviert: false,
+    bausteine: [], fragebogen: null, merkliste: [],
+    formular: { projekttitel: "", kurzbeschreibung: "", beschreibung: "", _eigeneFelder: [] },
+    kfp: { kosten: [], finanzierung: [] }, kfpHinweisAusblenden: false,
+    abrechnung: { belege: [], quellen: [], sachbericht: "" },
+    antraege: {}, eigeneFoerderungen: [], interneFristen: [], katalogGhosts: [], katalogAktualisiert: [],
+    arbeitsdokumente: [], ablageUrl: "", cryptpadHinweisAus: false,
+  });
+  const voll = () => ({
+    ...leer(), id: "p1", name: "Klangraum Festival", gruppeId: "g1",
+    bausteine: [{ id: "bs1", name: "Konzert März", beschreibung: "Text", ort: "Ort" }],
+    fragebogen: { sparten: ["musik"], projektarten: [] },
+    merkliste: ["de-musikfonds", "eigen-1"],
+    formular: { projekttitel: "Klangraum", kurzbeschreibung: "k", beschreibung: "b", _eigeneFelder: [{ id: "ef1", titel: "Extra", text: "t" }] },
+    kfp: {
+      kosten: [{ name: "Personal", posten: [{ id: "k1", bezeichnung: "Honorar", erlaeuterung: "", betrag: "1000", bausteinId: "bs1" }] }],
+      finanzierung: [{ name: "", posten: [{ foerderId: "de-musikfonds", bezeichnung: "", betrag: 1000, anteile: { bs1: "1000" } }] }],
+    },
+    antraege: {
+      "de-musikfonds": { status: "abgeschickt", abdeckung: ["bs1"], statusFrei: "", offizielleFristen: ["2026-09-15"],
+        eigeneFristen: [{ datum: "2026-09-01", titel: "Entwurf" }], kontakt: { ansprechpartner: "", email: "", telefon: "", notiz: "" },
+        checkliste: [{ text: "Lebenslauf", status: "abgeschlossen", statusFrei: "", datei: "" }] },
+      "eigen-1": { status: "in_bearbeitung", abdeckung: null, offizielleFristen: [], eigeneFristen: [] },
+    },
+    eigeneFoerderungen: [{ id: "eigen-1", eigen: true, name: "Lokaler Kulturtopf", foerdergeber: "Stadt", land: "ANDERES",
+      beschreibung: "", webseite: "", foerderhoehe_text: "—", max_anteil_prozent: null, fristen: ["2026-10-01"],
+      unvertraeglich_mit: [], checkliste_vorschlag: [],
+      harte_kriterien: { wohnsitz: [], durchfuehrungsort: [], traegerschaft: ["einzelperson"], studentisch_erlaubt: true },
+      weiche_kriterien: { sparten: [], projektarten: [], budget_min: null, budget_max: null, waehrung: "EUR", zeitpunkt: "fristen" } }],
+    interneFristen: [{ id: "i1", datum: "2026-08-01", titel: "Kickoff" }],
+    abrechnung: {
+      belege: [{ id: "b1", nr: 1, datum: "2026-05-01", empfaenger: "E", zweck: "Z", brutto: "100", mwst_satz: "19",
+        zahlungsart: "karte", kostenstelle: "k1", status: "erfasst", dateien: [{ name: "beleg.pdf" }],
+        zuordnungen: [{ quelleId: "q1", betrag: "100" }], notiz: "" }],
+      quellen: [{ id: "q1", typ: "foerderung", foerderId: "de-musikfonds", name: "Musikfonds", soll: "5000",
+        nachweisFrist: "2027-03-01", sachbericht: "", dateien: [{ name: "auszug.pdf" }] }],
+      sachbericht: "",
+    },
+    arbeitsdokumente: [{ id: "dok-1", titel: "Text", url: "https://cryptpad.fr/pad/#/2/x", foerderungen: ["de-musikfonds"] }],
+  });
+  const org = (projekte, gruppen = [{ id: "g1", name: "Klangraum" }]) => ({
+    projekte, projektgruppen: gruppen, aktivesProjektId: projekte[0]?.id ?? null,
+  });
+  pruefe(weitergabeAufbauPruefen(org([leer()])).ok, "ehrlich: frisch angelegtes Projekt");
+  pruefe(weitergabeAufbauPruefen(org([voll(), leer()])).ok, "ehrlich: reich gefülltes Projekt");
+  pruefe(weitergabeAufbauPruefen(org([], [])).ok, "ehrlich: Organisation ohne Projekte");
+  // Jede Förderung aus dem mitgelieferten Katalog muss als „Geist" (aus dem
+  // Katalog verschwundene, aber gemerkte Förderung) durchgehen.
+  const katalog = JSON.parse(readFileSync(new URL("../src/lib/daten/foerderungen.json", import.meta.url), "utf8")).foerderungen;
+  const geister = katalog.filter((f) => !weitergabeAufbauPruefen(org([{ ...voll(), katalogGhosts: [f] }])).ok).map((f) => f.id);
+  pruefe(katalog.length > 50 && geister.length === 0, `alle ${katalog.length} Katalog-Förderungen gehen als Geist durch${geister.length ? " – NICHT: " + geister.join(", ") : ""}`);
+  pruefe(weitergabeAufbauPruefen(org([{ ...voll(), eigeneFoerderungen: katalog.slice(0, 5).map((f) => ({ ...f, eigen: true })) }])).ok,
+    "Katalog-Einträge als eigene Förderungen gehen durch");
+  // Fristen mit Hinweis kommen als Objekt (Katalog-Pflege, Team-Abgleich).
+  const mitHinweis = voll();
+  mitHinweis.eigeneFoerderungen[0].fristen = ["2026-10-01", { datum: "03-15", hinweis: "jährlich" }, { datum: "2026-12-01" }];
+  mitHinweis.katalogGhosts = [{ ...mitHinweis.eigeneFoerderungen[0], id: "weg-1", eigen: undefined }];
+  pruefe(weitergabeAufbauPruefen(org([mitHinweis])).ok, "Fristen mit Hinweis (Objekt) gehen durch");
+  pruefe(weitergabeAufbauPruefen({ ...org([voll()]), kuenftig: 1, projekte: [{ ...voll(), neuesFeld: { x: 1 } }] }).ok,
+    "unbekannte zusätzliche Felder stören nicht");
+
+  // Jede dieser Varianten hat im Einbruchtest die Anzeige abstürzen lassen
+  // (oder das Projekt-Menü festgehalten) – sie muss abgelehnt werden.
+  /** @param {(p: any) => void} aendern @param {string} was */
+  const kaputt = (aendern, was, gruppen) => {
+    const p = voll();
+    aendern(p);
+    const r = weitergabeAufbauPruefen(org([p], gruppen));
+    pruefe(!r.ok && r.fehler.includes("keine lesbare Organisation"), `${was}: abgelehnt${r.ok ? "" : " (" + r.stelle + ")"}`);
+  };
+  kaputt((p) => (p.kfp.kosten = [{}]), "Kostengruppe ohne Posten");
+  kaputt((p) => (p.kfp.kosten[0].posten = null), "Posten-Liste null");
+  kaputt((p) => (p.kfp.finanzierung = [null]), "Finanzierung mit leerem Eintrag");
+  kaputt((p) => (p.abrechnung.belege = [5, "x", null]), "Belege mit Unsinn");
+  kaputt((p) => (p.abrechnung.belege[0].zuordnungen = "x"), "Zuordnungen keine Liste");
+  kaputt((p) => (p.formular._eigeneFelder = [null]), "Zusatzfeld leer");
+  kaputt((p) => (p.interneFristen = [null]), "interne Frist leer");
+  kaputt((p) => (p.bausteine = [{}]), "Teil ohne Namen");
+  kaputt((p) => (p.bausteine[0].id = {}), "Teil-Kennung kein Text (Projekt-Menü hing)");
+  kaputt((p) => delete p.eigeneFoerderungen[0].weiche_kriterien, "eigene Förderung ohne Kriterien");
+  kaputt((p) => (p.antraege["de-musikfonds"] = "x"), "Antrag kein Objekt");
+  kaputt((p) => (p.antraege["de-musikfonds"].checkliste = [null]), "Checkliste mit leerem Punkt");
+  kaputt((p) => (p.arbeitsdokumente = [null]), "Arbeitsdokument leer");
+  kaputt((p) => (p.merkliste = [null]), "Merkliste mit leerem Eintrag");
+  kaputt((p) => (p.gruppeId = 7), "Gruppen-Kennung kein Text");
+  kaputt((p) => (p.eigeneFoerderungen[0].fristen = [null]), "Frist leer");
+  kaputt((p) => (p.eigeneFoerderungen[0].fristen = [{ datum: 5 }]), "Frist-Datum keine Zeichenfolge");
+  kaputt(() => {}, "Projektgruppe ohne Namen", [{ id: "g1" }]);
+  kaputt(() => {}, "Projektgruppe kein Objekt", [null]);
 }
 
 console.log("Start-Organisation");
