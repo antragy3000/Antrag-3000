@@ -171,6 +171,26 @@ export function neueOrgDaten(frisch, vorlage, name) {
 }
 
 /**
+ * Wo die Daten einer OFFENEN Organisation gerade liegen – für Ergebnisse aus
+ * dem Netz, die erst ankommen, nachdem man womöglich umgeschaltet hat (Team
+ * verbinden, Ausweis erneuern). Wer vor dem Warten die ID festhält und hier
+ * erst beim Schreiben nachschlägt, trifft immer die richtige Organisation:
+ * die aktive, eine andere offene – oder keine mehr (gesperrt/entfernt), dann
+ * wird das Ergebnis verworfen.
+ * @param {string | null} id        die vorher festgehaltene ID
+ * @param {string | null} aktivId   die jetzt aktive Organisation
+ * @param {any} aktivDaten          ihre Daten
+ * @param {{ id: string, daten: any }[]} andere  die übrigen offenen
+ * @returns {{ daten: any, aktiv: boolean } | null}
+ */
+export function offeneOrgFinden(id, aktivId, aktivDaten, andere) {
+  if (!id) return null;
+  if (id === aktivId) return aktivDaten ? { daten: aktivDaten, aktiv: true } : null;
+  const o = (andere ?? []).find((x) => x.id === id);
+  return o ? { daten: o.daten, aktiv: false } : null;
+}
+
+/**
  * Welche Organisation nach dem Entsperren aktiv wird: die zuletzt benutzte
  * (Zeitstempel `zuletztGeoeffnet` im Tresor), sonst die erste nach Name.
  * @param {{ id: string, daten: any }[]} offene

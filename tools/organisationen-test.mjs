@@ -15,6 +15,7 @@ import {
   startOrg,
   orgFelderErgaenzen,
   orgOrdnerVon,
+  offeneOrgFinden,
   NAME_UNBEKANNT,
 } from "../src/lib/organisationen.js";
 
@@ -142,6 +143,19 @@ krumm.organisation.ordner = 42;
 pruefe(orgOrdnerVon(krumm) === "", "unbrauchbarer Wert wird ignoriert");
 orgFelderErgaenzen(mitOrdner);
 pruefe(mitOrdner.organisation.ordner === "Verein", "Ergänzen älterer Felder lässt den Ordner stehen");
+
+console.log("Netz-Ergebnis nach einem Wechsel");
+{
+  const a = { id: "aaaaaaaaaaaaaaaa", daten: tresor("A") };
+  const b = { id: "bbbbbbbbbbbbbbbb", daten: tresor("B") };
+  // Aufruf startet in A; inzwischen ist B aktiv, A liegt unter den anderen.
+  const ziel = offeneOrgFinden(a.id, b.id, b.daten, [a]);
+  pruefe(ziel?.daten === a.daten && ziel.aktiv === false, "landet bei A, obwohl B jetzt aktiv ist");
+  pruefe(offeneOrgFinden(b.id, b.id, b.daten, [a])?.aktiv === true, "die aktive wird als aktiv erkannt");
+  pruefe(offeneOrgFinden(a.id, b.id, b.daten, []) === null, "A inzwischen gesperrt/entfernt: Ergebnis wird verworfen");
+  pruefe(offeneOrgFinden(a.id, null, null, []) === null, "ganz gesperrt: verworfen");
+  pruefe(offeneOrgFinden(null, b.id, b.daten, [a]) === null, "ohne ID: nichts");
+}
 
 console.log("Start-Organisation");
 privat.daten.zuletztGeoeffnet = "2026-11-07T10:00:00.000Z";

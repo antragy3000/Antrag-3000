@@ -43,6 +43,11 @@ const S = {
   // Bausteine gliedern Kostenplan und Texte, bleiben also wie diese lokal.
   bausteinName: "SENSIBEL_BAUSTEIN_Konzert_Maerz",
   bausteinText: "SENSIBEL_BAUSTEIN_BESCHREIBUNG_Hofkonzert",
+  // Organisationen: Name, Ordner und die Namen der ANDEREN Organisationen auf
+  // dem Geraet stehen verschluesselt im Tresor und gehen nie ans Team.
+  orgName: "SENSIBEL_ORGANISATION_Verein_Blau",
+  orgOrdner: "SENSIBEL_ORGANISATION_ORDNER",
+  andereOrg: "SENSIBEL_ANDERE_ORGANISATION_Duo_Lichtung",
 };
 
 // Verbotene Feldnamen (dürfen als Schlüssel nie im Board stehen).
@@ -63,6 +68,8 @@ const VERBOTENE_FELDNAMEN = [
   "bausteine", "bausteinid",
   // Teil-Anträge: Abdeckung und Aufteilung der Finanzierung bleiben lokal.
   "abdeckung", "anteile",
+  // Organisationen: weder die eigene noch die anderen auf dem Geraet.
+  "organisation", "bekannteorganisationen", "ordner", "ordnerumzug", "zuletztgeoeffnet",
 ];
 
 // Tresor mit erfundenen sensiblen Daten.
@@ -137,6 +144,9 @@ const daten = {
     },
   ],
   aktivesProjektId: "p1",
+  organisation: { name: S.orgName, ordner: S.orgOrdner, ordnerUmzug: true },
+  bekannteOrganisationen: [{ id: "cccccccccccccccc", name: S.andereOrg }],
+  zuletztGeoeffnet: "2026-11-15T10:00:00.000Z",
 };
 
 const board = boardAusTresor(daten);

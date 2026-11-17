@@ -30,7 +30,7 @@
   import { macDownloadUrl } from "$lib/sicherheit";
   // Jede Verbindung ins Internet läuft über netzAufruf/netzMit und landet im
   // Verbindungsprotokoll (Paket 6; erzwungen durch npm run sicherheit).
-  import { netzAufruf, netzMit, verbindungen } from "$lib/netzProtokoll.svelte.js";
+  import { netzAufruf, netzAufruf as netzAufrufGlobal, netzMit, verbindungen } from "$lib/netzProtokoll.svelte.js";
   import { UPDATE_SERVER, netzFehlerText } from "$lib/netzBefehle";
   import Verbindungsprotokoll from "$lib/komponenten/Verbindungsprotokoll.svelte";
   import { getVersion } from "@tauri-apps/api/app";
@@ -52,7 +52,7 @@
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
   import { boardAusTresor, geteilteFoerdererAusTresor } from "$lib/sync";
   import { verlassenErlaubt } from "$lib/ungespeichert";
-  import { orgName, orgListe, bekannteAbgleichen, namePruefen, neueOrgDaten, startOrg, orgOrdnerVon, NAME_UNBEKANNT } from "$lib/organisationen.js";
+  import { orgName, orgListe, bekannteAbgleichen, namePruefen, neueOrgDaten, startOrg, orgOrdnerVon, offeneOrgFinden, NAME_UNBEKANNT } from "$lib/organisationen.js";
   // Reine Tresor-Struktur-Helfer (Vorlagen + Migration) – ausgelagert nach
   // $lib/tresorFormat.js, damit diese Datei kleiner bleibt.
   import { offizielleFristenAus, neueId, neuesProjekt, leereStammdaten, frischerTresor, normalisieren, STANDARD_TEAM_SYNC } from "$lib/tresorFormat.js";
@@ -551,6 +551,8 @@
     andereOrgs = [];
     alleOrgIds = [];
     gemerkte = [];
+    protokoll = [];
+    ausweisGeprueft = new Set();
     ordnerHinweise = [];
     orgMenuOffen = false;
     fehler = "";
@@ -578,7 +580,24 @@
     await invoke("tresor_speichern", { org: id, daten: JSON.stringify(d) });
   }
 
-  // ---------- Organisationen (Variante B+, Etappen O2 und O3) ----------
+  // ---------- Organisationen (Variante B+, Etappen O2 bis O5) ----------
+
+  // Ergebnis eines Netz-Aufrufs in DIE Organisation schreiben, für die er
+  // gestartet wurde (ID vor dem ersten await festhalten!). Hat man inzwischen
+  // umgeschaltet, landet es trotzdem dort und nicht in der jetzt aktiven; ist
+  // sie nicht mehr offen, wird es verworfen (Rückgabe false).
+  /** @param {string | null} id @param {(d: any) => void} aendern */
+  async function inOrgSchreiben(id, aendern) {
+    const ziel = offeneOrgFinden(id, orgId, daten, andereOrgs);
+    if (!ziel) return false;
+    aendern(ziel.daten);
+    if (ziel.aktiv) await tresorSpeichern();
+    else {
+      await speichernFuer(/** @type {string} */ (id), ziel.daten);
+      andereOrgs = [...andereOrgs];
+    }
+    return true;
+  }
 
   // Sorgt beim Öffnen dafür, dass eine Organisation ihren eigenen Ordner hat:
   //  1. Noch keiner (Tresor von vor O3)? Anlegen und MERKEN, dass der Umzug der
@@ -678,8 +697,15 @@
     daten.zuletztGeoeffnet = new Date().toISOString();
     ansichtZuruecksetzen();
     await tresorSpeichern();
-    // Wie nach dem Entsperren: bei „Automatisch" die Team-Verbindung prüfen.
-    if (daten.netzModus === "auto" && daten.sync && online) verbindungPruefen(true).catch(() => {});
+    // Das Sync-Protokoll zeigt, was DIESE Organisation gesendet hat.
+    protokoll = [];
+    // Wie nach dem Entsperren: bei „Automatisch" die Team-Verbindung prüfen
+    // und den Ausweis ihres Teams bei Bedarf erneuern. Die Synchronisation
+    // selbst startet man je Organisation wieder von Hand.
+    if (daten.netzModus === "auto" && daten.sync && online) {
+      verbindungPruefen(true).catch(() => {});
+      ausweisErneuernPruefen();
+    }
   }
 
   // --- Dialog: gesperrte Organisation mit ihrem Passwort öffnen ---
@@ -1180,6 +1206,7 @@
   // Zugangs-Paket laden: Datei wählen, in Rust prüfen (Ausweis +
   // Gerätename aus dem Zertifikat), verschlüsselt im Tresor ablegen.
   async function zugangspaketLaden() {
+    const id = orgId; // Team gehört zu DIESER Organisation (siehe inOrgSchreiben)
     const pfad = await dateiWaehlen({
       title: "Zugangs-Paket wählen",
       multiple: false,
@@ -1188,14 +1215,15 @@
     if (!pfad) return null;
     try {
       const info = await invoke("zugangspaket_pruefen", { pfad });
-      daten.sync = {
-        adresse: info.adresse,
-        geraetName: info.geraet_name,
-        ausweisPem: info.ausweis_pem,
-        caPem: info.ca_pem ?? "",
-        letzterAbgleich: null,
-      };
-      await tresorSpeichern();
+      await inOrgSchreiben(id, (d) => {
+        d.sync = {
+          adresse: info.adresse,
+          geraetName: info.geraet_name,
+          ausweisPem: info.ausweis_pem,
+          caPem: info.ca_pem ?? "",
+          letzterAbgleich: null,
+        };
+      });
       return info;
     } catch (e) {
       alert("Das Zugangs-Paket konnte nicht geladen werden.\n" + e);
@@ -1233,6 +1261,7 @@
   // Geräteschlüssel entsteht dabei LOKAL (in Rust) und verlässt das Gerät nie;
   // gesendet wird nur der öffentliche Teil, zurück kommt der signierte Ausweis.
   async function einladungAnnehmen(geraetName) {
+    const id = orgId; // Team gehört zu DIESER Organisation (siehe inOrgSchreiben)
     const name = (geraetName || "").trim();
     if (!name) return null;
     const pfad = await dateiWaehlen({
@@ -1250,14 +1279,15 @@
         token: einl.token,
         geraetName: name,
       });
-      daten.sync = {
-        adresse: info.adresse,
-        geraetName: info.geraet_name,
-        ausweisPem: info.ausweis_pem,
-        caPem: info.ca_pem ?? "",
-        letzterAbgleich: null,
-      };
-      await tresorSpeichern();
+      await inOrgSchreiben(id, (d) => {
+        d.sync = {
+          adresse: info.adresse,
+          geraetName: info.geraet_name,
+          ausweisPem: info.ausweis_pem,
+          caPem: info.ca_pem ?? "",
+          letzterAbgleich: null,
+        };
+      });
       return info;
     } catch (e) {
       alert("Die Einladung konnte nicht angenommen werden.\n" + netzFehlerText(e));
@@ -1305,6 +1335,7 @@
   // Eigenes Team erstellen (gehostet, ohne Konto/E-Mail): erzeugt lokal den
   // Schlüssel, bootstrappt am Server ein neues Konto und wird dessen Eigentümer.
   async function teamErstellen(teamUrl, syncAdresse, caPem, teamName, geraetName) {
+    const id = orgId; // Team gehört zu DIESER Organisation (siehe inOrgSchreiben)
     try {
       const info = await netzAufruf("team_erstellen", {
         teamUrl,
@@ -1313,14 +1344,15 @@
         teamName,
         geraetName,
       });
-      daten.sync = {
-        adresse: info.adresse,
-        geraetName: info.geraet_name,
-        ausweisPem: info.ausweis_pem,
-        caPem: info.ca_pem ?? "",
-        letzterAbgleich: null,
-      };
-      await tresorSpeichern();
+      await inOrgSchreiben(id, (d) => {
+        d.sync = {
+          adresse: info.adresse,
+          geraetName: info.geraet_name,
+          ausweisPem: info.ausweis_pem,
+          caPem: info.ca_pem ?? "",
+          letzterAbgleich: null,
+        };
+      });
       return info;
     } catch (e) {
       alert("Das Team konnte nicht erstellt werden.\n" + netzFehlerText(e));
@@ -1424,8 +1456,10 @@
       syncVerbunden = false;
       return { ok: false, fehler: "Kein Zugangs-Paket geladen." };
     }
+    const id = orgId;
     const r = await syncVerbindungTesten(automatisch === true);
-    syncVerbunden = !!r.ok;
+    // Inzwischen umgeschaltet? Dann gilt der Punkt nicht für die jetzige.
+    if (orgId === id) syncVerbunden = !!r.ok;
     return r;
   }
 
@@ -1540,29 +1574,43 @@
   // Ohne gespeicherten Zeitstempel (bestehendes Gerät) wird zunächst nur die Uhr
   // gestartet, damit ein frisch verbundenes Gerät nicht sofort erneuert.
   const AUSWEIS_ERNEUERN_NACH_TAGEN = 60; // vor dem 90-Tage-Ablauf
-  let ausweisGeprueft = false;
+  // Je Organisation einmal pro Sitzung (jede hat ihr eigenes Team, also ihren
+  // eigenen Ausweis). Alles, was gebraucht wird, wird VOR dem Warten gelesen;
+  // geschrieben wird per ID (inOrgSchreiben) – so landet ein erneuerter Ausweis
+  // auch nach einem Umschalten bei der richtigen Organisation.
+  /** @type {Set<string>} */
+  let ausweisGeprueft = new Set();
   async function ausweisErneuernPruefen() {
-    if (ausweisGeprueft || !online || !daten?.sync?.ausweisPem) return;
-    ausweisGeprueft = true;
+    if (!orgId || ausweisGeprueft.has(orgId) || !online || !daten?.sync?.ausweisPem) return;
+    const id = orgId;
+    ausweisGeprueft.add(id);
+    const s = { ...daten.sync };
+    const publicUrl = daten.einzelServer;
+    /** @param {string} neu */
+    const neuenAusweisSetzen = (neu) =>
+      inOrgSchreiben(id, (d) => {
+        // Nur den Ausweis ersetzen, der erneuert wurde (nicht etwa ein
+        // inzwischen neu verbundenes Team).
+        if (d.sync?.ausweisPem !== s.ausweisPem) return;
+        d.sync.ausweisPem = neu;
+        d.sync.ausweisErneuertAm = new Date().toISOString();
+      });
     const tag = 24 * 60 * 60 * 1000;
-    const stamp = daten.sync.ausweisErneuertAm ? Date.parse(daten.sync.ausweisErneuertAm) : NaN;
+    const stamp = s.ausweisErneuertAm ? Date.parse(s.ausweisErneuertAm) : NaN;
     if (isNaN(stamp)) {
-      daten.sync.ausweisErneuertAm = new Date().toISOString();
-      await tresorSpeichern();
+      await inOrgSchreiben(id, (d) => {
+        if (d.sync) d.sync.ausweisErneuertAm = new Date().toISOString();
+      });
       return;
     }
     if (Date.now() - stamp < AUSWEIS_ERNEUERN_NACH_TAGEN * tag) return;
     try {
       const neu = await netzAufruf("ausweis_erneuern", {
-        syncAdresse: daten.sync.adresse,
-        ausweisPem: daten.sync.ausweisPem,
-        caPem: daten.sync.caPem ?? "",
+        syncAdresse: s.adresse,
+        ausweisPem: s.ausweisPem,
+        caPem: s.caPem ?? "",
       }, { automatisch: true });
-      if (typeof neu === "string" && neu.includes("CERTIFICATE")) {
-        daten.sync.ausweisPem = neu;
-        daten.sync.ausweisErneuertAm = new Date().toISOString();
-        await tresorSpeichern();
-      }
+      if (typeof neu === "string" && neu.includes("CERTIFICATE")) await neuenAusweisSetzen(neu);
     } catch {
       // Die mTLS-Erneuerung ging nicht – häufigster echter Grund: der Ausweis
       // ist bereits abgelaufen (Gerät war länger offline) und kommt gar nicht
@@ -1571,15 +1619,11 @@
       // zu lange abgelaufen), bleibt der bisherige Ausweis unangetastet.
       try {
         const neu = await netzAufruf("ausweis_grace_erneuern", {
-          publicUrl: daten.einzelServer,
-          ausweisPem: daten.sync.ausweisPem,
-          caPem: daten.sync.caPem ?? "",
+          publicUrl,
+          ausweisPem: s.ausweisPem,
+          caPem: s.caPem ?? "",
         }, { automatisch: true });
-        if (typeof neu === "string" && neu.includes("CERTIFICATE")) {
-          daten.sync.ausweisPem = neu;
-          daten.sync.ausweisErneuertAm = new Date().toISOString();
-          await tresorSpeichern();
-        }
+        if (typeof neu === "string" && neu.includes("CERTIFICATE")) await neuenAusweisSetzen(neu);
       } catch {
         /* still: offline oder zu lange abgelaufen – bisheriger Ausweis bleibt */
       }
@@ -1602,7 +1646,19 @@
   // Alle Verbindungen des laufenden Abgleichs gelten im Verbindungsprotokoll
   // als „automatisch" (der Takt läuft von selbst weiter).
   const AUTO = { automatisch: true };
+  const ORG_GEWECHSELT = "org_gewechselt";
   async function einAbgleich() {
+    // Ein Abgleich gehört zu genau einer Organisation. orgWechseln wartet zwar
+    // auf den laufenden Takt; trotzdem bricht er ab, sobald die aktive eine
+    // andere ist – sonst gingen ihre Förderer an den falschen Server und ihre
+    // Liste „gesendet" in den falschen Tresor.
+    const id = orgId;
+    const netzAufruf = async (/** @type {string} */ befehl, /** @type {any} */ args, /** @type {any} */ opt) => {
+      if (orgId !== id) throw ORG_GEWECHSELT;
+      const r = await netzAufrufGlobal(befehl, args, opt);
+      if (orgId !== id) throw ORG_GEWECHSELT;
+      return r;
+    };
     const adresse = daten.sync.adresse;
     const ausweisPem = daten.sync.ausweisPem;
     const caPem = daten.sync.caPem ?? "";
@@ -1681,6 +1737,7 @@
           body,
         });
       } catch (e) {
+        if (e === ORG_GEWECHSELT) throw e; // nicht weitermachen, siehe oben
         // Fehler (Netz/Tempo-Bremse) protokollieren, aber weitermachen.
         protZeilen.push({
           projektId: `Meldung: ${m.foerderungName || m.foerderungId}`,
@@ -1705,7 +1762,10 @@
         delete gesendetF[id];
         protZeilen.push({ projektId: `Förderer zurückgezogen: ${id}`, aktion: "gelöscht", bytes: 0, body: null });
         geaendert = true;
-      } catch (e) { /* nächster Takt erneut */ }
+      } catch (e) {
+        if (e === ORG_GEWECHSELT) throw e;
+        /* sonst: nächster Takt erneut */
+      }
     }
 
     // 5b. Teilen – nur, wenn sich die öffentliche Sicht geändert hat.
@@ -1724,6 +1784,7 @@
           aktion: "gesendet", bytes: body.length, body,
         });
       } catch (e) {
+        if (e === ORG_GEWECHSELT) throw e;
         protZeilen.push({
           projektId: `Förderer: ${f.inhalt.name || f.id}`,
           aktion: `nicht geteilt (${e})`, bytes: 0, body: null,
@@ -1755,6 +1816,7 @@
       protokollEintrag({ zeilen: protZeilen, geholt: serverBoard.length });
     }
 
+    if (orgId !== id) throw ORG_GEWECHSELT;
     if (geaendert) {
       daten.sync.versionen = versionen;
       daten.sync.gesendet = gesendet;
@@ -1781,8 +1843,12 @@
           : "Aktiv · synchronisiert",
       };
     } catch (e) {
-      syncVerbunden = false;
-      syncMeldung = { art: "warn", text: "Verbindung unterbrochen – versuche weiter …" };
+      if (e === ORG_GEWECHSELT) {
+        syncLoopStoppen();
+      } else {
+        syncVerbunden = false;
+        syncMeldung = { art: "warn", text: "Verbindung unterbrochen – versuche weiter …" };
+      }
     } finally {
       tickAktiv = false;
       if (syncLaeuft) syncTimer = setTimeout(syncTakt, SYNC_INTERVALL_MS);
@@ -1797,7 +1863,10 @@
 
   async function autoSyncStarten() {
     if (!daten?.sync || syncLaeuft) return;
+    const id = orgId;
     const r = await verbindungPruefen();
+    // Während der Prüfung umgeschaltet: nicht in der anderen Organisation starten.
+    if (orgId !== id) return;
     if (!r.ok) {
       syncMeldung = { art: "warn", text: "Verbindung steht noch nicht – zuerst „Verbindung testen“." };
       return;
