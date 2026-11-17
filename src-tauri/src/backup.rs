@@ -71,29 +71,37 @@ use zeroize::{Zeroize, Zeroizing};
 
 use crate::{ordner, tresor};
 
-const MAGIC_KOMPLETT: &[u8; 8] = b"ANTRAG3S";
+pub(crate) const MAGIC_KOMPLETT: &[u8; 8] = b"ANTRAG3S";
+/// Eine weitergegebene Organisation (weitergabe.rs): derselbe Behaelter, aber
+/// eigene Kennung – so wird keine Datei je fuer die andere Art gehalten.
+pub(crate) const MAGIC_WEITERGABE: &[u8; 8] = b"ANTRAG3W";
+pub(crate) const ENDUNG_WEITERGABE: &str = ".a3korganisation";
 /// Version 2: Tresore mit ID ("tresor/<ID>.enc"), eine oder alle Organisationen.
 const VERSION: u8 = 2;
 /// Version 1 (bis 0.5): genau ein "tresor.enc" ohne ID – wird weiter gelesen.
 const VERSION_1: u8 = 1;
-const SALT_ENDE: usize = 9 + tresor::SALT_LAENGE;
+pub(crate) const SALT_ENDE: usize = 9 + tresor::SALT_LAENGE;
 const HUELLE_NONCE_ENDE: usize = SALT_ENDE + 12;
 const VERPACKT_ENDE: usize = HUELLE_NONCE_ENDE + 32 + 16;
-const KOPF_LAENGE: usize = VERPACKT_ENDE + 7;
+pub(crate) const KOPF_LAENGE: usize = VERPACKT_ENDE + 7;
 const BLOCK: usize = 64 * 1024;
 const BLOCK_VERSCHLUESSELT: usize = BLOCK + 16;
-const NAME_MAX: usize = 4096;
+pub(crate) const NAME_MAX: usize = 4096;
 
 const EINTRAG_TRESOR: &str = "tresor.enc";
 const PRAEFIX_TRESORE: &str = "tresor/";
-const PRAEFIX_DATEIEN: &str = "dateien/";
+pub(crate) const PRAEFIX_DATEIEN: &str = "dateien/";
 /// Obergrenze fuer einen Tresor in der Sicherung (er wird im Speicher gehalten).
-const TRESOR_MAX: u64 = 256 * 1024 * 1024;
+pub(crate) const TRESOR_MAX: u64 = 256 * 1024 * 1024;
 const ENDUNG_KOMPLETT: &str = ".a3ksicherung";
 
 const KEINE_SICHERUNG: &str = "Das ist keine gültige Antrag-3000-Sicherung.";
-const BESCHAEDIGT: &str = "Die Sicherung ist beschädigt oder wurde verändert. Es wurde nichts eingespielt.";
-const UNZULAESSIG: &str = "Die Sicherung enthält unzulässige Dateipfade. Es wurde nichts eingespielt.";
+pub(crate) const BESCHAEDIGT: &str = "Die Sicherung ist beschädigt oder wurde verändert. Es wurde nichts eingespielt.";
+pub(crate) const UNZULAESSIG: &str = "Die Sicherung enthält unzulässige Dateipfade. Es wurde nichts eingespielt.";
+const IST_WEITERGABE: &str =
+    "Das ist eine weitergegebene Organisation, keine Sicherung. Du fügst sie über das Organisations-Menü hinzu: „Organisation aus Datei hinzufügen“.";
+const IST_SICHERUNG: &str =
+    "Das ist eine Sicherung, keine weitergegebene Organisation. Du spielst sie unter „Sicherung“ ein.";
 
 /// Rueckmeldung ans Frontend.
 #[derive(Serialize, Default, Debug)]
@@ -111,7 +119,14 @@ pub struct Bericht {
 
 /// Entfernt eine halb fertige Datei, falls wir vorzeitig aussteigen.
 /// Nach einem erfolgreichen Umbenennen ist nichts mehr da – dann passiert nichts.
-struct Aufraeumen(PathBuf);
+pub(crate) struct Aufraeumen(pub(crate) PathBuf);
+
+/// "<pfad>.teil": dort entsteht eine Datei, bis sie komplett und gegengelesen ist.
+pub(crate) fn teil_pfad(ziel: &Path) -> PathBuf {
+    let mut teil = ziel.as_os_str().to_owned();
+    teil.push(".teil");
+    PathBuf::from(teil)
+}
 
 impl Drop for Aufraeumen {
     fn drop(&mut self) {
@@ -127,10 +142,11 @@ fn kopf_bauen(
     datenschluessel: &[u8; 32],
     schluessel: &[u8; 32],
     salt: &[u8; tresor::SALT_LAENGE],
+    magic: &[u8; 8],
     version: u8,
 ) -> Result<[u8; KOPF_LAENGE], String> {
     let mut kopf = [0u8; KOPF_LAENGE];
-    kopf[..8].copy_from_slice(MAGIC_KOMPLETT);
+    kopf[..8].copy_from_slice(magic);
     kopf[8] = version;
     kopf[9..SALT_ENDE].copy_from_slice(salt);
     OsRng.fill_bytes(&mut kopf[SALT_ENDE..HUELLE_NONCE_ENDE]);
@@ -147,7 +163,7 @@ fn kopf_bauen(
 
 /// Passt der Schluessel nicht, ist (praktisch immer) das Passwort falsch:
 /// fester Code wie beim Entsperren des Tresors.
-fn datenschluessel_entpacken(
+pub(crate) fn datenschluessel_entpacken(
     kopf: &[u8; KOPF_LAENGE],
     schluessel: &[u8; 32],
 ) -> Result<Zeroizing<[u8; 32]>, String> {
@@ -163,16 +179,26 @@ fn datenschluessel_entpacken(
     Ok(datenschluessel)
 }
 
-fn kopf_lesen(quelle: &Path) -> Result<(BufReader<File>, [u8; KOPF_LAENGE]), String> {
-    let datei = File::open(quelle).map_err(|e| format!("Sicherungsdatei nicht lesbar: {e}"))?;
+/// Liest den Kopf und prueft, dass die Datei von der erwarteten Art ist
+/// (`magic`): Sicherung (Version 1 oder 2) oder Weitergabe (Version 1).
+pub(crate) fn kopf_lesen(quelle: &Path, magic: &[u8; 8]) -> Result<(BufReader<File>, [u8; KOPF_LAENGE]), String> {
+    let datei = File::open(quelle).map_err(|e| format!("Datei nicht lesbar: {e}"))?;
     let mut leser = BufReader::new(datei);
     let mut kopf = [0u8; KOPF_LAENGE];
     leser.read_exact(&mut kopf).map_err(|_| KEINE_SICHERUNG.to_string())?;
-    if &kopf[..8] != MAGIC_KOMPLETT {
-        return Err(KEINE_SICHERUNG.into());
+    if &kopf[..8] != magic {
+        let andere_art = if &kopf[..8] == MAGIC_WEITERGABE {
+            IST_WEITERGABE
+        } else if &kopf[..8] == MAGIC_KOMPLETT {
+            IST_SICHERUNG
+        } else {
+            KEINE_SICHERUNG
+        };
+        return Err(andere_art.into());
     }
-    if kopf[8] != VERSION && kopf[8] != VERSION_1 {
-        return Err("Diese Sicherung stammt aus einer neueren Programmversion. Bitte aktualisiere Antrag 3000.".into());
+    let bekannt = if magic == MAGIC_KOMPLETT { kopf[8] == VERSION || kopf[8] == VERSION_1 } else { kopf[8] == 1 };
+    if !bekannt {
+        return Err("Diese Datei stammt aus einer neueren Programmversion. Bitte aktualisiere Antrag 3000.".into());
     }
     Ok((leser, kopf))
 }
@@ -185,7 +211,7 @@ fn kopf_lesen(quelle: &Path) -> Result<(BufReader<File>, [u8; KOPF_LAENGE]), Str
 /// volle Block ist genau BLOCK_VERSCHLUESSELT gross; der letzte ist immer
 /// kuerzer (notfalls leer) und traegt die Ende-Markierung. Daran erkennt der
 /// Leser ohne Vorausschau den Schluss, und abgeschnittene Dateien fallen auf.
-struct BlockSchreiber<W: Write> {
+pub(crate) struct BlockSchreiber<W: Write> {
     ziel: W,
     enc: Option<EncryptorBE32<Aes256Gcm>>,
     puffer: Vec<u8>,
@@ -213,7 +239,7 @@ impl<W: Write> Write for BlockSchreiber<W> {
 }
 
 impl<W: Write> BlockSchreiber<W> {
-    fn abschliessen(mut self) -> io::Result<W> {
+    pub(crate) fn abschliessen(mut self) -> io::Result<W> {
         let enc = self.enc.take().ok_or_else(strom_fehler)?;
         let block = enc
             .encrypt_last(Payload { msg: &self.puffer, aad: &self.kopf })
@@ -225,7 +251,7 @@ impl<W: Write> BlockSchreiber<W> {
 }
 
 /// Gegenstueck: liefert nur Daten, deren Siegel gestimmt hat.
-struct BlockLeser<R: Read> {
+pub(crate) struct BlockLeser<R: Read> {
     quelle: R,
     dec: Option<DecryptorBE32<Aes256Gcm>>,
     kopf: [u8; KOPF_LAENGE],
@@ -277,15 +303,16 @@ fn voll_lesen(quelle: &mut impl Read, puffer: &mut [u8]) -> io::Result<usize> {
 }
 
 /// Legt die Zieldatei an, schreibt den Kopf und wuerfelt den Sicherungs-Schluessel.
-fn schreiber_oeffnen(
+pub(crate) fn schreiber_oeffnen(
     pfad: &Path,
     schluessel: &[u8; 32],
     salt: &[u8; tresor::SALT_LAENGE],
+    magic: &[u8; 8],
     version: u8,
 ) -> Result<(BlockSchreiber<BufWriter<File>>, Zeroizing<[u8; 32]>), String> {
     let mut datenschluessel = Zeroizing::new([0u8; 32]);
     OsRng.fill_bytes(&mut datenschluessel[..]);
-    let kopf = kopf_bauen(&datenschluessel, schluessel, salt, version)?;
+    let kopf = kopf_bauen(&datenschluessel, schluessel, salt, magic, version)?;
 
     let datei = File::create(pfad).map_err(|e| format!("Sicherung nicht anlegbar: {e}"))?;
     let mut ziel = BufWriter::new(datei);
@@ -299,11 +326,12 @@ fn schreiber_oeffnen(
     Ok((schreiber, datenschluessel))
 }
 
-fn leser_oeffnen(
+pub(crate) fn leser_oeffnen(
     quelle: &Path,
     datenschluessel: &[u8; 32],
+    magic: &[u8; 8],
 ) -> Result<BlockLeser<BufReader<File>>, String> {
-    let (leser, kopf) = kopf_lesen(quelle)?;
+    let (leser, kopf) = kopf_lesen(quelle, magic)?;
     let dec = DecryptorBE32::from_aead(
         Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(datenschluessel)),
         GenericArray::from_slice(&kopf[VERPACKT_ENDE..]),
@@ -322,7 +350,7 @@ fn leser_oeffnen(
 // Die Eintraege im Strom
 // ============================================================
 
-fn eintrag_schreiben(
+pub(crate) fn eintrag_schreiben(
     ziel: &mut impl Write,
     name: &str,
     groesse: u64,
@@ -342,7 +370,7 @@ fn eintrag_schreiben(
     Ok(())
 }
 
-fn lesefehler(e: io::Error) -> String {
+pub(crate) fn lesefehler(e: io::Error) -> String {
     match e.kind() {
         io::ErrorKind::InvalidData | io::ErrorKind::UnexpectedEof => BESCHAEDIGT.to_string(),
         _ => format!("Sicherungsdatei nicht lesbar: {e}"),
@@ -351,7 +379,7 @@ fn lesefehler(e: io::Error) -> String {
 
 /// Geht alle Eintraege durch. Was der Besucher nicht liest, wird trotzdem
 /// entschluesselt – so prueft jeder Durchgang das Siegel der ganzen Datei.
-fn eintraege_durchlaufen<R: Read>(
+pub(crate) fn eintraege_durchlaufen<R: Read>(
     leser: &mut R,
     mut besucher: impl FnMut(&str, &mut dyn Read) -> Result<(), String>,
 ) -> Result<(), String> {
@@ -393,7 +421,7 @@ fn eintraege_durchlaufen<R: Read>(
 ///  - Ok(None): harmlos, aber auf diesem System kein gueltiger Name (z. B. ein
 ///    Doppelpunkt aus einer Mac-Sicherung, "a:b" oder CON.txt) → wird
 ///    uebersprungen und gemeldet, nie geschrieben.
-fn relativer_pfad(name: &str) -> Result<Option<PathBuf>, String> {
+pub(crate) fn relativer_pfad(name: &str) -> Result<Option<PathBuf>, String> {
     if name.split(['/', '\\']).any(|t| t.is_empty() || t == "." || t == "..") {
         return Err(UNZULAESSIG.into());
     }
@@ -440,7 +468,7 @@ impl Inhalt {
 
 /// Erster Durchgang: prueft die ganze Datei, ohne etwas zu schreiben.
 fn inhalt_pruefen(quelle: &Path, datenschluessel: &[u8; 32]) -> Result<Inhalt, String> {
-    let mut leser = leser_oeffnen(quelle, datenschluessel)?;
+    let mut leser = leser_oeffnen(quelle, datenschluessel, MAGIC_KOMPLETT)?;
     let version = leser.kopf[8];
     let mut inhalt = Inhalt { version, ..Inhalt::default() };
     let mut dateien_begonnen = false;
@@ -506,9 +534,9 @@ fn inhalt_pruefen(quelle: &Path, datenschluessel: &[u8; 32]) -> Result<Inhalt, S
 /// Eigene Sicherungen nicht mitsichern (sie koennen im selben Ordner liegen),
 /// die kurzlebigen Sperrdateien von Word ("~$...") auch nicht.
 fn gehoert_nicht_in_sicherung(name: &str) -> bool {
-    name.starts_with("~$")
-        || name.ends_with(ENDUNG_KOMPLETT)
-        || name.ends_with(&format!("{ENDUNG_KOMPLETT}.teil"))
+    let name = name.to_lowercase();
+    let name = name.strip_suffix(".teil").unwrap_or(&name);
+    name.starts_with("~$") || name.ends_with(ENDUNG_KOMPLETT) || name.ends_with(ENDUNG_WEITERGABE)
 }
 
 /// Sammelt alle normalen Dateien unter `start`; ihre Namen in der Sicherung
@@ -516,7 +544,7 @@ fn gehoert_nicht_in_sicherung(name: &str) -> bool {
 /// werden bewusst nicht verfolgt: Sie koennten aus dem Ordner hinausfuehren,
 /// und was dort liegt, gehoert nicht in diese Sicherung. Sie werden gemeldet.
 /// Mit `fremde_auslassen` bleiben Organisations-Ordner (mit Marke) draussen.
-fn dateien_sammeln(start: &Path, praefix: &str, fremde_auslassen: bool) -> (Vec<(String, PathBuf)>, Vec<String>) {
+pub(crate) fn dateien_sammeln(start: &Path, praefix: &str, fremde_auslassen: bool) -> (Vec<(String, PathBuf)>, Vec<String>) {
     let mut dateien = Vec::new();
     let mut probleme = Vec::new();
     let mut offen = vec![(start.to_path_buf(), praefix.to_string())];
@@ -594,11 +622,9 @@ fn komplett_schreiben(
 ) -> Result<Bericht, String> {
     let mut bericht = Bericht { probleme, organisationen: tresore.len() as u64, ..Bericht::default() };
 
-    let mut teil = ziel.as_os_str().to_owned();
-    teil.push(".teil");
-    let teil = PathBuf::from(teil);
+    let teil = teil_pfad(ziel);
     let _aufraeumen = Aufraeumen(teil.clone());
-    let (mut schreiber, datenschluessel) = schreiber_oeffnen(&teil, schluessel, salt, VERSION)?;
+    let (mut schreiber, datenschluessel) = schreiber_oeffnen(&teil, schluessel, salt, MAGIC_KOMPLETT, VERSION)?;
 
     let fehlgeschlagen = |e: io::Error| format!("Sicherung fehlgeschlagen: {e}");
     for (id, inhalt) in tresore {
@@ -644,7 +670,7 @@ fn komplett_schreiben(
 // ============================================================
 
 /// Schreibt eine Datei, ohne je etwas zu ueberschreiben (create_new).
-fn datei_einspielen(wurzel: &Path, relativ: &Path, inhalt: &mut dyn Read) -> io::Result<()> {
+pub(crate) fn datei_einspielen(wurzel: &Path, relativ: &Path, inhalt: &mut dyn Read) -> io::Result<()> {
     let ziel = wurzel.join(relativ);
     if ziel.symlink_metadata().is_ok() {
         return Err(io::ErrorKind::AlreadyExists.into());
@@ -772,7 +798,7 @@ fn komplett_entpacken(
     planen: impl FnOnce(&Inhalt) -> Result<Einspielplan, String>,
     wurzel: &Path,
 ) -> Result<(Bericht, Vec<(PathBuf, PathBuf)>), String> {
-    let (_, kopf) = kopf_lesen(quelle)?;
+    let (_, kopf) = kopf_lesen(quelle, MAGIC_KOMPLETT)?;
     let schluessel = Zeroizing::new(tresor::schluessel_ableiten(passwort, &kopf[9..SALT_ENDE])?);
     let datenschluessel = datenschluessel_entpacken(&kopf, &schluessel)?;
 
@@ -800,7 +826,7 @@ fn komplett_entpacken(
         fs::create_dir_all(wurzel).map_err(|e| format!("Ordner nicht anlegbar: {e}"))?;
         let umleitung = ordner_planen(wurzel, &inhalt, &plan)?;
         let mut bericht = Bericht { organisationen: tausch.len() as u64, ..Bericht::default() };
-        let mut leser = leser_oeffnen(quelle, &datenschluessel)?;
+        let mut leser = leser_oeffnen(quelle, &datenschluessel, MAGIC_KOMPLETT)?;
         eintraege_durchlaufen(&mut leser, |name, inhalt| {
             let Some(relativ) = name.strip_prefix(PRAEFIX_DATEIEN) else {
                 return Ok(()); // Tresor-Eintrag: oben schon erledigt
@@ -902,6 +928,8 @@ fn art_erkennen(quelle: &Path) -> Result<&'static str, String> {
         Ok("tresor")
     } else if &anfang[..8] == MAGIC_KOMPLETT {
         Ok("komplett")
+    } else if &anfang[..8] == MAGIC_WEITERGABE {
+        Ok("organisation")
     } else {
         Err(KEINE_SICHERUNG.into())
     }
@@ -1019,7 +1047,7 @@ pub struct Vorschau {
 }
 
 fn vorschau_bauen(quelle: &Path, passwort: &str, orgs: &Path) -> Result<Vorschau, String> {
-    let (_, kopf) = kopf_lesen(quelle)?;
+    let (_, kopf) = kopf_lesen(quelle, MAGIC_KOMPLETT)?;
     let schluessel = Zeroizing::new(tresor::schluessel_ableiten(passwort, &kopf[9..SALT_ENDE])?);
     let datenschluessel = datenschluessel_entpacken(&kopf, &schluessel)?;
     let inhalt = inhalt_pruefen(quelle, &datenschluessel)?;
@@ -1200,7 +1228,7 @@ mod tests {
 
     fn sicherung_von_hand_als(ziel: &Path, eintraege: &[(&str, &[u8])], version: u8) {
         let (schluessel, salt, _) = zugang();
-        let (mut s, _) = schreiber_oeffnen(ziel, &schluessel, &salt, version).unwrap();
+        let (mut s, _) = schreiber_oeffnen(ziel, &schluessel, &salt, MAGIC_KOMPLETT, version).unwrap();
         for (name, inhalt) in eintraege {
             eintrag_schreiben(&mut s, name, inhalt.len() as u64, &mut &**inhalt).unwrap();
         }

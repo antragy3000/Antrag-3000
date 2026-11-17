@@ -170,6 +170,124 @@ export function neueOrgDaten(frisch, vorlage, name) {
   return d;
 }
 
+// ------------------------------------------------------------------
+// Organisation weitergeben (O6c)
+//
+// Weitergegeben wird nur der INHALT einer Organisation – per Positivliste.
+// Alles andere (Team-Verbindung mit Ausweis, Geräte-Einstellungen, noch nicht
+// gesendete Meldungen, Liste der anderen Organisationen) bleibt auf dem Gerät.
+// Ein neues Feld im Tresor wird damit von selbst NICHT weitergegeben, bis es
+// hier bewusst eingetragen ist (organisationen-test.mjs prüft, dass jedes Feld
+// von frischerTresor() in genau einer der beiden Listen steht).
+// ------------------------------------------------------------------
+
+export const WEITERGABE_FORMAT = "antrag3000-organisation";
+/** Felder, die mitgehen (dazu der Name aus `organisation`). */
+export const WEITERGABE_FELDER = ["stammdaten", "projekte", "projektgruppen", "aktivesProjektId"];
+/** Felder, die bewusst auf dem Gerät bleiben (der Empfänger hat eigene). */
+export const NICHT_WEITERGEGEBEN = [
+  "version",
+  "modus",
+  "modusHinweisAus",
+  "netzModus",
+  "einzelServer",
+  "sync",
+  "teamCa",
+  "katalogMeldungen",
+  "katalogStand",
+  "katalogFeldDiff",
+  "bekannteOrganisationen",
+  "organisation", // nur der Name geht mit, nie der Ordner
+];
+
+/**
+ * Was in die Weitergabe-Datei kommt (als JSON). `d` = die Daten der
+ * Organisation (ein Schnappschuss, wird nicht verändert).
+ * @param {any} d
+ */
+export function weitergabeInhalt(d) {
+  /** @type {Record<string, any>} */
+  const aus = { format: WEITERGABE_FORMAT, version: 1, organisation: { name: orgName(d) } };
+  for (const feld of WEITERGABE_FELDER) {
+    if (d?.[feld] !== undefined) aus[feld] = structuredClone(d[feld]);
+  }
+  return aus;
+}
+
+/** @param {unknown} x @returns {x is Record<string, any>} */
+const istObjekt = (x) => !!x && typeof x === "object" && !Array.isArray(x);
+
+/**
+ * Der vorgeschlagene Name aus einer Weitergabe (fremde Daten, darum geprüft).
+ * @param {any} roh
+ */
+export function weitergabeName(roh) {
+  const n = istObjekt(roh) && istObjekt(roh.organisation) ? roh.organisation.name : "";
+  return typeof n === "string" ? n.trim().replace(/\s+/g, " ").slice(0, 80) : "";
+}
+
+/**
+ * Ein freier Name: `name`, sonst „name (2)“, „name (3)“ …
+ * @param {string} name
+ * @param {{ id: string, name: string }[]} liste
+ */
+export function freierOrgName(name, liste) {
+  const basis = name || "Organisation";
+  for (let i = 1; i < 1000; i++) {
+    const kandidat = i === 1 ? basis : `${basis} (${i})`;
+    if (namePruefen(kandidat, liste).ok) return kandidat;
+  }
+  return basis;
+}
+
+/**
+ * Baut aus einer Weitergabe (`roh`, fremde Daten!) die Daten einer NEUEN
+ * Organisation: Geräte-Einstellungen wie bei „Neue Organisation“ aus der
+ * gerade offenen (`vorlage`), vom Inhalt nur die Felder der Positivliste,
+ * einzeln zugewiesen. Prüft vorher den Aufbau – lieber eine klare Meldung als
+ * eine halb übernommene Organisation. normalisieren() folgt beim Aufrufer.
+ * @param {any} frisch   frischerTresor()
+ * @param {any} vorlage  Daten der offenen Organisation (oder null)
+ * @param {any} roh      JSON.parse(Inhalt der Datei)
+ * @param {string} name  der (geprüfte) Name der neuen Organisation
+ * @returns {{ ok: true, daten: any } | { ok: false, fehler: string }}
+ */
+export function weitergabeUebernehmen(frisch, vorlage, roh, name) {
+  const kaputt = { ok: /** @type {const} */ (false), fehler: "Die Datei enthält keine lesbare Organisation." };
+  if (!istObjekt(roh) || roh.format !== WEITERGABE_FORMAT) return kaputt;
+  if (roh.version !== 1) {
+    return { ok: false, fehler: "Diese Datei stammt aus einer neueren Programmversion. Bitte aktualisiere Antrag 3000." };
+  }
+  if (roh.stammdaten !== undefined && !istObjekt(roh.stammdaten)) return kaputt;
+  if (!Array.isArray(roh.projekte)) return kaputt;
+  const ids = new Set();
+  for (const p of roh.projekte) {
+    if (!istObjekt(p) || typeof p.id !== "string" || !p.id || typeof p.name !== "string" || ids.has(p.id)) return kaputt;
+    ids.add(p.id);
+  }
+  if (roh.projektgruppen !== undefined && (!Array.isArray(roh.projektgruppen) || !roh.projektgruppen.every(istObjekt))) {
+    return kaputt;
+  }
+  const aktiv = roh.aktivesProjektId;
+  if (aktiv !== undefined && aktiv !== null && typeof aktiv !== "string") return kaputt;
+
+  const d = neueOrgDaten(frisch, vorlage, name);
+  if (roh.stammdaten) {
+    d.stammdaten = roh.stammdaten;
+    // Das Logo wird als <img src> angezeigt. Aus fremder Hand nur ein
+    // eingebettetes Bild – eine Internet-Adresse würde beim Anzeigen still
+    // abgerufen (Prinzip 1: keine Verbindung ohne Zutun).
+    const logo = d.stammdaten.logo;
+    if (logo !== undefined && !(typeof logo === "string" && /^data:image\/(png|jpeg|gif|webp);base64,/i.test(logo))) {
+      d.stammdaten.logo = "";
+    }
+  }
+  d.projekte = roh.projekte;
+  d.projektgruppen = roh.projektgruppen ?? [];
+  d.aktivesProjektId = aktiv ?? null;
+  return { ok: true, daten: d };
+}
+
 /** ID der ersten Organisation – auf JEDEM Gerät dieselbe (siehe tresor.rs). */
 export const ERSTE_ORG = "0000000000000000";
 

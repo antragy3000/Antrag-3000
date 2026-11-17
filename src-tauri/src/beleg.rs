@@ -43,10 +43,17 @@ fn belegordner(app: &tauri::AppHandle, org_ordner: &str, projekt: &str) -> Resul
         .join("Belege"))
 }
 
-/// Schuetzt vor Pfad-Tricks im Dateinamen (er kommt aus dem Tresor, wir
-/// pruefen aber trotzdem): kein Verzeichniswechsel erlaubt.
+/// Schuetzt vor Pfad-Tricks im Dateinamen (er kommt aus dem Tresor – seit der
+/// Weitergabe auch aus fremder Hand): kein Verzeichniswechsel, kein Laufwerk
+/// ("C:x" wuerde unter Windows den Belegordner verlassen), kein ADS.
 fn pruefe_name(n: &str) -> Result<&str, String> {
-    if n.is_empty() || n.contains('/') || n.contains('\\') || n.contains("..") {
+    if n.is_empty()
+        || n.contains('/')
+        || n.contains('\\')
+        || n.contains(':')
+        || n.contains("..")
+        || std::path::Path::new(n).is_absolute()
+    {
         return Err("Ungueltiger Dateiname.".into());
     }
     Ok(n)
@@ -163,4 +170,17 @@ pub fn beleg_ordner_oeffnen(app: tauri::AppHandle, org_ordner: String, projekt: 
     tauri_plugin_opener::open_path(pfad.clone(), None::<&str>)
         .map_err(|e| format!("Belegordner laesst sich nicht oeffnen: {e}"))?;
     Ok(pfad.to_string_lossy().to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::pruefe_name;
+
+    #[test]
+    fn dateinamen_bleiben_im_belegordner() {
+        assert_eq!(pruefe_name("Beleg_2026.pdf"), Ok("Beleg_2026.pdf"));
+        for boese in ["", "../x.pdf", "a/b.pdf", r"a\b.pdf", "C:x.pdf", r"C:\Windows\x", "x.pdf:geheim", r"\\server\x", ".."] {
+            assert!(pruefe_name(boese).is_err(), "{boese}");
+        }
+    }
 }

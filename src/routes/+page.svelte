@@ -16,6 +16,7 @@
   import Zuteilung from "$lib/komponenten/Zuteilung.svelte";
   import Sachbericht from "$lib/komponenten/Sachbericht.svelte";
   import Sicherung from "$lib/komponenten/Sicherung.svelte";
+  import Weitergabe from "$lib/komponenten/Weitergabe.svelte";
   import TeamSync from "$lib/komponenten/TeamSync.svelte";
   import { katalog, setzeKatalog, setzeStandardKatalog, standardKatalog, pruefeKatalog, vergleicheKataloge, geaenderteFelder, setzeGeteilteFoerderer } from "$lib/katalog.svelte.js";
   import KatalogUpdate from "$lib/komponenten/KatalogUpdate.svelte";
@@ -52,7 +53,7 @@
   import { ANTRAG_STANDARD, CHECK_STANDARD } from "$lib/status";
   import { boardAusTresor, geteilteFoerdererAusTresor } from "$lib/sync";
   import { verlassenErlaubt } from "$lib/ungespeichert";
-  import { orgName, orgListe, bekannteAbgleichen, namePruefen, neueOrgDaten, startOrg, orgOrdnerVon, offeneOrgFinden, NAME_UNBEKANNT } from "$lib/organisationen.js";
+  import { orgName, orgListe, bekannteAbgleichen, namePruefen, neueOrgDaten, startOrg, orgOrdnerVon, offeneOrgFinden, weitergabeInhalt, NAME_UNBEKANNT } from "$lib/organisationen.js";
   // Reine Tresor-Struktur-Helfer (Vorlagen + Migration) – ausgelagert nach
   // $lib/tresorFormat.js, damit diese Datei kleiner bleibt.
   import { offizielleFristenAus, neueId, neuesProjekt, leereStammdaten, frischerTresor, normalisieren, STANDARD_TEAM_SYNC } from "$lib/tresorFormat.js";
@@ -840,24 +841,60 @@
         }
       }
       const neu = neueOrgDaten(frischerTresor(), $state.snapshot(daten), orgNeuPruefung.name);
-      neu.organisation.ordner = await invoke("org_ordner_anlegen", { name: orgNeuPruefung.name });
-      const id = await invoke("tresor_erstellen", { passwort: orgNeuPasswort, daten: JSON.stringify(neu) });
+      const passwort = orgNeuPasswort;
       orgNeuPasswort = orgNeuPasswortWdh = "";
-      await ordnerBeanspruchen(id, neu);
-      // Gleiches Passwort + „Auf diesem Gerät merken": die neue auch merken.
-      // Eine mit eigenem Passwort bewusst nicht – sonst wäre es keins.
-      if (orgNeuArt === "gleich" && aktivGemerkt) await invoke("merken_anlegen", { orgs: [id] }).catch(() => {});
-      alleOrgIds = await invoke("tresor_liste").catch(() => [...alleOrgIds, id]);
-      await gemerkteLaden();
-      andereOrgs = [...andereOrgs, { id, daten: neu }];
+      await orgEinrichten(neu, orgNeuArt, passwort);
       orgNeuOffen = false;
-      await bekannteAbgleichenUndSpeichern();
-      await orgWechseln(id);
     } catch (e) {
       orgNeuFehler = String(e);
     } finally {
       beschaeftigt = false;
     }
+  }
+
+  // Eine neue Organisation auf dem Gerät einrichten (neu angelegt oder aus
+  // einer Weitergabe): eigener Ordner, bei einer Weitergabe gleich die Dateien
+  // hinein (`dateienEinspielen`), erst DANN der Tresor – scheitert vorher
+  // etwas, entsteht keine halbe Organisation. Danach wird auf sie umgeschaltet.
+  /**
+   * @param {any} neu
+   * @param {string} art  "gleich" | "eigen"
+   * @param {string} passwort
+   * @param {null | ((ordner: string) => Promise<void>)} dateienEinspielen
+   */
+  async function orgEinrichten(neu, art, passwort, dateienEinspielen = null) {
+    neu.organisation.ordner = await invoke("org_ordner_anlegen", { name: orgName(neu) });
+    if (dateienEinspielen) await dateienEinspielen(neu.organisation.ordner);
+    /** @type {string} */
+    let id;
+    try {
+      id = await invoke("tresor_erstellen", { passwort, daten: JSON.stringify(neu) });
+    } catch (e) {
+      // Die Dateien liegen dann schon lesbar im neuen Ordner – sagen, wo.
+      if (dateienEinspielen) {
+        throw `${e} Die übernommenen Dateien liegen in Dokumente\\Antrag 3000\\${neu.organisation.ordner} – du kannst diesen Ordner löschen und es noch einmal versuchen.`;
+      }
+      throw e;
+    }
+    await ordnerBeanspruchen(id, neu);
+    // Gleiches Passwort + „Auf diesem Gerät merken": die neue auch merken.
+    // Eine mit eigenem Passwort bewusst nicht – sonst wäre es keins.
+    if (art === "gleich" && aktivGemerkt) await invoke("merken_anlegen", { orgs: [id] }).catch(() => {});
+    alleOrgIds = await invoke("tresor_liste").catch(() => [...alleOrgIds, id]);
+    await gemerkteLaden();
+    andereOrgs = [...andereOrgs, { id, daten: neu }];
+    await bekannteAbgleichenUndSpeichern();
+    await orgWechseln(id);
+  }
+
+  // --- Dialog: Organisation weitergeben / aus Datei hinzufügen (O6c) ---
+  /** @type {null | "geben" | "nehmen"} */
+  let weitergabeArt = $state(null);
+  /** @param {"geben" | "nehmen"} art */
+  function weitergabeOeffnen(art) {
+    orgMenuOffen = false;
+    if (art === "nehmen" && !verlassenErlaubt()) return;
+    weitergabeArt = art;
   }
 
   // --- Dialog: Organisation umbenennen (nur offene) ---
@@ -2808,6 +2845,8 @@
                   </div>
                 {/each}
                 <button class="projekt-neu" onclick={orgNeuOeffnen}>+ Neue Organisation</button>
+                <button class="projekt-neu" onclick={() => weitergabeOeffnen("nehmen")}>+ Organisation aus Datei hinzufügen …</button>
+                <button class="projekt-neu" onclick={() => weitergabeOeffnen("geben")}>↗ „{orgName(daten)}“ weitergeben …</button>
               </div>
             {/if}
           </div>
@@ -3667,6 +3706,23 @@
           <button type="button" class="leise" onclick={() => (orgNeuOffen = false)}>Abbrechen</button>
         </form>
       </div>
+    {/if}
+
+    {#if weitergabeArt}
+      <Weitergabe
+        art={weitergabeArt}
+        schliessen={() => (weitergabeArt = null)}
+        org={orgId}
+        {orgOrdner}
+        name={orgName(daten)}
+        inhalt={() => weitergabeInhalt($state.snapshot(daten))}
+        vorSichern={tresorSpeichern}
+        aktivName={orgName(daten)}
+        eintraege={orgEintraege}
+        vorlage={() => $state.snapshot(daten)}
+        pruefePasswort={(/** @type {string} */ pw) => invoke("tresor_passwort_pruefen", { org: orgId, passwort: pw })}
+        einrichten={orgEinrichten}
+      />
     {/if}
 
     {#if orgOeffnenZiel}

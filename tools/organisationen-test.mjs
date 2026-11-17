@@ -17,8 +17,15 @@ import {
   orgOrdnerVon,
   offeneOrgFinden,
   einspielVorschlag,
+  weitergabeInhalt,
+  weitergabeUebernehmen,
+  weitergabeName,
+  freierOrgName,
+  WEITERGABE_FELDER,
+  NICHT_WEITERGEGEBEN,
   NAME_UNBEKANNT,
 } from "../src/lib/organisationen.js";
+import { readFileSync } from "node:fs";
 
 // Ausschnitt von frischerTresor() (tresorFormat.js lädt Vite-Module und läuft
 // darum nicht direkt in Node).
@@ -190,6 +197,73 @@ console.log("Sicherung einspielen: Vorschlag je Organisation");
   pruefe(v[5].wahl === "ersetzen" && !v[5].andere, "zufällige ID, seither umbenannt: ersetzen, keine Warnung");
   pruefe(v[3].wahl === "dazu" && v[3].name === "Duo", "neu: kommt dazu");
   pruefe(v[4].name === null && v[4].wahl === "dazu", "unlesbarer Inhalt bricht nichts");
+}
+
+console.log("Organisation weitergeben");
+{
+  // Jedes Feld von frischerTresor() – direkt aus dem Quelltext gelesen – steht
+  // in GENAU einer Liste. Kommt ein neues dazu, schlägt dieser Test an, statt
+  // dass es still weitergegeben (oder still weggelassen) wird.
+  const quelle = readFileSync(new URL("../src/lib/tresorFormat.js", import.meta.url), "utf8");
+  const block = quelle.split("export function frischerTresor()")[1].split("\n}")[0];
+  const felder = [...block.matchAll(/^ {4}([A-Za-z]+):/gm)].map((m) => m[1]);
+  pruefe(felder.length >= 15, `Felder von frischerTresor() gefunden (${felder.length})`);
+  const ohneListe = felder.filter((f) => WEITERGABE_FELDER.includes(f) === NICHT_WEITERGEGEBEN.includes(f));
+  pruefe(ohneListe.length === 0, `jedes Feld ist eingeordnet${ohneListe.length ? ": fehlt " + ohneListe.join(", ") : ""}`);
+
+  const MARKE = "GEHEIM-MARKE";
+  const quelleOrg = {
+    ...frischerTresor(),
+    organisation: { name: "Verein Blau", ordner: MARKE + "-ordner", ordnerUmzug: true },
+    stammdaten: { person: { vorname: "Ada" }, bank: { iban: "CH00 1234" } },
+    projekte: [{ id: "p1", name: "Fest", arbeitsdokumente: [{ url: "https://cryptpad.example/x" }] }],
+    projektgruppen: [{ id: "g1", name: "Reihe" }],
+    aktivesProjektId: "p1",
+    modus: "team",
+    sync: { adresse: MARKE, ausweis: MARKE + "-ausweis" },
+    teamCa: MARKE + "-ca",
+    katalogMeldungen: [{ text: MARKE + "-meldung" }],
+    bekannteOrganisationen: [{ id: "x", name: MARKE + "-andere" }],
+    zuletztGeoeffnet: MARKE + "-zeit",
+    kuenftigesFeld: MARKE + "-neu",
+  };
+  const vorher = JSON.stringify(quelleOrg);
+  const json = JSON.stringify(weitergabeInhalt(quelleOrg));
+  pruefe(!json.includes(MARKE), "Team-Verbindung, Ordner, Meldungen, andere Organisationen und unbekannte Felder bleiben draußen");
+  pruefe(json.includes("CH00 1234") && json.includes("Fest") && json.includes("Reihe") && json.includes("cryptpad"), "Stammdaten, Projekte, Gruppen und Links gehen mit");
+  pruefe(JSON.stringify(quelleOrg) === vorher, "die Quelle bleibt unverändert");
+
+  const roh = JSON.parse(json);
+  pruefe(weitergabeName(roh) === "Verein Blau", "Name wird vorgeschlagen");
+  const empfaenger = { ...frischerTresor(), netzModus: "knopf", einzelServer: "https://eigener.example", modus: "team", sync: { adresse: "EMPF" } };
+  const r = weitergabeUebernehmen(frischerTresor(), empfaenger, roh, "Verein Blau");
+  pruefe(r.ok && r.daten.projekte[0].name === "Fest" && r.daten.stammdaten.bank.iban === "CH00 1234", "Inhalt kommt an");
+  pruefe(r.ok && r.daten.sync === null && r.daten.modus === "einzel" && r.daten.teamCa === null, "die neue Organisation hat keine Team-Verbindung");
+  pruefe(r.ok && r.daten.netzModus === "knopf" && r.daten.einzelServer === "https://eigener.example", "Geräte-Einstellungen kommen vom Empfänger");
+  pruefe(r.ok && r.daten.organisation.name === "Verein Blau" && !("ordner" in r.daten.organisation), "eigener Name, noch kein Ordner");
+
+  // Fremde Daten: Aufbau wird geprüft, eingeschleuste Felder kommen nicht an.
+  const boese = { ...roh, sync: { adresse: "x" }, modus: "team", katalogStand: { a: 1 }, organisation: { name: "X", ordner: ".." } };
+  const rb = weitergabeUebernehmen(frischerTresor(), null, boese, "X");
+  pruefe(rb.ok && rb.daten.sync === null && rb.daten.modus === "einzel" && JSON.stringify(rb.daten.katalogStand) === "{}" && !rb.daten.organisation.ordner, "eingeschleuste Felder werden ignoriert");
+  const nein = (x, was) => pruefe(!weitergabeUebernehmen(frischerTresor(), null, x, "X").ok, was);
+  nein(null, "leer: abgelehnt");
+  nein({ ...roh, format: "anders" }, "fremdes Format: abgelehnt");
+  nein({ ...roh, projekte: [null] }, "kaputtes Projekt: abgelehnt");
+  nein({ ...roh, projekte: [{ id: "a", name: "A" }, { id: "a", name: "B" }] }, "doppelte Projekt-ID: abgelehnt");
+  nein({ ...roh, projekte: "x" }, "Projekte keine Liste: abgelehnt");
+  nein({ ...roh, stammdaten: [] }, "Stammdaten keine Gruppe: abgelehnt");
+  nein({ ...roh, aktivesProjektId: 5 }, "aktives Projekt falscher Typ: abgelehnt");
+  pruefe(weitergabeUebernehmen(frischerTresor(), null, { ...roh, version: 2 }, "X").fehler.includes("neueren"), "neuere Version: klare Meldung");
+  pruefe(weitergabeName({ organisation: { name: 5 } }) === "", "unsinniger Name: leer");
+  const mitLogo = (logo) => weitergabeUebernehmen(frischerTresor(), null, { ...roh, stammdaten: { ...roh.stammdaten, logo } }, "X").daten.stammdaten.logo;
+  pruefe(mitLogo("data:image/png;base64,iVBORw0KGgo=") === "data:image/png;base64,iVBORw0KGgo=", "eingebettetes Logo bleibt");
+  pruefe(mitLogo("https://tracker.example/pixel.png") === "", "Logo als Internet-Adresse wird verworfen (kein stiller Abruf)");
+  pruefe(mitLogo("data:image/svg+xml;base64,PHN2Zz4=") === "" && mitLogo(5) === "", "SVG oder Unsinn als Logo wird verworfen");
+
+  const liste = [{ id: "a", name: "Verein Blau" }, { id: "b", name: "Verein Blau (2)" }];
+  pruefe(freierOrgName("Verein Blau", liste) === "Verein Blau (3)", "Name schon vergeben: freier Name");
+  pruefe(freierOrgName("Duo", liste) === "Duo", "freier Name bleibt");
 }
 
 console.log("Start-Organisation");

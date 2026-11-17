@@ -133,6 +133,11 @@
       fehler = String(e);
       return;
     }
+    if (art === "organisation") {
+      art = "";
+      fehler = "Das ist eine weitergegebene Organisation, keine Sicherung. Du fügst sie über das Organisations-Menü hinzu: „Organisation aus Datei hinzufügen“.";
+      return;
+    }
     gewaehlteDatei = pfad;
     passwort = "";
     vorschau = null;

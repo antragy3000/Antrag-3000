@@ -12,6 +12,7 @@ mod ordner;
 mod pdf;
 mod sync;
 mod tresor;
+mod weitergabe;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -99,7 +100,10 @@ pub fn run() {
             backup::sicherung_art,
             backup::sicherung_erstellen,
             backup::sicherung_pruefen,
-            backup::sicherung_einspielen
+            backup::sicherung_einspielen,
+            weitergabe::org_weitergeben,
+            weitergabe::weitergabe_pruefen,
+            weitergabe::weitergabe_dateien_einspielen
         ])
         .run(tauri::generate_context!())
         .expect("Fehler beim Starten der Anwendung");
